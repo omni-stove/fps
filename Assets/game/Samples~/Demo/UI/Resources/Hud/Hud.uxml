@@ -100,7 +100,7 @@
         <ui:VisualElement name="minimap" class="minimap" picking-mode="Ignore" style="display: none;" />
         <!-- 上の帯の方位とピン・目標の向き。CompassView が GameSignals.Minimap に値があるときだけ、文字・目盛り・印を足して出す。 -->
         <ui:VisualElement name="compass" class="compass" picking-mode="Ignore" style="display: none;" />
-        <!-- 自分が運転している飛行機の速さ・高度・スロットル・迎え角・G と失速の警告。AircraftHudView が、GameSignals.Aircraft に値がある間だけ行 (aircraft__row) と警告 (aircraft__warning) を入れて出す。 -->
+        <!-- 自分が運転している飛行機の速さ・高度・スロットル・迎え角・G と失速の警告。AircraftHudView が、AircraftSignals.Status に値がある間だけ行 (aircraft__row) と警告 (aircraft__warning) を入れて出す。 -->
         <ui:VisualElement name="aircraft" class="aircraft" picking-mode="Ignore" style="display: none;" />
         <!-- 偵察ドローンを操縦している間の電池・範囲外の警告・戻す操作。GameSignals.Drone に値がある間だけ出す (出すビューはまだ無く、隠したままにする)。 -->
         <ui:VisualElement name="drone-hud" class="drone-hud" picking-mode="Ignore" style="display: none;" />

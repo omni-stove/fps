@@ -461,7 +461,7 @@ namespace Shooter.Runtime
             }
 
             var shooter = _aim.root.gameObject;
-            StealthNoise.Emit(shooter, new SoundStimulus(SoundCueKind.Gunshot, rounds[0].Origin, weapon.Spec.ShotNoiseRadius, false));
+            SoundStimuli.Emit(shooter, new SoundStimulus(SoundCueKind.Gunshot, rounds[0].Origin, weapon.Spec.ShotNoiseRadius, false));
             var impact = weapon.AmmoTypes.Impact;
             var charge = Mathf.Clamp01(chargeFraction);
             var delivery = ShotDeliveries.For(round.Delivery);

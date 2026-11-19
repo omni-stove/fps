@@ -389,9 +389,10 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void AnUnawareEnemyFromBehindIsTakenDownSilentlyAndStaysWhereItFell()
         {
-            var victim = AddStealth(_enemyHost);
-            var (bystanderHost, bystanderAgent, bystander) = CreateStealthEnemy("enemy-2", new Vector3(-3f, 1f, 3f));
-            bystanderAgent.Target = _self;
+            var victim = AddWitness(_enemyHost, "enemy-1");
+            victim.Watching = _self;
+            var bystanderHost = new GameObject("enemy-2");
+            var bystander = AddWitness(bystanderHost, "enemy-2");
             TurnEnemyAway();
 
             var cues = 0;
@@ -425,9 +426,9 @@ namespace Shooter.Tests.EditMode
                 Assert.That(_player.IsControlHandedOff, Is.False);
 
                 Assert.That(cues, Is.Zero, "the takedown makes no sound cue");
-                Assert.That(bystander.Stage, Is.EqualTo(AwarenessStage.Unaware), "an enemy that did not see it stays unaware");
-                Assert.That(bystander.Level, Is.Zero);
-                Assert.That(bystander.Awareness.LastSeen, Is.Null);
+                Assert.That(victim.Calls, Is.Empty, "the target is not its own witness");
+                Assert.That(bystander.Calls, Is.EqualTo(new[] { _melee.Spec.TakedownWitnessAwareness }), "the bystander is asked once");
+                Assert.That(bystander.IsUnaware, Is.True, "an enemy that did not see it stays unaware");
                 Assert.That(lines, Has.None.StartsWith(ContextMeleeLog.WitnessedPrefix("Body")));
                 Assert.That(lines, Has.None.StartsWith(ContextMeleeLog.RewardPrefix("Body", ContextMeleeMove.TakedownId)));
             }
@@ -442,10 +443,10 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void AnEnemyThatHasNoticedThePlayerGetsThePlainMeleeEvenFromBehind()
         {
-            var stealth = AddStealth(_enemyHost);
+            var witness = AddWitness(_enemyHost, "enemy-1");
+            witness.IsUnaware = false;
+            witness.StageName = "Noticed";
             TurnEnemyAway();
-            stealth.Awareness.Meter.Raise(stealth.Awareness.Spec.NoticeThreshold);
-            Assert.That(stealth.Stage, Is.EqualTo(AwarenessStage.Noticed));
 
             var unawareBehind = ContextMeleeConditions.TargetBehind | ContextMeleeConditions.TargetUnaware;
             Assert.That(_context.Observe(_enemy) & unawareBehind, Is.EqualTo(ContextMeleeConditions.TargetBehind));
@@ -460,7 +461,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void AnEnemyFacingThePlayerIsNotTakenDown()
         {
-            AddStealth(_enemyHost);
+            Assert.That(_enemyHost.GetComponent<IMeleeWitness>(), Is.Null, "an enemy without a witness counts as unaware");
             Assert.That(_context.Observe(_enemy) & ContextMeleeConditions.TargetUnaware, Is.EqualTo(ContextMeleeConditions.TargetUnaware));
 
             LogAssert.Expect(LogType.Log, new Regex(@"^\[ContextMelee\] none id=Body target=enemy-1 conditions=TargetUnaware(\|Self\w+)*$"));
@@ -472,24 +473,24 @@ namespace Shooter.Tests.EditMode
         public void AnEnemyWatchingTheTakedownBecomesAwareAtOnce()
         {
             TurnEnemyAway();
-            var (witnessHost, witnessAgent, witness) = CreateStealthEnemy("enemy-2", new Vector3(-4f, 1f, 0f));
+            var witnessHost = new GameObject("enemy-2");
+            var witness = AddWitness(witnessHost, "enemy-2");
             var lines = new List<string>();
             Application.LogCallback onLog = (condition, stackTrace, type) => lines.Add(condition);
             Application.logMessageReceived += onLog;
             try
             {
-                witnessAgent.Target = _self;
-                SeeTheTarget(witness);
+                witness.Watching = _self;
                 Assert.That(_melee.TryMelee(), Is.True);
                 Assert.That(_context.Run.Move.Id, Is.EqualTo(ContextMeleeMove.TakedownId));
 
                 LogAssert.Expect(LogType.Log, "[ContextMelee] witnessed id=Body target=enemy-1 move=takedown by=enemy-2 stage=Engaged");
-                _context.NoticeWitnesses(_context.Run.Move, new[] { witness });
-                Assert.That(witness.Stage, Is.EqualTo(AwarenessStage.Engaged));
-                Assert.That(witness.Awareness.RaisedByAlarm, Is.False);
-                Assert.That(witness.Awareness.LastSeen, Is.EqualTo(_self.GroundPoint.ToNumerics()));
+                _context.NoticeWitnesses(_context.Run.Move, new IMeleeWitness[] { witness });
+                Assert.That(witness.IsUnaware, Is.False);
+                Assert.That(witness.Calls, Is.EqualTo(new[] { _context.Run.Move.WitnessAwareness }));
 
-                _context.NoticeWitnesses(_context.Run.Move, new[] { witness });
+                _context.NoticeWitnesses(_context.Run.Move, new IMeleeWitness[] { witness });
+                Assert.That(witness.Calls, Has.Count.EqualTo(1), "a witness that already saw it is not asked again");
                 Assert.That(lines.FindAll(l => l.StartsWith(ContextMeleeLog.WitnessedPrefix("Body"), StringComparison.Ordinal)), Has.Count.EqualTo(1));
                 Assert.That(_context.IsPerforming, Is.True, "being seen does not stop the takedown by itself");
             }
@@ -501,32 +502,30 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void OnlyAnEnemyLookingAtThePlayerDuringAMoveThatRaisesWitnessesCounts()
+        public void OnlyAWitnessThatSawItDuringAMoveThatRaisesWitnessesIsRecorded()
         {
             TurnEnemyAway();
-            var (witnessHost, witnessAgent, witness) = CreateStealthEnemy("enemy-2", new Vector3(-4f, 1f, 0f));
+            var witnessHost = new GameObject("enemy-2");
+            var witness = AddWitness(witnessHost, "enemy-2");
             try
             {
                 Assert.That(_melee.TryMelee(), Is.True);
                 var takedown = _context.Run.Move;
 
-                witnessAgent.Target = _self;
-                _context.NoticeWitnesses(takedown, new[] { witness });
-                Assert.That(witness.Stage, Is.EqualTo(AwarenessStage.Unaware), "not looking");
+                _context.NoticeWitnesses(ContextMeleeMove.Finisher(_melee.Spec), new IMeleeWitness[] { witness });
+                Assert.That(witness.Calls, Is.Empty, "the finisher does not raise witnesses");
 
-                witnessAgent.Target = null;
-                SeeTheTarget(witness);
-                var level = witness.Level;
-                _context.NoticeWitnesses(takedown, new[] { witness });
-                Assert.That(witness.Level, Is.EqualTo(level), "looking at someone else");
+                var gone = AddWitness(witnessHost, "enemy-3");
+                Object.DestroyImmediate(gone);
+                _context.NoticeWitnesses(takedown, new IMeleeWitness[] { witness, null, gone });
+                Assert.That(witness.Calls, Has.Count.EqualTo(1), "missing and destroyed witnesses are skipped");
+                Assert.That(witness.IsUnaware, Is.True, "a witness that did not see it");
 
-                witnessAgent.Target = _self;
-                _context.NoticeWitnesses(ContextMeleeMove.Finisher(_melee.Spec), new[] { witness });
-                Assert.That(witness.Level, Is.EqualTo(level), "the finisher does not raise witnesses");
-
-                witness.Awareness.Rule = Stealth.Off;
-                _context.NoticeWitnesses(takedown, new[] { witness });
-                Assert.That(witness.Stage, Is.EqualTo(AwarenessStage.Unaware), "stealth off keeps the old behavior");
+                witness.Watching = _self;
+                LogAssert.Expect(LogType.Log, "[ContextMelee] witnessed id=Body target=enemy-1 move=takedown by=enemy-2 stage=Engaged");
+                _context.NoticeWitnesses(takedown, new IMeleeWitness[] { witness });
+                Assert.That(witness.Calls, Has.Count.EqualTo(2), "a witness that did not see it is asked again");
+                Assert.That(witness.IsUnaware, Is.False);
             }
             finally
             {
@@ -540,33 +539,11 @@ namespace Shooter.Tests.EditMode
             Physics.SyncTransforms();
         }
 
-        private static EnemyStealth AddStealth(GameObject host)
+        private static FakeMeleeWitness AddWitness(GameObject host, string id)
         {
-            var stealth = host.AddComponent<EnemyStealth>();
-            Assert.That(stealth.TryInitialize(), Is.True);
-            stealth.Awareness.Rule = Stealth.On;
-            return stealth;
-        }
-
-        private static void SeeTheTarget(EnemyStealth stealth)
-        {
-            stealth.Awareness.Meter.Tick(0f, EnemySpec.DefaultSightRange, new AwarenessSighting(true, 4f, 0f, AwarenessPosture.Standing, 1f, 0f));
-            Assert.That(stealth.Awareness.Meter.IsSeeing, Is.True);
-        }
-
-        private (GameObject Host, EnemyAgent Agent, EnemyStealth Stealth) CreateStealthEnemy(string id, Vector3 position)
-        {
-            var host = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            host.name = id;
-            host.transform.SetPositionAndRotation(position, Quaternion.LookRotation(Vector3.left));
-            var agent = host.AddComponent<EnemyAgent>();
-            agent.WeaponDefinition = _rifle;
-            agent.Id = id;
-            host.GetComponent<Damageable>().Initialize(id, _enemyHealth);
-            Assert.That(agent.TryInitialize(), Is.True);
-            var stealth = AddStealth(host);
-            Physics.SyncTransforms();
-            return (host, agent, stealth);
+            var witness = host.AddComponent<FakeMeleeWitness>();
+            witness.WitnessId = id;
+            return witness;
         }
 
         private void Stagger()

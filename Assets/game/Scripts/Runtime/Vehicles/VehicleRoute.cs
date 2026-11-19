@@ -70,7 +70,7 @@ namespace Shooter.Runtime
             }
         }
 
-        // 位置でなく Transform を渡すのは、点を Transform で持つ部品 (BotAircraftPilot) にも、動かした点をそのまま追わせるため。
+        // 位置でなく Transform を渡すのは、点を Transform で持つ部品 (IBotPilot の部品) にも、動かした点をそのまま追わせるため。
         public void CopyPoints(List<Transform> into)
         {
             if (into == null)

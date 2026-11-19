@@ -61,7 +61,7 @@ namespace Shooter.Runtime
             _rows.Clear();
             _warningRow = null;
             Subscribe();
-            Show(GameSignals.Aircraft.Value);
+            Show(AircraftSignals.Status.Value);
         }
 
         protected override void OnLanguageChanged()
@@ -155,7 +155,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            GameSignals.Aircraft.Changed += HandleAircraftChanged;
+            AircraftSignals.Status.Changed += HandleAircraftChanged;
             _subscribed = true;
         }
 
@@ -166,7 +166,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            GameSignals.Aircraft.Changed -= HandleAircraftChanged;
+            AircraftSignals.Status.Changed -= HandleAircraftChanged;
             _subscribed = false;
         }
 
@@ -175,7 +175,7 @@ namespace Shooter.Runtime
             // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
             if (this == null)
             {
-                GameSignals.Aircraft.Changed -= HandleAircraftChanged;
+                AircraftSignals.Status.Changed -= HandleAircraftChanged;
                 return;
             }
 

@@ -22,5 +22,9 @@ namespace Shooter.Core
         GunGame,
 
         Payload,
+
+        BattleRoyale,
+
+        Extraction,
     }
 }

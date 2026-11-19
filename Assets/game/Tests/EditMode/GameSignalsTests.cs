@@ -65,7 +65,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Replays.Value, Is.Null);
             Assert.That(GameSignals.Cosmetics.Value, Is.Null);
             Assert.That(GameSignals.Stash.Value, Is.Null);
-            Assert.That(GameSignals.Aircraft.Value, Is.Null);
             Assert.That(GameSignals.Stamina.Value, Is.Null);
             Assert.That(GameSignals.LockOnWarning.Value, Is.Null);
             Assert.That(GameSignals.Emotes.Value, Is.Null);
@@ -197,7 +196,6 @@ namespace Shooter.Tests.EditMode
             GameSignals.Replays.Publish(new FakeReplayLibrary());
             GameSignals.Cosmetics.Publish(new FakeCosmeticLocker());
             GameSignals.Stash.Publish(new StashStatus(60, null));
-            GameSignals.Aircraft.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
             GameSignals.Stamina.Publish(new StaminaStatus(0f, 100f, true));
             GameSignals.LockOnWarning.Publish(new LockOnWarningStatus(LockOnWarningStage.Locked, 90f));
             GameSignals.Emotes.Publish(new FakeEmoteControl());
@@ -214,6 +212,47 @@ namespace Shooter.Tests.EditMode
             EverySignalStartsEmpty();
             GameSignals.ModeStatus.Publish(Status());
             Assert.That(heard, Is.Zero, "subscribers from before the reset are gone");
+        }
+
+        [Test]
+        public void ACreatedSignalHoldsWhatWasPublishedUntilResetAll()
+        {
+            var signal = GameSignals.Create<int?>("CreatedForTest");
+            var heard = new List<int?>();
+            signal.Changed += heard.Add;
+
+            signal.Publish(3);
+
+            Assert.That(signal.Value, Is.EqualTo((int?)3));
+            Assert.That(heard, Is.EqualTo(new int?[] { 3 }));
+
+            GameSignals.ResetAll();
+
+            Assert.That(signal.Value, Is.Null);
+            Assert.That(signal.HasValue, Is.False);
+            signal.Publish(4);
+            Assert.That(heard, Is.EqualTo(new int?[] { 3 }), "subscribers from before the reset are gone");
+            Assert.That(signal.Value, Is.EqualTo((int?)4), "the created signal still works after the reset");
+        }
+
+        [Test]
+        public void CreateNamesTheSignalForItsLogs()
+        {
+            var signal = GameSignals.Create<string>("NamedForTest");
+            signal.Changed += _ => throw new InvalidOperationException("broken view");
+            LogAssert.Expect(LogType.Error, new Regex(Regex.Escape(GameSignals.LogTag) + ".*NamedForTest"));
+            LogAssert.Expect(LogType.Exception, new Regex("broken view"));
+
+            signal.Publish("x");
+
+            Assert.That(signal.ToString(), Is.EqualTo("NamedForTest=x"));
+        }
+
+        [Test]
+        public void CreateRejectsAMissingName()
+        {
+            Assert.Throws<ArgumentException>(() => GameSignals.Create<int?>(null));
+            Assert.Throws<ArgumentException>(() => GameSignals.Create<int?>(string.Empty));
         }
 
         [Test]

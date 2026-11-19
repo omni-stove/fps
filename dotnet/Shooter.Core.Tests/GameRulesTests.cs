@@ -104,7 +104,7 @@ namespace Shooter.Core.Tests
         }
 
         [TestCase(-1)]
-        [TestCase(10)]
+        [TestCase(12)]
         public void RejectsAnUndefinedObjective(int value)
         {
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(objective: (MatchObjective)value));
@@ -163,6 +163,19 @@ namespace Shooter.Core.Tests
             Assert.That((int)MatchObjective.KillConfirmed, Is.EqualTo(7));
             Assert.That((int)MatchObjective.GunGame, Is.EqualTo(8));
             Assert.That((int)MatchObjective.Payload, Is.EqualTo(9));
+            Assert.That((int)MatchObjective.BattleRoyale, Is.EqualTo(10));
+            Assert.That((int)MatchObjective.Extraction, Is.EqualTo(11));
+            Assert.That(Enum.GetValues<MatchObjective>().Length, Is.EqualTo(12));
+        }
+
+        [TestCase(MatchObjective.BattleRoyale)]
+        [TestCase(MatchObjective.Extraction)]
+        public void KeepsTheBattleRoyaleAndExtractionObjectives(MatchObjective objective)
+        {
+            var rules = Rules(objective: objective);
+
+            Assert.That(rules.Objective, Is.EqualTo(objective));
+            Assert.That(GameRules.Default.WithObjective(objective).Objective, Is.EqualTo(objective));
         }
 
         [Test]

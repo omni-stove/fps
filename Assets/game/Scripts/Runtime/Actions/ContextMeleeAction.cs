@@ -48,8 +48,8 @@ namespace Shooter.Runtime
         private Vector3 _alignTo;
         private float _yawFrom;
         private float _yawTo;
-        private readonly HashSet<EnemyStealth> _witnessed = new HashSet<EnemyStealth>();
-        private readonly List<EnemyStealth> _witnessCandidates = new List<EnemyStealth>();
+        private readonly HashSet<IMeleeWitness> _witnessed = new HashSet<IMeleeWitness>();
+        private readonly List<IMeleeWitness> _witnessCandidates = new List<IMeleeWitness>();
 
         public ContextMeleeSelector Selector => _selector;
 
@@ -251,9 +251,9 @@ namespace Shooter.Runtime
             var agent = target.GetComponent<EnemyAgent>();
             if (agent != null && agent.IsInitialized)
             {
-                var stealth = target.GetComponent<EnemyStealth>();
-                var stage = stealth != null ? stealth.Stage : AwarenessStage.Unaware;
-                if (ContextMeleeSelector.IsUnaware(agent.State, stage))
+                var witness = target.GetComponent<IMeleeWitness>();
+                var unaware = IsGone(witness) || witness.IsUnaware;
+                if (ContextMeleeSelector.IsUnaware(agent.State, unaware))
                 {
                     conditions |= ContextMeleeConditions.TargetUnaware;
                 }
@@ -303,15 +303,15 @@ namespace Shooter.Runtime
             var move = _run.Move;
             var events = _run.Tick(Mathf.Max(0f, deltaSeconds));
             Align(_run.IsActive ? _run.AlignProgress : 1f);
-            NoticeWitnesses(move, EnemyStealth.Active);
+            NoticeWitnesses(move, MeleeWitnesses.Active);
             if ((events & ContextMeleeEvents.Resolved) != 0)
             {
                 Resolve(move);
             }
         }
 
-        // EnemyStealth.Active は OnEnable で入るので Edit Mode では空になる。テストから候補を渡せるよう分けておく。
-        internal void NoticeWitnesses(ContextMeleeMove move, IReadOnlyList<EnemyStealth> candidates)
+        // MeleeWitnesses.Active は OnEnable で入るので Edit Mode では空になる。テストから候補を渡せるよう分けておく。
+        internal void NoticeWitnesses(ContextMeleeMove move, IReadOnlyList<IMeleeWitness> candidates)
         {
             var target = _target;
             if (move == null || !(move.WitnessAwareness > 0f) || _self == null || target == null || candidates == null)
@@ -324,7 +324,7 @@ namespace Shooter.Runtime
             _witnessCandidates.AddRange(candidates);
             foreach (var witness in _witnessCandidates)
             {
-                if (witness == null || witness.gameObject == target.gameObject || _witnessed.Contains(witness))
+                if (IsGone(witness) || witness.gameObject == target.gameObject || _witnessed.Contains(witness))
                 {
                     continue;
                 }
@@ -332,11 +332,17 @@ namespace Shooter.Runtime
                 if (witness.Witness(_self, move.WitnessAwareness))
                 {
                     _witnessed.Add(witness);
-                    Debug.Log(ContextMeleeLog.Witnessed(AttackerId, target.Id, move.Id, witness.Id, witness.Stage), this);
+                    Debug.Log(ContextMeleeLog.Witnessed(AttackerId, target.Id, move.Id, witness.Id, witness.StageName), this);
                 }
             }
 
             _witnessCandidates.Clear();
+        }
+
+        // interface 越しの == は UnityEngine.Object の破棄を見ないので、破棄済みの部品も無いものとして扱う。
+        private static bool IsGone(IMeleeWitness witness)
+        {
+            return witness == null || (witness is UnityEngine.Object unityObject && unityObject == null);
         }
 
         public bool Interrupt(ContextMeleeInterruption reason, bool force = false)

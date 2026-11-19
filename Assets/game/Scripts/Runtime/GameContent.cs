@@ -145,8 +145,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("最初に持つ武器")]
         private LoadoutDefinition _loadout;
 
-        [SerializeField, Tooltip("メニューに出すキャンペーンのミッション")]
-        private MissionCatalog _missions;
+        // キャンペーンを本体の外から足せるように、型は ScriptableObject にとどめる。入れる型は GameContentSlots に登録した枠が決める。
+        [SerializeField, Tooltip("メニューに出すキャンペーンのミッション (MissionCatalog)")]
+        private ScriptableObject _missions;
 
         [Header("モード")]
         [SerializeField]
@@ -223,8 +224,9 @@ namespace Shooter.Runtime
         [SerializeField]
         private SuppressionCatalog _suppression;
 
-        [SerializeField]
-        private AwarenessIndicatorCatalog _awarenessIndicator;
+        // 隠密を本体の外から足せるように、型は ScriptableObject にとどめる。入れる型は GameContentSlots に登録した枠が決める。
+        [SerializeField, Tooltip("敵が気づいたときの印 (AwarenessIndicatorCatalog)")]
+        private ScriptableObject _awarenessIndicator;
 
         [SerializeField]
         private CameraShakeSettings _cameraShake;
@@ -509,7 +511,7 @@ namespace Shooter.Runtime
             set => _loadout = value;
         }
 
-        public MissionCatalog Missions
+        public ScriptableObject Missions
         {
             get => _missions;
             set => _missions = value;
@@ -659,7 +661,7 @@ namespace Shooter.Runtime
             set => _suppression = value;
         }
 
-        public AwarenessIndicatorCatalog AwarenessIndicator
+        public ScriptableObject AwarenessIndicator
         {
             get => _awarenessIndicator;
             set => _awarenessIndicator = value;

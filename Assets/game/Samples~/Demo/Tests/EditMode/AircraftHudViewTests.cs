@@ -45,7 +45,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void APublishedStatusShowsTheReadingsAndTheWarningOnlyWhileStalling()
         {
-            GameSignals.Aircraft.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
+            AircraftSignals.Status.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
 
             Assert.That(_view.IsShown, Is.True);
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
@@ -54,7 +54,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(_view.Warning, Is.Empty);
             Assert.That(WarningRow().style.display.value, Is.EqualTo(DisplayStyle.None));
 
-            GameSignals.Aircraft.Publish(new AircraftStatus(20f, 120f, 1f, 18f, 0.5f, true, false));
+            AircraftSignals.Status.Publish(new AircraftStatus(20f, 120f, 1f, 18f, 0.5f, true, false));
 
             Assert.That(_view.Warning, Is.EqualTo("失速"));
             Assert.That(WarningRow().text, Is.EqualTo("失速"));
@@ -65,15 +65,15 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void ClearingTheSignalHidesTheView()
         {
-            GameSignals.Aircraft.Publish(new AircraftStatus(20f, 120f, 1f, 18f, 0.5f, true, false));
+            AircraftSignals.Status.Publish(new AircraftStatus(20f, 120f, 1f, 18f, 0.5f, true, false));
 
-            GameSignals.Aircraft.Clear();
+            AircraftSignals.Status.Clear();
 
             Assert.That(_view.IsShown, Is.False);
             Assert.That(_view.Lines, Is.Empty);
             Assert.That(_view.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
 
-            GameSignals.Aircraft.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
+            AircraftSignals.Status.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
             Assert.That(RowTexts(), Has.Length.EqualTo(5));
             Assert.That(_view.Element.Children().Last(), Is.SameAs(WarningRow()), "rows shown again go above the warning");
         }

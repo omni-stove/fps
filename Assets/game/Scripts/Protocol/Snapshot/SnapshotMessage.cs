@@ -8,7 +8,7 @@ namespace Shooter.Protocol
     // 壊れた建物の部品のように滅多に変わらず大きい状態は、毎 tick の差分に載せずに StructureStateMessage で送る。
     public sealed class SnapshotMessage : IMessage
     {
-        public const byte CurrentVersion = 20;
+        public const byte CurrentVersion = 21;
 
         public const int NoBaseline = -1;
 
@@ -83,6 +83,11 @@ namespace Shooter.Protocol
             _owner.Knockback = default;
             _owner.RespawnSeconds = null;
             _owner.Money = 0;
+            _owner.RedeploysLeft = 0;
+            _owner.RedeploySeconds = null;
+            _owner.ExtractionProgress = 0f;
+            _owner.HasExtractionPoint = false;
+            _owner.ExtractionPointId = 0;
             _owner.Grenades.Clear();
             _owner.EquippedWeaponIds.Clear();
             _owner.Present = OwnerFields.All;
@@ -183,14 +188,14 @@ namespace Shooter.Protocol
             writer.WriteInt32(baseline != null ? baseline.Tick : NoBaseline);
 
             var matchFields = baseline != null ? Match.ChangedFields(in baseline.Match) : MatchFields.All;
-            writer.WriteByte((byte)matchFields);
+            writer.WriteUInt16((ushort)matchFields);
             Match.Write(writer, matchFields);
 
             writer.WriteBool(HasOwner);
             if (HasOwner)
             {
                 var ownerFields = baseline != null && baseline.HasOwner ? _owner.ChangedFields(baseline._owner) : OwnerFields.All;
-                writer.WriteByte((byte)ownerFields);
+                writer.WriteUInt16((ushort)ownerFields);
                 _owner.Write(writer, ownerFields);
             }
 
@@ -217,14 +222,14 @@ namespace Shooter.Protocol
             var hasBaseline = BaselineTick != NoBaseline;
             IsComplete = false;
 
-            _matchPresent = (MatchFields)reader.ReadByteBelow((int)MatchFields.All + 1, "match parts");
+            _matchPresent = (MatchFields)ReadParts(reader, (int)MatchFields.All, "match parts");
             ExpectAll(hasBaseline, (int)_matchPresent, (int)MatchFields.All, "match");
             Match.Read(reader, _matchPresent);
 
             HasOwner = reader.ReadBool();
             if (HasOwner)
             {
-                var ownerFields = (OwnerFields)reader.ReadByteBelow((int)OwnerFields.All + 1, "owner parts");
+                var ownerFields = (OwnerFields)ReadParts(reader, (int)OwnerFields.All, "owner parts");
                 ExpectAll(hasBaseline, (int)ownerFields, (int)OwnerFields.All, "owner");
                 _owner.Read(reader, ownerFields);
             }
@@ -246,6 +251,18 @@ namespace Shooter.Protocol
                 && _vehicles.IsComplete
                 && _objectiveItems.IsComplete
                 && _deployables.IsComplete;
+        }
+
+        private static int ReadParts(MessageReader reader, int all, string what)
+        {
+            var at = reader.Position;
+            var bits = (int)reader.ReadUInt16();
+            if ((bits & ~all) != 0)
+            {
+                throw new MessageReadException(what + " " + Text(bits) + " include an unknown part at byte " + Text(at));
+            }
+
+            return bits;
         }
 
         private static void ExpectAll(bool hasBaseline, int present, int all, string what)

@@ -97,7 +97,7 @@ namespace Shooter.Editor
         // 既存のアセットは GUID を保って上書きするので、それを参照しているシーンは壊れない。
         public static MissionDefinition CreateOrUpdateDefinition(string path)
         {
-            return SceneBuildHelpers.CreateOrUpdateMissionDefinition(path, Configure);
+            return MissionDefinitionAssets.CreateOrUpdate(path, Configure);
         }
 
         public static void Configure(MissionDefinition definition)

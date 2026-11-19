@@ -100,21 +100,6 @@ namespace Shooter.Core
             return $"{Tag} '{vehicle}' part '{part}' is not in the spec; it takes damage unscaled";
         }
 
-        public static string PartBroken(string vehicle, string part, AircraftDamageEffect effect, AircraftCondition condition)
-        {
-            return string.Format(
-                CultureInfo.InvariantCulture,
-                "{0} '{1}' part broken part={2} effect={3} lift={4:0.00}/{5:0.00} control={6:0.00} thrust={7:0.00}",
-                Tag,
-                vehicle,
-                part,
-                effect,
-                condition.LeftLift,
-                condition.RightLift,
-                condition.Control,
-                condition.Thrust);
-        }
-
         public static string PartDamaged(string vehicle, string part, int damage, int total)
         {
             return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' part damaged part={2} dmg={3} total={4}", Tag, vehicle, part, damage, total);
@@ -124,24 +109,6 @@ namespace Shooter.Core
         {
             return string.Format(
                 CultureInfo.InvariantCulture, "{0} '{1}' part '{2}' is not sent; at most {3} parts per vehicle are synced", Tag, vehicle, part, max);
-        }
-
-        public static string NetCondition(string vehicle, AircraftCondition condition)
-        {
-            return string.Format(
-                CultureInfo.InvariantCulture,
-                "{0} '{1}' net condition lift={2:0.00}/{3:0.00} control={4:0.00} thrust={5:0.00}",
-                Tag,
-                vehicle,
-                condition.LeftLift,
-                condition.RightLift,
-                condition.Control,
-                condition.Thrust);
-        }
-
-        public static string InvalidAircraftDamage(string vehicle, string error)
-        {
-            return $"{Tag} '{vehicle}' aircraft damage settings are invalid; parts take no flight damage: {error}";
         }
 
         public static string Ram(string vehicle, string target, int damage, float speed, string driver, int health)
@@ -189,6 +156,16 @@ namespace Shooter.Core
             return $"{Tag} '{vehicle}' bot takes controls rider={rider} as={(flies ? "pilot" : "driver")} route={(string.IsNullOrEmpty(route) ? "none" : route)}";
         }
 
+        public static string BotPilotTypeInvalid(string vehicle, string pilotType)
+        {
+            return $"{Tag} '{vehicle}' bot pilot type '{(string.IsNullOrEmpty(pilotType) ? "none" : pilotType)}' is not a MonoBehaviour with IBotPilot; the bot drives it as a car";
+        }
+
+        public static string BotPilotNotAdded(string vehicle, string pilotType)
+        {
+            return $"{Tag} '{vehicle}' bot pilot '{pilotType}' could not be added; the bot drives it as a car";
+        }
+
         public static string BotGivesUpControls(string vehicle, string rider)
         {
             return $"{Tag} '{vehicle}' bot gives up controls rider={rider}";
@@ -197,11 +174,6 @@ namespace Shooter.Core
         public static string BotRouteOrdered(string rider, string route)
         {
             return $"{Tag} bot route order rider={rider} route={(string.IsNullOrEmpty(route) ? "none" : route)}";
-        }
-
-        public static string EffectsMissingMotor(string vehicle)
-        {
-            return $"{Tag} '{vehicle}' has no SimpleAircraftMotor; the aircraft effects show nothing";
         }
 
         public static string VaporUnswitchable(string vehicle, string prefab)

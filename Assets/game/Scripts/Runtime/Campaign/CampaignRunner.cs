@@ -144,7 +144,7 @@ namespace Shooter.Runtime
             set => _missions = value;
         }
 
-        public MissionCatalog EffectiveMissions => GameContent.Pick(_missions, c => c.Missions);
+        public MissionCatalog EffectiveMissions => GameContent.Pick(_missions, c => c.Missions as MissionCatalog);
 
         public float ReloadDelaySeconds
         {

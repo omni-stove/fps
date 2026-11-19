@@ -46,6 +46,13 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.Aero.Responsiveness, Is.EqualTo(AircraftAeroSpec.DefaultResponsiveness));
             Assert.That(spec.Aero.Alignment, Is.EqualTo(AircraftAeroSpec.DefaultAlignment));
             Assert.That(spec.Aero.AirBrakeDrag, Is.EqualTo(AircraftAeroSpec.DefaultAirBrakeDrag));
+            Assert.That(spec.Aero.LiftSlope, Is.EqualTo(AircraftAeroSpec.DefaultLiftSlope));
+            Assert.That(spec.Aero.CriticalAngle, Is.EqualTo(AircraftAeroSpec.DefaultCriticalAngle));
+            Assert.That(spec.Aero.PostStallLift, Is.EqualTo(AircraftAeroSpec.DefaultPostStallLift));
+            Assert.That(spec.Aero.InducedDrag, Is.EqualTo(AircraftAeroSpec.DefaultInducedDrag));
+            Assert.That(spec.Aero.Weathervane, Is.EqualTo(AircraftAeroSpec.DefaultWeathervane));
+            Assert.That(spec.Aero.Dihedral, Is.EqualTo(AircraftAeroSpec.DefaultDihedral));
+            Assert.That(spec.Aero.WingRoll, Is.EqualTo(AircraftAeroSpec.DefaultWingRoll));
             Assert.That(aim.PitchGain, Is.EqualTo(AircraftAimSpec.DefaultPitchGain));
             Assert.That(aim.YawGain, Is.EqualTo(AircraftAimSpec.DefaultYawGain));
             Assert.That(aim.RollGain, Is.EqualTo(AircraftAimSpec.DefaultRollGain));
@@ -69,7 +76,14 @@ namespace Shooter.Tests.EditMode
                     yawRate: 15f,
                     responsiveness: 3f,
                     alignment: 1.5f,
-                    airBrakeDrag: 4f));
+                    airBrakeDrag: 4f,
+                    liftSlope: 0.09f,
+                    criticalAngle: 14f,
+                    postStallLift: 0.4f,
+                    inducedDrag: 0.07f,
+                    weathervane: 2.5f,
+                    dihedral: 0.8f,
+                    wingRoll: 0.3f));
             var definition = NewDefinition("Trainer");
 
             definition.CopyFrom(original);
@@ -89,6 +103,13 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.Aero.Responsiveness, Is.EqualTo(3f));
             Assert.That(spec.Aero.Alignment, Is.EqualTo(1.5f));
             Assert.That(spec.Aero.AirBrakeDrag, Is.EqualTo(4f));
+            Assert.That(spec.Aero.LiftSlope, Is.EqualTo(0.09f));
+            Assert.That(spec.Aero.CriticalAngle, Is.EqualTo(14f));
+            Assert.That(spec.Aero.PostStallLift, Is.EqualTo(0.4f));
+            Assert.That(spec.Aero.InducedDrag, Is.EqualTo(0.07f));
+            Assert.That(spec.Aero.Weathervane, Is.EqualTo(2.5f));
+            Assert.That(spec.Aero.Dihedral, Is.EqualTo(0.8f));
+            Assert.That(spec.Aero.WingRoll, Is.EqualTo(0.3f));
         }
 
         [Test]

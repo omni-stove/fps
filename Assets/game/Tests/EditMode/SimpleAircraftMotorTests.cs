@@ -82,7 +82,7 @@ namespace Shooter.Tests.EditMode
 
             var command = _motor.LastCommand;
             Assert.That(_motor.Input, Is.EqualTo(new VehicleMotorInput(1f, 1f)));
-            Assert.That(command.LiftRatio, Is.EqualTo(1f), "100 m/s along the nose is past the lift speed");
+            Assert.That(command.LiftRatio, Is.EqualTo(0f), "100 m/s along the nose meets the wings at no angle");
             Assert.That(command.Control, Is.EqualTo(1f));
             Assert.That(command.LocalAcceleration.Z, Is.EqualTo(0f).Within(Epsilon), "full thrust at top speed");
             Assert.That(command.LocalAngularAcceleration.X, Is.LessThan(0f), "pitching up turns about -x");
@@ -134,13 +134,16 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void StepPublishesTheFlightState()
         {
-            _motor.Body.linearVelocity = new Vector3(0f, 0f, 50f);
+            _motor.Body.linearVelocity = new Vector3(0f, -5f, 50f);
 
             _motor.Step();
 
-            Assert.That(_motor.State.Airspeed, Is.EqualTo(50f).Within(Epsilon));
-            Assert.That(_motor.State.AngleOfAttackRadians, Is.EqualTo(0f).Within(Epsilon));
-            Assert.That(_motor.State.LoadFactor, Is.EqualTo(1f).Within(Epsilon), "50 m/s is past the default lift speed");
+            Assert.That(_motor.State.Airspeed, Is.EqualTo(Mathf.Sqrt(2525f)).Within(Epsilon));
+            Assert.That(_motor.State.AngleOfAttackRadians, Is.EqualTo(Mathf.Atan(0.1f)).Within(Epsilon));
+            Assert.That(_motor.State.LoadFactor, Is.GreaterThan(0f), "air from below the nose lifts");
+            Assert.That(
+                _motor.State.LoadFactor,
+                Is.EqualTo(_motor.LastCommand.LocalAcceleration.Y / Physics.gravity.magnitude).Within(Epsilon));
             Assert.That(_motor.State.Grounded, Is.False);
             Assert.That(_motor.State, Is.EqualTo(_motor.LastCommand.State));
         }

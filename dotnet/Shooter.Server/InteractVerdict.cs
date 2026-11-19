@@ -23,7 +23,7 @@ namespace Shooter.Server
 
         public static InteractVerdict Refused(InteractRefusal refusal)
         {
-            if (refusal == InteractRefusal.None || !Enum.IsDefined(typeof(InteractRefusal), refusal))
+            if (refusal == InteractRefusal.None || !Enum.IsDefined(refusal))
             {
                 throw new ArgumentOutOfRangeException(nameof(refusal), refusal, "refusal must name a reason");
             }

@@ -87,7 +87,8 @@ namespace Shooter.Server.Tests
             Assert.That(default(InteractVerdict).Refusal, Is.EqualTo(InteractRefusal.NotInteractable));
             Assert.That(InteractVerdict.Accepted.IsAccepted, Is.True);
             Assert.That(InteractVerdict.Accepted.Refusal, Is.EqualTo(InteractRefusal.None));
-            Assert.That(InteractVerdict.Refused(InteractRefusal.OutOfReach), Is.EqualTo(InteractVerdict.Refused(InteractRefusal.OutOfReach)));
+            var outOfReach = InteractRefusal.OutOfReach;
+            Assert.That(InteractVerdict.Refused(outOfReach), Is.EqualTo(InteractVerdict.Refused(InteractRefusal.OutOfReach)));
             Assert.That(InteractVerdict.Refused(InteractRefusal.OutOfReach), Is.Not.EqualTo(InteractVerdict.Accepted));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => InteractVerdict.Refused(InteractRefusal.None));
         }

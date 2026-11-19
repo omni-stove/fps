@@ -330,7 +330,7 @@ namespace Shooter.Core.Tests
         // 床が動くたびに当たりを組み直すため、体が握る世界の中身だけを差し替える
         private sealed class SwappableWorld : IWorldCollision
         {
-            public IWorldCollision Inner { get; set; }
+            public BvhWorldCollision Inner { get; set; }
 
             public bool Raycast(Vector3 origin, Vector3 direction, float maxDistance, int layerMask, out WorldHit hit)
             {

@@ -8,6 +8,7 @@ namespace Shooter.Core.Tests
     public sealed class PlatformRouteTests
     {
         private const float _tolerance = 1e-4f;
+        private static readonly int[] _expectedCalls = { 1 };
 
         private static readonly Vector3[] _line = { Vector3.Zero, new Vector3(0f, 0f, 4f) };
         private static readonly Vector3[] _shaft = { Vector3.Zero, new Vector3(0f, 4f, 0f) };
@@ -210,7 +211,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(route.Position.Y, Is.EqualTo(1f).Within(_tolerance));
             Assert.That(route.To, Is.EqualTo(0));
-            Assert.That(route.Calls, Is.EqualTo(new[] { 1 }));
+            Assert.That(route.Calls, Is.EqualTo(_expectedCalls));
 
             route.Step(0.5f);
             Assert.That(route.Position.Y, Is.EqualTo(0f).Within(_tolerance));

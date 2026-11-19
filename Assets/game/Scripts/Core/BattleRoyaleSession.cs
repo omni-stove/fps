@@ -59,6 +59,9 @@ namespace Shooter.Core
 
         public bool UsesDowned => _downed != null;
 
+        // ダウンを別の Session が持つとき、その人がダウン中かを渡す。時間切れの立っている人数から引く
+        public Func<int, bool> ExternalDowned { get; set; }
+
         public bool IsLive => _mode.State == GameModeState.Playing;
 
         public int EntrantCount => _entrants.Count;
@@ -594,6 +597,26 @@ namespace Shooter.Core
             }
         }
 
+        // IsDowned / IsStanding に混ぜないのは、倒れきる処理が「立っている人」だけを対象にするため。時間切れの数え方だけ外のダウンを引く。
+        private int CountExternallyDowned(Side squad)
+        {
+            if (ExternalDowned == null)
+            {
+                return 0;
+            }
+
+            var count = 0;
+            foreach (var id in _mode.GetPlayerIds())
+            {
+                if (_mode.GetSide(id) == squad && !_mode.IsDown(id) && !IsDowned(id) && ExternalDowned(id))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
         // 立っている人数を上の桁、残っている人数を下の桁にするのは、1 回の比較で立っている人数を先に、同じなら残っている人数で比べるため。
         private Side? CaptureStandingAndPickLeader()
         {
@@ -608,7 +631,7 @@ namespace Shooter.Core
                     continue;
                 }
 
-                var count = ((long)CountStanding(squad) << 32) | (uint)CountRemaining(squad);
+                var count = ((long)(CountStanding(squad) - CountExternallyDowned(squad)) << 32) | (uint)CountRemaining(squad);
                 _finalCounts[squad] = count;
                 if (count > best)
                 {

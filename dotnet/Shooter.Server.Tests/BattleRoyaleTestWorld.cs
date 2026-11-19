@@ -51,9 +51,12 @@ namespace Shooter.Server.Tests
             return session == null ? DamageOutcome.Ignored : session.ApplyDamage(playerId, playerId, amount);
         }
 
-        public int SpawnCrate(Vector3 position, string tableId)
+        public List<float> CrateReaches { get; } = new List<float>();
+
+        public int SpawnCrate(Vector3 position, string tableId, float reach)
         {
             Crates.Add((position, tableId));
+            CrateReaches.Add(reach);
             return 1000 + Crates.Count;
         }
 

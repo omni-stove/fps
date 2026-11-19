@@ -55,6 +55,12 @@ namespace Shooter.Server
             var limit = spec.HasTimeLimit ? spec.TimeLimitSeconds : float.PositiveInfinity;
             _battleRoyale = new BattleRoyaleSession(spec.SquadCount, spec.SquadSize, limit, ActionRules.Default.WithDowned(Downed.Off), spec.Redeploy);
             _drops = new SupplyDropSchedule(spec.SupplyDrops);
+            // Session は試合ごとに替わりうるので、呼ばれたときに host から引く
+            _battleRoyale.ExternalDowned = id =>
+            {
+                var session = _host.Session;
+                return session != null && session.HasPlayer(id) && session.IsDowned(id);
+            };
         }
 
         public MatchObjective Objective => MatchObjective.BattleRoyale;
@@ -598,7 +604,7 @@ namespace Shooter.Server
                 }
 
                 _falling.RemoveAt(index);
-                var itemId = _world.SpawnCrate(crate.Landing, _spec.SupplyDrops.TableId);
+                var itemId = _world.SpawnCrate(crate.Landing, _spec.SupplyDrops.TableId, _spec.SupplyDrops.Reach);
                 _host.Log.WriteLine(SupplyDropLog.Landed(crate.Number, crate.Landing));
                 _host.Log.WriteLine(BattleRoyaleRulesLog.CrateLanded(crate.Number, itemId));
             }

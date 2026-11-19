@@ -44,9 +44,9 @@ namespace Shooter.Server
             return _combat.DamageOverTime(null, playerId, amount, string.Empty);
         }
 
-        public int SpawnCrate(Vector3 position, string tableId)
+        public int SpawnCrate(Vector3 position, string tableId, float reach)
         {
-            return _loot.SpawnCrate(position, tableId);
+            return _loot.SpawnCrate(position, tableId, reach);
         }
 
         public int? SpawnDeathBox(int playerId)

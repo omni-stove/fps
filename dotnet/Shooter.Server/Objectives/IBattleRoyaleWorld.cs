@@ -20,7 +20,7 @@ namespace Shooter.Server
         DamageOutcome HurtByZone(int playerId, int amount);
 
         // 返すのはスナップショットの物の Id
-        int SpawnCrate(Vector3 position, string tableId);
+        int SpawnCrate(Vector3 position, string tableId, float reach);
 
         // 体の無い人なら置かずに null
         int? SpawnDeathBox(int playerId);

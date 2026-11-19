@@ -9,8 +9,11 @@ namespace Shooter.Core.Tests
         private static readonly float[] _oneAndTwo = { 1f, 2f };
         private static readonly float[] _onlyOne = { 1f };
         private static readonly float[] _oneAndOneHalf = { 1f, 1.5f };
+        private static readonly float[] _defaultLadder = { 1f, 1.5f, 2f };
+        private static readonly float[] _oneAndOneQuarter = { 1f, 1.25f };
+        private static readonly float[] _fourSteps = { 0.8f, 1.3f, 1.7f, 1.9f };
 
-        private const string _handgunId ="b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
+        private const string _handgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
         private const string _knifeId = "5f0c2d8e-71a4-4b39-9e6d-3a8b1c4f2e07";
 
         private static NetMatchFile File(NetMatchSettings settings, MatchObjective objective = MatchObjective.None)
@@ -68,7 +71,7 @@ namespace Shooter.Core.Tests
             var payload = PayloadSpec.Default;
             Assert.That(payload.CartSpeed, Is.EqualTo(1.5f));
             Assert.That(payload.MinPushers, Is.EqualTo(1));
-            Assert.That(payload.PusherSpeedMultipliers, Is.EqualTo(new[] { 1f, 1.5f, 2f }));
+            Assert.That(payload.PusherSpeedMultipliers, Is.EqualTo(_defaultLadder));
             Assert.That(payload.RollbackDelaySeconds, Is.EqualTo(10f));
             Assert.That(payload.RollbackSpeed, Is.EqualTo(0.5f));
             Assert.That(payload.CheckpointBonusSeconds, Is.EqualTo(60f));
@@ -152,7 +155,7 @@ namespace Shooter.Core.Tests
                 killConfirmed: new KillConfirmedSpec(40, 360f, 2.5f, 25f, 2, 1.25f),
                 gunGame: new GunGameSpec(720f, 0.5f, new[] { _handgunId, _knifeId }, new[] { _knifeId }, false),
                 voteKick: new VoteKickSpec(true, 0.75f, 20f, 300f),
-                payload: new PayloadSpec(2.25f, 2, new[] { 1f, 1.25f }, 5f, 0f, 45f, 480f),
+                payload: new PayloadSpec(2.25f, 2, _oneAndOneQuarter,5f, 0f, 45f, 480f),
                 economy: new EconomySpec(1000, 9000, 250, 2500, 1200, 400, 2800));
 
             var read = NetMatchFile.Parse(NetMatchFile.Write(File(original, MatchObjective.GunGame)), "GunGame.json").Settings;
@@ -164,7 +167,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(read.Payload.CartSpeed, Is.EqualTo(2.25f));
             Assert.That(read.Payload.MinPushers, Is.EqualTo(2));
-            Assert.That(read.Payload.PusherSpeedMultipliers, Is.EqualTo(new[] { 1f, 1.25f }));
+            Assert.That(read.Payload.PusherSpeedMultipliers, Is.EqualTo(_oneAndOneQuarter));
             Assert.That(read.Payload.RollbackDelaySeconds, Is.EqualTo(5f));
             Assert.That(read.Payload.RollbackSpeed, Is.Zero);
             Assert.That(read.Payload.CheckpointBonusSeconds, Is.EqualTo(45f));
@@ -233,7 +236,7 @@ namespace Shooter.Core.Tests
                 weatherId: "clear",
                 gunGame: new GunGameSpec(tierWeaponIds: new[] { _handgunId }),
                 voteKick: new VoteKickSpec(true, 0.5f, 15f, 0f),
-                payload: new PayloadSpec(pusherSpeedMultipliers: new[] { 0.8f, 1.3f, 1.7f, 1.9f }),
+                payload: new PayloadSpec(pusherSpeedMultipliers: _fourSteps),
                 economy: new EconomySpec(startMoney: 0, lossStreakBonus: 0));
             var text = NetMatchFile.Write(File(settings));
 

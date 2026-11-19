@@ -45,7 +45,6 @@ namespace Shooter.Editor
             new Vector3(0f, 0f, 34f),
         };
 
-        // 曲がり角の 2 か所を中継点にする (RoutePoints の番号)。
         public static readonly IReadOnlyList<int> CheckpointPoints = new[] { 2, 4 };
 
         // 既定の遮蔽物は中央を塞ぐので、道筋から台車の範囲より離して置き直す。
@@ -101,7 +100,6 @@ namespace Shooter.Editor
             return new PayloadRoute(points, CheckpointPoints);
         }
 
-        // 台車が道筋のどこにいても bot が回る点。HardpointRunner.RouteAround を台車の範囲で、道筋に沿って PatrolCheckStep ごとに並べる。
         public static List<Vector3> PatrolPoints(int botCount)
         {
             if (botCount < 0)

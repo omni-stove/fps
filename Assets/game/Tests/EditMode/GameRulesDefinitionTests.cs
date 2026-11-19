@@ -85,6 +85,7 @@ namespace Shooter.Tests.EditMode
             definition.MaxWeapons = 2;
             definition.ReloadMode = ReloadMode.Manual;
             definition.ViewMode = ViewMode.ThirdPerson;
+            definition.AdsEyeView = AdsEyeView.Always;
             definition.Streaks = Streaks.Off;
             definition.TextChat = TextChat.Off;
             definition.Spectating = Spectating.Off;
@@ -142,6 +143,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(rules.MaxWeapons, Is.EqualTo(2));
             Assert.That(rules.ReloadMode, Is.EqualTo(ReloadMode.Manual));
             Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+            Assert.That(rules.AdsEyeView, Is.EqualTo(AdsEyeView.Always));
             Assert.That(rules.Streaks, Is.EqualTo(Streaks.Off));
             Assert.That(rules.TextChat, Is.EqualTo(TextChat.Off));
             Assert.That(rules.Spectating, Is.EqualTo(Spectating.Off));
@@ -184,6 +186,15 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(definition.IdleWarningSeconds, Is.EqualTo(GameRules.DefaultIdleWarningSeconds));
             Assert.That(definition.ToRules().IdleWarningSeconds, Is.EqualTo(15f));
+        }
+
+        [Test]
+        public void ANewDefinitionFollowsEachWeaponForTheAdsEyeView()
+        {
+            var definition = NewDefinition("FreshAdsEyeView");
+
+            Assert.That(definition.AdsEyeView, Is.EqualTo(AdsEyeView.PerWeapon));
+            Assert.That(definition.ToRules().AdsEyeView, Is.EqualTo(AdsEyeView.PerWeapon));
         }
 
         [Test]
@@ -278,7 +289,8 @@ namespace Shooter.Tests.EditMode
                 .WithTextChat(TextChat.Off)
                 .WithSpectating(Spectating.Off)
                 .WithRespawnAnchors(new[] { RespawnAnchor.Squad, RespawnAnchor.Beacon, RespawnAnchor.Base })
-                .WithIdleWarningSeconds(30f);
+                .WithIdleWarningSeconds(30f)
+                .WithAdsEyeView(AdsEyeView.Never);
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -333,6 +345,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("MaxWeapons")]
         [TestCase("ReloadMode")]
         [TestCase("ViewMode")]
+        [TestCase("AdsEyeView")]
         [TestCase("Streaks")]
         [TestCase("TextChat")]
         [TestCase("Spectating")]
@@ -428,6 +441,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons));
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode));
             Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode));
+            Assert.That(actual.AdsEyeView, Is.EqualTo(expected.AdsEyeView));
             Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks));
             Assert.That(actual.TextChat, Is.EqualTo(expected.TextChat));
             Assert.That(actual.Spectating, Is.EqualTo(expected.Spectating));
@@ -581,6 +595,9 @@ namespace Shooter.Tests.EditMode
                     break;
                 case "ViewMode":
                     definition.ViewMode = (ViewMode)99;
+                    break;
+                case "AdsEyeView":
+                    definition.AdsEyeView = (AdsEyeView)99;
                     break;
                 case "Streaks":
                     definition.Streaks = (Streaks)99;

@@ -276,7 +276,8 @@ namespace Shooter.Runtime
                 return ReasonNotLocalView;
             }
 
-            if (_rig.Mode != ViewMode.FirstPerson)
+            // 三人称でも目へ寄せている間は体を隠すので、一人称の銃まで消すと手元に何も描かれなくなる。
+            if (_rig.Mode != ViewMode.FirstPerson && !CurrentSightView().HidesBody)
             {
                 return ReasonThirdPerson;
             }

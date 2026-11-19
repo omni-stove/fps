@@ -84,6 +84,7 @@ namespace Shooter.Core.Tests
   ""maxWeapons"": 2,
   ""reloadMode"": ""Manual"",
   ""viewMode"": ""ThirdPerson"",
+  ""adsEyeView"": ""Always"",
   ""respawnAnchor"": [""Beacon"", ""Squad"", ""Base""]
 }";
             var expected = new GameRules(
@@ -108,7 +109,8 @@ namespace Shooter.Core.Tests
                 ReloadMode.Manual,
                 ViewMode.ThirdPerson,
                 respawnAnchor: _everyAnchor,
-                idleWarningSeconds: 30f);
+                idleWarningSeconds: 30f,
+                adsEyeView: AdsEyeView.Always);
 
             AssertSameRules(GameRulesJson.Parse(json, _source), expected);
         }
@@ -118,6 +120,30 @@ namespace Shooter.Core.Tests
         {
             Assert.That(GameRulesJson.Parse("{}", _source).ViewMode, Is.EqualTo(ViewMode.FirstPerson));
             Assert.That(GameRulesJson.Parse("{\"viewMode\": \"ThirdPerson\"}", _source).ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
+        }
+
+        [Test]
+        public void OmittedAdsEyeViewIsPerWeaponAndWrittenValuesAreRead()
+        {
+            Assert.That(GameRulesJson.Parse("{}", _source).AdsEyeView, Is.EqualTo(AdsEyeView.PerWeapon));
+            Assert.That(GameRulesJson.Parse("{\"adsEyeView\": \"Always\"}", _source).AdsEyeView, Is.EqualTo(AdsEyeView.Always));
+            Assert.That(GameRulesJson.Parse("{\"adsEyeView\": \"Never\"}", _source).AdsEyeView, Is.EqualTo(AdsEyeView.Never));
+            Assert.That(
+                GameRulesJson.Parse("{\"viewMode\": \"ThirdPerson\"}", _source, GameRules.Default.WithAdsEyeView(AdsEyeView.Always)).AdsEyeView,
+                Is.EqualTo(AdsEyeView.Always),
+                "omitted keeps the base");
+        }
+
+        [Test]
+        public void WriteThenParseKeepsAdsEyeView()
+        {
+            Assert.That(GameRulesJson.Write(GameRules.Default), Does.Contain("\"adsEyeView\": \"PerWeapon\""));
+
+            var rules = GameRules.Default.WithViewMode(ViewMode.ThirdPerson).WithAdsEyeView(AdsEyeView.Never);
+            var written = GameRulesJson.Write(rules);
+            Assert.That(written, Does.Contain("\"adsEyeView\": \"Never\""));
+
+            AssertSameRules(GameRulesJson.Parse(written, _source), rules);
         }
 
         [Test]
@@ -353,7 +379,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ItemNamesMatchTheRulesConstructors()
         {
-            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(27));
+            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(28));
             Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(31));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
@@ -707,6 +733,8 @@ namespace Shooter.Core.Tests
         [TestCase("{\"actions\": [1]}", "actions")]
         [TestCase("{\"deathBody\": null}", "deathBody")]
         [TestCase("{\"viewMode\": \"Overhead\"}", "viewMode")]
+        [TestCase("{\"adsEyeView\": \"Scope\"}", "adsEyeView")]
+        [TestCase("{\"adsEyeView\": 1}", "adsEyeView")]
         [TestCase("{\"actions\": null}", "actions")]
         public void WrongTypeIsRejectedWithItsName(string json, string item)
         {
@@ -789,6 +817,7 @@ namespace Shooter.Core.Tests
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons), "maxWeapons");
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode), "reloadMode");
             Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode), "viewMode");
+            Assert.That(actual.AdsEyeView, Is.EqualTo(expected.AdsEyeView), "adsEyeView");
             Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks), "streaks");
             Assert.That(actual.TextChat, Is.EqualTo(expected.TextChat), "textChat");
             Assert.That(actual.Spectating, Is.EqualTo(expected.Spectating), "spectating");

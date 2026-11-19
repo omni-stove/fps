@@ -141,5 +141,31 @@ namespace Shooter.Core.Tests
             Assert.That(SightView.None.ShowsReticle, Is.False);
             Assert.Throws<ArgumentOutOfRangeException>(() => SightView.Of(_scope, (ViewMode)99, 1f));
         }
+
+        [Test]
+        public void TheAdsEyeViewRuleOverridesTheSightOnlyInThirdPerson()
+        {
+            Assert.That(SightView.Of(_redDot, ViewMode.ThirdPerson, 1f, AdsEyeView.PerWeapon).EyeBlend, Is.Zero, "a red dot stays over the shoulder");
+            Assert.That(SightView.Of(_scope, ViewMode.ThirdPerson, 1f, AdsEyeView.PerWeapon).EyeBlend, Is.EqualTo(1f), "the scope asks for the eye");
+
+            var always = SightView.Of(_redDot, ViewMode.ThirdPerson, 0.5f, AdsEyeView.Always);
+            Assert.That(always.EyeBlend, Is.EqualTo(0.5f));
+            Assert.That(always.ThroughSight, Is.True);
+            Assert.That(always.HidesBody, Is.True);
+            Assert.That(always.AimedIn, Is.False, "not yet past aimedInProgress");
+            Assert.That(SightView.Of(_redDot, ViewMode.ThirdPerson, 1f, AdsEyeView.Always).ReticleId, Is.EqualTo("redDot"));
+
+            var never = SightView.Of(_scope, ViewMode.ThirdPerson, 1f, AdsEyeView.Never);
+            Assert.That(never.EyeBlend, Is.Zero);
+            Assert.That(never.ThroughSight, Is.False);
+            Assert.That(never.ScopeOverlay, Is.False, "the scope is not looked through over the shoulder");
+
+            Assert.That(SightView.Of(_scope, ViewMode.FirstPerson, 1f, AdsEyeView.Never), Is.EqualTo(SightView.Of(_scope, ViewMode.FirstPerson, 1f)), "first person always looks through the sight");
+            Assert.That(SightView.Of(_redDot, ViewMode.FirstPerson, 1f, AdsEyeView.Always).EyeBlend, Is.Zero, "the camera is already at the eye");
+            Assert.That(SightView.Of(_scope, ViewMode.ThirdPerson, 1f), Is.EqualTo(SightView.Of(_scope, ViewMode.ThirdPerson, 1f, AdsEyeView.PerWeapon)), "PerWeapon is the default");
+
+            var e = Assert.Throws<ArgumentOutOfRangeException>(() => SightView.Of(_scope, ViewMode.ThirdPerson, 1f, (AdsEyeView)99));
+            Assert.That(e.ParamName, Is.EqualTo("eyeViewRule"));
+        }
     }
 }

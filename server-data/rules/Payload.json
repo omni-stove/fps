@@ -54,6 +54,7 @@
     "maxWeapons": 2,
     "reloadMode": "Auto",
     "viewMode": "FirstPerson",
+    "adsEyeView": "PerWeapon",
     "playerMaxHealth": 100,
     "zoneDamage": {
       "head": 2,

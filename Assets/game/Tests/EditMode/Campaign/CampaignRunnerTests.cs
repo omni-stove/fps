@@ -717,7 +717,7 @@ namespace Shooter.Tests.EditMode
             var rig = scene.Player.gameObject.AddComponent<ViewRig>();
             scene.Campaign.RulesDefinition = NewRules("CampaignNormal", 3f, 20f, false, 1.5f);
             scene.Campaign.LaunchArgs = Array.Empty<string>();
-            _definition.RulesOverride = "{\"viewMode\": \"ThirdPerson\", \"regenPerSecond\": 5}";
+            _definition.RulesOverride = "{\"viewMode\": \"ThirdPerson\", \"adsEyeView\": \"Always\", \"regenPerSecond\": 5}";
 
             ExpectCampaign(new Regex(@"^\[Campaign\] rules=CampaignNormal difficulty=\(none\) regen=20/s "));
             ExpectCampaign($"mission={MissionName} rules override view=ThirdPerson");
@@ -730,6 +730,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(scene.Weapon.Loadout.Items[0].ReserveAmmo, Is.EqualTo(135), "90 x 1.5");
             Assert.That(scene.Player.GetComponent<HealthRegen>().Rules, Is.SameAs(scene.Campaign.Rules));
             Assert.That(rig.Mode, Is.EqualTo(ViewMode.ThirdPerson));
+            Assert.That(rig.AdsEyeView, Is.EqualTo(AdsEyeView.Always));
         }
 
         [Test]

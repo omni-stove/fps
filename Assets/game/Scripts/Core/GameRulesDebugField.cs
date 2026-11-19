@@ -64,5 +64,7 @@ namespace Shooter.Core
         HudDensity,
 
         ViewMode,
+
+        AdsEyeView,
     }
 }

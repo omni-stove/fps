@@ -133,6 +133,7 @@ namespace Shooter.Runtime
             rig.ThirdPersonOffset = tuning.ThirdPersonOffset;
             rig.MinBoomLength = tuning.MinBoomLength;
             rig.Mode = rules.ViewMode;
+            rig.AdsEyeView = rules.AdsEyeView;
             if (!rig.IsInitialized)
             {
                 rig.Initialize(eye, camera);

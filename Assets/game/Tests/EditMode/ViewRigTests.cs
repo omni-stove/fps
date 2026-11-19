@@ -182,6 +182,7 @@ namespace Shooter.Tests.EditMode
         {
             Assert.That(_rig.Mode, Is.EqualTo(ViewMode.FirstPerson));
             Assert.That(_rig.ThirdPersonOffset, Is.EqualTo(ViewRig.DefaultThirdPersonOffset));
+            Assert.That(_rig.AdsEyeView, Is.EqualTo(AdsEyeView.PerWeapon), "each weapon decides until the rules say otherwise");
         }
 
         [Test]

@@ -10,6 +10,8 @@ namespace Shooter.Runtime
 
         public Func<ViewMode> ViewModeSource { get; set; }
 
+        public Func<AdsEyeView> AdsEyeViewSource { get; set; }
+
         public SightSpec Sight => WeaponSource?.Invoke()?.Aim.Sight ?? SightSpec.Default;
 
         public SightView SightView { get; private set; }
@@ -30,9 +32,24 @@ namespace Shooter.Runtime
             return _viewRig != null ? _viewRig.Mode : ViewMode.FirstPerson;
         }
 
+        private AdsEyeView CurrentAdsEyeView()
+        {
+            if (AdsEyeViewSource != null)
+            {
+                return AdsEyeViewSource();
+            }
+
+            if (_viewRig == null)
+            {
+                _viewRig = GetComponent<ViewRig>();
+            }
+
+            return _viewRig != null ? _viewRig.AdsEyeView : AdsEyeView.PerWeapon;
+        }
+
         private void StepSight()
         {
-            var next = Shooter.Core.SightView.Of(Sight, CurrentViewMode(), Progress);
+            var next = Shooter.Core.SightView.Of(Sight, CurrentViewMode(), Progress, CurrentAdsEyeView());
             var previous = SightView;
             SightView = next;
             if (next.AimedIn != previous.AimedIn

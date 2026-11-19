@@ -310,6 +310,29 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AThirdPersonEyeViewDrawsTheModelUntilTheCameraIsBackAtTheShoulder()
+        {
+            _rig.Mode = ViewMode.ThirdPerson;
+            var view = SightView.Of(new SightSpec(), ViewMode.ThirdPerson, 0.5f, AdsEyeView.Always);
+            _presenter.SightSource = () => view;
+            _presenter.Refresh();
+
+            Assert.That(_presenter.Instance, Is.Not.Null, "the body is hidden, so the gun is drawn instead");
+            Assert.That(_presenter.Instance.GetComponent<Renderer>().enabled, Is.True, "an iron sight keeps the gun on screen");
+
+            view = SightView.Of(new SightSpec(), ViewMode.ThirdPerson, 0f, AdsEyeView.Always);
+            _presenter.Refresh();
+
+            Assert.That(_presenter.Instance, Is.Null);
+            Assert.That(_logs[_logs.Count - 1], Is.EqualTo(ViewmodelPresenter.FormatRemoveLog(RifleId, ViewmodelPresenter.ReasonThirdPerson)));
+
+            view = SightView.Of(new SightSpec(), ViewMode.ThirdPerson, 1f, AdsEyeView.PerWeapon);
+            _presenter.Refresh();
+
+            Assert.That(_presenter.Instance, Is.Null, "over the shoulder the body holds the gun");
+        }
+
+        [Test]
         public void SomeoneElsesViewShowsNothing()
         {
             _rig.ApplyBodyVisibility(false);

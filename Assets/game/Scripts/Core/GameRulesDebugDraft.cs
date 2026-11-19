@@ -86,6 +86,7 @@ namespace Shooter.Core
                 case GameRulesDebugField.FallDamage: return (int)rules.FallDamage;
                 case GameRulesDebugField.HudDensity: return (int)rules.HudDensity;
                 case GameRulesDebugField.ViewMode: return (int)rules.ViewMode;
+                case GameRulesDebugField.AdsEyeView: return (int)rules.AdsEyeView;
                 default: throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a defined GameRulesDebugField");
             }
         }
@@ -160,6 +161,7 @@ namespace Shooter.Core
                 .WithFallDamage((FallDamage)Get(GameRulesDebugField.FallDamage))
                 .WithHudDensity((HudDensity)Get(GameRulesDebugField.HudDensity))
                 .WithViewMode((ViewMode)Get(GameRulesDebugField.ViewMode))
+                .WithAdsEyeView((AdsEyeView)Get(GameRulesDebugField.AdsEyeView))
                 .WithActions(actions);
         }
 
@@ -253,6 +255,7 @@ namespace Shooter.Core
                 case GameRulesDebugField.FallDamage: return typeof(FallDamage);
                 case GameRulesDebugField.HudDensity: return typeof(HudDensity);
                 case GameRulesDebugField.ViewMode: return typeof(ViewMode);
+                case GameRulesDebugField.AdsEyeView: return typeof(AdsEyeView);
                 default: throw new ArgumentOutOfRangeException(nameof(field), field, "field is not a defined GameRulesDebugField");
             }
         }

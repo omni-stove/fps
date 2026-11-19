@@ -187,6 +187,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("プレイヤーの視点。一人称か三人称 (肩越し)")]
         private ViewMode _viewMode = ViewMode.FirstPerson;
 
+        [SerializeField, Tooltip("三人称で覗いたときにカメラを目へ寄せるか。PerWeapon なら武器の sight.eyeViewInThirdPerson に従い、Always ならどの武器でも寄せ、Never ならどの武器でも寄せない。一人称では効かない")]
+        private AdsEyeView _adsEyeView = AdsEyeView.PerWeapon;
+
         [Header("ストリーク")]
         [SerializeField, Tooltip("倒れずに倒した数で UAV・空爆を得るストリークをプレイヤーに付けるか")]
         private Streaks _streaks = Streaks.On;
@@ -535,6 +538,12 @@ namespace Shooter.Runtime
             set => _viewMode = value;
         }
 
+        public AdsEyeView AdsEyeView
+        {
+            get => _adsEyeView;
+            set => _adsEyeView = value;
+        }
+
         public Streaks Streaks
         {
             get => _streaks;
@@ -620,7 +629,8 @@ namespace Shooter.Runtime
                     _spectating,
                     // 空の配列を null と同じく既定へ戻さず断るのは、インスペクターで消し切ったことに気づけるようにするため。
                     _respawnAnchors ?? Array.Empty<RespawnAnchor>(),
-                    _idleWarningSeconds);
+                    _idleWarningSeconds,
+                    _adsEyeView);
             }
             catch (ArgumentException e)
             {
@@ -672,6 +682,7 @@ namespace Shooter.Runtime
             _maxWeapons = rules.MaxWeapons;
             _reloadMode = rules.ReloadMode;
             _viewMode = rules.ViewMode;
+            _adsEyeView = rules.AdsEyeView;
             _playerMaxHealth = rules.PlayerMaxHealth;
             _headDamageMultiplier = rules.ZoneDamage.Head;
             _bodyDamageMultiplier = rules.ZoneDamage.Body;

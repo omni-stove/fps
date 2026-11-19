@@ -190,6 +190,50 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheAircraftWaitsAtTheStartOfAClearRunway()
+        {
+            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules);
+            Physics.SyncTransforms();
+
+            var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
+            Assert.That(aircraft.VehicleId, Is.EqualTo(AircraftFixtureBuilder.VehicleId));
+            Assert.That(Vector3.Distance(aircraft.transform.position, VehicleRangeSceneBuilder.AircraftOrigin), Is.LessThan(Epsilon));
+            Assert.That(Vector3.Angle(aircraft.transform.forward, Vector3.forward), Is.LessThan(0.1f));
+            Assert.That(aircraft.Seats.Select(s => s.Role), Is.EqualTo(new[] { VehicleSeatRole.Driver }));
+            Assert.That(aircraft.Spec.ChaseDistance, Is.EqualTo(AircraftFixtureBuilder.ChaseDistance));
+
+            var motor = aircraft.GetComponent<SimpleAircraftMotor>();
+            var scheme = aircraft.GetComponent<AircraftControlScheme>();
+            Assert.That(motor, Is.Not.Null);
+            Assert.That(motor.Body.mass, Is.EqualTo(AircraftSpec.DefaultMass));
+            Assert.That(aircraft.GetComponent<VehicleMotorLink>(), Is.Not.Null);
+            Assert.That(aircraft.GetComponent<VehicleImpactDamage>(), Is.Not.Null);
+            Assert.That(VehicleControlSchemes.For(aircraft.gameObject), Is.SameAs(scheme));
+            Assert.That(aircraft.GetComponentsInChildren<WheelCollider>().Length, Is.EqualTo(3));
+
+            var fuselageBottom = AircraftFixtureBuilder.FuselageCenter.y - (AircraftFixtureBuilder.FuselageSize.y / 2f);
+            Assert.That(fuselageBottom, Is.GreaterThan(AircraftFixtureBuilder.NoseWheel.y - AircraftFixtureBuilder.WheelRadius), "the fuselage rides above the wheels");
+
+            Assert.That(VehicleRangeSceneBuilder.RunwayLength, Is.EqualTo(125f).Within(Epsilon));
+            var halfSpan = (AircraftFixtureBuilder.WingSize.x / 2f) + 1f;
+            var runwayCenter = new Vector3(
+                VehicleRangeSceneBuilder.AircraftOrigin.x,
+                3f,
+                (VehicleRangeSceneBuilder.AircraftOrigin.z + VehicleRangeSceneBuilder.FloorHalfExtent) / 2f);
+            var runwayHalf = new Vector3(halfSpan, 2.9f, VehicleRangeSceneBuilder.RunwayLength / 2f);
+            foreach (var hit in Physics.OverlapBox(runwayCenter, runwayHalf))
+            {
+                Assert.That(hit.transform.IsChildOf(aircraft.transform), Is.True, $"'{hit.name}' stands on the runway");
+            }
+
+            Assert.That(
+                aircraft.FindBoardableSeat(aircraft.Seats[0].EnterPoints[0].position, out var distance),
+                Is.EqualTo(0),
+                "Interact at the enter point takes the pilot seat");
+            Assert.That(distance, Is.LessThanOrEqualTo(VehicleSpec.DefaultEnterRange));
+        }
+
+        [Test]
         public void TheEnemyStandsBeyondEarshotOfWhatTheSmokeFires()
         {
             VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules);

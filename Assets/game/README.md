@@ -245,8 +245,8 @@ public sealed class HealthOnlyHud : MonoBehaviour
 
 ## 乗り物を足す
 
-キットは乗り降り・座席・耐久・座席の武器・固定銃座を持ち、動き方は `IVehicleMotor` で差し込む。同梱の動き方は車 (`SimpleCarMotor`) だけ。
-組み方の例はサンプルの `CarFixtureBuilder`・`MountedGunFixtureBuilder` で、試走場は **Shooter > Build Vehicle Range Scene**、通しの確認は `VehicleSmokeRun` (smoke のスイートに入っている)。
+キットは乗り降り・座席・耐久・座席の武器・固定銃座を持ち、動き方は `IVehicleMotor` で差し込む。同梱の動き方は車 (`SimpleCarMotor`) と飛行機 (`SimpleAircraftMotor`)。
+組み方の例はサンプルの `CarFixtureBuilder`・`MountedGunFixtureBuilder`・`AircraftFixtureBuilder` で、試走場は **Shooter > Build Vehicle Range Scene**、通しの確認は `VehicleSmokeRun` (smoke のスイートに入っている)。
 
 ### 座席を並べる
 
@@ -259,12 +259,34 @@ public sealed class HealthOnlyHud : MonoBehaviour
 
 ### 動き方を差し込む (`IVehicleMotor`)
 
-1. `IVehicleMotor` を実装した MonoBehaviour を `Vehicle` と同じ GameObject に付け、`VehicleMotorLink` も付ける。`VehicleMotorLink` が運転席の入力を `VehicleMotorInput` (`Throttle`・`Steer`・`Brake`・`Vertical`) にして `SetInput` に渡す。
+1. `IVehicleMotor` を実装した MonoBehaviour を `Vehicle` と同じ GameObject に付け、`VehicleMotorLink` も付ける。運転席の入力は、当て方 (`IVehicleControlScheme`) を通って `VehicleMotorInput` になり、`SetInput` に届く。
+   - `VehicleMotorInput` は -1 から 1 の軸を 8 本 (`AxisCount`) 持つだけで、軸に意味は無い。どの番号の軸を何に使うかはモーターが決め、番号を定数で出す (`CarDrive.ThrottleAxis` など)。
 2. `SetInput` では入力を覚えるだけにし、力は `FixedUpdate` で掛ける。座席の入力は `Update` で届くので、その場で掛けると描画の頻度で物理が変わる。
 3. 運転席が空くと `VehicleMotorInput.Idle` が届くので、そのときはアクセルなどを放す。
 4. 調整値は自分の Spec や ScriptableObject に持たせ、`Configure` などで入れる (`SimpleCarMotor` と `CarSpec` が例)。
+5. 最高速度のある動き方は `IVehicleTopSpeed` も実装する。マップの書き出し (`MapVehicleExporter`) が、サーバーの速すぎ判定の上限をここから決める。無ければ既定の上限 (`VehicleDriveSpec.DefaultMaxSpeed`) になる。
 
-入力の対応: `Throttle` は移動の前後、`Steer` は左右、`Brake` はダッシュ、`Vertical` はジャンプ (+1) としゃがみ (-1)。空を飛ぶものは `Vertical` を上昇・下降に使う。
+### 操作の当て方を決める (`IVehicleControlScheme`)
+
+座席の入力 (`VehicleSeatInput`: 移動・上下・ダッシュ・撃つ・構える・視線の向き) をどの軸に当てるかは、当て方の部品で決める。オフラインの座席もオンラインの運転も同じ当て方を通る。
+
+- 何も付けなければ車の当て方 (`CarControlScheme`) になる。移動の前後が `ThrottleAxis`、左右が `SteerAxis`、ダッシュが `BrakeAxis`、ジャンプ (+1)・しゃがみ (-1) が `RightAxis` (横転を起こす)。
+- 変えるなら、`IVehicleControlScheme` を実装した MonoBehaviour を `Vehicle` と同じ GameObject に付ける。コードから入れるなら `VehicleMotorLink.ControlScheme` に入れる (付けた部品より勝つ)。どちらも次の入力から効く。
+- 当て方の中では、座席の入力を使っても、自分の `InputAction` を読んでもよい。例: 飛行機なら視線の向きからピッチとロールを出し、移動の前後を推力に当てる。
+- 使われる当て方は `VehicleControlSchemes.For(乗り物の GameObject)` で引ける。
+
+### 飛行機 (`SimpleAircraftMotor`)
+
+1. `Rigidbody` と当たり判定を持つ機体の根元に、`Vehicle`・`VehicleMotorLink`・`SimpleAircraftMotor`・`AircraftControlScheme` を付ける。
+   - 試走場では西の端 (`VehicleRangeSceneBuilder.AircraftOrigin`) に北向きで置いてあり、smoke の通しで離陸して 15m 昇るまでを確かめる。
+2. 飛び方の値は `SimpleAircraftMotor` の欄か `Configure(AircraftSpec)` で入れる。押す力は加速 (m/s²) で持つので、質量を変えても飛び方は変わらない。
+   - `MaxSpeed` は水平に全開で飛んだときに落ち着く速さ。降下では重さの分だけ速くなり、`TopSpeed` はその速さを返す。
+   - `LiftSpeed` より遅いと翼が重さを支えきれずに沈み、`ControlSpeed` より遅いと舵が効きにくくなる (止まっていても `MinControl` だけは効く)。
+3. 軸は `AircraftFlight.ThrottleAxis` (0、負はエアブレーキ)・`PitchAxis` (1、+ で機首上げ)・`RollAxis` (2、+ で右へ傾く)・`YawAxis` (3、+ で右へ向く)。
+4. `AircraftControlScheme` は、視線の方へ機首を向け、移動の前後でスロットルを開け閉めし (閉じ切ってさらに下げるとエアブレーキ)、左右でロールを足す。強さは欄か `Configure(AircraftAimSpec)` で入れる。
+   - 乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれは、そのまま曲がり続ける速さになる。上下は視線の高さへ機首が合う。
+5. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。
+
 プレイヤーの座席の入力を AI・チュートリアル・自動の確認から書き換えるときは、`PlayerVehicleRider.SeatInputFilter` に `IVehicleSeatInputFilter` を入れる。
 
 ## 文言・言語 (サンプルの決まり)

@@ -22,14 +22,16 @@ namespace Shooter.Tests.EditMode
             "[Vehicle] 'Car' exploded at=(-14.0, 0.9, -24.0) riders=0 damaged=0 killed=0",
             "[Vehicle] 'Car' wrecked riders=0",
             "[Vehicle] 'MountedGun' leave rider=Player seat=0 reason=Request exit=0",
+            "[Vehicle] 'Aircraft' board rider=Player seat=0 role=Driver",
+            "[VehicleSmokeRun] flew 'Aircraft' altitude=15.3 speed=33.1",
         };
 
         [Test]
-        public void ExpectsBoardDriveShootLeaveAndDestroyInThatOrder()
+        public void ExpectsBoardDriveShootLeaveDestroyAndFlyInThatOrder()
         {
             var expected = VehicleSmokeRun.ExpectedLogs();
 
-            Assert.That(expected.Count, Is.EqualTo(9));
+            Assert.That(expected.Count, Is.EqualTo(11));
             Assert.That(expected[0].Prefix, Is.EqualTo("[Vehicle] 'GunCar' board rider="));
             Assert.That(expected[0].Fragment, Is.EqualTo(" seat=0 role=Driver"));
             Assert.That(expected[1].Prefix, Is.EqualTo("[VehicleSmokeRun] drove 'GunCar' "));
@@ -41,12 +43,15 @@ namespace Shooter.Tests.EditMode
             Assert.That(expected[6].Prefix, Is.EqualTo("[Vehicle] 'Car' exploded at="));
             Assert.That(expected[7].Prefix, Is.EqualTo("[Vehicle] 'Car' wrecked "));
             Assert.That(expected[8].Prefix, Is.EqualTo("[Vehicle] 'MountedGun' leave rider="));
+            Assert.That(expected[9].Prefix, Is.EqualTo("[Vehicle] 'Aircraft' board rider="));
+            Assert.That(expected[9].Fragment, Is.EqualTo(" seat=0 role=Driver"));
+            Assert.That(expected[10].Prefix, Is.EqualTo("[VehicleSmokeRun] flew 'Aircraft' "));
         }
 
         [Test]
         public void ALogOfTheWholeRunMatchesEveryExpectation()
         {
-            Assert.That(VehicleSmokeRun.CountInOrder(_passingRun, VehicleSmokeRun.ExpectedLogs()), Is.EqualTo(9));
+            Assert.That(VehicleSmokeRun.CountInOrder(_passingRun, VehicleSmokeRun.ExpectedLogs()), Is.EqualTo(11));
         }
 
         [Test]
@@ -71,6 +76,21 @@ namespace Shooter.Tests.EditMode
             Assert.That(VehicleSmokeRun.CountInOrder(Array.Empty<string>(), expected), Is.Zero);
             Assert.Throws<ArgumentNullException>(() => VehicleSmokeRun.CountInOrder(null, expected));
             Assert.Throws<ArgumentNullException>(() => VehicleSmokeRun.CountInOrder(_passingRun, null));
+        }
+
+        [Test]
+        public void AFlightThatNeverClimbsStopsTheCountAtBoarding()
+        {
+            var grounded = _passingRun.Take(_passingRun.Length - 1).ToArray();
+
+            Assert.That(VehicleSmokeRun.CountInOrder(grounded, VehicleSmokeRun.ExpectedLogs()), Is.EqualTo(10));
+        }
+
+        [Test]
+        public void TheFlightLogCarriesTheAltitudeAndSpeed()
+        {
+            Assert.That(VehicleSmokeRun.FlewLog("Aircraft", 15.26f, 33.14f), Is.EqualTo("[VehicleSmokeRun] flew 'Aircraft' altitude=15.3 speed=33.1"));
+            Assert.That(VehicleSmokeRun.FlewLog("Aircraft", 15.26f, 33.14f), Does.StartWith(VehicleSmokeRun.FlewLogPrefix("Aircraft")));
         }
 
         [Test]

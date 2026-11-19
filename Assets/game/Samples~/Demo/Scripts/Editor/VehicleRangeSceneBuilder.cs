@@ -34,6 +34,7 @@ namespace Shooter.Editor
         public const string GunCarName = "GunCar";
         public const string CarName = CarFixtureBuilder.DefaultName;
         public const string MountedGunName = MountedGunFixtureBuilder.DefaultName;
+        public const string AircraftName = AircraftFixtureBuilder.DefaultName;
         public const string EnemiesName = "Enemies";
         public const string EnemyName = "Enemy";
         public const string EnemyId = "VehicleRangeEnemy";
@@ -82,6 +83,12 @@ namespace Shooter.Editor
         public static readonly Quaternion MountedGunRotation = Quaternion.LookRotation(Vector3.back, Vector3.up);
         public static readonly Vector3 CarOrigin = new Vector3(-14f, 0f, -24f);
         public static readonly Quaternion CarRotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
+
+        // 銃座・車・柱から離れた西の端に、床の北の端まで 120m ほどの滑走路を取る。全開で離陸の速さに届くのは 80m ほど先。
+        public static readonly Vector3 AircraftOrigin = new Vector3(-30f, 0f, -55f);
+        public static readonly Quaternion AircraftRotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+
+        public static float RunwayLength => FloorHalfExtent - AircraftOrigin.z;
 
         public static readonly Vector3 EnemyGround = new Vector3(40f, 0f, 55f);
         public static readonly EnemyBody EnemyBodySize = new EnemyBody(2f, 0.5f, 3.5f, Damageable.DefaultMaxHealth);
@@ -228,6 +235,7 @@ namespace Shooter.Editor
                 created.Add(CarFixtureBuilder.Create(scene, null, GunCarName, GunCarOrigin, GunCarRotation, playerWeapons[0]).gameObject);
                 created.Add(CarFixtureBuilder.Create(scene, null, CarName, CarOrigin, CarRotation).gameObject);
                 created.Add(MountedGunFixtureBuilder.Create(scene, null, MountedGunName, MountedGunOrigin, MountedGunRotation, gunWeapon).gameObject);
+                created.Add(AircraftFixtureBuilder.Create(scene, null, AircraftName, AircraftOrigin, AircraftRotation).gameObject);
 
                 var targets = new GameObject(TargetsName);
                 created.Add(targets);

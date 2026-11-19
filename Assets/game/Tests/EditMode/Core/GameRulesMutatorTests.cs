@@ -6,8 +6,20 @@ namespace Shooter.Core.Tests
 {
     public sealed class GameRulesMutatorTests
     {
-        private const string LowHealthJson = "{ \"playerMaxHealth\": 50 }";
-        private const string HeadshotsOnlyJson = "{ \"zoneDamage\": { \"body\": 0, \"limb\": 0 } }";
+        private const string _lowHealthJson = "{ \"playerMaxHealth\": 50 }";
+        private const string _headshotsOnlyJson = "{ \"zoneDamage\": { \"body\": 0, \"limb\": 0 } }";
+
+        private static readonly string[] _expectedIds = { "low-health", "headshots-only", "tags" };
+        private static readonly string[] _expectedChanges =
+        {
+            "InfiniteReserve: Off -> On",
+            "Grenade: Off -> On",
+            "GrenadeCount: 0 -> 2",
+            "playerMaxHealth: 100 -> 50",
+            "zoneDamage.body: 1 -> 0",
+            "zoneDamage.limb: 0.75 -> 0",
+        };
+        private static readonly string[] _expectedAnchorChanges = { "regenPerSecond: 0 -> 2.5", "respawnAnchor: [Base] -> [Squad, Base]" };
 
         // 書いていない欄が元のままかを見分けられるよう、既定と違う値を持たせた土台。
         private static readonly GameRules _base = GameRules.Default
@@ -19,7 +31,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ApplyOverwritesOnlyTheWrittenItems()
         {
-            var mutator = new GameRulesMutator("low-health", LowHealthJson);
+            var mutator = new GameRulesMutator("low-health", _lowHealthJson);
 
             var rules = mutator.Apply(_base);
 
@@ -36,7 +48,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ANestedItemKeepsItsUnwrittenSiblings()
         {
-            var headshots = new GameRulesMutator("headshots-only", HeadshotsOnlyJson).Apply(_base);
+            var headshots = new GameRulesMutator("headshots-only", _headshotsOnlyJson).Apply(_base);
             Assert.That(headshots.ZoneDamage.Head, Is.EqualTo(DamageCalculator.HeadMultiplier));
             Assert.That(headshots.ZoneDamage.Body, Is.EqualTo(0d));
             Assert.That(headshots.ZoneDamage.Limb, Is.EqualTo(0d));
@@ -137,8 +149,8 @@ namespace Shooter.Core.Tests
         [Test]
         public void FindLooksUpByIdExactly()
         {
-            var low = new GameRulesMutator("low-health", LowHealthJson);
-            var headshots = new GameRulesMutator("headshots-only", HeadshotsOnlyJson);
+            var low = new GameRulesMutator("low-health", _lowHealthJson);
+            var headshots = new GameRulesMutator("headshots-only", _headshotsOnlyJson);
             var all = new[] { low, headshots };
 
             Assert.That(GameRulesMutator.Find(all, "headshots-only"), Is.SameAs(headshots));
@@ -158,7 +170,7 @@ namespace Shooter.Core.Tests
 
             var mutators = MutatorJson.Parse(text, "mutators.json");
 
-            Assert.That(mutators.Select(m => m.Id), Is.EqualTo(new[] { "low-health", "headshots-only", "tags" }));
+            Assert.That(mutators.Select(m => m.Id), Is.EqualTo(_expectedIds));
             Assert.That(mutators[0].SourceName, Is.EqualTo("mutators.json mutator 'low-health'"));
             Assert.That(mutators[1].RulesJson, Is.EqualTo("{\"zoneDamage\": {\"body\": 0, \"limb\": 0.0}}"));
             Assert.That(mutators[2].RulesJson, Is.EqualTo("{\"respawnAnchor\": [\"Squad\", \"Base\"], \"infiniteReserve\": true}"));
@@ -222,28 +234,20 @@ namespace Shooter.Core.Tests
         {
             var after = GameRulesMutator.ApplyAll(GameRules.Default, new[]
             {
-                new GameRulesMutator("low-health", LowHealthJson),
-                new GameRulesMutator("headshots-only", HeadshotsOnlyJson),
+                new GameRulesMutator("low-health", _lowHealthJson),
+                new GameRulesMutator("headshots-only", _headshotsOnlyJson),
                 new GameRulesMutator("grenades", "{ \"infiniteReserve\": true, \"actions\": { \"grenade\": \"On\", \"grenadeCount\": 2 } }"),
             });
 
             var changes = MutatorLog.Changes(GameRules.Default, after);
 
-            Assert.That(changes, Is.EqualTo(new[]
-            {
-                "InfiniteReserve: Off -> On",
-                "Grenade: Off -> On",
-                "GrenadeCount: 0 -> 2",
-                "playerMaxHealth: 100 -> 50",
-                "zoneDamage.body: 1 -> 0",
-                "zoneDamage.limb: 0.75 -> 0",
-            }));
+            Assert.That(changes, Is.EqualTo(_expectedChanges));
         }
 
         [Test]
         public void TheAppliedLogNamesTheMutatorAndSaysWhenNothingChanged()
         {
-            var low = new GameRulesMutator("low-health", LowHealthJson);
+            var low = new GameRulesMutator("low-health", _lowHealthJson);
 
             Assert.That(
                 MutatorLog.Applied(low, GameRules.Default, low.Apply(GameRules.Default)),
@@ -260,7 +264,7 @@ namespace Shooter.Core.Tests
 
             var changes = MutatorLog.Changes(GameRules.Default, after);
 
-            Assert.That(changes, Is.EqualTo(new[] { "regenPerSecond: 0 -> 2.5", "respawnAnchor: [Base] -> [Squad, Base]" }));
+            Assert.That(changes, Is.EqualTo(_expectedAnchorChanges));
         }
 
         [Test]
@@ -271,7 +275,7 @@ namespace Shooter.Core.Tests
 
             Assert.That(MutatorLog.Skipped(broken, reason), Is.EqualTo("[Mutator] skipped id=broken: " + reason.Message));
             Assert.That(
-                MutatorLog.UnknownId("missing", new[] { broken, new GameRulesMutator("low-health", LowHealthJson) }),
+                MutatorLog.UnknownId("missing", new[] { broken, new GameRulesMutator("low-health", _lowHealthJson) }),
                 Is.EqualTo("[Mutator] skipped id=missing: no mutator has this id; known ids are broken, low-health"));
             Assert.That(
                 MutatorLog.UnknownId("missing", Array.Empty<GameRulesMutator>()),

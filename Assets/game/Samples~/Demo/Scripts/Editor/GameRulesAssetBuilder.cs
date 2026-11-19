@@ -681,7 +681,8 @@ namespace Shooter.Editor
                 source.MaxWeapons,
                 source.ReloadMode,
                 source.ViewMode,
-                idleWarningSeconds: source.IdleWarningSeconds);
+                idleWarningSeconds: source.IdleWarningSeconds,
+                adsEyeView: source.AdsEyeView);
         }
     }
 }

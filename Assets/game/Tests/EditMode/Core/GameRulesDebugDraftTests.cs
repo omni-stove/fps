@@ -16,6 +16,8 @@ namespace Shooter.Core.Tests
         private static readonly string[] _downedOptions = { "Off", "Revive" };
         private static readonly string[] _viewModeOptions = { "FirstPerson", "ThirdPerson" };
         private static readonly string[] _viewModeToThirdPerson = { "ViewMode: FirstPerson -> ThirdPerson" };
+        private static readonly string[] _adsEyeViewOptions = { "PerWeapon", "Always", "Never" };
+        private static readonly string[] _adsEyeViewToAlways = { "AdsEyeView: PerWeapon -> Always" };
 
         private static readonly string[] _expectedChanges =
         {
@@ -54,7 +56,7 @@ namespace Shooter.Core.Tests
 #pragma warning restore CA2263
 
             Assert.That(GameRulesDebugDraft.Fields, Is.EqualTo(defined));
-            Assert.That(defined.Length, Is.EqualTo(31));
+            Assert.That(defined.Length, Is.EqualTo(32));
         }
 
         [Test]
@@ -118,6 +120,23 @@ namespace Shooter.Core.Tests
 
             Assert.That(built.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
             Assert.That(GameRulesDebugDraft.Changes(GameRules.Default, built), Is.EqualTo(_viewModeToThirdPerson));
+        }
+
+        [Test]
+        public void AdsEyeViewIsADropdownThatComesAfterTheView()
+        {
+            var draft = new GameRulesDebugDraft(GameRules.Default);
+            Assert.That(draft.Get(GameRulesDebugField.AdsEyeView), Is.EqualTo((int)AdsEyeView.PerWeapon));
+            Assert.That(GameRulesDebugDraft.Options(GameRulesDebugField.AdsEyeView), Is.EqualTo(_adsEyeViewOptions));
+            Assert.That(GameRulesDebugDraft.IsToggle(GameRulesDebugField.AdsEyeView), Is.False);
+            Assert.That((int)GameRulesDebugField.AdsEyeView, Is.EqualTo((int)GameRulesDebugField.ViewMode + 1));
+
+            draft.Set(GameRulesDebugField.AdsEyeView, (int)AdsEyeView.Always);
+            var built = draft.Build();
+
+            Assert.That(built.AdsEyeView, Is.EqualTo(AdsEyeView.Always));
+            Assert.That(built.ViewMode, Is.EqualTo(ViewMode.FirstPerson), "the view is left alone");
+            Assert.That(GameRulesDebugDraft.Changes(GameRules.Default, built), Is.EqualTo(_adsEyeViewToAlways));
         }
 
         [Test]

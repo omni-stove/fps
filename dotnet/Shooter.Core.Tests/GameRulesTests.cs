@@ -68,6 +68,7 @@ namespace Shooter.Core.Tests
             Assert.That(rules.MinPlayers, Is.EqualTo(0));
             Assert.That(rules.IdleKickSeconds, Is.EqualTo(0f));
             Assert.That(rules.IdleWarningSeconds, Is.EqualTo(15f));
+            Assert.That(rules.AdsEyeView, Is.EqualTo(AdsEyeView.PerWeapon));
         }
 
         [Test]
@@ -136,6 +137,31 @@ namespace Shooter.Core.Tests
             Assert.That(Rules().IdleWarningSeconds, Is.EqualTo(15f));
             Assert.That(Rules(idleKickSeconds: 120f, idleWarningSeconds: 30f).IdleWarningSeconds, Is.EqualTo(30f));
             Assert.That(GameRules.Default.WithIdleWarningSeconds(30f).WithIdleKickSeconds(60f).IdleWarningSeconds, Is.EqualTo(30f), "a later With keeps it");
+        }
+
+        [Test]
+        public void TheAdsEyeViewIsPerWeaponUnlessGiven()
+        {
+            Assert.That(Rules().AdsEyeView, Is.EqualTo(AdsEyeView.PerWeapon));
+            Assert.That(GameRules.Default.WithAdsEyeView(AdsEyeView.Always).AdsEyeView, Is.EqualTo(AdsEyeView.Always));
+            Assert.That(GameRules.Default.WithAdsEyeView(AdsEyeView.Never).WithViewMode(ViewMode.ThirdPerson).AdsEyeView, Is.EqualTo(AdsEyeView.Never), "a later With keeps it");
+            Assert.That(GameRules.Default.AdsEyeView, Is.EqualTo(AdsEyeView.PerWeapon), "With does not change the source");
+        }
+
+        [Test]
+        public void RejectsAnUndefinedAdsEyeView()
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => GameRules.Default.WithAdsEyeView((AdsEyeView)99));
+            Assert.That(ex.ParamName, Is.EqualTo("adsEyeView"));
+        }
+
+        [Test]
+        public void AdsEyeViewKeepsTheOrderTheValuesWereAddedIn()
+        {
+            // 値の並びがアセットの直列化とデバッグパネルの選択肢の番号に乗るので、並びを固定する。
+            Assert.That((int)AdsEyeView.PerWeapon, Is.EqualTo(0));
+            Assert.That((int)AdsEyeView.Always, Is.EqualTo(1));
+            Assert.That((int)AdsEyeView.Never, Is.EqualTo(2));
         }
 
         [TestCase(0f)]

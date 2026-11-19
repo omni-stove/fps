@@ -29,5 +29,6 @@
   "debug.rules.field.Jump": "Jump",
   "debug.rules.field.FallDamage": "Fall damage",
   "debug.rules.field.HudDensity": "HUD density",
-  "debug.rules.field.ViewMode": "View"
+  "debug.rules.field.ViewMode": "View",
+  "debug.rules.field.AdsEyeView": "First-person ADS in third person"
 }

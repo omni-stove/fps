@@ -671,7 +671,7 @@ namespace Shooter.Runtime
             var rig = player.GetComponent<ViewRig>();
             if (rig != null)
             {
-                ApplyView(rig, rules.ViewMode);
+                ApplyView(rig, rules.ViewMode, rules.AdsEyeView);
             }
 
             var deathCamera = player.GetComponent<PlayerDeathCamera>();
@@ -684,9 +684,10 @@ namespace Shooter.Runtime
             StreakController.Apply(player.gameObject, rules);
         }
 
-        private static void ApplyView(ViewRig rig, ViewMode mode)
+        private static void ApplyView(ViewRig rig, ViewMode mode, AdsEyeView adsEyeView)
         {
             rig.Mode = mode;
+            rig.AdsEyeView = adsEyeView;
 
             // Mode の setter は有効な間しかカメラと体を直さないので、Edit Mode やまだ有効になる前の rig でもここで揃える。
             if (rig.IsInitialized)

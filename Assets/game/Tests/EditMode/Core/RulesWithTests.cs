@@ -88,6 +88,7 @@ namespace Shooter.Core.Tests
                 (nameof(GameRules.MaxWeapons), r => r.WithMaxWeapons(0), 0),
                 (nameof(GameRules.ReloadMode), r => r.WithReloadMode(ReloadMode.Auto), ReloadMode.Auto),
                 (nameof(GameRules.ViewMode), r => r.WithViewMode(ViewMode.FirstPerson), ViewMode.FirstPerson),
+                (nameof(GameRules.AdsEyeView), r => r.WithAdsEyeView(AdsEyeView.Always), AdsEyeView.Always),
                 (nameof(GameRules.PlayerMaxHealth), r => r.WithPlayerMaxHealth(150), 150),
                 (nameof(GameRules.ZoneDamage), r => r.WithZoneDamage(otherZoneDamage), otherZoneDamage),
                 (nameof(GameRules.Streaks), r => r.WithStreaks(Streaks.Off), Streaks.Off),
@@ -209,6 +210,7 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithMaxWeapons(GameRules.MaxWeaponsLimit + 1));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithReloadMode((ReloadMode)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithViewMode((ViewMode)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _rules.WithAdsEyeView((AdsEyeView)99));
         }
 
         [Test]

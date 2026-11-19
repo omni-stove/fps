@@ -29,6 +29,7 @@ namespace Shooter.Core
         public const string MaxWeaponsItem = "maxWeapons";
         public const string ReloadModeItem = "reloadMode";
         public const string ViewModeItem = "viewMode";
+        public const string AdsEyeViewItem = "adsEyeView";
         public const string PlayerMaxHealthItem = "playerMaxHealth";
         public const string ZoneDamageItem = "zoneDamage";
         public const string StreaksItem = "streaks";
@@ -100,6 +101,7 @@ namespace Shooter.Core
             MaxWeaponsItem,
             ReloadModeItem,
             ViewModeItem,
+            AdsEyeViewItem,
             PlayerMaxHealthItem,
             ZoneDamageItem,
             StreaksItem,
@@ -224,7 +226,8 @@ namespace Shooter.Core
                     top.ReadEnum(TextChatItem, defaults.TextChat),
                     top.ReadEnum(SpectatingItem, defaults.Spectating),
                     top.ReadEnumArray(RespawnAnchorItem, defaults.RespawnAnchors),
-                    top.ReadFloat(IdleWarningSecondsItem, defaults.IdleWarningSeconds));
+                    top.ReadFloat(IdleWarningSecondsItem, defaults.IdleWarningSeconds),
+                    top.ReadEnum(AdsEyeViewItem, defaults.AdsEyeView));
             }
             catch (ArgumentException e)
             {
@@ -294,6 +297,7 @@ namespace Shooter.Core
             writer.Int(MaxWeaponsItem, rules.MaxWeapons);
             writer.Enum(ReloadModeItem, rules.ReloadMode);
             writer.Enum(ViewModeItem, rules.ViewMode);
+            writer.Enum(AdsEyeViewItem, rules.AdsEyeView);
             writer.Int(PlayerMaxHealthItem, rules.PlayerMaxHealth);
             writer.BeginObject(ZoneDamageItem);
             writer.Double(HeadItem, rules.ZoneDamage.Head);

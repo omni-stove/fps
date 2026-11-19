@@ -64,6 +64,7 @@ namespace Shooter.Runtime
         private AimDownSights _ads;
         private bool _bodyHiddenBySight;
         private ShoulderSide _chosenShoulder = ShoulderSide.Right;
+        private AdsEyeView _adsEyeView = AdsEyeView.PerWeapon;
         private ICharacterMotorStateSource _motorSource;
         private float _leanAmount;
         private float _leanRollDegrees;
@@ -87,6 +88,20 @@ namespace Shooter.Runtime
                     ApplyBodyVisibility(true);
                     UpdateCameraPosition();
                 }
+            }
+        }
+
+        public AdsEyeView AdsEyeView
+        {
+            get => _adsEyeView;
+            set
+            {
+                if (!Enum.IsDefined(typeof(AdsEyeView), value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "unknown ADS eye view");
+                }
+
+                _adsEyeView = value;
             }
         }
 

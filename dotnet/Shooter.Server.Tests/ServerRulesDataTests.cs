@@ -103,7 +103,10 @@ namespace Shooter.Server.Tests
             Assert.That(data.AssistPath, Is.Null);
             Assert.That(data.ChatWords, Is.SameAs(ChatWordFilterSpec.Default));
             Assert.That(data.ChatWordsPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
+            Assert.That(data.BuyList, Is.Null);
+            Assert.That(data.Economy, Is.Null, "no buy list means no economy");
+            Assert.That(data.EconomyPath, Is.Null);
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default economy=none walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
         }
 
         [Test]
@@ -335,6 +338,65 @@ namespace Shooter.Server.Tests
 
             Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
             Assert.That(error, Does.StartWith("cannot read chat word tuning: ").And.Contain("mask"));
+        }
+
+        [Test]
+        public void ReadsTheBuyListBesideTheRulesAndTakesTheMoneyFromTheMatchSettings()
+        {
+            var settings = new NetMatchSettings(economy: new EconomySpec(startMoney: 500, maxMoney: 9000));
+            TestRules.Write(_first.Path, "TeamDeathmatch", TestRules.File(settings: settings, name: "TeamDeathmatch"));
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(
+                Path.Combine(tuning, ServerRulesData.EconomyTuningFileName),
+                "{\"startMoney\": 100, \"resetOnSwap\": false, \"items\": [{\"id\": \"" + TestRules.RifleId + "\", \"kind\": \"Weapon\", \"price\": 2700}]}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.EconomyPath, Does.EndWith(ServerRulesData.EconomyTuningFileName));
+            Assert.That(data.LogLine, Does.Contain(" economy=" + data.EconomyPath + " "));
+            var economy = data.Economy;
+            Assert.That(economy.Catalog.Count, Is.EqualTo(1));
+            Assert.That(economy.Catalog.Items[0].Price, Is.EqualTo(2700));
+            Assert.That(economy.ResetOnSwap, Is.False);
+            Assert.That(economy.Spec.StartMoney, Is.EqualTo(500), "the money comes from the match settings, not the buy list");
+            Assert.That(economy.Spec.MaxMoney, Is.EqualTo(9000));
+
+            var changed = data.WithSettings(data.Settings.WithPrivacy(true, "FRIENDS"));
+            Assert.That(changed.BuyList, Is.SameAs(data.BuyList));
+            Assert.That(changed.EconomyPath, Is.EqualTo(data.EconomyPath));
+            Assert.That(data.WithRules(GameRules.Default).BuyList, Is.SameAs(data.BuyList));
+        }
+
+        [Test]
+        public void BrokenEconomyTuningStopsTheLoad()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.EconomyTuningFileName), "{\"items\": [{\"id\": \"a\", \"kind\": \"Weapon\"}]}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("cannot read economy tuning: ").And.Contain("price"));
+        }
+
+        [Test]
+        public void TheCommittedEconomyTuningListsOnlyWeaponsTheSearchAndDestroyRulesCarry()
+        {
+            var root = RepositoryRoot();
+            var path = Path.Combine(root, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName, ServerRulesData.EconomyTuningFileName);
+            var rules = EconomyJson.Parse(File.ReadAllText(path), path);
+            var rulesPath = Path.Combine(root, ServerMapData.DataDirectoryName, ServerRulesData.RulesDirectoryName, "SearchAndDestroy" + NetMatchFile.Extension);
+            var file = NetMatchFile.Parse(File.ReadAllText(rulesPath), rulesPath);
+            var loadout = file.CreateLoadout();
+
+            Assert.That(rules.Catalog.Count, Is.GreaterThan(0));
+            foreach (var item in rules.Catalog.Items)
+            {
+                Assert.That(item.Kind, Is.EqualTo(BuyItemKind.Weapon), item.Id + ": the server only hands out bought weapons");
+                Assert.That(loadout.Catalog.TryGet(item.Id, out _), Is.True, item.Id + " is in the weapon catalog of the rules");
+                Assert.That(item.Slot, Is.LessThan(loadout.Rule.SlotCount), item.Id + " fits a loadout slot");
+            }
         }
 
         [Test]

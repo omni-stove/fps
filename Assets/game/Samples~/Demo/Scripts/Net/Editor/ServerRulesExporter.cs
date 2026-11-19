@@ -170,6 +170,11 @@ namespace Shooter.Editor
                 var spawns = new List<SpawnPoint>();
                 var areas = new List<ControlPointArea>();
                 var flagBases = new List<FlagBasePoint>();
+                var carts = new List<PayloadCart>();
+                foreach (var rootObject in scene.GetRootGameObjects())
+                {
+                    carts.AddRange(rootObject.GetComponentsInChildren<PayloadCart>(false));
+                }
 
                 // 並びは階層順にする (サーバーの SpawnSelector の同点の決め手になる)
                 foreach (var rootObject in scene.GetRootGameObjects())
@@ -181,7 +186,11 @@ namespace Shooter.Editor
 
                     foreach (var zone in rootObject.GetComponentsInChildren<ControlPointZone>(false))
                     {
-                        areas.Add(zone.Area);
+                        // 台車と一緒に動く範囲は拠点ではないので、拠点の並びに入れない
+                        if (!IsCartZone(zone, carts))
+                        {
+                            areas.Add(zone.Area);
+                        }
                     }
 
                     foreach (var flagBase in rootObject.GetComponentsInChildren<FlagBase>(false))
@@ -197,12 +206,99 @@ namespace Shooter.Editor
                     }
                 }
 
+                var payload = ToPayload(scenePath, carts, attackerSideId: FindAttackerSideId(scene));
                 var output = Path.Combine(directory, scene.name + NetMapPoints.Extension);
-                File.WriteAllText(output, NetMapPoints.Write(new NetMapPoints(spawns, areas, flagBases)));
+                File.WriteAllText(output, NetMapPoints.Write(new NetMapPoints(spawns, areas, flagBases, payload)));
                 written.Add(output);
             }
 
             return written;
+        }
+
+        // 台車の無いシーンは null。サーバーは Payload のルールで道筋の無いマップを起動のときに断る
+        public static NetMapPayload ToPayload(string scenePath, IReadOnlyList<PayloadCart> carts, int attackerSideId)
+        {
+            if (carts == null)
+            {
+                throw new ArgumentNullException(nameof(carts));
+            }
+
+            if (carts.Count == 0)
+            {
+                return null;
+            }
+
+            // サーバーは 1 台だけを押すので、どれを書き出すかを黙って選ばない
+            if (carts.Count > 1)
+            {
+                throw new InvalidOperationException(
+                    LogTag + " " + scenePath + " has " + carts.Count + " PayloadCarts; the server pushes one, so keep one");
+            }
+
+            var cart = carts[0];
+            if (!new Side(attackerSideId).TryGetTeam(out var attackers))
+            {
+                throw new InvalidOperationException(
+                    LogTag + " the PayloadRunner in " + scenePath + " makes side " + attackerSideId + " attack; only sides 0 (Alpha) and 1 (Bravo) can push");
+            }
+
+            var points = cart.Points;
+            var positions = new System.Numerics.Vector3[points.Count];
+            for (var i = 0; i < positions.Length; i++)
+            {
+                if (points[i] == null)
+                {
+                    throw new InvalidOperationException(LogTag + " PayloadCart '" + cart.name + "' in " + scenePath + " route point #" + i + " is not set");
+                }
+
+                positions[i] = points[i].position.ToNumerics();
+            }
+
+            var zone = CartZone(cart);
+            var radius = zone != null ? zone.Radius : ControlPointZone.DefaultRadius;
+            var height = zone != null ? zone.Height : ControlPointZone.DefaultHeight;
+            try
+            {
+                return new NetMapPayload(attackers, positions, cart.Checkpoints, radius, height);
+            }
+            catch (ArgumentException e)
+            {
+                throw new InvalidOperationException(LogTag + " PayloadCart '" + cart.name + "' in " + scenePath + " has an invalid route: " + e.Message, e);
+            }
+        }
+
+        // シーンの PayloadRunner の攻め側 (アセットがあればそちら)。Runner を置かないネット用のシーンは Runner の既定と同じ側にする
+        public static int FindAttackerSideId(UnityEngine.SceneManagement.Scene scene)
+        {
+            foreach (var rootObject in scene.GetRootGameObjects())
+            {
+                var runner = rootObject.GetComponentInChildren<PayloadRunner>(false);
+                if (runner != null)
+                {
+                    return runner.Definition != null ? runner.Definition.AttackerSideId : runner.AttackerSideId;
+                }
+            }
+
+            return PayloadRunner.DefaultAttackerSideId;
+        }
+
+        // PayloadCart.BuildRoute と同じ順 (欄、子) で範囲を探す。どちらも無ければ遊ぶときに既定の半径で足される
+        private static ControlPointZone CartZone(PayloadCart cart)
+        {
+            return cart.Zone != null ? cart.Zone : cart.GetComponentInChildren<ControlPointZone>(true);
+        }
+
+        private static bool IsCartZone(ControlPointZone zone, IReadOnlyList<PayloadCart> carts)
+        {
+            foreach (var cart in carts)
+            {
+                if (CartZone(cart) == zone)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // サーバーは Resources も入口も読めないので、オフラインと同じ値で動くよう KitTuning が読むのと同じ JSON を写す

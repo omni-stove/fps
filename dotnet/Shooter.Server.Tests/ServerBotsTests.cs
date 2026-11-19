@@ -374,6 +374,65 @@ namespace Shooter.Server.Tests
             Assert.That(crossed, Is.True, _log.ToString());
         }
 
+        // 人 (Alpha) は道筋から離れた出現地点に立ったまま。Bot (Bravo) だけが攻め側なので、台車が進めば Bot が押している
+        [Test]
+        public void ABotGoesToThePayloadAndPushesIt()
+        {
+            Start(BotTestMaps.Flat(PayloadPoints()), Rules().WithObjective(MatchObjective.Payload), bots: 2, spec: SightOf(1f));
+            Join(1);
+            Tick();
+            Assert.That(_bots.Count, Is.EqualTo(1));
+            var botId = _bots.BotIds.Single();
+            Assert.That(TeamOf(botId), Is.EqualTo(Team.Bravo));
+            var rules = (PayloadRules)_rules.Objective;
+            Assert.That(_log.ToString(), Does.Contain("[Bot] rally x=0.00 y=0.00 z=8.00 radius=3.00 bots=1"));
+
+            Step(15f);
+
+            Assert.That(rules.Payload.Distance, Is.GreaterThan(1d), _log.ToString());
+            Assert.That(_log.ToString(), Does.Contain("[Payload] cart=pushing pushers=1 defenders=0"));
+            Assert.That(_log.ToString(), Does.Contain("[Bot] rally x=0.00 y=0.00 z=6.").Or.Contain("[Bot] rally x=0.00 y=0.00 z=5."),
+                "the bots are sent after the cart once it has moved half its radius");
+        }
+
+        [Test]
+        public void BotsPatrolTheSpawnPointsWhenTheObjectiveNamesNoPlace()
+        {
+            Start(BotTestMaps.Flat(FlatPoints()), Rules(), bots: 2);
+            Join(1);
+            Step(1f);
+
+            Assert.That(_log.ToString(), Does.Not.Contain("[Bot] rally"));
+        }
+
+        [Test]
+        public void TheRallyRouteCrossesTheAreaAndTurnsForEachBot()
+        {
+            var center = new Vector3(0f, 0f, 8f);
+
+            var first = ServerBots.RouteAround(center, 3f, 0);
+            var second = ServerBots.RouteAround(center, 3f, 1);
+
+            Assert.That(first, Has.Length.EqualTo(2));
+            Assert.That(Vector3.Distance(first[0], new Vector3(1.5f, 0f, 8f)), Is.LessThan(1e-5f));
+            Assert.That(Vector3.Distance(first[1], new Vector3(-1.5f, 0f, 8f)), Is.LessThan(1e-5f));
+            Assert.That(Vector3.Distance(second[0], center), Is.EqualTo(1.5f).Within(1e-5f), "half the radius from the middle");
+            Assert.That(second[0].Y, Is.Zero);
+            Assert.That(Vector3.Distance(second[0], first[0]), Is.GreaterThan(1f), "the next bot crosses at another angle");
+            Assert.Throws<ArgumentOutOfRangeException>(() => ServerBots.RouteAround(center, 0f, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ServerBots.RouteAround(center, 3f, -1));
+        }
+
+        // 道筋は z = 8 から z = -8 へまっすぐ。押すのは Bravo (Bot)、出現地点はどちらも道筋から 10m 以上離す
+        private static NetMapPoints PayloadPoints()
+        {
+            return new NetMapPoints(
+                new[] { new SpawnPoint(new Vector3(-12f, 1.1f, -12f), Team.Alpha), new SpawnPoint(new Vector3(12f, 1.1f, 12f), Team.Bravo) },
+                Array.Empty<ControlPointArea>(),
+                null,
+                new NetMapPayload(Team.Bravo, new[] { new Vector3(0f, 0f, 8f), new Vector3(0f, 0f, -8f) }, null, 3f, 4f));
+        }
+
         private static bool Near(Vector3 position, Vector3 spawn)
         {
             return Vector3.Distance(Flat(position), Flat(spawn)) < 1.5f && Math.Abs(position.Y - spawn.Y) < 0.5f;

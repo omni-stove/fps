@@ -226,6 +226,7 @@ namespace Shooter.Server
 
             StopObjective();
             StopMapVote();
+            StopVoteKick();
             _nextData = null;
             _session = null;
         }
@@ -386,6 +387,7 @@ namespace Shooter.Server
             IdlePlayerJoined(playerId);
             ObjectivePlayerJoined(playerId);
             VoicePlayerJoined(player);
+            VoteKickPlayerJoined(player);
             OnPlayerJoined(player);
         }
 
@@ -402,6 +404,7 @@ namespace Shooter.Server
             ChatPlayerLeft(playerId);
             SpectatePlayerLeft(playerId);
             VoicePlayerLeft(player);
+            VoteKickPlayerLeft(playerId);
             OnPlayerLeft(player);
             if (_session.HasPlayer(playerId) && _session.Leave(playerId))
             {

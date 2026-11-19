@@ -468,6 +468,7 @@ namespace Shooter.Server
             _restartRemaining = 0f;
             AlphaScore = 0;
             BravoScore = 0;
+            ForgetBarredForNextMatch();
             MatchId = ServerEventLog.NewMatchId();
             _log.WriteLine(MatchLog.Restart());
             Restarted?.Invoke();

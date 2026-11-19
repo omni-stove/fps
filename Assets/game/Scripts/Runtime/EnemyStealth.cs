@@ -10,7 +10,7 @@ namespace Shooter.Runtime
     [DefaultExecutionOrder(-50)]
     [DisallowMultipleComponent]
     [RequireComponent(typeof(EnemyAgent))]
-    public sealed class EnemyStealth : MonoBehaviour
+    public sealed class EnemyStealth : MonoBehaviour, IMeleeWitness
     {
         public const string LogTag = "[Stealth]";
 
@@ -21,60 +21,8 @@ namespace Shooter.Runtime
         private static readonly List<EnemyStealth> _active = new List<EnemyStealth>();
 
         [Header("Awareness")]
-        [SerializeField, Range(1f, 360f), Tooltip("視野の全角 (度)。外ではゲージがたまらない")]
-        private float _fieldOfViewDegrees = AwarenessSpec.DefaultFieldOfViewDegrees;
-
-        [SerializeField, Min(0.01f), Tooltip("すべての係数が 1 のときに 1 秒でたまる量 (満ちて 1)")]
-        private float _gainPerSecond = AwarenessSpec.DefaultGainPerSecond;
-
-        [SerializeField, Min(0f), Tooltip("これより近ければ距離でたまり方を落とさない (m)")]
-        private float _fullGainDistance = AwarenessSpec.DefaultFullGainDistance;
-
-        [SerializeField, Range(0f, 1f), Tooltip("視認距離の端でのたまり方の係数")]
-        private float _farGainFactor = AwarenessSpec.DefaultFarGainFactor;
-
-        [SerializeField, Range(0f, 1f), Tooltip("視野の端でのたまり方の係数")]
-        private float _peripheralGainFactor = AwarenessSpec.DefaultPeripheralGainFactor;
-
-        [SerializeField, Range(0f, 1f), Tooltip("相手がしゃがんでいるときの係数")]
-        private float _crouchGainFactor = AwarenessSpec.DefaultCrouchGainFactor;
-
-        [SerializeField, Range(0f, 1f), Tooltip("相手が伏せているときの係数")]
-        private float _proneGainFactor = AwarenessSpec.DefaultProneGainFactor;
-
-        [SerializeField, Range(0f, 1f), Tooltip("相手が止まっているときの係数")]
-        private float _stillGainFactor = AwarenessSpec.DefaultStillGainFactor;
-
-        [SerializeField, Min(0.01f), Tooltip("相手がこの速さ (m/s) 以上で動くと動きの係数が 1")]
-        private float _fullMotionSpeed = AwarenessSpec.DefaultFullMotionSpeed;
-
-        [SerializeField, Min(0f), Tooltip("見えなくなってから減り始めるまでの秒数")]
-        private float _decayDelaySeconds = AwarenessSpec.DefaultDecayDelaySeconds;
-
-        [SerializeField, Min(0f), Tooltip("見えていない間に 1 秒で減る量")]
-        private float _decayPerSecond = AwarenessSpec.DefaultDecayPerSecond;
-
-        [SerializeField, Range(0.01f, 0.99f), Tooltip("これ以上で気づき")]
-        private float _noticeThreshold = AwarenessSpec.DefaultNoticeThreshold;
-
-        [SerializeField, Range(0.01f, 0.99f), Tooltip("これ以上で警戒。満ちると交戦")]
-        private float _alertThreshold = AwarenessSpec.DefaultAlertThreshold;
-
-        [SerializeField, Range(0.02f, 1f), Tooltip("交戦に入った後、これを下回るまで交戦のまま。警戒の境目より上")]
-        private float _engagedHoldThreshold = AwarenessSpec.DefaultEngagedHoldThreshold;
-
-        [SerializeField, Min(0f), Tooltip("交戦に入ったことを仲間に伝える範囲 (m)。0 なら伝えない")]
-        private float _alarmRadius = AwarenessSpec.DefaultAlarmRadius;
-
-        [Header("Hearing")]
-        [SerializeField, Range(0f, 1f), Tooltip("すぐそばの銃声 1 発でゲージに足す量。離れるほど音の届く距離に比べて減る")]
-        private float _gunshotGain = AwarenessSpec.DefaultGunshotGain;
-
-        [SerializeField, Range(0f, 1f), Tooltip("すぐそばの足音 1 歩でゲージに足す量")]
-        private float _footstepGain = AwarenessSpec.DefaultFootstepGain;
-
-        [SerializeField, Range(0.01f, 0.99f), Tooltip("物音を聞いて調べに行くときのゲージの量。音だけではこれより上がらない。警戒の境目以上")]
-        private float _investigateLevel = AwarenessSpec.DefaultInvestigateLevel;
+        [SerializeField, Tooltip("見つかるまでのゲージのたまり方・減り方と、物音の聞こえ方")]
+        private EnemyAwarenessSettings _settings = new EnemyAwarenessSettings();
 
         [Header("Indicator")]
         [SerializeField, Tooltip("頭上に出す印。空なら AwarenessIndicatorCatalog の印、それも無ければ仮の印")]
@@ -94,10 +42,9 @@ namespace Shooter.Runtime
         private GameObject _indicatorObject;
         private bool _warnedIndicator;
 
-        // ApplySpec で渡された値は波の強さのように敵のデータを元に作り直したものなので、EnemyAgent と同じくデータより優先する。
-        private bool _specApplied;
-
         public static IReadOnlyList<EnemyStealth> Active => _active;
+
+        public EnemyAwarenessSettings Settings => _settings;
 
         public StealthAwareness Awareness => _awareness;
 
@@ -117,34 +64,13 @@ namespace Shooter.Runtime
 
         public string Id => _agent != null ? _agent.Id : name;
 
+        public bool IsUnaware => Stage == AwarenessStage.Unaware;
+
+        public string StageName => Stage.ToString();
+
         public AwarenessSpec CreateSpec()
         {
-            var agent = _agent != null ? _agent : GetComponent<EnemyAgent>();
-            var definition = agent != null ? agent.EffectiveDefinition : null;
-            if (definition != null && !_specApplied)
-            {
-                return definition.ToAwarenessSpec();
-            }
-
-            return new AwarenessSpec(
-                _fieldOfViewDegrees,
-                _gainPerSecond,
-                _fullGainDistance,
-                _farGainFactor,
-                _peripheralGainFactor,
-                _crouchGainFactor,
-                _proneGainFactor,
-                _stillGainFactor,
-                _fullMotionSpeed,
-                _decayDelaySeconds,
-                _decayPerSecond,
-                _noticeThreshold,
-                _alertThreshold,
-                _alarmRadius,
-                _engagedHoldThreshold,
-                _gunshotGain,
-                _footstepGain,
-                _investigateLevel);
+            return (_settings ?? new EnemyAwarenessSettings()).ToSpec();
         }
 
         public void ApplySpec(AwarenessSpec spec)
@@ -159,25 +85,12 @@ namespace Shooter.Runtime
                 throw new InvalidOperationException($"EnemyStealth '{name}' is already initialized; apply the spec before activating it");
             }
 
-            _fieldOfViewDegrees = spec.FieldOfViewDegrees;
-            _gainPerSecond = spec.GainPerSecond;
-            _fullGainDistance = spec.FullGainDistance;
-            _farGainFactor = spec.FarGainFactor;
-            _peripheralGainFactor = spec.PeripheralGainFactor;
-            _crouchGainFactor = spec.CrouchGainFactor;
-            _proneGainFactor = spec.ProneGainFactor;
-            _stillGainFactor = spec.StillGainFactor;
-            _fullMotionSpeed = spec.FullMotionSpeed;
-            _decayDelaySeconds = spec.DecayDelaySeconds;
-            _decayPerSecond = spec.DecayPerSecond;
-            _noticeThreshold = spec.NoticeThreshold;
-            _alertThreshold = spec.AlertThreshold;
-            _alarmRadius = spec.AlarmRadius;
-            _engagedHoldThreshold = spec.EngagedHoldThreshold;
-            _gunshotGain = spec.GunshotGain;
-            _footstepGain = spec.FootstepGain;
-            _investigateLevel = spec.InvestigateLevel;
-            _specApplied = true;
+            if (_settings == null)
+            {
+                _settings = new EnemyAwarenessSettings();
+            }
+
+            _settings.CopyFrom(spec);
         }
 
         // EnemyAgent の初期化 (Awake) の後でないと Brain が無いので、Start でつなぐ。テストからは直接呼ぶ。
@@ -362,11 +275,14 @@ namespace Shooter.Runtime
             {
                 _active.Add(this);
             }
+
+            MeleeWitnesses.Add(this);
         }
 
         private void OnDisable()
         {
             _active.Remove(this);
+            MeleeWitnesses.Remove(this);
             if (_indicatorObject != null)
             {
                 _indicatorObject.SetActive(false);
@@ -384,6 +300,7 @@ namespace Shooter.Runtime
         private void OnDestroy()
         {
             _active.Remove(this);
+            MeleeWitnesses.Remove(this);
             if (_awareness != null)
             {
                 _awareness.StageChanged -= OnStageChanged;

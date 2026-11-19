@@ -38,6 +38,23 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void RefillAtFillsOnlyThatTypeAndSaysWhetherItWasShort()
+        {
+            var inventory = new GrenadeInventory(_both, _two);
+            var changes = 0;
+            inventory.Changed += () => changes++;
+            inventory.TryTake(0);
+            inventory.TryTake(1);
+
+            Assert.That(inventory.RefillAt(1), Is.True);
+            Assert.That(inventory.RemainingAt(1), Is.EqualTo(2));
+            Assert.That(inventory.RemainingAt(0), Is.EqualTo(1));
+            Assert.That(inventory.RefillAt(1), Is.False, "a full pouch has nothing to refill");
+            Assert.That(changes, Is.EqualTo(3));
+            Assert.Throws<ArgumentOutOfRangeException>(() => inventory.RefillAt(2));
+        }
+
+        [Test]
         public void SelectNextCyclesThroughTheTypesAndReportsTheChange()
         {
             var inventory = new GrenadeInventory(_both, _two);

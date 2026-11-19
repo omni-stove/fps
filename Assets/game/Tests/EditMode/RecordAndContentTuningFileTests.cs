@@ -152,6 +152,42 @@ namespace Shooter.Tests.EditMode
             Assert.That(extraction.KeepCarriedOnDeath, Is.EqualTo(ExtractionSpec.DefaultKeepCarriedOnDeath));
         }
 
+        [Test]
+        public void TheEconomyFileHoldsTheDefaultAmountsAndSellsWeaponsAndThrowables()
+        {
+            var rules = EconomyJson.Parse(Bundled(EconomyJson.ResourcePath), EconomyJson.ResourcePath);
+            var grenades = TuningJson.ParseGrenades(Bundled(KitTuning.GrenadeResourcePath), KitTuning.GrenadeResourcePath);
+
+            Assert.That(rules.Spec.StartMoney, Is.EqualTo(EconomySpec.DefaultStartMoney));
+            Assert.That(rules.Spec.MaxMoney, Is.EqualTo(EconomySpec.DefaultMaxMoney));
+            Assert.That(rules.Spec.KillReward, Is.EqualTo(EconomySpec.DefaultKillReward));
+            Assert.That(rules.Spec.RoundWinReward, Is.EqualTo(EconomySpec.DefaultRoundWinReward));
+            Assert.That(rules.Spec.RoundLossReward, Is.EqualTo(EconomySpec.DefaultRoundLossReward));
+            Assert.That(rules.Spec.LossStreakBonus, Is.EqualTo(EconomySpec.DefaultLossStreakBonus));
+            Assert.That(rules.Spec.MaxLossReward, Is.EqualTo(EconomySpec.DefaultMaxLossReward));
+            Assert.That(rules.ResetOnSwap, Is.EqualTo(EconomyRules.DefaultResetOnSwap));
+
+            var weapons = 0;
+            var throwables = 0;
+            foreach (var item in rules.Catalog.Items)
+            {
+                Assert.That(item.Price, Is.LessThanOrEqualTo(rules.Spec.MaxMoney), item.Id + " can be afforded");
+                Assert.That(item.NameKey, Is.Not.Empty, item.Id + " has a name key for the buy menu");
+                if (item.Kind == BuyItemKind.Weapon)
+                {
+                    weapons++;
+                }
+                else if (item.Kind == BuyItemKind.Throwable)
+                {
+                    throwables++;
+                    Assert.That(grenades.TryFind(item.Id, out _), Is.True, item.Id + " is a grenade type in grenade.json");
+                }
+            }
+
+            Assert.That(weapons, Is.GreaterThan(0));
+            Assert.That(throwables, Is.GreaterThan(0));
+        }
+
         private static readonly (string path, Func<GameContent, TextAsset> select, Action<GameContent, TextAsset> set)[] _newTuningSlots =
         {
             (KitTuning.PayloadResourcePath, c => c.PayloadTuning, (c, v) => c.PayloadTuning = v),

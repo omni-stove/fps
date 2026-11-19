@@ -300,7 +300,7 @@ namespace Shooter.Core.Tests
 
                 lock (Bodies)
                 {
-                    // Unity の .NET Standard 2.1 には CancellationToken を取る ReadAsStringAsync がないので、dotnet でだけ出る CA2016 を止める
+                    // Unity の .NET Standard 2.1 には CancellationToken を取る ReadAsStringAsync がない。
 #pragma warning disable CA2016
                     Bodies.Add(request.Content.ReadAsStringAsync().GetAwaiter().GetResult());
 #pragma warning restore CA2016

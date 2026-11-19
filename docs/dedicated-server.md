@@ -61,6 +61,10 @@ make server-dotnet ARGS="-rules FreeForAll"
   モードの例はどれも近接とキルカムを `On` にしてある (`GunGame` はストリークを `Off`)。この 3 つの規則はスナップショットでクライアントにも届く。
 - 近接・ストリークの調整値は `server-data/tuning/melee.json`・`streaks.json` から読む。クライアントの `Resources/Tuning/` と同じ中身にしておく。
   置ける物 (タレット・盾・囮) は `server-data/tuning/deployables.json` にある種類だけを置かせる。
+- 文字のチャット (`rules.textChat`)・観戦 (`rules.spectating`)・置ける物 (`rules.actions.abilities`) もどのモードでも止められる。
+  `Off` にすると、サーバーはチャットを誰にも配らず (`[Chat] refused ... reason=RuleOff`)、観戦の要求に映す相手を割り当てず (ラウンドの合間も)、
+  置く要求を断る (`[Deploy] ... refused reason=RuleOff`)。既定は `textChat` と `spectating` が `On`、`abilities` が `Off` で、
+  置ける物を使うには `deployables.json` に加えて `abilities` を `On` にする。この 3 つの規則もスナップショットでクライアントに届く。
 
 ### 止める
 

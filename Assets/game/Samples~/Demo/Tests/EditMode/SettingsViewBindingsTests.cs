@@ -90,12 +90,12 @@ namespace Shooter.Tests.EditMode
             _view.Open(_container);
             var reload = _asset.FindAction(InputActionPaths.Reload);
 
-            var result = _view.SetBinding(ReloadKey, "<Keyboard>/t");
+            var result = _view.SetBinding(ReloadKey, "<Keyboard>/m");
 
             Assert.That(result.Changed, Is.True);
             Assert.That(result.Conflicts, Is.Empty);
             Assert.That(_view.PendingConflict, Is.Null);
-            Assert.That(reload.bindings, Has.Some.Matches<InputBinding>(b => b.effectivePath == "<Keyboard>/t"));
+            Assert.That(reload.bindings, Has.Some.Matches<InputBinding>(b => b.effectivePath == "<Keyboard>/m"));
             Assert.That(reload.bindings, Has.None.Matches<InputBinding>(b => b.effectivePath == "<Keyboard>/r"));
             Assert.That(_view.Bindings.PathOf(ReloadPad), Is.EqualTo("<Gamepad>/buttonWest"), "the gamepad is separate");
             Assert.That(
@@ -110,7 +110,7 @@ namespace Shooter.Tests.EditMode
             // 起動し直したときと同じく、上書きの無いアセットに読み込む。
             _restarted = ProjectActionsClone.Create();
             Assert.That(new InputBindingOverridesStore(_bindingStore.Key).Load(_restarted), Is.True);
-            Assert.That(new PlayerBindings(_restarted).PathOf(ReloadKey), Is.EqualTo("<Keyboard>/t"));
+            Assert.That(new PlayerBindings(_restarted).PathOf(ReloadKey), Is.EqualTo("<Keyboard>/m"));
             Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False, "the other settings did not change");
         }
 
@@ -118,12 +118,12 @@ namespace Shooter.Tests.EditMode
         public void TheSavedBindingIsShownWhenOpenedAgain()
         {
             _view.Open(_container);
-            _view.SetBinding(ReloadKey, "<Keyboard>/t");
+            _view.SetBinding(ReloadKey, "<Keyboard>/m");
             _view.Close();
 
             _view.Open(_container);
 
-            Assert.That(_view.Bindings.PathOf(ReloadKey), Is.EqualTo("<Keyboard>/t"));
+            Assert.That(_view.Bindings.PathOf(ReloadKey), Is.EqualTo("<Keyboard>/m"));
             Assert.That(_view.HasUnsavedChanges, Is.False);
         }
 
@@ -131,7 +131,7 @@ namespace Shooter.Tests.EditMode
         public void AnOverlapIsShownAndCanBeUndone()
         {
             _view.Open(_container);
-            _view.SetBinding(ReloadKey, "<Keyboard>/t");
+            _view.SetBinding(ReloadKey, "<Keyboard>/m");
 
             var result = _view.SetBinding(ReloadKey, "<Keyboard>/e");
 
@@ -148,7 +148,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_view.UndoRebind(), Is.True);
 
-            Assert.That(_view.Bindings.PathOf(ReloadKey), Is.EqualTo("<Keyboard>/t"), "back to the binding before the overlap");
+            Assert.That(_view.Bindings.PathOf(ReloadKey), Is.EqualTo("<Keyboard>/m"), "back to the binding before the overlap");
             Assert.That(_view.PendingConflict, Is.Null);
             Assert.That(IsDisplayed(notice.parent), Is.False);
             Assert.That(_view.UndoRebind(), Is.False, "nothing more to undo");
@@ -187,7 +187,7 @@ namespace Shooter.Tests.EditMode
         public void ResetBindingsGoesBackToRAndIsSavedOnClose()
         {
             _view.Open(_container);
-            _view.SetBinding(ReloadKey, "<Keyboard>/t");
+            _view.SetBinding(ReloadKey, "<Keyboard>/m");
             _view.SetBinding(ReloadPad, "<Gamepad>/buttonNorth");
             _view.Close();
             Assert.That(PlayerPrefs.HasKey(_bindingStore.Key), Is.True);
@@ -274,7 +274,7 @@ namespace Shooter.Tests.EditMode
         public void RebindingNeedsAnOpenViewWithAPlayerMap()
         {
             Assert.Throws<InvalidOperationException>(() => _view.StartRebind(ReloadKey));
-            Assert.Throws<InvalidOperationException>(() => _view.SetBinding(ReloadKey, "<Keyboard>/t"));
+            Assert.Throws<InvalidOperationException>(() => _view.SetBinding(ReloadKey, "<Keyboard>/m"));
             Assert.Throws<InvalidOperationException>(() => _view.ResetBindingsToDefaults());
             Assert.That(_view.UndoRebind(), Is.False);
             Assert.That(_view.KeepRebind(), Is.False);

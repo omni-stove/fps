@@ -213,7 +213,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void AFreeKeyAndTheSlotItselfAreNotConflicts()
         {
-            Assert.That(_bindings.FindConflicts(ReloadKey, "<Keyboard>/t"), Is.Empty);
+            Assert.That(_bindings.FindConflicts(ReloadKey, "<Keyboard>/m"), Is.Empty);
             Assert.That(_bindings.FindConflicts(ReloadKey, "<Keyboard>/r"), Is.Empty, "keeping the same key");
             Assert.That(_bindings.FindConflicts(ReloadKey, null), Is.Empty);
         }
@@ -221,10 +221,10 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void AnOverrideIsSeenByTheConflictCheckOfOtherSlots()
         {
-            _bindings.ApplyOverride(ReloadKey, "<Keyboard>/t");
+            _bindings.ApplyOverride(ReloadKey, "<Keyboard>/m");
 
             Assert.That(_bindings.FindConflicts(new RebindSlot("Interact", InputDeviceKind.KeyboardMouse), "<Keyboard>/r"), Is.Empty, "R is free now");
-            var conflicts = _bindings.FindConflicts(new RebindSlot("Interact", InputDeviceKind.KeyboardMouse), "<Keyboard>/t");
+            var conflicts = _bindings.FindConflicts(new RebindSlot("Interact", InputDeviceKind.KeyboardMouse), "<Keyboard>/m");
             Assert.That(conflicts.Select(c => c.ActionName), Is.EqualTo(new[] { "Reload" }));
         }
 
@@ -247,7 +247,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(_bindings.PathOf(ReloadPad), Is.EqualTo("<Gamepad>/buttonWest"), "the gamepad is separate");
             Assert.That(_bindings.HasOverrides, Is.True);
 
-            _bindings.ApplyOverride(ReloadKey, "<Keyboard>/t");
+            _bindings.ApplyOverride(ReloadKey, "<Keyboard>/m");
             _bindings.RestoreOverride(ReloadKey, "<Keyboard>/f");
             Assert.That(_bindings.PathOf(ReloadKey), Is.EqualTo("<Keyboard>/f"));
 

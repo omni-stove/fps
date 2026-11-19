@@ -16,7 +16,7 @@ namespace Shooter.Server
 
         public const string FilePattern = "*.json";
 
-        private readonly IReadOnlyList<ServerPlaylistEntry> _entries;
+        private readonly System.Collections.ObjectModel.ReadOnlyCollection<ServerPlaylistEntry> _entries;
         private readonly IReadOnlyList<string> _mapNames;
         private readonly PlaylistCursor _cursor;
 

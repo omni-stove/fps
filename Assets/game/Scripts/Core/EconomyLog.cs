@@ -94,5 +94,40 @@ namespace Shooter.Core
         {
             return $"{Tag} the weapon '{weaponId}' in the buy list cannot be equipped: {(string.IsNullOrEmpty(problem) ? "not found" : problem)}";
         }
+
+        public static string Off(string reason)
+        {
+            return Tag + " off: " + reason;
+        }
+
+        public static string NotSold(BuyItem item, string reason)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} item={1} kind={2} is not sold: {3}", Tag, item.Id, item.Kind, reason);
+        }
+
+        public static string Left(int playerId)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} player={1} left; the wallet is dropped", Tag, playerId);
+        }
+
+        public static string NetWallet(WalletStatus? status)
+        {
+            return status.HasValue ? Tag + " net " + status.Value : Tag + " net no wallet";
+        }
+
+        public static string NetBuy(string itemId, bool sent)
+        {
+            return Tag + " net buy item=" + ItemText(itemId) + (sent ? string.Empty : " (not connected; not sent)");
+        }
+
+        public static string NetBuyRefused(string itemId, string reason)
+        {
+            return Tag + " net buy item=" + ItemText(itemId) + " (" + reason + "; not sent)";
+        }
+
+        private static string ItemText(string itemId)
+        {
+            return string.IsNullOrEmpty(itemId) ? "-" : itemId;
+        }
     }
 }

@@ -1451,9 +1451,7 @@
     color: rgb(255, 210, 60);
 }
 
-.ping-marker--enemy {
-    color: rgb(255, 80, 60);
-}
+/* 敵の印 (ping-marker--enemy) の色は設定の色覚のパレットで変わるので、ここに書かず PingMarkersView がパレットの敵の色を入れる。 */
 
 /* 印の形 (ひし形)。色は印の color と揃える。 */
 .ping-marker__icon {
@@ -1463,10 +1461,6 @@
     border-width: 2px;
     border-color: rgba(0, 0, 0, 0.6);
     background-color: rgb(255, 210, 60);
-}
-
-.ping-marker--enemy .ping-marker__icon {
-    background-color: rgb(255, 80, 60);
 }
 
 /* 画面の外の印は少し小さく薄くして、端に寄せたことが分かるようにする。 */

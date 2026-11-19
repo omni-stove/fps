@@ -148,6 +148,67 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void EnemyMarksArePaintedInThePalettesEnemyColorAndRepaintedWhenItChanges()
+        {
+            var before = AppliedControlSettings.Current;
+            var volume = AudioListener.volume;
+            try
+            {
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.Standard));
+                _view.Bind(CloneLayout());
+                var enemy = new PingMarker(1, PingKind.Enemy, null, new System.Numerics.Vector3(0f, 1f, 10f), false, 0f, 100f);
+                var location = new PingMarker(2, PingKind.Location, null, new System.Numerics.Vector3(1f, 1f, 10f), false, 0f, 100f);
+                GameSignals.Pings.Publish(new[] { enemy, location });
+
+                var enemyMark = _view.Element.Q<VisualElement>(className: PingMarkersView.EnemyClass);
+                var locationMark = _view.Element.Q<VisualElement>(className: PingMarkersView.LocationClass);
+                Assert.That(enemyMark, Is.Not.Null);
+                Assert.That(locationMark, Is.Not.Null);
+                var standard = TeamColors.ToColor(TeamPalette.Standard.Enemy);
+                Assert.That(_view.EnemyColor, Is.EqualTo(standard));
+                Assert.That(enemyMark.style.color.value, Is.EqualTo(standard));
+                Assert.That(enemyMark.Q<VisualElement>(className: PingMarkersView.IconClass).style.backgroundColor.value, Is.EqualTo(standard));
+
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.RedGreen));
+
+                var redGreen = TeamColors.ToColor(TeamPalette.RedGreen.Enemy);
+                Assert.That(_view.EnemyColor, Is.EqualTo(redGreen));
+                Assert.That(enemyMark.style.color.value, Is.EqualTo(redGreen));
+                Assert.That(enemyMark.Q<VisualElement>(className: PingMarkersView.IconClass).style.backgroundColor.value, Is.EqualTo(redGreen));
+                Assert.That(locationMark.style.color.keyword, Is.EqualTo(StyleKeyword.Null), "location marks keep the colour from the style sheet");
+                Assert.That(locationMark.Q<VisualElement>(className: PingMarkersView.IconClass).style.backgroundColor.keyword, Is.EqualTo(StyleKeyword.Null));
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(before);
+                AudioListener.volume = volume;
+            }
+        }
+
+        [Test]
+        public void EnemyMarksDrawnAfterThePaletteChangedTakeTheNewColor()
+        {
+            var before = AppliedControlSettings.Current;
+            var volume = AudioListener.volume;
+            try
+            {
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.Standard));
+                _view.Bind(CloneLayout());
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.BlueYellow));
+
+                GameSignals.Pings.Publish(new[] { new PingMarker(1, PingKind.Enemy, null, new System.Numerics.Vector3(0f, 1f, 10f), false, 0f, 100f) });
+
+                var enemyMark = _view.Element.Q<VisualElement>(className: PingMarkersView.EnemyClass);
+                Assert.That(enemyMark.style.color.value, Is.EqualTo(TeamColors.ToColor(TeamPalette.BlueYellow.Enemy)));
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(before);
+                AudioListener.volume = volume;
+            }
+        }
+
+        [Test]
         public void ShowingNothingReleasesTheMarks()
         {
             _pinger.TryPingAlong(new Vector3(0f, 1f, 0f), Vector3.forward, out var marker);

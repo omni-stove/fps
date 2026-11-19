@@ -170,6 +170,23 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void RestoreSetsTheSidewaysSpeedWithoutClampingItAgain()
+        {
+            var opened = new ParachuteMotion();
+            opened.Open(new Vector2(30f, 40f));
+            var restored = new ParachuteMotion();
+
+            restored.Restore(opened.HorizontalVelocity);
+
+            Assert.That(restored.HorizontalVelocity, Is.EqualTo(opened.HorizontalVelocity));
+            Assert.That(
+                restored.Step(new Vector2(0.3f, 1f), 0.4f, 0.1f),
+                Is.EqualTo(opened.Step(new Vector2(0.3f, 1f), 0.4f, 0.1f)),
+                "the restored motion steps the same way");
+            Assert.Throws<ArgumentOutOfRangeException>(() => restored.Restore(new Vector2(float.NaN, 0f)));
+        }
+
+        [Test]
         public void StepRejectsInvalidArguments()
         {
             var motion = new ParachuteMotion();

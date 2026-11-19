@@ -39,7 +39,16 @@ namespace Shooter.Server
             var motor = rules.Motor;
             var defaults = ServerMotorSettings.Default;
             return new ServerMotorSettings(
-                motor.Motor, motor.Stance, motor.Mover, motor.Prone, motor.Swim, motor.WallRun, rules.Rules, defaults.KillPlaneY, defaults.SpawnPosition);
+                motor.Motor,
+                motor.Stance,
+                motor.Mover,
+                motor.Prone,
+                motor.Swim,
+                motor.WallRun,
+                motor.Parachute,
+                rules.Rules,
+                defaults.KillPlaneY,
+                defaults.SpawnPosition);
         }
 
         public static bool Create(

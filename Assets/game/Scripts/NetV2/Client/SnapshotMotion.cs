@@ -39,7 +39,17 @@ namespace Shooter.NetV2
                     ? CharacterWallRunState.None
                     : new CharacterWallRunState(wallRunSide, 0f, Vector3.Zero),
                 row.AirJumpsUsed,
-                row.JumpGraceLeft);
+                row.JumpGraceLeft,
+                ToParachute(row));
+        }
+
+        // 開いている間の速度の横はパラシュートの横の速さそのもの (ServerMovement が CharacterMotorSimulation の速度をそのまま載せる) なので、
+        // 横の速さを別に送らずに速度から戻す。
+        public static CharacterParachuteState ToParachute(in PlayerSnapshot row)
+        {
+            return row.IsParachuting
+                ? CharacterParachuteState.Open(new Vector2(row.Velocity.X, row.Velocity.Z))
+                : CharacterParachuteState.None;
         }
 
         // 巻き戻すかを決める値 (泳いでいるか・壁走りの向き・リーンの向き) を authoritative のまま変えないのは、変えると食い違いを見逃すため。
@@ -74,7 +84,8 @@ namespace Shooter.NetV2
                 CompleteSwim(authoritative, predicted.Swim, water, geometry),
                 CompleteWallRun(authoritative, predicted.WallRun),
                 authoritative.AirJumpsUsed,
-                authoritative.JumpGraceLeft);
+                authoritative.JumpGraceLeft,
+                authoritative.Parachute);
         }
 
         public static CharacterMotorState WithWallRun(CharacterMotorState state, CharacterWallRunState wallRun)
@@ -94,7 +105,8 @@ namespace Shooter.NetV2
                 state.Swim,
                 wallRun,
                 state.AirJumpsUsed,
-                state.JumpGraceLeft);
+                state.JumpGraceLeft,
+                state.Parachute);
         }
 
         private static CharacterSwimState CompleteSwim(
@@ -142,7 +154,7 @@ namespace Shooter.NetV2
             return amount > 0f ? 1 : (amount < 0f ? -1 : 0);
         }
 
-        // ダウン中か・乗り越え・伏せ・はしご・ジャンプを使えるか・持ち物の倍率は入力で送らないので、
+        // ダウン中か・乗り越え・伏せ・はしご・ジャンプ・パラシュートを使えるか・持ち物の倍率は入力で送らないので、
         // サーバーが配る値 (downed と rules と OwnerSnapshot.CarrySpeedMultiplier) から入れ、サーバーと同じ入力にする。
         public static CharacterMotorInput ToInput(in InputFrame frame, bool downed, in MatchRulesSync rules, float carrySpeedMultiplier = 1f)
         {
@@ -178,7 +190,10 @@ namespace Shooter.NetV2
                 ladderAllowed: rules.Ladder == Ladder.On,
                 carrySpeedMultiplier: carrySpeedMultiplier,
                 jumpAllowed: rules.Jump == Jump.On,
-                lean: LeanInput.Combine(frame.Has(InputButtons.LeanLeft), frame.Has(InputButtons.LeanRight)));
+                lean: LeanInput.Combine(frame.Has(InputButtons.LeanLeft), frame.Has(InputButtons.LeanRight)),
+                openParachute: frame.Has(InputButtons.OpenParachute),
+                closeParachute: frame.Has(InputButtons.CloseParachute),
+                parachuteAllowed: rules.Parachute == Parachute.On);
         }
 
         // 近接は押している間を送る。サーバー (ServerMelee) とクライアント (ClientMelee) はどちらも押し始めた tick だけ振るので、押したままでは振り直さない
@@ -192,7 +207,9 @@ namespace Shooter.NetV2
             bool prone = false,
             bool leanLeft = false,
             bool leanRight = false,
-            bool melee = false)
+            bool melee = false,
+            bool openParachute = false,
+            bool closeParachute = false)
         {
             var buttons = InputButtons.None;
             buttons |= sprint ? InputButtons.Sprint : InputButtons.None;
@@ -205,6 +222,8 @@ namespace Shooter.NetV2
             buttons |= leanLeft ? InputButtons.LeanLeft : InputButtons.None;
             buttons |= leanRight ? InputButtons.LeanRight : InputButtons.None;
             buttons |= melee ? InputButtons.Melee : InputButtons.None;
+            buttons |= openParachute ? InputButtons.OpenParachute : InputButtons.None;
+            buttons |= closeParachute ? InputButtons.CloseParachute : InputButtons.None;
             return buttons;
         }
 

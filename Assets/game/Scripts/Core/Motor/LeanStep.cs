@@ -47,6 +47,7 @@ namespace Shooter.Core
                 && !state.IsDiving
                 && !state.IsClimbing
                 && !state.IsVaulting
+                && !state.IsParachuting
                 && !swim.IsSwimming;
         }
 

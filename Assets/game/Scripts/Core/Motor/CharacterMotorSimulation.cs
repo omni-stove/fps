@@ -39,6 +39,13 @@ namespace Shooter.Core
         private IWaterVolumes _water = NoWaterVolumes.Instance;
         private SwimTuning _swim = SwimTuning.Default;
         private WallRunTuning _wallRun = WallRunTuning.Default;
+        private ParachuteTuning _parachuteTuning = ParachuteTuning.Default;
+
+        // 状態から毎 tick 戻して使う作業用。tick をまたいで中身を持ち越さない
+        private ParachuteMotion _parachute = NewParachute(ParachuteTuning.Default);
+
+        // この tick の頭で開いていたか。どの道筋で閉じても Finish で閉じた理由を残すため
+        private bool _parachuteWasOpen;
 
         public CharacterMotorSimulation(CharacterBody body, PlayerMotor motor, float tickSeconds, float killPlaneY)
             : this(body, motor, tickSeconds, killPlaneY, ProneSpec.Default)
@@ -124,6 +131,24 @@ namespace Shooter.Core
             set => _wallRun = value ?? throw new ArgumentNullException(nameof(value));
         }
 
+        // 予測とサーバーで同じ値を渡す。開ける高さや降りる速さが違うと、開いたかと位置が毎 tick 食い違う。
+        public ParachuteTuning Parachute
+        {
+            get => _parachuteTuning;
+            set
+            {
+                _parachuteTuning = value ?? throw new ArgumentNullException(nameof(value));
+                _parachute = NewParachute(value);
+            }
+        }
+
+        // 開こうとした tick だけ値を持つ。ログと見た目は呼び手が読んで出す (シミュレーションは予測のやり直しでも呼ばれるため)
+        public ParachuteOpenVerdict? LastParachuteVerdict { get; private set; }
+
+        public float LastParachuteHeight { get; private set; }
+
+        public ParachuteCloseReason? LastParachuteClose { get; private set; }
+
         public float TickSeconds { get; }
 
         public float KillPlaneY { get; }
@@ -152,9 +177,42 @@ namespace Shooter.Core
             return state.WithKnockback(state.Knockback.Launch(velocity));
         }
 
+        // 入力を待たずにサーバーが開く口 (高い所に置いて降ろすとき)。ルールと高さの判定は入力で開くときと同じにする。
+        // 動くのは次の入力からにし、持ち主の予測がその状態から入力をやり直せるようにする。
+        public CharacterMotorState Deploy(CharacterMotorState state, bool allowed)
+        {
+            LastParachuteVerdict = null;
+            LastParachuteClose = null;
+            Place(state);
+            var busy = state.IsDodging || state.IsVaulting || state.IsDiving || state.IsProne || state.IsClimbing || state.IsKnockedBack
+                || state.IsSwimming || state.Cover.IsInCover;
+            if (!TryOpenParachute(allowed, state.IsParachuting, busy, state.Velocity))
+            {
+                return state;
+            }
+
+            return state.WithParachute(CharacterParachuteState.Open(_parachute.HorizontalVelocity));
+        }
+
+        // オフラインの ParachuteMovement.MeasureHeightAboveGround と同じく、足元の少し上から真下へ地面を探す。
+        public float MeasureHeightAboveGround()
+        {
+            var position = Body.Position;
+            var origin = new Vector3(position.X, Body.FeetY(position) + ParachuteMotion.ProbeLift, position.Z);
+            if (!Body.World.Raycast(origin, -Vector3.UnitY, ParachuteMotion.ProbeDistance + ParachuteMotion.ProbeLift, Body.LayerMask, out var hit))
+            {
+                return float.PositiveInfinity;
+            }
+
+            return Math.Max(0f, hit.Distance - ParachuteMotion.ProbeLift);
+        }
+
         public CharacterMotorState Step(CharacterMotorState state, CharacterMotorInput input)
         {
             input = input.Restrained();
+            LastParachuteVerdict = null;
+            LastParachuteClose = null;
+            _parachuteWasOpen = state.IsParachuting;
             Place(state);
             Ride(state, input.Platform);
 
@@ -203,8 +261,8 @@ namespace Shooter.Core
 
             var wasProne = _proneInput.IsActive || state.IsProne;
 
-            // 回避・乗り越え・伏せ・はしごの最中はカバーに入らない (寄せる動きと転がり・乗り越えの軌跡がぶつかるため。CoverController と同じ)
-            var busy = _dodge.IsRolling || vault.IsVaulting || wasProne || _dive.IsDiving || ladder.IsClimbing;
+            // 回避・乗り越え・伏せ・はしご・パラシュートの最中はカバーに入らない (寄せる動きと転がり・乗り越えの軌跡がぶつかるため。CoverController と同じ)
+            var busy = _dodge.IsRolling || vault.IsVaulting || wasProne || _dive.IsDiving || ladder.IsClimbing || state.IsParachuting;
             var cover = StepCover(state.Cover, busy && !state.Cover.IsInCover ? input.WithoutCover() : input);
 
             if (input.Dodge && state.IsGrounded && !vault.IsVaulting && !cover.IsInCover && _dodge.IsReady
@@ -253,6 +311,20 @@ namespace Shooter.Core
                 _dodge.Step(TickSeconds);
                 var climbed = Climb(state.Stance, ladder, move.Y, jump, placed, state.IsGrounded, out var climbVelocity);
                 return Finish(climbVelocity, Body.Stance, cover, vault, input, climbed, traversal);
+            }
+
+            // オフラインの ParachuteMovement ははしご (LadderMovement) より低い移動の横取りなので、はしごの後に見る。
+            // 開いた tick から開いた動きにするのは、オフラインでも PlayerController より先にジャンプを読んで開くため。
+            var parachute = UpdateParachute(state, input, vault, startVelocity, wasProne);
+            if (parachute.IsOpen)
+            {
+                // 回避は空中では始まらないので、ここで進むのは次の回避までの待ち時間だけ
+                _dodge.Step(TickSeconds);
+                var upright = ResolveStance(state.Stance, false, false);
+                var glide = Glide(parachute, input.Move, input.Yaw, out parachute);
+
+                // オフラインの PlayerController.FinishTraversal は移動の横取りの間、空中ジャンプの数を戻す
+                return Finish(glide, upright, cover, vault, input, ladder, traversal.WithParachute(parachute).WithAirJumpsUsed(0));
             }
 
             if (cover.IsInCover)
@@ -481,6 +553,12 @@ namespace Shooter.Core
                 traversal = traversal.WithJumpGraceLeft(_motor.Spec.JumpGraceSeconds);
             }
 
+            // 吹き飛ばし・泳ぎ・はしご・落下の下限は開いたままにせず閉じる (オフラインでより高い移動の横取りに替わったときと同じ)
+            if (_parachuteWasOpen && !traversal.Parachute.IsOpen && !LastParachuteClose.HasValue)
+            {
+                LastParachuteClose = ParachuteCloseReason.Interrupted;
+            }
+
             var prone = new CharacterProneState(
                 _proneInput.IsActive, _proneInput.WasSprinting, input.Crouch, _dive.IsDiving, _dive.Direction, _dive.Elapsed);
             return new CharacterMotorState(
@@ -498,7 +576,8 @@ namespace Shooter.Core
                 traversal.Swim,
                 traversal.WallRun,
                 traversal.AirJumpsUsed,
-                traversal.JumpGraceLeft);
+                traversal.JumpGraceLeft,
+                traversal.Parachute);
         }
 
         // 前の tick を床に立って終えたときだけ運ぶ。はしご・泳ぎ・吹き飛ばしの間は床に立っていない。
@@ -516,6 +595,80 @@ namespace Shooter.Core
             var contacts = Body.Move(intended);
             LastRide = new PlatformRide(platform, intended, (contacts & CapsuleContacts.Above) != 0);
             _rideVelocity = LastRide.Velocity(TickSeconds);
+        }
+
+        // オフラインの ParachuteMovement.Update と同じく、接地中とルールで切ってある間は開けるかを調べない (空振りのたびに判定を残さないため)。
+        private CharacterParachuteState UpdateParachute(
+            CharacterMotorState state, CharacterMotorInput input, CharacterVaultState vault, Vector3 startVelocity, bool wasProne)
+        {
+            var parachute = state.Parachute;
+            if (parachute.IsOpen)
+            {
+                if (!input.ParachuteAllowed)
+                {
+                    LastParachuteClose = ParachuteCloseReason.RuleOff;
+                    return CharacterParachuteState.None;
+                }
+
+                if (input.CloseParachute)
+                {
+                    LastParachuteClose = ParachuteCloseReason.Released;
+                    return CharacterParachuteState.None;
+                }
+
+                return parachute;
+            }
+
+            if (!input.OpenParachute || !input.ParachuteAllowed || state.IsGrounded)
+            {
+                return CharacterParachuteState.None;
+            }
+
+            var busy = _dodge.IsRolling || vault.IsVaulting || _dive.IsDiving || wasProne || state.Cover.IsInCover;
+            return TryOpenParachute(true, false, busy, startVelocity)
+                ? CharacterParachuteState.Open(_parachute.HorizontalVelocity)
+                : CharacterParachuteState.None;
+        }
+
+        private bool TryOpenParachute(bool allowed, bool isOpen, bool busy, Vector3 velocity)
+        {
+            var height = MeasureHeightAboveGround();
+            var verdict = _parachute.Evaluate(allowed ? Shooter.Core.Parachute.On : Shooter.Core.Parachute.Off, isOpen, busy, height);
+            LastParachuteVerdict = verdict;
+            LastParachuteHeight = height;
+            if (verdict != ParachuteOpenVerdict.Open)
+            {
+                return false;
+            }
+
+            _parachute.Open(new Vector2(velocity.X, velocity.Z));
+            return true;
+        }
+
+        // 着地は動かした後の接地で見る (ParachuteMovement と同じく、開いてから 1 度は動かしてから閉じる)。
+        // 返す下向きの速さを落下ダメージの閾値までに抑えるのは ParachuteMovement.Step と同じく、降りる速さを閾値より速く設定されても
+        // 開いている間はダメージを受けないという約束を守るため (動く量はそのまま)。
+        private Vector3 Glide(CharacterParachuteState parachute, Vector2 move, float yaw, out CharacterParachuteState after)
+        {
+            _parachute.Restore(parachute.HorizontalVelocity);
+            var velocity = _parachute.Step(move, yaw, TickSeconds);
+            Body.Move(velocity * TickSeconds);
+            var reported = new Vector3(velocity.X, -Math.Min(_parachute.DescentSpeed, _motor.Spec.SafeFallSpeed), velocity.Z);
+            if (Body.IsGrounded)
+            {
+                _parachute.Reset();
+                LastParachuteClose = ParachuteCloseReason.Landed;
+                after = CharacterParachuteState.None;
+                return reported;
+            }
+
+            after = CharacterParachuteState.Open(_parachute.HorizontalVelocity);
+            return reported;
+        }
+
+        private static ParachuteMotion NewParachute(ParachuteTuning tuning)
+        {
+            return new ParachuteMotion(tuning.MinOpenHeight, tuning.DescentSpeed, tuning.HorizontalSpeed, tuning.SteerAcceleration);
         }
 
         public void Place(CharacterMotorState state)
@@ -931,22 +1084,29 @@ namespace Shooter.Core
             return Math.Abs(target - current) <= maxDelta ? target : current + (Math.Sign(target - current) * maxDelta);
         }
 
-        // Finish までの道筋 (はしご・吹き飛ばし・ふつうの移動) のどれを通っても同じく状態へ写すため、5 つの段の結果をまとめて運ぶ
+        // Finish までの道筋 (はしご・吹き飛ばし・パラシュート・ふつうの移動) のどれを通っても同じく状態へ写すため、6 つの段の結果をまとめて運ぶ。
+        // パラシュートを閉じた既定で始めるのは、開いたまま運ぶのをパラシュートの道筋だけにし、ほかの道筋に替わったら閉じるため。
         private readonly struct TraversalStates
         {
             public TraversalStates(CharacterLeanState lean, CharacterSwimState swim, CharacterWallRunState wallRun, int airJumpsUsed)
-                : this(lean, swim, wallRun, airJumpsUsed, 0f)
+                : this(lean, swim, wallRun, airJumpsUsed, 0f, CharacterParachuteState.None)
             {
             }
 
             private TraversalStates(
-                CharacterLeanState lean, CharacterSwimState swim, CharacterWallRunState wallRun, int airJumpsUsed, float jumpGraceLeft)
+                CharacterLeanState lean,
+                CharacterSwimState swim,
+                CharacterWallRunState wallRun,
+                int airJumpsUsed,
+                float jumpGraceLeft,
+                CharacterParachuteState parachute)
             {
                 Lean = lean;
                 Swim = swim;
                 WallRun = wallRun;
                 AirJumpsUsed = airJumpsUsed;
                 JumpGraceLeft = jumpGraceLeft;
+                Parachute = parachute;
             }
 
             public CharacterLeanState Lean { get; }
@@ -959,19 +1119,26 @@ namespace Shooter.Core
 
             public float JumpGraceLeft { get; }
 
+            public CharacterParachuteState Parachute { get; }
+
             public TraversalStates WithAirJumpsUsed(int airJumpsUsed)
             {
-                return new TraversalStates(Lean, Swim, WallRun, airJumpsUsed, JumpGraceLeft);
+                return new TraversalStates(Lean, Swim, WallRun, airJumpsUsed, JumpGraceLeft, Parachute);
             }
 
             public TraversalStates WithWallRun(CharacterWallRunState wallRun)
             {
-                return new TraversalStates(Lean, Swim, wallRun, AirJumpsUsed, JumpGraceLeft);
+                return new TraversalStates(Lean, Swim, wallRun, AirJumpsUsed, JumpGraceLeft, Parachute);
             }
 
             public TraversalStates WithJumpGraceLeft(float jumpGraceLeft)
             {
-                return new TraversalStates(Lean, Swim, WallRun, AirJumpsUsed, jumpGraceLeft);
+                return new TraversalStates(Lean, Swim, WallRun, AirJumpsUsed, jumpGraceLeft, Parachute);
+            }
+
+            public TraversalStates WithParachute(CharacterParachuteState parachute)
+            {
+                return new TraversalStates(Lean, Swim, WallRun, AirJumpsUsed, JumpGraceLeft, parachute);
             }
         }
     }

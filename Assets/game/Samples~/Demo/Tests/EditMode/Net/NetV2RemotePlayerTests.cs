@@ -117,5 +117,24 @@ namespace Shooter.Net.Tests
             Assert.That(_remote.Body.localScale.y, Is.EqualTo(0.6f).Within(1e-5f), "the crouch still squashes the new body");
             Assert.That(_remote.Body.localScale.x, Is.EqualTo(0.8f).Within(1e-5f));
         }
+
+        [Test]
+        public void AnOpenParachuteHangsTheBodyUprightInsteadOfLeaning()
+        {
+            // 出てきた最初の Show は寄せずにそのまま置くので、1 回目で傾きの答えが見える
+            _remote.Show(new RemotePose(System.Numerics.Vector3.Zero, 0f, PlayerStance.Standing, null, 1f, false, WallRunSide.None, true));
+
+            Assert.That(_remote.IsParachuting, Is.True);
+            Assert.That(Quaternion.Angle(_remote.Tilt, Quaternion.identity), Is.EqualTo(0f).Within(1e-3f), "the lean is not shown while parachuting");
+        }
+
+        [Test]
+        public void ALeanWithoutAParachuteStillTiltsTheBody()
+        {
+            _remote.Show(new RemotePose(System.Numerics.Vector3.Zero, 0f, PlayerStance.Standing, null, 1f, false, WallRunSide.None, false));
+
+            Assert.That(_remote.IsParachuting, Is.False);
+            Assert.That(Quaternion.Angle(_remote.Tilt, Quaternion.identity), Is.GreaterThan(1f));
+        }
     }
 }

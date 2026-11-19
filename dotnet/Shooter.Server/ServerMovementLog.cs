@@ -90,6 +90,20 @@ namespace Shooter.Server
             return Head("knockback", playerId, tick) + " landed at=" + Vector(position);
         }
 
+        // オフラインの ParachuteMovement.FormatOpenLog と同じ書き方にし、開けなかった理由と測った高さを同じ見方で追えるようにする
+        public static string ParachuteOpen(int playerId, int tick, ParachuteOpenVerdict verdict, float heightAboveGround)
+        {
+            var height = float.IsPositiveInfinity(heightAboveGround) ? "inf" : heightAboveGround.ToString("F2", CultureInfo.InvariantCulture);
+            return verdict == ParachuteOpenVerdict.Open
+                ? Head("parachute", playerId, tick) + " opened height=" + height
+                : Head("parachute", playerId, tick) + " open=" + verdict + " height=" + height;
+        }
+
+        public static string ParachuteClosed(int playerId, int tick, ParachuteCloseReason reason)
+        {
+            return Head("parachute", playerId, tick) + " closed reason=" + reason;
+        }
+
         private static string Vector(Vector3 value)
         {
             return string.Format(CultureInfo.InvariantCulture, "({0:0.0}, {1:0.0}, {2:0.0})", value.X, value.Y, value.Z);

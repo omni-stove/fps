@@ -11,9 +11,9 @@ namespace Shooter.Protocol.Tests
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
 
         [Test]
-        public void TheProtocolVersionIs27()
+        public void TheProtocolVersionIs28()
         {
-            Assert.That(MatchProtocol.Version, Is.EqualTo(27));
+            Assert.That(MatchProtocol.Version, Is.EqualTo(28));
         }
 
         [Test]

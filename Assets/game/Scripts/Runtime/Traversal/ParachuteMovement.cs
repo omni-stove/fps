@@ -18,11 +18,11 @@ namespace Shooter.Runtime
         // 開いた後に有効になる動き (乗り物の座席など) がこれより高ければ、パラシュートは閉じてそちらに任せる。
         public const int MovementPriority = 100;
 
-        // 接地して少しめり込んでいても、Ray の始点が地面の中に入って地面を外さないよう、足元より上から飛ばす。
         // 始点は自分の体の中になるが、Ray は始点を含むコライダーには当たらない。
-        public const float ProbeLift = 0.25f;
+        // ネットの移動 (CharacterMotorSimulation) と同じ高さで開けるかを決めるよう、Core の値を使う。
+        public const float ProbeLift = ParachuteMotion.ProbeLift;
 
-        public const float ProbeDistance = 1000f;
+        public const float ProbeDistance = ParachuteMotion.ProbeDistance;
 
         private const int MaxProbeHits = 16;
 

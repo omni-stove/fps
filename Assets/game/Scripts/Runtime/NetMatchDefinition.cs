@@ -522,7 +522,8 @@ namespace Shooter.Runtime
                 new CapsuleMoverSpec(_slopeLimitDegrees, _stepOffset, _skinWidth, CapsuleMoverSpec.DefaultLayerMask),
                 prone,
                 traversal.Swim,
-                traversal.WallRun);
+                traversal.WallRun,
+                traversal.Parachute);
         }
 
         public bool TryCreateLoadout(out ServerLoadout loadout, out string error)

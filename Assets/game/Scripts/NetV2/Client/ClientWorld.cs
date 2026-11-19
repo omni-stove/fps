@@ -174,6 +174,7 @@ namespace Shooter.NetV2
                 Knockback = knockback ?? KnockbackSpec.Default,
                 Swim = motor.Swim,
                 WallRun = motor.WallRun,
+                Parachute = motor.Parachute,
             };
         }
 

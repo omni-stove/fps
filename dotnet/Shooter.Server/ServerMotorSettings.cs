@@ -57,10 +57,26 @@ namespace Shooter.Server
             GameRules rules,
             float killPlaneY,
             Vector3 spawnPosition)
+            : this(motor, stance, mover, prone, swim, wallRun, ParachuteTuning.Default, rules, killPlaneY, spawnPosition)
+        {
+        }
+
+        public ServerMotorSettings(
+            MotorSpec motor,
+            StanceGeometry stance,
+            CapsuleMoverSpec mover,
+            ProneSpec prone,
+            SwimTuning swim,
+            WallRunTuning wallRun,
+            ParachuteTuning parachute,
+            GameRules rules,
+            float killPlaneY,
+            Vector3 spawnPosition)
         {
             Prone = prone ?? throw new ArgumentNullException(nameof(prone));
             Swim = swim ?? throw new ArgumentNullException(nameof(swim));
             WallRun = wallRun ?? throw new ArgumentNullException(nameof(wallRun));
+            Parachute = parachute ?? throw new ArgumentNullException(nameof(parachute));
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
             Stance = stance ?? throw new ArgumentNullException(nameof(stance));
             Mover = mover ?? throw new ArgumentNullException(nameof(mover));
@@ -96,6 +112,8 @@ namespace Shooter.Server
 
         public WallRunTuning WallRun { get; }
 
+        public ParachuteTuning Parachute { get; }
+
         public GameRules Rules { get; }
 
         public float KillPlaneY { get; }
@@ -104,12 +122,12 @@ namespace Shooter.Server
 
         public ServerMotorSettings WithRules(GameRules rules)
         {
-            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, rules, KillPlaneY, SpawnPosition);
+            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, Parachute, rules, KillPlaneY, SpawnPosition);
         }
 
         public ServerMotorSettings WithSpawnPosition(Vector3 spawnPosition)
         {
-            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, Rules, KillPlaneY, spawnPosition);
+            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, Parachute, Rules, KillPlaneY, spawnPosition);
         }
     }
 }

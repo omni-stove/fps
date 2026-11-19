@@ -38,7 +38,10 @@ namespace Shooter.Core
             float carrySpeedMultiplier = 1f,
             bool jumpAllowed = true,
             int lean = 0,
-            PlatformMotion platform = default)
+            PlatformMotion platform = default,
+            bool openParachute = false,
+            bool closeParachute = false,
+            bool parachuteAllowed = false)
         {
             if (!(carrySpeedMultiplier >= 0f) || float.IsInfinity(carrySpeedMultiplier))
             {
@@ -68,6 +71,9 @@ namespace Shooter.Core
             _jumpForbidden = !jumpAllowed;
             _lean = (sbyte)lean;
             _platform = platform;
+            OpenParachute = openParachute;
+            CloseParachute = closeParachute;
+            ParachuteAllowed = parachuteAllowed;
         }
 
         public Vector2 Move { get; }
@@ -104,12 +110,19 @@ namespace Shooter.Core
 
         public PlatformMotion Platform => _platform;
 
+        public bool OpenParachute { get; }
+
+        public bool CloseParachute { get; }
+
+        public bool ParachuteAllowed { get; }
+
+        // 開いているパラシュートを許すかは残す。倒れただけで閉じると、空中で倒れた人がそのまま落ちて死ぬため。
         public CharacterMotorInput Restrained()
         {
             return Downed
                 ? new CharacterMotorInput(
                     Vector2.Zero, Yaw, false, false, true, true, false, false, false, false, false, false, false, CarrySpeedMultiplier, JumpAllowed,
-                    platform: Platform)
+                    platform: Platform, parachuteAllowed: ParachuteAllowed)
                 : this;
         }
 
@@ -156,12 +169,14 @@ namespace Shooter.Core
                 vaultAllowed: rules.Vault == Shooter.Core.Vault.On,
                 proneAllowed: rules.Prone == Shooter.Core.Prone.On,
                 ladderAllowed: rules.Ladder == Shooter.Core.Ladder.On,
-                jumpAllowed: rules.Jump == Shooter.Core.Jump.On);
+                jumpAllowed: rules.Jump == Shooter.Core.Jump.On,
+                parachuteAllowed: rules.Parachute == Shooter.Core.Parachute.On);
         }
 
         public CharacterMotorInput With(
             bool? cover = null, bool? dodge = null, bool? vaultAllowed = null, bool? prone = null, bool? proneAllowed = null, bool? ladderAllowed = null,
-            float? carrySpeedMultiplier = null, bool? jumpAllowed = null, int? lean = null, PlatformMotion? platform = null)
+            float? carrySpeedMultiplier = null, bool? jumpAllowed = null, int? lean = null, PlatformMotion? platform = null,
+            bool? openParachute = null, bool? closeParachute = null, bool? parachuteAllowed = null)
         {
             return new CharacterMotorInput(
                 Move,
@@ -180,7 +195,10 @@ namespace Shooter.Core
                 carrySpeedMultiplier ?? CarrySpeedMultiplier,
                 jumpAllowed ?? JumpAllowed,
                 lean ?? Lean,
-                platform ?? Platform);
+                platform ?? Platform,
+                openParachute ?? OpenParachute,
+                closeParachute ?? CloseParachute,
+                parachuteAllowed ?? ParachuteAllowed);
         }
 
         public static bool IsValid(Vector2 move, float yaw)

@@ -157,6 +157,7 @@ namespace Shooter.Server
                 Knockback = _knockback,
                 Swim = _settings.Swim,
                 WallRun = _settings.WallRun,
+                Parachute = _settings.Parachute,
             };
         }
 
@@ -241,6 +242,35 @@ namespace Shooter.Server
             mover.Simulation.SpawnPosition = position;
             mover.State = new CharacterMotorState(position, Vector3.Zero, false, false);
             mover.Simulation.Place(mover.State);
+            Publish(mover);
+            return true;
+        }
+
+        // 指定の高さに置き、入力で開くときと同じルールと高さの判定でパラシュートを開いて降ろす (Battle Royale の降下など)。
+        // Teleport と違って出現の位置を替えないのは、落下の下限で戻す先を空の上にしないため。
+        // 開けなかった (ルールで切ってある・低すぎる) ときもその位置に置いたまま落とし、置けた人がいれば true を返す。
+        public bool Drop(int playerId, Vector3 position)
+        {
+            if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
+            {
+                throw new ArgumentOutOfRangeException(nameof(position), position, "position must be finite");
+            }
+
+            if (!_byPlayer.TryGetValue(playerId, out var mover))
+            {
+                return false;
+            }
+
+            var simulation = mover.Simulation;
+            mover.State = simulation.Deploy(
+                new CharacterMotorState(position, Vector3.Zero, false, false), _settings.Rules.Actions.Parachute == Parachute.On);
+            simulation.Place(mover.State);
+            if (simulation.LastParachuteVerdict.HasValue)
+            {
+                _log.WriteLine(ServerMovementLog.ParachuteOpen(
+                    playerId, mover.LastProcessedTick, simulation.LastParachuteVerdict.Value, simulation.LastParachuteHeight));
+            }
+
             Publish(mover);
             return true;
         }
@@ -365,6 +395,7 @@ namespace Shooter.Server
                 row.WallRunSide = (Shooter.Protocol.WallRunSide)(byte)state.WallRun.Side;
                 row.AirJumpsUsed = (byte)Math.Min(byte.MaxValue, state.AirJumpsUsed);
                 row.JumpGraceLeft = state.JumpGraceLeft;
+                row.IsParachuting = state.IsParachuting;
             }
 
             if (_byPlayer.TryGetValue(receiver.PlayerId, out var own))
@@ -423,7 +454,9 @@ namespace Shooter.Server
                     false,
                     false,
                     CarrySpeedMultiplier(mover),
-                    lean: LeanInput.Combine(frame.Has(InputButtons.LeanLeft), frame.Has(InputButtons.LeanRight)))
+                    lean: LeanInput.Combine(frame.Has(InputButtons.LeanLeft), frame.Has(InputButtons.LeanRight)),
+                    openParachute: frame.Has(InputButtons.OpenParachute),
+                    closeParachute: frame.Has(InputButtons.CloseParachute))
                 .WithRules(_settings.Rules.Actions);
 
             if (mover.Riding)
@@ -522,6 +555,17 @@ namespace Shooter.Server
             if (previous.IsKnockedBack && !current.IsKnockedBack)
             {
                 _log.WriteLine(ServerMovementLog.KnockbackLanded(playerId, tick, current.Position));
+            }
+
+            var simulation = mover.Simulation;
+            if (simulation.LastParachuteVerdict.HasValue)
+            {
+                _log.WriteLine(ServerMovementLog.ParachuteOpen(playerId, tick, simulation.LastParachuteVerdict.Value, simulation.LastParachuteHeight));
+            }
+
+            if (simulation.LastParachuteClose.HasValue)
+            {
+                _log.WriteLine(ServerMovementLog.ParachuteClosed(playerId, tick, simulation.LastParachuteClose.Value));
             }
 
             // 傾きは毎 tick 少しずつ変わるので、向きが替わったときだけ出す

@@ -41,7 +41,8 @@
       "reviveRange": 1.5,
       "emote": "Off",
       "stamina": "Off",
-      "reloadInterruptedBy": ["Melee", "Grenade"]
+      "reloadInterruptedBy": ["Melee", "Grenade"],
+      "aimWhileReloading": "On"
     },
     "spawnProtectionSeconds": 0,
     "fallDamage": "Off",

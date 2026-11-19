@@ -410,7 +410,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            (_hint ?? (_hint = new InteractHintSlot(this))).Show(hint);
+            (_hint ?? (_hint = new InteractHintSlot(this))).Show(hint, hint.HasRoom && Time.time >= _readyAt);
         }
 
         private void HidePrompt()

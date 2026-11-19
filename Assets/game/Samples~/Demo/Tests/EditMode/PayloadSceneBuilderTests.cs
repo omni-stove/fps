@@ -13,7 +13,7 @@ namespace Shooter.Tests.EditMode
     public sealed class PayloadSceneBuilderTests
     {
         // 道筋の区間の長さ: 6 + 10 + 6 + √80 + 6。
-        private const double ExpectedRouteLength = 34d + 8.94427191d;
+        private const double ExpectedRouteLength = 28d + 8.94427191d;
 
         // 台車の箱を真上から見たときの、中心から角までの距離。
         private static float CartHalfDiagonal =>

@@ -134,6 +134,35 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ADecalMovesTurnsAndStretchesWithItsWall()
+        {
+            var presenter = Presenter();
+            var wall = Wall("Wall", new Vector3(0f, 1f, 11.5f));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Blood\] spray "));
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Blood\] decal "));
+            presenter.PlayImpact(CharacterImpact(new Vector3(0f, 1f, 10f), HitZone.Body), Vector3.forward);
+            var decal = presenter.Decals.Items[0].Root.transform;
+
+            Assert.That(presenter.FollowDecalAnchors(), Is.Zero, "a still wall leaves its decal alone");
+
+            wall.transform.position = new Vector3(2f, 1f, 11.5f);
+            Assert.That(presenter.FollowDecalAnchors(), Is.EqualTo(1));
+            AssertNear(decal.position, new Vector3(2f, 1f, 11f - BloodPresenter.DecalSurfaceOffset));
+            AssertNear(decal.forward, Vector3.forward);
+
+            wall.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            presenter.FollowDecalAnchors();
+            AssertNear(decal.position, new Vector3(2f, 1f, 12f + BloodPresenter.DecalSurfaceOffset), "the decal turns to the far side with the wall");
+            AssertNear(decal.forward, Vector3.back);
+
+            wall.transform.rotation = Quaternion.identity;
+            wall.transform.localScale = new Vector3(4f, 4f, 2f);
+            presenter.FollowDecalAnchors();
+            AssertNear(decal.position, new Vector3(2f, 1f, 10.5f - BloodPresenter.DecalSurfaceOffset), "the gap to the face stays the same when the wall stretches");
+            AssertNear(decal.localScale, Vector3.one * 0.5f, "the decal keeps its own size");
+        }
+
+        [Test]
         public void AWallFartherThanTheLimitGetsNoDecal()
         {
             var presenter = Presenter();

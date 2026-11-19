@@ -239,6 +239,64 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ADecalMovesAndTurnsWithTheObjectItHit()
+        {
+            var decals = Decals();
+            var surface = Surface("metal", 0.2f);
+            var crate = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            crate.transform.position = new Vector3(0f, 0f, 0.5f);
+            var decal = decals.Place(new ImpactInfo(Vector3.zero, Vector3.back, crate.GetComponent<Collider>(), "metal", false, null), surface, 0f);
+            var placed = decal.Root.transform;
+
+            Assert.That(decals.FollowAnchors(), Is.Zero, "a still object leaves its decal alone");
+            AssertNear(placed.position, Vector3.back * ImpactDecals.SurfaceOffset);
+
+            crate.transform.position = new Vector3(3f, 1f, 0.5f);
+            Assert.That(decals.FollowAnchors(), Is.EqualTo(1));
+            AssertNear(placed.position, new Vector3(3f, 1f, -ImpactDecals.SurfaceOffset));
+            AssertNear(placed.forward, Vector3.back);
+
+            crate.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+            decals.FollowAnchors();
+            AssertNear(placed.position, new Vector3(2.5f - ImpactDecals.SurfaceOffset, 1f, 0.5f), "the decal turns with the face it is on");
+            AssertNear(placed.forward, Vector3.left);
+            AssertNear(placed.localScale, new Vector3(0.2f, 0.2f, 1f), "the decal keeps its own size");
+        }
+
+        [Test]
+        public void TheGapToTheFaceStaysTheSameWhenTheObjectStretches()
+        {
+            var decals = Decals();
+            var surface = Surface("wood", 0.1f);
+            var plank = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            plank.transform.position = new Vector3(0f, 0f, 0.5f);
+            var decal = decals.Place(new ImpactInfo(Vector3.zero, Vector3.back, plank.GetComponent<Collider>(), "wood", false, null), surface, 0f);
+
+            plank.transform.localScale = new Vector3(1f, 1f, 4f);
+            decals.FollowAnchors();
+
+            AssertNear(decal.Root.transform.position, new Vector3(0f, 0f, -1.5f - ImpactDecals.SurfaceOffset));
+        }
+
+        [Test]
+        public void ADecalWithoutAnObjectAndAReleasedDecalStayPut()
+        {
+            var decals = Decals();
+            var surface = Surface("concrete", 0.1f);
+            var door = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            var loose = decals.Place(new ImpactInfo(new Vector3(1f, 0f, 0f), Vector3.back, null, "concrete", false, null), surface, 0f);
+            var onDoor = decals.Place(new ImpactInfo(Vector3.zero, Vector3.back, door.GetComponent<Collider>(), "concrete", false, null), surface, 0f);
+
+            decals.Clear();
+            var reused = decals.Place(new ImpactInfo(new Vector3(0f, 5f, 0f), Vector3.back, null, "concrete", false, null), surface, 0f);
+            door.transform.position = new Vector3(9f, 0f, 0f);
+
+            Assert.That(reused, Is.SameAs(onDoor).Or.SameAs(loose));
+            Assert.That(decals.FollowAnchors(), Is.Zero, "a reused decal no longer follows the door it was on");
+            AssertNear(reused.Root.transform.position, new Vector3(0f, 5f, -ImpactDecals.SurfaceOffset));
+        }
+
+        [Test]
         public void TheDetachedLogNamesTheCountAndWhatIsLeft()
         {
             Assert.That(ImpactDecals.FormatDetachedLog(3, 5, 64), Is.EqualTo("[Presentation] decal released detached count=3 active=5/64"));

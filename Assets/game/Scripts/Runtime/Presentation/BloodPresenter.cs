@@ -34,7 +34,7 @@ namespace Shooter.Runtime
         private readonly Dictionary<GameObject, PresentationPool<PooledEffect>> _sprayPools =
             new Dictionary<GameObject, PresentationPool<PooledEffect>>();
 
-        private readonly Dictionary<PooledEffect, Collider> _decalAnchors = new Dictionary<PooledEffect, Collider>();
+        private readonly Dictionary<PooledEffect, DecalAttachment> _decalAnchors = new Dictionary<PooledEffect, DecalAttachment>();
         private readonly List<PooledEffect> _decalScratch = new List<PooledEffect>();
         private PresentationPool<PooledEffect> _decals;
         private GameObject _decalSource;
@@ -94,7 +94,28 @@ namespace Shooter.Runtime
 
         public Collider DecalAnchorOf(PooledEffect decal)
         {
-            return decal != null && _decalAnchors.TryGetValue(decal, out var anchor) ? anchor : null;
+            return decal != null && _decalAnchors.TryGetValue(decal, out var attachment) ? attachment.Collider : null;
+        }
+
+        public int FollowDecalAnchors()
+        {
+            if (_decals == null || _decals.ActiveCount == 0)
+            {
+                return 0;
+            }
+
+            var moved = 0;
+            _decals.CopyActive(_decalScratch);
+            foreach (var decal in _decalScratch)
+            {
+                if (_decalAnchors.TryGetValue(decal, out var attachment) && attachment.Follow(decal.Root.transform))
+                {
+                    moved++;
+                }
+            }
+
+            _decalScratch.Clear();
+            return moved;
         }
 
         private void OnEnable()
@@ -137,6 +158,12 @@ namespace Shooter.Runtime
         private void Update()
         {
             Tick(Time.time);
+        }
+
+        // 貼り先を動かすのは Update や物理なので、それらが済んだ後に痕を合わせる。
+        private void LateUpdate()
+        {
+            FollowDecalAnchors();
         }
 
         public bool PlayImpact(ImpactInfo impact, Vector3? direction)
@@ -197,8 +224,7 @@ namespace Shooter.Runtime
             _decals.CopyActive(_decalScratch);
             foreach (var decal in _decalScratch)
             {
-                var anchor = DecalAnchorOf(decal);
-                if (anchor == null || !anchor.enabled || !anchor.gameObject.activeInHierarchy)
+                if (!_decalAnchors.TryGetValue(decal, out var attachment) || attachment.Collider == null || attachment.IsDetached)
                 {
                     _decals.Release(decal);
                 }
@@ -355,17 +381,29 @@ namespace Shooter.Runtime
             }
 
             var decal = _decals.Rent(now + catalog.WallDecalLifetime);
-            _decalAnchors[decal] = wall.collider;
+            if (!_decalAnchors.TryGetValue(decal, out var attachment))
+            {
+                attachment = new DecalAttachment();
+                _decalAnchors[decal] = attachment;
+            }
 
             var normal = wall.normal.sqrMagnitude > 1e-8f ? wall.normal.normalized : -Vector3.forward;
             var roll = Quaternion.AngleAxis(UnityEngine.Random.Range(0f, 360f), Vector3.forward);
+            var rotation = Quaternion.LookRotation(-normal) * roll;
+
+            // 血痕の +Z は壁の中を向くので、浮かせる向きは -Z。
+            attachment.Attach(wall.collider, wall.point, rotation, Vector3.back * DecalSurfaceOffset);
             decal.Root.transform.localScale = _decalBaseScale * catalog.WallDecalSize;
-            decal.PlayAt(wall.point + (normal * DecalSurfaceOffset), Quaternion.LookRotation(-normal) * roll);
+            decal.PlayAt(wall.point + (normal * DecalSurfaceOffset), rotation);
         }
 
         private void HideDecal(PooledEffect decal)
         {
-            _decalAnchors.Remove(decal);
+            if (_decalAnchors.TryGetValue(decal, out var attachment))
+            {
+                attachment.Clear();
+            }
+
             decal.Hide();
         }
 

@@ -6,7 +6,7 @@ namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Rigidbody))]
-    public sealed class SimpleAircraftMotor : MonoBehaviour, IVehicleMotor, IVehicleTopSpeed
+    public sealed class SimpleAircraftMotor : MonoBehaviour, IVehicleMotor, IVehicleTopSpeed, IBotPilotedMotor
     {
         [SerializeField, Tooltip("飛び方の値 (Create > Shooter > Aircraft Definition)。空なら既定値で飛ぶ")]
         private AircraftDefinition _definition;
@@ -43,6 +43,8 @@ namespace Shooter.Runtime
         public float ForwardSpeed => Vector3.Dot(Body.linearVelocity, transform.forward);
 
         public float TopSpeed => AircraftAero.TopSpeed(Spec, Physics.gravity.magnitude);
+
+        public Type BotPilotType => typeof(BotAircraftPilot);
 
         private void Awake()
         {

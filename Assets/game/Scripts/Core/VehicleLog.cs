@@ -156,6 +156,16 @@ namespace Shooter.Core
             return $"{Tag} '{vehicle}' bot takes controls rider={rider} as={(flies ? "pilot" : "driver")} route={(string.IsNullOrEmpty(route) ? "none" : route)}";
         }
 
+        public static string BotPilotTypeInvalid(string vehicle, string pilotType)
+        {
+            return $"{Tag} '{vehicle}' bot pilot type '{(string.IsNullOrEmpty(pilotType) ? "none" : pilotType)}' is not a MonoBehaviour with IBotPilot; the bot drives it as a car";
+        }
+
+        public static string BotPilotNotAdded(string vehicle, string pilotType)
+        {
+            return $"{Tag} '{vehicle}' bot pilot '{pilotType}' could not be added; the bot drives it as a car";
+        }
+
         public static string BotGivesUpControls(string vehicle, string rider)
         {
             return $"{Tag} '{vehicle}' bot gives up controls rider={rider}";

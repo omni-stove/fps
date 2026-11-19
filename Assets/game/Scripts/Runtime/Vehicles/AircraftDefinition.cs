@@ -19,7 +19,7 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("視線の方へ機首を向ける当て方 (AircraftControlScheme) の値")]
         private AircraftAimSettings _aim = new AircraftAimSettings();
 
-        [SerializeField, Tooltip("操縦桿の値")]
+        [SerializeField, Tooltip("操縦桿で直接操る当て方 (AircraftStickControlScheme) の値")]
         private AircraftStickSettings _stick = new AircraftStickSettings();
 
         [SerializeField, Tooltip("地上を走るときの値")]
@@ -30,6 +30,9 @@ namespace Shooter.Runtime
 
         [SerializeField, Tooltip("舵面の動き・エンジン音・ベイパーの値 (AircraftEffects が読む)")]
         private AircraftEffectsSettings _effects = new AircraftEffectsSettings();
+
+        [SerializeField, Tooltip("HUD に出す警告の値")]
+        private AircraftWarningSettings _warning = new AircraftWarningSettings();
 
         public float Mass
         {
@@ -55,6 +58,8 @@ namespace Shooter.Runtime
 
         public AircraftEffectsSettings Effects => _effects ??= new AircraftEffectsSettings();
 
+        public AircraftWarningSettings Warning => _warning ??= new AircraftWarningSettings();
+
         public AircraftSpec ToSpec()
         {
             try
@@ -72,6 +77,18 @@ namespace Shooter.Runtime
             try
             {
                 return Aim.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw Invalid(e);
+            }
+        }
+
+        public AircraftStickSpec ToStickSpec()
+        {
+            try
+            {
+                return Stick.ToSpec();
             }
             catch (ArgumentException e)
             {
@@ -108,6 +125,18 @@ namespace Shooter.Runtime
             try
             {
                 return Ground.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw Invalid(e);
+            }
+        }
+
+        public AircraftWarningSpec ToWarningSpec()
+        {
+            try
+            {
+                return Warning.ToSpec();
             }
             catch (ArgumentException e)
             {

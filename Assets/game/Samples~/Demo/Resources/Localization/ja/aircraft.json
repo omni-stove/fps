@@ -1,0 +1,9 @@
+{
+  "aircraft.speed": "速度 {0} km/h",
+  "aircraft.altitude": "高度 {0} m",
+  "aircraft.throttle": "スロットル {0}%",
+  "aircraft.airBrake": "エアブレーキ {0}%",
+  "aircraft.angleOfAttack": "迎え角 {0}°",
+  "aircraft.loadFactor": "{0} G",
+  "aircraft.stall": "失速"
+}

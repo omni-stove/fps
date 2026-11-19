@@ -136,6 +136,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheStickBlockSurvivesARoundTrip()
+        {
+            var definition = NewDefinition("Trainer");
+
+            Assert.That(definition.ToStickSpec().Deadzone, Is.EqualTo(AircraftStickSpec.DefaultDeadzone));
+            definition.Stick.CopyFrom(new AircraftStickSpec(deadzone: 0.25f, exponent: 1.5f, throttleRate: 0.8f, forwardPitchesDown: false));
+            var stick = definition.ToStickSpec();
+
+            Assert.That(stick.Deadzone, Is.EqualTo(0.25f));
+            Assert.That(stick.Exponent, Is.EqualTo(1.5f));
+            Assert.That(stick.ThrottleRate, Is.EqualTo(0.8f));
+            Assert.That(stick.ForwardPitchesDown, Is.False);
+        }
+
+        [Test]
         public void TheDamageBlockStartsFromTheDefaultPartsAndSurvivesARoundTrip()
         {
             var definition = NewDefinition("Trainer");
@@ -213,6 +228,22 @@ namespace Shooter.Tests.EditMode
             Assert.That(effects.EngineSpeedShare, Is.EqualTo(0.5f));
             Assert.That(effects.VaporLoadFactor, Is.EqualTo(5f));
             Assert.Throws<ArgumentNullException>(() => definition.Effects.CopyFrom(null));
+        }
+
+        [Test]
+        public void TheWarningBlockStartsFromTheDefaultsAndSurvivesARoundTrip()
+        {
+            var definition = NewDefinition("Trainer");
+
+            Assert.That(definition.ToWarningSpec().StallAngleDegrees, Is.EqualTo(AircraftWarningSpec.DefaultStallAngleDegrees));
+            Assert.That(definition.ToWarningSpec().StallSpeed, Is.EqualTo(AircraftWarningSpec.DefaultStallSpeed));
+
+            definition.Warning.CopyFrom(new AircraftWarningSpec(stallAngleDegrees: 18f, stallSpeed: 42f));
+            var warning = definition.ToWarningSpec();
+
+            Assert.That(warning.StallAngleDegrees, Is.EqualTo(18f));
+            Assert.That(warning.StallSpeed, Is.EqualTo(42f));
+            Assert.Throws<ArgumentNullException>(() => definition.Warning.CopyFrom(null));
         }
 
         [Test]

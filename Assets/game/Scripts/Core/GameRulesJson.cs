@@ -33,6 +33,7 @@ namespace Shooter.Core
         public const string StreaksItem = "streaks";
         public const string TextChatItem = "textChat";
         public const string SpectatingItem = "spectating";
+        public const string RespawnAnchorItem = "respawnAnchor";
 
         public const string HeadItem = "head";
         public const string BodyItem = "body";
@@ -65,6 +66,8 @@ namespace Shooter.Core
         public const string AimToFireItem = "aimToFire";
         public const string JumpItem = "jump";
         public const string ReviveRangeItem = "reviveRange";
+        public const string EmoteItem = "emote";
+        public const string StaminaItem = "stamina";
 
         // 項目は 2 段までなので、それより深く入れ子にしたものは読む前に断る。
         private const int _maxDepth = 8;
@@ -98,6 +101,7 @@ namespace Shooter.Core
             StreaksItem,
             TextChatItem,
             SpectatingItem,
+            RespawnAnchorItem,
         };
 
         public static IReadOnlyList<string> ActionItemNames { get; } = new[]
@@ -129,6 +133,8 @@ namespace Shooter.Core
             AimToFireItem,
             JumpItem,
             ReviveRangeItem,
+            EmoteItem,
+            StaminaItem,
         };
 
         // 弱点の倍率はルールで変えるものではないので書けるようにせず、土台のルールの値のままにする。
@@ -210,7 +216,8 @@ namespace Shooter.Core
                     zoneDamage,
                     top.ReadEnum(StreaksItem, defaults.Streaks),
                     top.ReadEnum(TextChatItem, defaults.TextChat),
-                    top.ReadEnum(SpectatingItem, defaults.Spectating));
+                    top.ReadEnum(SpectatingItem, defaults.Spectating),
+                    top.ReadEnumArray(RespawnAnchorItem, defaults.RespawnAnchors));
             }
             catch (ArgumentException e)
             {
@@ -265,6 +272,8 @@ namespace Shooter.Core
             writer.Enum(AimToFireItem, actions.AimToFire);
             writer.Enum(JumpItem, actions.Jump);
             writer.Float(ReviveRangeItem, actions.ReviveRange);
+            writer.Enum(EmoteItem, actions.Emote);
+            writer.Enum(StaminaItem, actions.Stamina);
             writer.EndObject();
             writer.Float(SpawnProtectionSecondsItem, rules.SpawnProtectionSeconds);
             writer.Enum(FallDamageItem, rules.FallDamage);
@@ -284,6 +293,7 @@ namespace Shooter.Core
             writer.Enum(StreaksItem, rules.Streaks);
             writer.Enum(TextChatItem, rules.TextChat);
             writer.Enum(SpectatingItem, rules.Spectating);
+            writer.EnumArray(RespawnAnchorItem, rules.RespawnAnchors);
             return writer.Finish();
         }
 
@@ -326,7 +336,9 @@ namespace Shooter.Core
                     fields.ReadEnum(SlowMotionItem, defaults.SlowMotion),
                     fields.ReadEnum(AimToFireItem, defaults.AimToFire),
                     fields.ReadEnum(JumpItem, defaults.Jump),
-                    fields.ReadFloat(ReviveRangeItem, defaults.ReviveRange));
+                    fields.ReadFloat(ReviveRangeItem, defaults.ReviveRange),
+                    fields.ReadEnum(EmoteItem, defaults.Emote),
+                    fields.ReadEnum(StaminaItem, defaults.Stamina));
             }
             catch (ArgumentException e)
             {
@@ -563,6 +575,32 @@ namespace Shooter.Core
                     return fallback;
                 }
 
+                return MatchEnum<T>(name, node);
+            }
+
+            // 空の配列と重なりはここで断らず、ルールの検査に任せて項目名付きで断らせる。
+            public IReadOnlyList<T> ReadEnumArray<T>(string name, IReadOnlyList<T> fallback)
+                where T : struct, Enum
+            {
+                var node = Find(name);
+                if (node == null)
+                {
+                    return fallback;
+                }
+
+                Require(node, name, NodeKind.Array, "an array of the names " + string.Join(", ", System.Enum.GetNames(typeof(T))));
+                var values = new T[node.Elements.Count];
+                for (var i = 0; i < values.Length; i++)
+                {
+                    values[i] = MatchEnum<T>(name, node.Elements[i]);
+                }
+
+                return values;
+            }
+
+            private T MatchEnum<T>(string name, Node node)
+                where T : struct, Enum
+            {
                 var names = System.Enum.GetNames(typeof(T));
                 Require(node, name, NodeKind.String, "one of the names " + string.Join(", ", names));
 
@@ -620,6 +658,23 @@ namespace Shooter.Core
                 where T : struct, System.Enum
             {
                 Raw(name, "\"" + value.ToString() + "\"");
+            }
+
+            public void EnumArray<T>(string name, IReadOnlyList<T> values)
+                where T : struct, System.Enum
+            {
+                var text = new StringBuilder("[");
+                for (var i = 0; i < values.Count; i++)
+                {
+                    if (i > 0)
+                    {
+                        text.Append(", ");
+                    }
+
+                    text.Append('"').Append(values[i].ToString()).Append('"');
+                }
+
+                Raw(name, text.Append(']').ToString());
             }
 
             public void Float(string name, float value)

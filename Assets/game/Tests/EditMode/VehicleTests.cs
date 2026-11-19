@@ -364,6 +364,18 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void SeatInputCarriesTheCountermeasurePressAndLeavesItOffByDefault()
+        {
+            var pressed = new VehicleSeatInput(Vector2.zero, 0f, false, false, false, false, Vector3.zero, Vector3.forward, true);
+            var omitted = new VehicleSeatInput(Vector2.zero, 0f, false, false, false, false, Vector3.zero, Vector3.forward);
+
+            Assert.That(pressed.CountermeasurePressed, Is.True);
+            Assert.That(pressed.ReloadPressed, Is.False, "the other presses are kept apart");
+            Assert.That(omitted.CountermeasurePressed, Is.False, "callers written before the countermeasure never drop flares");
+            Assert.That(VehicleSeatInput.Idle.CountermeasurePressed, Is.False);
+        }
+
+        [Test]
         public void SeatInputRejectsOutOfRangeValues()
         {
             Assert.Throws<ArgumentOutOfRangeException>(

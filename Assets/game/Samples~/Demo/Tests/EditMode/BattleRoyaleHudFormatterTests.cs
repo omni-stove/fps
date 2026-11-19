@@ -308,6 +308,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void NoRedeployLinesForAPlayerWhoseSquadHasNoOneLeftToStand()
+        {
+            var br = Create(new RedeploySpec(charges: 1, lastPhaseIndex: 1, delaySeconds: 8f));
+            br.Start();
+            br.ReportLethal(_squadmate, _enemy);
+            br.ReportLethal(_player, _enemy);
+            br.Tick(ActionRules.DefaultDownedBleedoutSeconds);
+
+            var detail = new BattleRoyaleStatus(br, _player, null, null, false);
+            Assert.That(detail.LocalRedeploySeconds, Is.Null);
+            Assert.That(detail.LocalRedeploysLeft, Is.Null);
+            Assert.That(BattleRoyaleHudFormatter.RedeployLines(detail), Is.Empty);
+        }
+
+        [Test]
         public void TheRedeployTextsExistInEveryLanguage()
         {
             var en = UnityEngine.Resources.Load<UnityEngine.TextAsset>("Localization/en/modes-survival");

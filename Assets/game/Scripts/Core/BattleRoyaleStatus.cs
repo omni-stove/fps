@@ -27,7 +27,10 @@ namespace Shooter.Core
             if (localPlayerId.HasValue && session.Mode.HasPlayer(localPlayerId.Value))
             {
                 LocalRedeploySeconds = session.GetRedeployRemaining(localPlayerId.Value);
-                LocalRedeploysLeft = session.IsRedeployOpen || LocalRedeploySeconds.HasValue
+                var squadOut = session.GetPlacement(session.Mode.GetSide(localPlayerId.Value)).HasValue;
+                var downedWithoutReturn = session.Mode.IsDown(localPlayerId.Value) && !LocalRedeploySeconds.HasValue;
+                LocalRedeploysLeft = (session.IsRedeployOpen && !squadOut && !downedWithoutReturn)
+                    || LocalRedeploySeconds.HasValue
                     ? session.GetRedeploysLeft(localPlayerId.Value)
                     : (int?)null;
             }
@@ -66,10 +69,8 @@ namespace Shooter.Core
 
         public string InteractKeyLabel { get; }
 
-        // 戻る待ちの間だけ値を持つ。
         public float? LocalRedeploySeconds { get; }
 
-        // まだ戻れる段階にいる (または戻る待ちの) 間だけ値を持つ。待ちに入った分はもう引いてある。
         public int? LocalRedeploysLeft { get; }
 
         private static SupplyDropMark[] Copy(IReadOnlyList<SupplyDropMark> drops)

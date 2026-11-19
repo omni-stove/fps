@@ -100,6 +100,8 @@ namespace Shooter.Runtime
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void InstallOnPlay()
         {
+            // 読んだプロフィールに古いレートがあれば記録係が Install でレートの側へ渡すので、渡す先を先に入れる。
+            SkillBootstrap.EnsureInstalledOnPlay();
             Install(CloudSaveBootstrap.Storage);
             var sync = CloudSaveBootstrap.Current;
             if (sync != null)

@@ -20,7 +20,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void EachStatIsReadFromTheProfile()
         {
-            var profile = new PlayerProfile(0, 9, 8, 7, 6, 5, 1000, 4, 3, 0, null);
+            var profile = new PlayerProfile(0, 9, 8, 7, 6, 5, 4, 3, 0, null);
 
             Assert.That(AchievementTracker.CountOf(profile, PlayerStat.Kills), Is.EqualTo(9));
             Assert.That(AchievementTracker.CountOf(profile, PlayerStat.Deaths), Is.EqualTo(8));
@@ -94,7 +94,7 @@ namespace Shooter.Core.Tests
         public void AnUnlockedAchievementIsNotUnlockedAgain()
         {
             var unlocked = new List<AchievementDefinition>();
-            var profile = new PlayerProfile(0, 5, 0, 0, 0, 0, 1000, 0, 0, 0, _firstBlood);
+            var profile = new PlayerProfile(0, 5, 0, 0, 0, 0, 0, 0, 0, _firstBlood);
 
             var next = _tracker.Unlock(profile, unlocked);
 
@@ -106,7 +106,7 @@ namespace Shooter.Core.Tests
         public void SeveralAchievementsUnlockTogetherInTheSpecOrder()
         {
             var unlocked = new List<AchievementDefinition>();
-            var profile = new PlayerProfile(0, 1, 0, 25, 10, 0, 1000, 0, 0, 0, _oldEvent);
+            var profile = new PlayerProfile(0, 1, 0, 25, 10, 0, 0, 0, 0, _oldEvent);
 
             var next = _tracker.Unlock(profile, unlocked);
 
@@ -122,7 +122,7 @@ namespace Shooter.Core.Tests
                 new AchievementDefinition("brawler", "a.brawler", "a.brawler.text", PlayerStat.MeleeKills, 20),
                 new AchievementDefinition("survivor", "a.survivor", "a.survivor.text", PlayerStat.Deaths, 100, hidden: true),
             }));
-            var profile = new PlayerProfile(0, 30, 3, 0, 0, 0, 1000, 0, 5, 0, _survivorAndRemoved);
+            var profile = new PlayerProfile(0, 30, 3, 0, 0, 0, 0, 5, 0, _survivorAndRemoved);
 
             var progress = tracker.Progress(profile);
 

@@ -7,7 +7,7 @@ namespace Shooter.Core
 {
     public sealed class PlayerProfile : IEquatable<PlayerProfile>
     {
-        public const int CurrentVersion = 5;
+        public const int CurrentVersion = 6;
 
         public const int OldestReadableVersion = 1;
 
@@ -37,9 +37,15 @@ namespace Shooter.Core
             _headshotsKey, _meleeKillsKey, _playSecondsKey, _achievementsKey,
         };
 
-        private static readonly string[] _keys =
+        private static readonly string[] _version5Keys =
         {
             _versionKey, _xpKey, _killsKey, _assistsKey, _deathsKey, _matchesKey, _winsKey, _ratingKey,
+            _headshotsKey, _meleeKillsKey, _playSecondsKey, _achievementsKey, _cosmeticsKey,
+        };
+
+        private static readonly string[] _keys =
+        {
+            _versionKey, _xpKey, _killsKey, _assistsKey, _deathsKey, _matchesKey, _winsKey,
             _headshotsKey, _meleeKillsKey, _playSecondsKey, _achievementsKey, _cosmeticsKey,
         };
 
@@ -60,12 +66,7 @@ namespace Shooter.Core
         }
 
         public PlayerProfile(int xp, int kills, int deaths, int matches, int wins, int assists)
-            : this(xp, kills, deaths, matches, wins, assists, SkillSpec.DefaultInitialRating)
-        {
-        }
-
-        public PlayerProfile(int xp, int kills, int deaths, int matches, int wins, int assists, int rating)
-            : this(xp, kills, deaths, matches, wins, assists, rating, 0, 0, 0, null)
+            : this(xp, kills, deaths, matches, wins, assists, 0, 0, 0, null)
         {
         }
 
@@ -76,12 +77,11 @@ namespace Shooter.Core
             int matches,
             int wins,
             int assists,
-            int rating,
             int headshots,
             int meleeKills,
             int playSeconds,
             IReadOnlyList<string> achievements)
-            : this(xp, kills, deaths, matches, wins, assists, rating, headshots, meleeKills, playSeconds, achievements, null)
+            : this(xp, kills, deaths, matches, wins, assists, headshots, meleeKills, playSeconds, achievements, null)
         {
         }
 
@@ -93,12 +93,28 @@ namespace Shooter.Core
             int matches,
             int wins,
             int assists,
-            int rating,
             int headshots,
             int meleeKills,
             int playSeconds,
             IReadOnlyList<string> achievements,
             IReadOnlyDictionary<CosmeticKind, string> cosmetics)
+            : this(xp, kills, deaths, matches, wins, assists, headshots, meleeKills, playSeconds, achievements, cosmetics, null)
+        {
+        }
+
+        private PlayerProfile(
+            int xp,
+            int kills,
+            int deaths,
+            int matches,
+            int wins,
+            int assists,
+            int headshots,
+            int meleeKills,
+            int playSeconds,
+            IReadOnlyList<string> achievements,
+            IReadOnlyDictionary<CosmeticKind, string> cosmetics,
+            int? legacyRating)
         {
             RequireNonNegative(xp, nameof(xp));
             RequireNonNegative(kills, nameof(kills));
@@ -106,10 +122,14 @@ namespace Shooter.Core
             RequireNonNegative(matches, nameof(matches));
             RequireNonNegative(wins, nameof(wins));
             RequireNonNegative(assists, nameof(assists));
-            RequireNonNegative(rating, nameof(rating));
             RequireNonNegative(headshots, nameof(headshots));
             RequireNonNegative(meleeKills, nameof(meleeKills));
             RequireNonNegative(playSeconds, nameof(playSeconds));
+            if (legacyRating.HasValue)
+            {
+                RequireNonNegative(legacyRating.Value, _ratingKey);
+            }
+
             if (wins > matches)
             {
                 throw new ArgumentOutOfRangeException(
@@ -124,7 +144,7 @@ namespace Shooter.Core
             Matches = matches;
             Wins = wins;
             Assists = assists;
-            Rating = rating;
+            LegacyRating = legacyRating;
             Headshots = headshots;
             MeleeKills = meleeKills;
             PlaySeconds = playSeconds;
@@ -146,7 +166,9 @@ namespace Shooter.Core
 
         public int Wins { get; }
 
-        public int Rating { get; }
+        // 版 3 から 5 の保存にあったレートで、それ以外の版と組み立てたプロフィールでは null。書き出さず、比べもしないのは、
+        // レートを SkillRecorder が持つようになり、ここに残すと 2 か所に別の値が残るため。読み込んだ側が SkillRecorder に渡す。
+        public int? LegacyRating { get; }
 
         public int Headshots { get; }
 
@@ -156,11 +178,6 @@ namespace Shooter.Core
 
         // 解いた順に持つのは、統計の画面で新しく解いたものを後ろに並べるため。
         public IReadOnlyList<string> Achievements => _achievements;
-
-        public static PlayerProfile Started(int rating)
-        {
-            return new PlayerProfile(0, 0, 0, 0, 0, 0, rating);
-        }
 
         public bool HasAchievement(string id)
         {
@@ -175,20 +192,15 @@ namespace Shooter.Core
             return _cosmetics[CosmeticIndex(kind)];
         }
 
-        public PlayerProfile WithRating(int rating)
-        {
-            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, rating, Headshots, MeleeKills, PlaySeconds, _achievements, Cosmetics);
-        }
-
         // ProgressionLedger が数える項目だけを差し替え、実績の記録係が数える項目は持ち越す。
         public PlayerProfile WithRecord(int xp, int kills, int deaths, int matches, int wins, int assists)
         {
-            return new PlayerProfile(xp, kills, deaths, matches, wins, assists, Rating, Headshots, MeleeKills, PlaySeconds, _achievements, Cosmetics);
+            return new PlayerProfile(xp, kills, deaths, matches, wins, assists, Headshots, MeleeKills, PlaySeconds, _achievements, Cosmetics);
         }
 
         public PlayerProfile WithStats(int headshots, int meleeKills, int playSeconds)
         {
-            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Rating, headshots, meleeKills, playSeconds, _achievements, Cosmetics);
+            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, headshots, meleeKills, playSeconds, _achievements, Cosmetics);
         }
 
         // null か空の Id で外す。外すのと着けるのを分けないのは、画面が選択肢の「無し」を null で渡すだけで済むため。
@@ -203,7 +215,7 @@ namespace Shooter.Core
 
             var cosmetics = (string[])_cosmetics.Clone();
             cosmetics[index] = id;
-            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Rating, Headshots, MeleeKills, PlaySeconds, _achievements, CosmeticMap(cosmetics));
+            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Headshots, MeleeKills, PlaySeconds, _achievements, CosmeticMap(cosmetics));
         }
 
         public PlayerProfile WithAchievement(string id)
@@ -217,7 +229,7 @@ namespace Shooter.Core
             var achievements = new string[_achievements.Length + 1];
             Array.Copy(_achievements, achievements, _achievements.Length);
             achievements[_achievements.Length] = trimmed;
-            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Rating, Headshots, MeleeKills, PlaySeconds, achievements, Cosmetics);
+            return new PlayerProfile(Xp, Kills, Deaths, Matches, Wins, Assists, Headshots, MeleeKills, PlaySeconds, achievements, Cosmetics);
         }
 
         public string ToJson()
@@ -231,7 +243,6 @@ namespace Shooter.Core
             AppendInt(builder, _deathsKey, Deaths).Append(',');
             AppendInt(builder, _matchesKey, Matches).Append(',');
             AppendInt(builder, _winsKey, Wins).Append(',');
-            AppendInt(builder, _ratingKey, Rating).Append(',');
             AppendInt(builder, _headshotsKey, Headshots).Append(',');
             AppendInt(builder, _meleeKillsKey, MeleeKills).Append(',');
             AppendInt(builder, _playSecondsKey, PlaySeconds).Append(',');
@@ -275,18 +286,11 @@ namespace Shooter.Core
 
         public static PlayerProfile FromJson(string json)
         {
-            return FromJson(json, SkillSpec.DefaultInitialRating);
-        }
-
-        // 初めの値を PlayerProfile の中で決めないのは、実力の値を持たない版 2 までの保存をゲームが調整した値から始めるため。
-        public static PlayerProfile FromJson(string json, int initialRating)
-        {
             if (json == null)
             {
                 throw new ArgumentNullException(nameof(json));
             }
 
-            RequireNonNegative(initialRating, nameof(initialRating));
             if (!(SaveJson.Parse(json) is Dictionary<string, object> root))
             {
                 throw new FormatException("invalid profile data: the root must be an object");
@@ -316,7 +320,7 @@ namespace Shooter.Core
             var deaths = ReadInt(root, _deathsKey);
             var matches = ReadInt(root, _matchesKey);
             var wins = ReadInt(root, _winsKey);
-            var rating = version < 3 ? initialRating : ReadInt(root, _ratingKey);
+            int? legacyRating = version >= 3 && version <= 5 ? ReadInt(root, _ratingKey) : (int?)null;
 
             // 版 3 までは内訳と遊んだ時間を数えていないので 0 から始め、実績は次に条件を確かめたときに今の数から解き直す。
             var headshots = version < 4 ? 0 : ReadInt(root, _headshotsKey);
@@ -328,7 +332,7 @@ namespace Shooter.Core
             var cosmetics = version < 5 ? null : ReadCosmetics(root, _cosmeticsKey);
             try
             {
-                return new PlayerProfile(xp, kills, deaths, matches, wins, assists, rating, headshots, meleeKills, playSeconds, achievements, cosmetics);
+                return new PlayerProfile(xp, kills, deaths, matches, wins, assists, headshots, meleeKills, playSeconds, achievements, cosmetics, legacyRating);
             }
             catch (ArgumentException e)
             {
@@ -346,7 +350,6 @@ namespace Shooter.Core
                 && Deaths == other.Deaths
                 && Matches == other.Matches
                 && Wins == other.Wins
-                && Rating == other.Rating
                 && Headshots == other.Headshots
                 && MeleeKills == other.MeleeKills
                 && PlaySeconds == other.PlaySeconds
@@ -374,7 +377,7 @@ namespace Shooter.Core
             }
 
             return HashCode.Combine(
-                HashCode.Combine(Xp, Kills, Assists, Deaths, Matches, Wins, Rating),
+                HashCode.Combine(Xp, Kills, Assists, Deaths, Matches, Wins),
                 HashCode.Combine(Headshots, MeleeKills, PlaySeconds, achievements.ToHashCode(), cosmetics.ToHashCode()));
         }
 
@@ -382,8 +385,8 @@ namespace Shooter.Core
         {
             return string.Format(
                 CultureInfo.InvariantCulture,
-                "xp={0} kills={1} assists={2} deaths={3} matches={4} wins={5} rating={6} headshots={7} meleeKills={8} playSeconds={9} achievements={10}",
-                Xp, Kills, Assists, Deaths, Matches, Wins, Rating, Headshots, MeleeKills, PlaySeconds, string.Join(",", _achievements));
+                "xp={0} kills={1} assists={2} deaths={3} matches={4} wins={5} headshots={6} meleeKills={7} playSeconds={8} achievements={9}",
+                Xp, Kills, Assists, Deaths, Matches, Wins, Headshots, MeleeKills, PlaySeconds, string.Join(",", _achievements));
         }
 
         private static string[] KeysOf(int version)
@@ -398,6 +401,8 @@ namespace Shooter.Core
                     return _version3Keys;
                 case 4:
                     return _version4Keys;
+                case 5:
+                    return _version5Keys;
                 default:
                     return _keys;
             }

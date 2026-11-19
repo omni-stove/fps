@@ -22,20 +22,11 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ANewStorageStartsAtTheGivenRating()
-        {
-            var storage = new MemorySaveStorage();
-
-            Assert.That(new ProfileStore(storage, 1500).Load(), Is.EqualTo(PlayerProfile.Started(1500)));
-            Assert.That(new ProfileStore(storage).InitialRating, Is.EqualTo(1000));
-        }
-
-        [Test]
-        public void ASavedProfileIsReadBack()
+        public void ASavedProfileIsReadBackWithoutARating()
         {
             var storage = new MemorySaveStorage();
             var store = new ProfileStore(storage);
-            var profile = new PlayerProfile(900, 3, 2, 2, 1, 4, 1234);
+            var profile = new PlayerProfile(900, 3, 2, 2, 1, 4);
 
             store.Save(profile);
 
@@ -43,17 +34,17 @@ namespace Shooter.Tests.EditMode
             Assert.That(
                 storage.Text("profile"),
                 Is.EqualTo(
-                    "{\"version\":5,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1234,"
+                    "{\"version\":6,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,"
                     + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[],\"cosmetics\":{}}"));
             Assert.That(new ProfileStore(storage).Load(), Is.EqualTo(profile));
-            Assert.That(new ProfileStore(storage, 1500).Load(), Is.EqualTo(profile), "a saved rating wins over the initial rating");
+            Assert.That(new ProfileStore(storage).Load().LegacyRating, Is.Null);
         }
 
         [Test]
         public void TheAchievementsAndStatsAreReadBackByANewStore()
         {
             var storage = new MemorySaveStorage();
-            var profile = new PlayerProfile(900, 3, 2, 2, 1, 4, 1234, 2, 1, 754, new[] { "first-blood", "veteran" });
+            var profile = new PlayerProfile(900, 3, 2, 2, 1, 4, 2, 1, 754, new[] { "first-blood", "veteran" });
 
             new ProfileStore(storage).Save(profile);
             var read = new ProfileStore(storage).Load();
@@ -66,16 +57,17 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void AVersion3ProfileKeepsItsRecordAndStartsWithNoAchievements()
+        public void AVersion3ProfileKeepsItsRecordAndItsRatingAsTheLegacyRating()
         {
             var storage = new MemorySaveStorage();
             const string version3 = "{\"version\":3,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1234}";
             storage.Write(ProfileStore.Slot, version3);
             var writes = storage.WriteCount;
 
-            var profile = new ProfileStore(storage, 1500).Load();
+            var profile = new ProfileStore(storage).Load();
 
-            Assert.That(profile, Is.EqualTo(new PlayerProfile(900, 3, 2, 2, 1, 4, 1234)));
+            Assert.That(profile, Is.EqualTo(new PlayerProfile(900, 3, 2, 2, 1, 4)));
+            Assert.That(profile.LegacyRating, Is.EqualTo(1234));
             Assert.That(profile.Achievements, Is.Empty);
             Assert.That(profile.PlaySeconds, Is.Zero);
             Assert.That(storage.Has(ProfileStore.RejectedSlot), Is.False);
@@ -84,16 +76,17 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void AVersion2ProfileKeepsItsRecordAndStartsAtTheGivenRating()
+        public void AVersion2ProfileKeepsItsRecordAndHasNoLegacyRating()
         {
             var storage = new MemorySaveStorage();
             const string version2 = "{\"version\":2,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1}";
             storage.Write(ProfileStore.Slot, version2);
             var writes = storage.WriteCount;
 
-            var profile = new ProfileStore(storage, 1500).Load();
+            var profile = new ProfileStore(storage).Load();
 
-            Assert.That(profile, Is.EqualTo(new PlayerProfile(900, 3, 2, 2, 1, 4, 1500)));
+            Assert.That(profile, Is.EqualTo(new PlayerProfile(900, 3, 2, 2, 1, 4)));
+            Assert.That(profile.LegacyRating, Is.Null);
             Assert.That(storage.Has(ProfileStore.RejectedSlot), Is.False);
             Assert.That(storage.WriteCount, Is.EqualTo(writes), "the old save is rewritten by the next save, not by reading");
             LogAssert.NoUnexpectedReceived();
@@ -135,9 +128,9 @@ namespace Shooter.Tests.EditMode
 
             LogAssert.Expect(LogType.Warning, new Regex(@"^\[Progression\] profile rejected: "));
             LogAssert.Expect(LogType.Warning, "[Progression] kept the rejected profile in slot=profile-rejected");
-            var profile = new ProfileStore(storage, 1500).Load();
+            var profile = new ProfileStore(storage).Load();
 
-            Assert.That(profile, Is.EqualTo(PlayerProfile.Started(1500)));
+            Assert.That(profile, Is.EqualTo(PlayerProfile.Empty));
             Assert.That(storage.Text(ProfileStore.RejectedSlot), Is.EqualTo(Broken));
             Assert.That(storage.Text(ProfileStore.Slot), Is.EqualTo(Broken), "the slot is left until the next save");
         }
@@ -146,10 +139,10 @@ namespace Shooter.Tests.EditMode
         public void AProfileFromANewerVersionIsRejected()
         {
             var storage = new MemorySaveStorage();
-            const string newer = "{\"version\":5,\"xp\":900,\"kills\":3,\"assists\":0,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1000,\"prestige\":1}";
+            const string newer = "{\"version\":7,\"xp\":900,\"kills\":3,\"assists\":0,\"deaths\":2,\"matches\":2,\"wins\":1,\"prestige\":1}";
             storage.Write(ProfileStore.Slot, newer);
 
-            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Progression\] profile rejected: unsupported profile data version 5"));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Progression\] profile rejected: unsupported profile data version 7"));
             LogAssert.Expect(LogType.Warning, "[Progression] kept the rejected profile in slot=profile-rejected");
             var profile = new ProfileStore(storage).Load();
 
@@ -196,8 +189,6 @@ namespace Shooter.Tests.EditMode
         public void RejectsMissingArguments()
         {
             Assert.Throws<ArgumentNullException>(() => new ProfileStore(null));
-            Assert.Throws<ArgumentNullException>(() => new ProfileStore(null, 1000));
-            Assert.Throws<ArgumentOutOfRangeException>(() => new ProfileStore(new MemorySaveStorage(), -1));
             Assert.Throws<ArgumentNullException>(() => new ProfileStore(new MemorySaveStorage()).Save(null));
         }
     }

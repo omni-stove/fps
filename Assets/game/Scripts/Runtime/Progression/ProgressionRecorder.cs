@@ -9,33 +9,20 @@ namespace Shooter.Runtime
     {
         public const string ResourcePath = KitTuning.ProgressionResourcePath;
 
-        public const string SkillResourcePath = KitTuning.SkillResourcePath;
-
         private readonly ProfileStore _store;
         private readonly IParticipants _participants;
 
         public ProgressionRecorder(ISaveStorage storage)
-            : this(storage, LoadSpec(), LoadSkillSpec(), new OfflineParticipants())
+            : this(storage, LoadSpec(), new OfflineParticipants())
         {
         }
 
         public ProgressionRecorder(ISaveStorage storage, ProgressionSpec spec, IParticipants participants)
-            : this(storage, spec, SkillSpec.Default, participants)
         {
-        }
-
-        public ProgressionRecorder(ISaveStorage storage, ProgressionSpec spec, SkillSpec skill, IParticipants participants)
-        {
-            if (skill == null)
-            {
-                throw new ArgumentNullException(nameof(skill));
-            }
-
-            _store = new ProfileStore(storage, skill.InitialRating);
+            _store = new ProfileStore(storage);
             Ledger = new ProgressionLedger(spec);
-            Skill = new SkillRating(skill);
             _participants = participants ?? throw new ArgumentNullException(nameof(participants));
-            Profile = PlayerProfile.Started(skill.InitialRating);
+            Profile = PlayerProfile.Empty;
         }
 
         // 実績の記録係が同じプロフィールを書き換えるので、変わるたびに知らせる。保存はこの記録係だけがする。
@@ -45,8 +32,6 @@ namespace Shooter.Runtime
         public event Action<MatchResult> MatchRecording;
 
         public ProgressionLedger Ledger { get; }
-
-        public SkillRating Skill { get; }
 
         public IParticipants Participants => _participants;
 
@@ -66,11 +51,6 @@ namespace Shooter.Runtime
             return KitTuning.Load(c => c.ProgressionTuning, ResourcePath, ProgressionJson.Parse, ProgressionSpec.Default);
         }
 
-        public static SkillSpec LoadSkillSpec()
-        {
-            return KitTuning.Load(c => c.SkillTuning, SkillResourcePath, SkillJson.Parse, SkillSpec.Default);
-        }
-
         public void Install()
         {
             if (IsInstalled)
@@ -80,12 +60,12 @@ namespace Shooter.Runtime
 
             var loaded = _store.Load();
             Debug.Log(ProgressionLog.Configured(Ledger.Spec));
-            Debug.Log(ProgressionLog.SkillConfigured(Skill.Spec));
             Debug.Log(ProgressionLog.Loaded(loaded, Ledger.LevelOf(loaded)));
             CombatEvents.Killed += OnKilled;
             CombatEvents.MatchFinished += OnMatchFinished;
             IsInstalled = true;
             SetProfile(loaded);
+            HandOverLegacyRating(loaded);
         }
 
         // 保存先の中身が外から替わったとき (クラウドセーブが他の端末の新しいプロフィールを採ったとき) に呼ぶ。
@@ -100,6 +80,18 @@ namespace Shooter.Runtime
             var loaded = _store.Load();
             Debug.Log(ProgressionLog.Loaded(loaded, Ledger.LevelOf(loaded)));
             SetProfile(loaded);
+            HandOverLegacyRating(loaded);
+        }
+
+        // 版 5 までのプロフィールにあったレートは次の保存で消えるので、その前にレートの記録係へ渡す。
+        // 記録係はレートのスロットがまだ無いときだけ受け取るので、毎回渡しても前に引き継いだ値や試合で動いた値を戻さない。
+        private static void HandOverLegacyRating(PlayerProfile profile)
+        {
+            var skill = SkillBootstrap.Current;
+            if (profile.LegacyRating.HasValue && skill != null && skill.IsInstalled)
+            {
+                skill.AdoptLegacy(profile.LegacyRating.Value);
+            }
         }
 
         public void Change(Func<PlayerProfile, PlayerProfile> change)
@@ -182,22 +174,8 @@ namespace Shooter.Runtime
             Debug.Log(ProgressionLog.MatchRecorded(result, award));
             LogLevelUp(award);
             SetProfile(award.Profile);
-            if (result.Rated)
-            {
-                Rate(result);
-            }
-
             Notify(MatchRecording, result);
             Save();
-        }
-
-        private void Rate(MatchResult result)
-        {
-            var previous = Profile.Rating;
-            var opponents = result.OpponentRating ?? Skill.Spec.InitialRating;
-            var rating = Skill.Next(previous, opponents, result.Outcome);
-            Debug.Log(ProgressionLog.Rated(result.Outcome, previous, rating, opponents));
-            SetProfile(Profile.WithRating(rating));
         }
 
         private void SetProfile(PlayerProfile profile)

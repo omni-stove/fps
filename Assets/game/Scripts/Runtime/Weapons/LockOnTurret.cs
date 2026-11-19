@@ -31,6 +31,7 @@ namespace Shooter.Runtime
         private LockOnTurretSpec _spec;
         private LockOnAim _aim;
         private HitboxLockOnTargets _targets;
+        private FilteredTargets _filtered;
         private RoundSpec _round;
         private WeaponDefinition _roundSource;
         private bool _hasTarget;
@@ -138,21 +139,14 @@ namespace Shooter.Runtime
             var head = Head;
             var eye = head.position;
             _candidates.Clear();
-            _targets.Collect(eye.ToNumerics(), head.forward.ToNumerics(), round.Range, _candidates);
+            _filtered.Collect(eye.ToNumerics(), head.forward.ToNumerics(), round.Range, _candidates);
 
-            var spec = Spec;
-            var self = SideMember.Of(gameObject);
             var tracked = _aim.TargetId;
             var found = false;
             var bestDistance = float.PositiveInfinity;
             foreach (var candidate in _candidates)
             {
                 var candidatePoint = candidate.Point.ToUnity();
-                if (!spec.IsHighEnough(transform.position.y, candidatePoint.y) || IsAlly(self, candidate.Id))
-                {
-                    continue;
-                }
-
                 if (tracked.HasValue && candidate.Id == tracked.Value)
                 {
                     point = candidatePoint;
@@ -208,7 +202,9 @@ namespace Shooter.Runtime
             aim.LookSource = null;
             aim.AimingSource = () => _hasTarget && enabled;
             aim.AimSource = () => new Ray(Head.position, Head.forward);
-            aim.Targets = _targets;
+            // 捕捉も頭を向ける先と同じ候補から選ぶため、高さと味方で絞った包みを渡す。
+            _filtered = new FilteredTargets(this, _targets);
+            aim.Targets = _filtered;
             aim.TargetLookup = _targets.Find;
             // Id は作り直しごとに振り直すため、古い捕捉を残すと別の体を捉えた扱いになる。
             aim.Tracker.Clear();
@@ -257,6 +253,39 @@ namespace Shooter.Runtime
 
             _warnedWeapon = true;
             Debug.LogWarning(message, this);
+        }
+
+        private sealed class FilteredTargets : ILockOnTargets
+        {
+            private readonly LockOnTurret _owner;
+            private readonly HitboxLockOnTargets _inner;
+            private readonly List<LockOnCandidate> _scratch = new List<LockOnCandidate>();
+
+            public FilteredTargets(LockOnTurret owner, HitboxLockOnTargets inner)
+            {
+                _owner = owner;
+                _inner = inner;
+            }
+
+            public void Collect(System.Numerics.Vector3 eye, System.Numerics.Vector3 forward, float range, List<LockOnCandidate> into)
+            {
+                _scratch.Clear();
+                _inner.Collect(eye, forward, range, _scratch);
+                var spec = _owner.Spec;
+                var self = SideMember.Of(_owner.gameObject);
+                var originY = _owner.transform.position.y;
+                foreach (var candidate in _scratch)
+                {
+                    if (spec.IsHighEnough(originY, candidate.Point.ToUnity().y) && !_owner.IsAlly(self, candidate.Id))
+                    {
+                        into.Add(candidate);
+                    }
+                }
+            }
+
+            public Func<System.Numerics.Vector3?> Follow(int id) => _inner.Follow(id);
+
+            public ILockOnDecoy Decoy(int id) => _inner.Decoy(id);
         }
 
         private LockOnTurretSpec ReadSpec()

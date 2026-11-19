@@ -94,6 +94,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("スキン・迷彩のカタログの JSON。空なら Resources/Tuning/cosmetics")]
         private TextAsset _cosmeticsTuning;
 
+        [SerializeField, Tooltip("エモートの一覧 (Id・表示名のキー・長さ・繰り返すか・動いたら止めるか) の JSON。空なら Resources/Tuning/emotes、それも無ければエモートは無い")]
+        private TextAsset _emotesTuning;
+
         [SerializeField, Tooltip("天候と時刻の組の JSON。空なら Resources/Tuning/weather")]
         private TextAsset _weatherTuning;
 
@@ -233,6 +236,9 @@ namespace Shooter.Runtime
 
         [SerializeField, Tooltip("スキンの体と迷彩の材質 (見た目の visualId ごと)。空なら Resources/Presentation/CosmeticVisualCatalog、それも無ければ見た目を替えない")]
         private CosmeticVisualCatalog _cosmeticVisuals;
+
+        [SerializeField, Tooltip("エモートのアニメーション (エモートの Id ごと)。空なら Resources/Presentation/EmoteCatalog、それも無ければ体を動かさずにエモートを出す")]
+        private EmoteCatalog _emoteAnimations;
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
@@ -383,6 +389,12 @@ namespace Shooter.Runtime
         {
             get => _cosmeticsTuning;
             set => _cosmeticsTuning = value;
+        }
+
+        public TextAsset EmotesTuning
+        {
+            get => _emotesTuning;
+            set => _emotesTuning = value;
         }
 
         public TextAsset WeatherTuning
@@ -653,6 +665,12 @@ namespace Shooter.Runtime
         {
             get => _cosmeticVisuals;
             set => _cosmeticVisuals = value;
+        }
+
+        public EmoteCatalog EmoteAnimations
+        {
+            get => _emoteAnimations;
+            set => _emoteAnimations = value;
         }
 
         public static GameContent Current

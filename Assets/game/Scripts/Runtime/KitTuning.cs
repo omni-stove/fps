@@ -45,6 +45,8 @@ namespace Shooter.Runtime
 
         public static ReplaySpec Replay => Load(c => c.ReplayTuning, ReplayJson.ResourcePath, ReplayJson.Parse, ReplaySpec.Default);
 
+        public static IReadOnlyList<EmoteSpec> Emotes => Load(c => c.EmotesTuning, EmoteJson.ResourcePath, EmoteJson.Parse, EmoteSpec.DefaultEmotes);
+
         public static InfectedSpec Infected => Load(c => c.InfectedTuning, InfectedJson.ResourcePath, InfectedJson.Parse, InfectedSpec.Default);
 
         public static void Reload()

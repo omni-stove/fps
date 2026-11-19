@@ -128,6 +128,21 @@ namespace Shooter.Core
             return $"{Tag} '{vehicle}' has no IVehicleMotor; the driver's input moves nothing";
         }
 
+        public static string EffectsMissingMotor(string vehicle)
+        {
+            return $"{Tag} '{vehicle}' has no SimpleAircraftMotor; the aircraft effects show nothing";
+        }
+
+        public static string VaporUnswitchable(string vehicle, string prefab)
+        {
+            return $"{Tag} '{vehicle}' vapor prefab '{prefab}' has no TrailRenderer or ParticleSystem; it is placed but never switched";
+        }
+
+        public static string VaporShaderMissing(string shader)
+        {
+            return $"{Tag} the built-in shader '{shader}' is missing; the code-built vapor trail uses the default material";
+        }
+
         public static string Righted(string vehicle, float tiltDegrees)
         {
             return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' righted tilt={2:0}", Tag, vehicle, tiltDegrees);

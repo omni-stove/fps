@@ -97,6 +97,13 @@ namespace Shooter.Runtime
         [SerializeField, UnityEngine.Range(0f, 90f), Tooltip("動きながら撃ったときに散らばりへ足す最大の角度 (度)")]
         private float _moveSpreadDegrees;
 
+        // 0 も「覗き込めば動いても散らない」という意味のある値なので、未設定は別のフラグで持つ。
+        [SerializeField, Tooltip("覗き込み切ったときの移動の散らばりを、動きながら撃ったときの値と別に決める")]
+        private bool _hasAdsMoveSpreadDegrees;
+
+        [SerializeField, UnityEngine.Range(0f, 90f), Tooltip("覗き込み切って動きながら撃ったときに散らばりへ足す最大の角度 (度)")]
+        private float _adsMoveSpreadDegrees;
+
         [Header("音")]
         [SerializeField, Min(0f), Tooltip("銃声が敵に聞こえる距離 (m)。消音した武器は小さくする。0 なら聞こえない")]
         private float _shotNoiseRadius = WeaponSpec.DefaultShotNoiseRadius;
@@ -405,6 +412,16 @@ namespace Shooter.Runtime
             set => _moveSpreadDegrees = value;
         }
 
+        public float? AdsMoveSpreadDegrees
+        {
+            get => _hasAdsMoveSpreadDegrees ? _adsMoveSpreadDegrees : (float?)null;
+            set
+            {
+                _hasAdsMoveSpreadDegrees = value.HasValue;
+                _adsMoveSpreadDegrees = value ?? 0f;
+            }
+        }
+
         public BurstSettings Burst => _burst ??= new BurstSettings();
 
         public ChargeSettings Charge => _charge ??= new ChargeSettings();
@@ -565,7 +582,8 @@ namespace Shooter.Runtime
                     ZoomLevels(),
                     BreathHold.ToSpec(),
                     _swayDegrees,
-                    Sight.ToSpec());
+                    Sight.ToSpec(),
+                    AdsMoveSpreadDegrees);
                 return new WeaponSpec(
                     Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description, DrawSeconds, _holsterSeconds, Shield.ToSpec());
             }

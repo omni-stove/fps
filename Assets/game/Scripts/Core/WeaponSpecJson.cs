@@ -116,6 +116,7 @@ namespace Shooter.Core
         public const string HipSpreadDegreesItem = "hipSpreadDegrees";
         public const string AdsSpreadDegreesItem = "adsSpreadDegrees";
         public const string MoveSpreadDegreesItem = "moveSpreadDegrees";
+        public const string AdsMoveSpreadDegreesItem = "adsMoveSpreadDegrees";
         public const string RecoilPitchDegreesItem = "recoilPitchDegrees";
         public const string RecoilYawDegreesItem = "recoilYawDegrees";
         public const string RecoilRecoveryPerSecondItem = "recoilRecoveryPerSecond";
@@ -195,9 +196,9 @@ namespace Shooter.Core
 
         public static IReadOnlyList<string> AimItemNames { get; } = new[]
         {
-            HipSpreadDegreesItem, AdsSpreadDegreesItem, MoveSpreadDegreesItem, RecoilPitchDegreesItem, RecoilYawDegreesItem,
-            RecoilRecoveryPerSecondItem, RecoilRecoveryDelaySecondsItem, BlindFireSpreadDegreesItem, ZoomLevelsItem, BreathHoldItem,
-            SwayDegreesItem, SightSpecJson.SightItem,
+            HipSpreadDegreesItem, AdsSpreadDegreesItem, MoveSpreadDegreesItem, AdsMoveSpreadDegreesItem, RecoilPitchDegreesItem,
+            RecoilYawDegreesItem, RecoilRecoveryPerSecondItem, RecoilRecoveryDelaySecondsItem, BlindFireSpreadDegreesItem, ZoomLevelsItem,
+            BreathHoldItem, SwayDegreesItem, SightSpecJson.SightItem,
         };
 
         public static IReadOnlyList<string> AmmoTypeItemNames { get; } = new[] { IdItem, NameKeyItem, RoundItem, ImpactItem };
@@ -782,7 +783,8 @@ namespace Shooter.Core
                 zoomLevels,
                 breathHold,
                 part.Float(SwayDegreesItem, 0f),
-                sight));
+                sight,
+                part.Owner(AdsMoveSpreadDegreesItem, out _) != null ? part.Float(AdsMoveSpreadDegreesItem, 0f) : (float?)null));
         }
 
         private static float[] ReadZoomLevels(Part part)
@@ -826,6 +828,11 @@ namespace Shooter.Core
             writer.Float(HipSpreadDegreesItem, aim.HipSpreadDegrees);
             writer.Float(AdsSpreadDegreesItem, aim.AdsSpreadDegrees);
             writer.Float(MoveSpreadDegreesItem, aim.MoveSpreadDegrees);
+            // 移動と同じ値は書かなくても同じに読めるので、項目が無かった頃に書き出したデータを変えない。
+            if (aim.AdsMoveSpreadDegrees != aim.MoveSpreadDegrees)
+            {
+                writer.Float(AdsMoveSpreadDegreesItem, aim.AdsMoveSpreadDegrees);
+            }
             writer.Float(RecoilPitchDegreesItem, aim.RecoilPitchDegrees);
             writer.Float(RecoilYawDegreesItem, aim.RecoilYawDegrees);
             writer.Float(RecoilRecoveryPerSecondItem, aim.RecoilRecoveryPerSecond);

@@ -140,6 +140,21 @@ namespace Shooter.Core.Tests
             }
         }
 
+        [Test]
+        public void EverySampleWeaponThatSpreadsWhileMovingSpreadsLessWhileAimedIn()
+        {
+            var specs = ReadAll(SampleWeaponJsonFolder())
+                .Concat(_referenceFolders.SelectMany(folder => ReadAll(ReferenceWeaponJsonFolder(folder))))
+                .Where(spec => spec.MoveSpreadDegrees > 0f)
+                .ToList();
+
+            Assert.That(specs, Is.Not.Empty);
+            foreach (var spec in specs)
+            {
+                Assert.That(spec.AdsMoveSpreadDegrees, Is.EqualTo(spec.MoveSpreadDegrees * 0.3f).Within(1e-3f), spec.NameKey);
+            }
+        }
+
         [TestCaseSource(nameof(_referenceFolders))]
         public void EveryWeaponCategoryHasFourReferenceWeapons(string folder)
         {

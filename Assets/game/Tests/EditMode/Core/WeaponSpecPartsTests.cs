@@ -211,6 +211,15 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheAdsMoveSpreadIsTheMoveSpreadUnlessGiven()
+        {
+            Assert.That(new AimSpec(moveSpreadDegrees: 3f).AdsMoveSpreadDegrees, Is.EqualTo(3f));
+            Assert.That(new AimSpec(moveSpreadDegrees: 3f, adsMoveSpreadDegrees: 0.9f).AdsMoveSpreadDegrees, Is.EqualTo(0.9f));
+            Assert.That(new AimSpec(moveSpreadDegrees: 3f, adsMoveSpreadDegrees: 0f).AdsMoveSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(AimSpec.Default.AdsMoveSpreadDegrees, Is.EqualTo(0f));
+        }
+
+        [Test]
         public void CopiesTheZoomLevelsAndAmmoTypes()
         {
             var zoomLevels = new[] { 30f, 15f };
@@ -399,6 +408,7 @@ namespace Shooter.Core.Tests
                 case "AimSpec.zoomLevels": return new AimSpec(zoomLevels: _zoomBeyondTheProjection);
                 case "AimSpec.zoomLevels.empty": return new AimSpec(zoomLevels: Array.Empty<float>());
                 case "AimSpec.swayDegrees": return new AimSpec(swayDegrees: -1f);
+                case "AimSpec.adsMoveSpreadDegrees": return new AimSpec(adsMoveSpreadDegrees: 90.1f);
                 case "BreathHoldSpec.maxHoldSeconds": return new BreathHoldSpec(0f, 1f, 0.5f);
                 case "BreathHoldSpec.recoverSeconds": return new BreathHoldSpec(1f, -1f, 0.5f);
                 case "BreathHoldSpec.swayMultiplier": return new BreathHoldSpec(1f, 1f, 1.1f);
@@ -501,6 +511,7 @@ namespace Shooter.Core.Tests
         [TestCase("AimSpec.zoomLevels", "zoomLevels")]
         [TestCase("AimSpec.zoomLevels.empty", "zoomLevels")]
         [TestCase("AimSpec.swayDegrees", "swayDegrees")]
+        [TestCase("AimSpec.adsMoveSpreadDegrees", "adsMoveSpreadDegrees")]
         [TestCase("BreathHoldSpec.maxHoldSeconds", "maxHoldSeconds")]
         [TestCase("BreathHoldSpec.recoverSeconds", "recoverSeconds")]
         [TestCase("BreathHoldSpec.swayMultiplier", "swayMultiplier")]

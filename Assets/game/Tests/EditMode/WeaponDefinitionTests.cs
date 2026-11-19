@@ -77,6 +77,22 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AnUnsetAdsMoveSpreadIsTheMoveSpreadAndAZeroOneIsKept()
+        {
+            var definition = NewDefinition("AdsMove", _rifleId);
+            definition.MoveSpreadDegrees = 3f;
+
+            Assert.That(definition.ToSpec().AdsMoveSpreadDegrees, Is.EqualTo(3f));
+
+            definition.AdsMoveSpreadDegrees = 0f;
+            Assert.That(definition.AdsMoveSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(definition.ToSpec().AdsMoveSpreadDegrees, Is.EqualTo(0f));
+
+            definition.AdsMoveSpreadDegrees = null;
+            Assert.That(definition.ToSpec().AdsMoveSpreadDegrees, Is.EqualTo(3f));
+        }
+
+        [Test]
         public void RecoilAndSpreadStartAtZero()
         {
             var definition = NewDefinition("Default", _rifleId);
@@ -88,6 +104,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(definition.HipSpreadDegrees, Is.EqualTo(0f));
             Assert.That(definition.AdsSpreadDegrees, Is.EqualTo(0f));
             Assert.That(definition.MoveSpreadDegrees, Is.EqualTo(0f));
+            Assert.That(definition.AdsMoveSpreadDegrees, Is.Null);
             Assert.That(spec.RecoilPitchDegrees, Is.EqualTo(0f));
             Assert.That(spec.RecoilYawDegrees, Is.EqualTo(0f));
             Assert.That(spec.RecoilRecoveryPerSecond, Is.EqualTo(0f));
@@ -164,6 +181,7 @@ namespace Shooter.Tests.EditMode
             definition.HipSpreadDegrees = 3f;
             definition.AdsSpreadDegrees = 0.5f;
             definition.MoveSpreadDegrees = 2f;
+            definition.AdsMoveSpreadDegrees = 0.6f;
             definition.RecoilRecoveryDelaySeconds = 0.3f;
             definition.ShotNoiseRadius = 8f;
             definition.Weight = 1.2f;
@@ -196,6 +214,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.HipSpreadDegrees, Is.EqualTo(3f));
             Assert.That(spec.AdsSpreadDegrees, Is.EqualTo(0.5f));
             Assert.That(spec.MoveSpreadDegrees, Is.EqualTo(2f));
+            Assert.That(spec.AdsMoveSpreadDegrees, Is.EqualTo(0.6f));
             Assert.That(spec.RecoilRecoveryDelaySeconds, Is.EqualTo(0.3f));
             Assert.That(spec.ShotNoiseRadius, Is.EqualTo(8f));
             Assert.That(spec.Weight, Is.EqualTo(1.2f));

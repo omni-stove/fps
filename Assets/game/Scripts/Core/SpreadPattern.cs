@@ -48,7 +48,8 @@ namespace Shooter.Core
             var ads = Clamp01(adsProgress);
             var move = Clamp01(moveFraction);
             var aim = spec.HipSpreadDegrees + ((spec.AdsSpreadDegrees - spec.HipSpreadDegrees) * ads);
-            return Math.Min(MaxDegrees, aim + (spec.MoveSpreadDegrees * move));
+            var moving = spec.MoveSpreadDegrees + ((spec.AdsMoveSpreadDegrees - spec.MoveSpreadDegrees) * ads);
+            return Math.Min(MaxDegrees, aim + (moving * move));
         }
 
         public static float MoveShare(WeaponSpec spec, float adsProgress, float moveFraction)

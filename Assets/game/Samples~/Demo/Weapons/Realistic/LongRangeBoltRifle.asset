@@ -46,6 +46,8 @@ MonoBehaviour:
   _hipSpreadDegrees: 3.35
   _adsSpreadDegrees: 0
   _moveSpreadDegrees: 0.84
+  _hasAdsMoveSpreadDegrees: 1
+  _adsMoveSpreadDegrees: 0.252
   _shotNoiseRadius: 90
   _weight: 6.8
   _moveSpeedMultiplier: 1

@@ -38,6 +38,8 @@ MonoBehaviour:
   _hipSpreadDegrees: 4
   _adsSpreadDegrees: 0.1
   _moveSpreadDegrees: 4
+  _hasAdsMoveSpreadDegrees: 1
+  _adsMoveSpreadDegrees: 1.2
   _shotNoiseRadius: 60
   _extraZoomLevels:
   - 16.43

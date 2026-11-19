@@ -26,11 +26,16 @@ namespace Shooter.Core
             IEnumerable<float> zoomLevels = null,
             BreathHoldSpec breathHold = null,
             float swayDegrees = 0f,
-            SightSpec sight = null)
+            SightSpec sight = null,
+            float? adsMoveSpreadDegrees = null)
         {
             HipSpreadDegrees = SpecGuard.Angle(hipSpreadDegrees, nameof(hipSpreadDegrees));
             AdsSpreadDegrees = SpecGuard.Angle(adsSpreadDegrees, nameof(adsSpreadDegrees));
             MoveSpreadDegrees = SpecGuard.Angle(moveSpreadDegrees, nameof(moveSpreadDegrees));
+            // 書いていない武器は、この項目が無かった頃と同じく覗き込んでも移動の散らばりを減らさない。
+            AdsMoveSpreadDegrees = adsMoveSpreadDegrees.HasValue
+                ? SpecGuard.Angle(adsMoveSpreadDegrees.Value, nameof(adsMoveSpreadDegrees))
+                : MoveSpreadDegrees;
             RecoilPitchDegrees = SpecGuard.Angle(recoilPitchDegrees, nameof(recoilPitchDegrees));
             RecoilYawDegrees = SpecGuard.Angle(recoilYawDegrees, nameof(recoilYawDegrees));
             RecoilRecoveryPerSecond = SpecGuard.NonNegativeFinite(recoilRecoveryPerSecond, nameof(recoilRecoveryPerSecond));
@@ -47,6 +52,8 @@ namespace Shooter.Core
         public float AdsSpreadDegrees { get; }
 
         public float MoveSpreadDegrees { get; }
+
+        public float AdsMoveSpreadDegrees { get; }
 
         public float RecoilPitchDegrees { get; }
 

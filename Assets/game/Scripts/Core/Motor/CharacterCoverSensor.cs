@@ -7,6 +7,9 @@ namespace Shooter.Core
     {
         public const float ProbeHeight = 0.5f;
 
+        // 足元の Ray が車体の下の隙間を抜けたとき、車のように浮いた物にも当たる高さで探し直す。低い壁 (1.1m) より下にする。
+        public const float UpperProbeHeight = 0.9f;
+
         public const float TopProbeHeight = 3f;
 
         // 上端を下ろす Ray で探すとき、当たった面から壁の内側へ入れる距離 (m)。CoverController と同じ値
@@ -46,7 +49,11 @@ namespace Shooter.Core
             var mask = _body.LayerMask;
             if (!world.Raycast(origin, direction, spec.CoverMaxEnterDistance, mask, out var hit))
             {
-                return CoverProbeResult.None;
+                origin = new Vector3(position.X, feetY + UpperProbeHeight, position.Z);
+                if (!world.Raycast(origin, direction, spec.CoverMaxEnterDistance, mask, out hit))
+                {
+                    return CoverProbeResult.None;
+                }
             }
 
             var normal = hit.Normal;

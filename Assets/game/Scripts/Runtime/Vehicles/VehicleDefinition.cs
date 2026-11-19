@@ -18,6 +18,12 @@ namespace Shooter.Runtime
         [SerializeField, Min(0.01f), Tooltip("座席の乗る位置からこの距離 (m) までなら乗り込める")]
         private float _enterRange = VehicleSpec.DefaultEnterRange;
 
+        [SerializeField, Min(0f), Tooltip("プレイヤーが乗り込みを始めてから座席に着くまでの秒数。0 ならすぐ座る")]
+        private float _enterSeconds = VehicleSpec.DefaultEnterSeconds;
+
+        [SerializeField, Min(0f), Tooltip("プレイヤーが降りると決めてから降りるまでの秒数。0 ならすぐ降りる")]
+        private float _exitSeconds = VehicleSpec.DefaultExitSeconds;
+
         [SerializeField, Min(0f), Tooltip("追うカメラを注視点からどれだけ離すか (m)")]
         private float _chaseDistance = VehicleSpec.DefaultChaseDistance;
 
@@ -79,6 +85,18 @@ namespace Shooter.Runtime
         {
             get => _enterRange;
             set => _enterRange = value;
+        }
+
+        public float EnterSeconds
+        {
+            get => _enterSeconds;
+            set => _enterSeconds = value;
+        }
+
+        public float ExitSeconds
+        {
+            get => _exitSeconds;
+            set => _exitSeconds = value;
         }
 
         public float ChaseDistance
@@ -198,7 +216,9 @@ namespace Shooter.Runtime
                         _speedFieldOfViewFullSpeed,
                         _speedFieldOfViewExtraDegrees,
                         _speedFieldOfViewBlendSeconds),
-                    BailOut.ToSpec());
+                    BailOut.ToSpec(),
+                    _enterSeconds,
+                    _exitSeconds);
             }
             catch (ArgumentException e)
             {
@@ -216,6 +236,8 @@ namespace Shooter.Runtime
             _id = spec.Id;
             _maxHealth = spec.MaxHealth;
             _enterRange = spec.EnterRange;
+            _enterSeconds = spec.EnterSeconds;
+            _exitSeconds = spec.ExitSeconds;
             _chaseDistance = spec.ChaseDistance;
             _chaseHeight = spec.ChaseHeight;
             var speedFieldOfView = spec.SpeedFieldOfView;

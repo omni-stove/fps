@@ -90,6 +90,61 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ARamByTheLocalPlayerShowsTheHitOnTheirScreen()
+        {
+            var driver = TestCars.Board(_vehicle, "Driver", 0, _created);
+            var body = driver.gameObject.AddComponent<Damageable>();
+            body.Initialize("Driver", 100);
+            body.IsLocalPlayer = true;
+            var confirms = new List<HitConfirm>();
+            void Record(HitConfirm confirm) => confirms.Add(confirm);
+            CombatEvents.HitConfirmed += Record;
+            try
+            {
+                LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' ram target=Dummy dmg=40 speed=8.0 by=Driver hp=60");
+                _impact.TryHit(_targetCollider, 8f, 0f);
+
+                Assert.That(confirms.Count, Is.EqualTo(1));
+                Assert.That(confirms[0].Damage, Is.EqualTo(40));
+                Assert.That(confirms[0].Killed, Is.False);
+                Assert.That(confirms[0].Point.HasValue, Is.True, "the damage number is placed on the target");
+
+                LogAssert.Expect(LogType.Log, "[Combat] target died id=Dummy");
+                LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' ram target=Dummy dmg=200 speed=30.0 by=Driver hp=0");
+                _impact.TryHit(_targetCollider, 30f, 2f);
+                Assert.That(confirms.Count, Is.EqualTo(2));
+                Assert.That(confirms[1].Killed, Is.True, "running someone over shows the kill");
+            }
+            finally
+            {
+                CombatEvents.HitConfirmed -= Record;
+            }
+        }
+
+        [Test]
+        public void ARamWithoutTheLocalPlayerDrivingShowsNothing()
+        {
+            TestCars.Board(_vehicle, "Driver", 0, _created);
+            var confirms = 0;
+            void Record(HitConfirm _) => confirms++;
+            CombatEvents.HitConfirmed += Record;
+            try
+            {
+                LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' ram target=Dummy dmg=40 speed=8.0 by=Driver hp=60");
+                _impact.TryHit(_targetCollider, 8f, 0f);
+                LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' ram target=Dummy dmg=40 speed=8.0 by=- hp=20");
+                _vehicle.ForceExit(_vehicle.OccupantOf(0), VehicleLeaveReason.Forced);
+                _impact.TryHit(_targetCollider, 8f, 2f);
+
+                Assert.That(confirms, Is.Zero);
+            }
+            finally
+            {
+                CombatEvents.HitConfirmed -= Record;
+            }
+        }
+
+        [Test]
         public void TheSameTargetIsHitAgainOnlyAfterTheRepeatTime()
         {
             LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' ram target=Dummy dmg=20 speed=6.0 by=- hp=80");

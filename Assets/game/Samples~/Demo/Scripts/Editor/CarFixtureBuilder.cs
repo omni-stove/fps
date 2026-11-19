@@ -52,6 +52,10 @@ namespace Shooter.Editor
         public static readonly Vector3 GunLocal = new Vector3(0f, GunnerSeatLocal.y + 1f, -0.6f);
         public static readonly Vector3 MuzzleLocal = new Vector3(0f, 0f, 1f);
 
+        public const float EnterSeconds = 1f;
+
+        public const float ExitSeconds = 0.6f;
+
         public static VehicleSpec Spec(string gunnerWeaponId = null)
         {
             if (gunnerWeaponId == null)
@@ -63,7 +67,9 @@ namespace Shooter.Editor
                     {
                         new VehicleSeatSpec(VehicleSeatRole.Driver, VehicleSeatPose.Seated, VehicleCameraView.Chase),
                         new VehicleSeatSpec(VehicleSeatRole.Passenger, VehicleSeatPose.Seated, VehicleCameraView.Chase),
-                    });
+                    },
+                    enterSeconds: EnterSeconds,
+                    exitSeconds: ExitSeconds);
             }
 
             return new VehicleSpec(
@@ -85,7 +91,9 @@ namespace Shooter.Editor
                         GunPitchMinDegrees,
                         GunPitchMaxDegrees,
                         GunTurnSpeedDegreesPerSecond),
-                });
+                },
+                enterSeconds: EnterSeconds,
+                exitSeconds: ExitSeconds);
         }
 
         public static Vehicle Create(

@@ -21,6 +21,9 @@ namespace Shooter.Runtime
         // 低い壁 (1.1m 未満) にも段差より上で当たる高さにする。
         public const float DefaultProbeHeight = 0.5f;
 
+        // 足元の Ray が車体の下の隙間を抜けたとき、車のように浮いた物にも当たる高さで探し直す。低い壁 (1.1m) より下にする。
+        public const float DefaultUpperProbeHeight = CharacterCoverSensor.UpperProbeHeight;
+
         public const float DefaultTopProbeHeight = 3f;
 
         private const string LogTag = CoverState.LogTag;
@@ -41,6 +44,9 @@ namespace Shooter.Runtime
 
         [SerializeField, Min(0f), Tooltip("壁を探す Ray の、足元からの高さ (m)")]
         private float _probeHeight = DefaultProbeHeight;
+
+        [SerializeField, Min(0f), Tooltip("足元の Ray が下を抜けたときに壁を探し直す Ray の、足元からの高さ (m)")]
+        private float _upperProbeHeight = DefaultUpperProbeHeight;
 
         [SerializeField, Min(0f), Tooltip("壁の上端を探す Ray の始点の、足元からの高さ (m)")]
         private float _topProbeHeight = DefaultTopProbeHeight;
@@ -475,7 +481,11 @@ namespace Shooter.Runtime
             var origin = new Vector3(bodyPosition.x, feetY + _probeHeight, bodyPosition.z);
             if (!TryCast(origin, direction, _state.Spec.CoverMaxEnterDistance, out var hit))
             {
-                return CoverProbeResult.None;
+                origin = new Vector3(bodyPosition.x, feetY + _upperProbeHeight, bodyPosition.z);
+                if (!TryCast(origin, direction, _state.Spec.CoverMaxEnterDistance, out hit))
+                {
+                    return CoverProbeResult.None;
+                }
             }
 
             var normal = hit.normal;

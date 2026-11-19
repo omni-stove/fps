@@ -54,6 +54,22 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void GettingInAndOutIsInstantUnlessTheGameGivesItTime()
+        {
+            var instant = new VehicleSpec("jeep", 800, _threeSeats);
+            Assert.That(instant.EnterSeconds, Is.EqualTo(0f));
+            Assert.That(instant.ExitSeconds, Is.EqualTo(0f));
+
+            var timed = new VehicleSpec("jeep", 800, _threeSeats, enterSeconds: 1.5f, exitSeconds: 0.75f);
+            Assert.That(timed.EnterSeconds, Is.EqualTo(1.5f));
+            Assert.That(timed.ExitSeconds, Is.EqualTo(0.75f));
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VehicleSpec("jeep", 800, _threeSeats, enterSeconds: -0.1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VehicleSpec("jeep", 800, _threeSeats, enterSeconds: float.NaN));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new VehicleSpec("jeep", 800, _threeSeats, exitSeconds: float.PositiveInfinity));
+        }
+
+        [Test]
         public void TheSeatListIsCopied()
         {
             var seats = new[] { new VehicleSeatSpec(VehicleSeatRole.Driver) };

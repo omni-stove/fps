@@ -24,6 +24,10 @@ namespace Shooter.Runtime
 
         private const int MaxHeightProbeHits = 16;
 
+        // 降りる位置は乗り物の原点の高さに置かれるので、サスペンションで車体が沈むと地面の下になり、床を塞がりと数えてしまう。
+        // この幅の中に地面があれば、その上に足を置き直してから塞がりを調べる。
+        private const float ExitGroundSnap = 0.5f;
+
         private static readonly List<Vehicle> _active = new List<Vehicle>();
         private static readonly Collider[] _overlapBuffer = new Collider[32];
         private static readonly RaycastHit[] _heightProbeBuffer = new RaycastHit[MaxHeightProbeHits];
@@ -39,6 +43,12 @@ namespace Shooter.Runtime
 
         [SerializeField, Min(0.01f), Tooltip("座席の乗る位置からこの距離 (m) までなら乗り込める")]
         private float _enterRange = VehicleSpec.DefaultEnterRange;
+
+        [SerializeField, Min(0f), Tooltip("プレイヤーが乗り込みを始めてから座席に着くまでの秒数。0 ならすぐ座る")]
+        private float _enterSeconds = VehicleSpec.DefaultEnterSeconds;
+
+        [SerializeField, Min(0f), Tooltip("プレイヤーが降りると決めてから降りるまでの秒数。0 ならすぐ降りる")]
+        private float _exitSeconds = VehicleSpec.DefaultExitSeconds;
 
         [SerializeField, Min(0f), Tooltip("追うカメラを注視点からどれだけ離すか (m)")]
         private float _chaseDistance = VehicleSpec.DefaultChaseDistance;
@@ -302,6 +312,8 @@ namespace Shooter.Runtime
             _vehicleId = spec.Id;
             _maxHealth = spec.MaxHealth;
             _enterRange = spec.EnterRange;
+            _enterSeconds = spec.EnterSeconds;
+            _exitSeconds = spec.ExitSeconds;
             _chaseDistance = spec.ChaseDistance;
             _chaseHeight = spec.ChaseHeight;
             (_bailOut ??= new BailOutSettings()).CopyFrom(spec.BailOut);
@@ -513,6 +525,7 @@ namespace Shooter.Runtime
             if (!TryFindExit(seat, rider, out var feet, out var rotation, out var exitIndex))
             {
                 Debug.Log(VehicleLog.LeaveRefused(name, rider.RiderName, VehicleLog.ReasonExitBlocked), this);
+                LogExitBlockers(seat, rider);
                 return false;
             }
 
@@ -560,6 +573,33 @@ namespace Shooter.Runtime
             var spec = Spec.BailOut;
             heightAboveGround = spec.Enabled ? MeasureHeightAboveGround() : null;
             return spec.Evaluate(heightAboveGround);
+        }
+
+        public Vector3 OnGround(Vector3 feetPosition)
+        {
+            var origin = feetPosition + (Vector3.up * ExitGroundSnap);
+            var count = Physics.RaycastNonAlloc(
+                origin, Vector3.down, _heightProbeBuffer, ExitGroundSnap * 2f, _groundMask, QueryTriggerInteraction.Ignore);
+            var nearest = float.PositiveInfinity;
+            try
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    var hit = _heightProbeBuffer[i];
+                    if (hit.collider == null || hit.collider.transform.IsChildOf(transform) || IsRiderCollider(hit.collider))
+                    {
+                        continue;
+                    }
+
+                    nearest = Mathf.Min(nearest, hit.distance);
+                }
+            }
+            finally
+            {
+                Array.Clear(_heightProbeBuffer, 0, count);
+            }
+
+            return float.IsPositiveInfinity(nearest) ? feetPosition : origin + (Vector3.down * nearest);
         }
 
         public float? MeasureHeightAboveGround()
@@ -736,9 +776,10 @@ namespace Shooter.Runtime
             var candidates = ExitCandidates(seat);
             for (var i = 0; i < candidates.Count; i++)
             {
-                if (!IsExitBlocked(candidates[i].Position, rider))
+                var feet = OnGround(candidates[i].Position);
+                if (!IsExitBlocked(feet, rider))
                 {
-                    feetPosition = candidates[i].Position;
+                    feetPosition = feet;
                     rotation = candidates[i].Rotation;
                     candidateIndex = i;
                     return true;
@@ -752,6 +793,11 @@ namespace Shooter.Runtime
         }
 
         public bool IsExitBlocked(Vector3 feetPosition, IVehicleRider rider)
+        {
+            return FindExitBlocker(feetPosition, rider) != null;
+        }
+
+        public Collider FindExitBlocker(Vector3 feetPosition, IVehicleRider rider)
         {
             if (rider == null)
             {
@@ -774,10 +820,10 @@ namespace Shooter.Runtime
                         continue;
                     }
 
-                    return true;
+                    return hit;
                 }
 
-                return false;
+                return null;
             }
             finally
             {
@@ -1014,6 +1060,16 @@ namespace Shooter.Runtime
             }
 
             return count;
+        }
+
+        private void LogExitBlockers(VehicleSeat seat, IVehicleRider rider)
+        {
+            var candidates = ExitCandidates(seat);
+            for (var i = 0; i < candidates.Count; i++)
+            {
+                var blocker = FindExitBlocker(OnGround(candidates[i].Position), rider);
+                Debug.Log(VehicleLog.ExitBlockedBy(name, i, blocker != null ? blocker.name : "-"), this);
+            }
         }
 
         private List<ExitCandidate> ExitCandidates(VehicleSeat seat)
@@ -1310,7 +1366,17 @@ namespace Shooter.Runtime
 
             var bailOut = (_bailOut ??= new BailOutSettings()).ToSpec();
             return new VehicleSpec(
-                _vehicleId, _maxHealth, seats, WeaponSpecs(), null, _enterRange, _chaseDistance, _chaseHeight, bailOut: bailOut);
+                _vehicleId,
+                _maxHealth,
+                seats,
+                WeaponSpecs(),
+                null,
+                _enterRange,
+                _chaseDistance,
+                _chaseHeight,
+                bailOut: bailOut,
+                enterSeconds: _enterSeconds,
+                exitSeconds: _exitSeconds);
         }
 
         private VehicleWeaponSpec[] WeaponSpecs()

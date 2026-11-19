@@ -18,6 +18,11 @@ namespace Shooter.Core
 
         public const float DefaultChaseHeight = 2f;
 
+        // キットの既定は今までどおりすぐ乗り降りする。時間を掛けるかはゲームが決める。
+        public const float DefaultEnterSeconds = 0f;
+
+        public const float DefaultExitSeconds = 0f;
+
         private readonly VehicleSeatSpec[] _seats;
         private readonly VehicleWeaponSpec[] _weapons;
         private readonly VehiclePartSpec[] _parts;
@@ -33,7 +38,9 @@ namespace Shooter.Core
             float chaseHeight = DefaultChaseHeight,
             VehicleDurabilitySpec durability = null,
             VehicleSpeedFieldOfViewSpec speedFieldOfView = null,
-            BailOutSpec bailOut = null)
+            BailOutSpec bailOut = null,
+            float enterSeconds = DefaultEnterSeconds,
+            float exitSeconds = DefaultExitSeconds)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -70,6 +77,16 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(chaseHeight), chaseHeight, "chaseHeight must be finite");
             }
 
+            if (!(enterSeconds >= 0f) || float.IsInfinity(enterSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(enterSeconds), enterSeconds, "enterSeconds must not be negative and must be finite");
+            }
+
+            if (!(exitSeconds >= 0f) || float.IsInfinity(exitSeconds))
+            {
+                throw new ArgumentOutOfRangeException(nameof(exitSeconds), exitSeconds, "exitSeconds must not be negative and must be finite");
+            }
+
             _seats = CopySeats(seats, out var driverSeatIndex);
             _weapons = CopyWeapons(weapons, _seats.Length);
             _parts = CopyParts(parts);
@@ -83,6 +100,8 @@ namespace Shooter.Core
             Durability = durability ?? VehicleDurabilitySpec.Default;
             SpeedFieldOfView = speedFieldOfView ?? VehicleSpeedFieldOfViewSpec.Default;
             BailOut = bailOut ?? BailOutSpec.Default;
+            EnterSeconds = enterSeconds;
+            ExitSeconds = exitSeconds;
         }
 
         public string Id { get; }
@@ -108,6 +127,10 @@ namespace Shooter.Core
         public VehicleSpeedFieldOfViewSpec SpeedFieldOfView { get; }
 
         public BailOutSpec BailOut { get; }
+
+        public float EnterSeconds { get; }
+
+        public float ExitSeconds { get; }
 
         public IReadOnlyList<int> WeaponsOfSeat(int seatIndex)
         {

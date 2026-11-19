@@ -137,6 +137,8 @@ namespace Shooter.Core.Tests
             Assert.That(
                 VehicleLog.LeaveRefused("Jeep", "Player", VehicleLog.ReasonExitBlocked),
                 Is.EqualTo("[Vehicle] 'Jeep' leave refused rider=Player reason=exit_blocked"));
+            Assert.That(VehicleLog.ExitBlockedBy("Jeep", 2, "Wall"), Is.EqualTo("[Vehicle] 'Jeep' exit=2 blocked by=Wall"));
+            Assert.That(VehicleLog.DiedInSeat("Jeep", "Player", 1), Is.EqualTo("[Vehicle] 'Jeep' died in seat rider=Player seat=1"));
             Assert.That(VehicleLog.Wrecked("Jeep", 2), Is.EqualTo("[Vehicle] 'Jeep' wrecked riders=2"));
             Assert.Throws<ArgumentOutOfRangeException>(() => VehicleLog.Wrecked("Jeep", -1));
             Assert.That(

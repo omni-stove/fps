@@ -21,6 +21,7 @@ namespace Shooter.NetV2
         private ClientVehicles _vehicles;
         private StanceGeometry _geometry;
         private int _driving = VehicleSeatSync.NoVehicle;
+        private InteractHintSlot _boardHint;
 
         public NetV2Vehicles(UnityEngine.Object context)
         {
@@ -73,6 +74,7 @@ namespace Shooter.NetV2
 
         public void Leave()
         {
+            _boardHint?.Clear();
             KeySharing.Release(InputActionPaths.Interact, this);
             if (_vehicles != null)
             {
@@ -170,7 +172,18 @@ namespace Shooter.NetV2
             }
 
             var seat = _vehicles.LocalSeat;
-            KeySharing.SetClaim(InputActionPaths.Interact, this, seat.IsRiding || TryFindNearest(feet, out _));
+            var role = VehicleSeatRole.Driver;
+            var offered = !seat.IsRiding && TryFindNearest(feet, out _, out role);
+            if (offered)
+            {
+                BoardHint.Show(new VehicleBoardHint(role, InputActionPaths.Interact));
+            }
+            else
+            {
+                BoardHint.Clear();
+            }
+
+            KeySharing.SetClaim(InputActionPaths.Interact, this, seat.IsRiding || offered);
             if (local.TakeInteract())
             {
                 if (seat.IsRiding)
@@ -254,9 +267,17 @@ namespace Shooter.NetV2
             return new SceneVehicle(vehicle, body, motor, effects, parts, mounts);
         }
 
+        private InteractHintSlot BoardHint => _boardHint ?? (_boardHint = new InteractHintSlot(this));
+
         private bool TryFindNearest(Vector3 feet, out int nearest)
         {
+            return TryFindNearest(feet, out nearest, out _);
+        }
+
+        private bool TryFindNearest(Vector3 feet, out int nearest, out VehicleSeatRole role)
+        {
             nearest = -1;
+            role = VehicleSeatRole.Driver;
             var best = float.PositiveInfinity;
             for (var i = 0; i < _scene.Count; i++)
             {
@@ -274,6 +295,7 @@ namespace Shooter.NetV2
                     {
                         best = distance;
                         nearest = i;
+                        role = seat.Role;
                     }
                 }
             }

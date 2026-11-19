@@ -52,6 +52,17 @@ namespace Shooter.Runtime
             }
         }
 
+        public Damageable Find(int id)
+        {
+            if (id < 0 || id >= _byId.Count)
+            {
+                return null;
+            }
+
+            var owner = _byId[id];
+            return owner != null ? owner : null;
+        }
+
         public Func<NVector3?> Follow(int id)
         {
             if (id < 0 || id >= _byId.Count)

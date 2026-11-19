@@ -6,7 +6,8 @@ namespace Shooter.Core
     // 同じ値をデータから読んでここに持つ。
     public sealed class DeployType
     {
-        public DeployType(string id, DeployRole role, DeploySpec deploy, TurretSpec turret = null, string weaponId = null, DecoySpec decoy = null)
+        public DeployType(
+            string id, DeployRole role, DeploySpec deploy, TurretSpec turret = null, string weaponId = null, DecoySpec decoy = null, BeaconSpec beacon = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -47,12 +48,25 @@ namespace Shooter.Core
                 throw new ArgumentException("only a Decoy has a decoy spec", nameof(decoy));
             }
 
+            if (role == DeployRole.Beacon)
+            {
+                if (beacon == null)
+                {
+                    throw new ArgumentException("a Beacon needs a beacon spec", nameof(beacon));
+                }
+            }
+            else if (beacon != null)
+            {
+                throw new ArgumentException("only a Beacon has a beacon spec", nameof(beacon));
+            }
+
             Id = id;
             Role = role;
             Deploy = deploy ?? throw new ArgumentNullException(nameof(deploy));
             Turret = turret;
             WeaponId = weaponId;
             Decoy = decoy;
+            Beacon = beacon;
         }
 
         public string Id { get; }
@@ -67,7 +81,9 @@ namespace Shooter.Core
 
         public DecoySpec Decoy { get; }
 
-        // DeploySpec.Default は盾の形と数なので、タレットと囮は各 Spec の既定の形と数に置き換える (DeployAbilityDefinition の派生と同じ)。
+        public BeaconSpec Beacon { get; }
+
+        // DeploySpec.Default は盾の形と数なので、タレット・囮・ビーコンは各 Spec の既定の形と数に置き換える (DeployAbilityDefinition の派生と同じ)。
         public static DeploySpec DefaultDeploy(DeployRole role)
         {
             switch (role)
@@ -76,6 +92,9 @@ namespace Shooter.Core
                     return Shaped(TurretSpec.DefaultMaxActive, TurretSpec.DefaultMaxHealth, TurretSpec.DefaultWidth, TurretSpec.DefaultHeight, TurretSpec.DefaultDepth);
                 case DeployRole.Decoy:
                     return Shaped(DecoySpec.DefaultMaxActive, DecoySpec.DefaultMaxHealth, DecoySpec.DefaultWidth, DecoySpec.DefaultHeight, DecoySpec.DefaultDepth);
+                case DeployRole.Beacon:
+                    return Shaped(
+                        BeaconSpec.DefaultMaxActive, BeaconSpec.DefaultMaxHealth, BeaconSpec.DefaultWidth, BeaconSpec.DefaultHeight, BeaconSpec.DefaultDepth);
                 case DeployRole.Shield:
                     return DeploySpec.Default;
                 default:

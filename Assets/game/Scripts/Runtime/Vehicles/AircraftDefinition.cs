@@ -28,6 +28,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("壊れたときの飛び方の値")]
         private AircraftDamageSettings _damage = new AircraftDamageSettings();
 
+        [SerializeField, Tooltip("HUD に出す警告の値")]
+        private AircraftWarningSettings _warning = new AircraftWarningSettings();
+
         public float Mass
         {
             get => _mass;
@@ -50,6 +53,8 @@ namespace Shooter.Runtime
 
         public AircraftDamageSettings Damage => _damage ??= new AircraftDamageSettings();
 
+        public AircraftWarningSettings Warning => _warning ??= new AircraftWarningSettings();
+
         public AircraftSpec ToSpec()
         {
             try
@@ -67,6 +72,18 @@ namespace Shooter.Runtime
             try
             {
                 return Aim.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw Invalid(e);
+            }
+        }
+
+        public AircraftWarningSpec ToWarningSpec()
+        {
+            try
+            {
+                return Warning.ToSpec();
             }
             catch (ArgumentException e)
             {

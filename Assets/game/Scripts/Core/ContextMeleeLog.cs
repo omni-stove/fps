@@ -55,7 +55,7 @@ namespace Shooter.Core
             return $"{LogTag} interrupted id={attackerId} target={targetId} move={moveId} reason={reason}";
         }
 
-        public static string Witnessed(string attackerId, string targetId, string moveId, string witnessId, AwarenessStage stage)
+        public static string Witnessed(string attackerId, string targetId, string moveId, string witnessId, string stage)
         {
             return $"{LogTag} witnessed id={attackerId} target={targetId} move={moveId} by={witnessId} stage={stage}";
         }

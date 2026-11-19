@@ -101,10 +101,6 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("種類が Bomber のときに使う値")]
         private EnemyBomberSettings _bomber = new EnemyBomberSettings();
 
-        [Header("発見ゲージ")]
-        [SerializeField, Tooltip("見つかるまでのゲージのたまり方・減り方と、物音の聞こえ方")]
-        private EnemyAwarenessSettings _awareness = new EnemyAwarenessSettings();
-
         [Header("近接")]
         [SerializeField, Tooltip("近づいた目標を殴るときの値")]
         private EnemyMeleeSettings _melee = new EnemyMeleeSettings();
@@ -253,8 +249,6 @@ namespace Shooter.Runtime
             set => _crouchEyeHeight = value;
         }
 
-        public EnemyAwarenessSettings Awareness => _awareness;
-
         public EnemyMeleeSettings Melee => _melee;
 
         public EnemySpec ToSpec()
@@ -291,18 +285,6 @@ namespace Shooter.Runtime
             catch (ArgumentException e)
             {
                 throw new EnemyDefinitionException($"enemy '{source}' is invalid: {e.Message}", e);
-            }
-        }
-
-        public AwarenessSpec ToAwarenessSpec()
-        {
-            try
-            {
-                return _awareness.ToSpec();
-            }
-            catch (ArgumentException e)
-            {
-                throw new EnemyDefinitionException($"enemy '{SourceName}' has invalid awareness: {e.Message}", e);
             }
         }
 

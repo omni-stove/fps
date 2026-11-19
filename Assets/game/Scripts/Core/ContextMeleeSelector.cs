@@ -108,9 +108,9 @@ namespace Shooter.Core
         }
 
         // 判断が見張りのままでも、発見ゲージが気づきに届いていれば相手はこちらを向き始めているので、気づいていないとはみなさない。
-        public static bool IsUnaware(EnemyState state, AwarenessStage stage)
+        public static bool IsUnaware(EnemyState state, bool unaware)
         {
-            return (state == EnemyState.Idle || state == EnemyState.Patrol) && stage == AwarenessStage.Unaware;
+            return (state == EnemyState.Idle || state == EnemyState.Patrol) && unaware;
         }
 
         // 相手の正面から stand 離れた点ではなく、今いる向きのまま相手に寄った点にする。回り込ませると壁や他の敵にめり込みやすい。

@@ -51,7 +51,7 @@ namespace Shooter.Tests.EditMode
         public void AnInvalidSpecIsReportedAndNothingIsHooked()
         {
             var serialized = new SerializedObject(_stealth);
-            serialized.FindProperty("_alertThreshold").floatValue = 0.9f;
+            serialized.FindProperty("_settings._alertThreshold").floatValue = 0.9f;
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             LogAssert.Expect(LogType.Error, new Regex(@"^\[Stealth\] id=enemy-1 の設定が不正です: "));
@@ -271,6 +271,130 @@ namespace Shooter.Tests.EditMode
             Assert.That(created.GunshotGain, Is.EqualTo(0.2f));
             Assert.That(created.FootstepGain, Is.EqualTo(0.05f));
             Assert.That(created.InvestigateLevel, Is.EqualTo(0.7f));
+        }
+
+        [Test]
+        public void ANewStealthHasTheAwarenessDefaults()
+        {
+            var spec = _stealth.CreateSpec();
+            var expected = AwarenessSpec.Default;
+
+            Assert.That(spec.FieldOfViewDegrees, Is.EqualTo(expected.FieldOfViewDegrees));
+            Assert.That(spec.GainPerSecond, Is.EqualTo(expected.GainPerSecond));
+            Assert.That(spec.FullGainDistance, Is.EqualTo(expected.FullGainDistance));
+            Assert.That(spec.FarGainFactor, Is.EqualTo(expected.FarGainFactor));
+            Assert.That(spec.PeripheralGainFactor, Is.EqualTo(expected.PeripheralGainFactor));
+            Assert.That(spec.CrouchGainFactor, Is.EqualTo(expected.CrouchGainFactor));
+            Assert.That(spec.ProneGainFactor, Is.EqualTo(expected.ProneGainFactor));
+            Assert.That(spec.StillGainFactor, Is.EqualTo(expected.StillGainFactor));
+            Assert.That(spec.FullMotionSpeed, Is.EqualTo(expected.FullMotionSpeed));
+            Assert.That(spec.DecayDelaySeconds, Is.EqualTo(expected.DecayDelaySeconds));
+            Assert.That(spec.DecayPerSecond, Is.EqualTo(expected.DecayPerSecond));
+            Assert.That(spec.NoticeThreshold, Is.EqualTo(expected.NoticeThreshold));
+            Assert.That(spec.AlertThreshold, Is.EqualTo(expected.AlertThreshold));
+            Assert.That(spec.AlarmRadius, Is.EqualTo(expected.AlarmRadius));
+            Assert.That(spec.EngagedHoldThreshold, Is.EqualTo(expected.EngagedHoldThreshold));
+            Assert.That(spec.GunshotGain, Is.EqualTo(expected.GunshotGain));
+            Assert.That(spec.FootstepGain, Is.EqualTo(expected.FootstepGain));
+            Assert.That(spec.InvestigateLevel, Is.EqualTo(expected.InvestigateLevel));
+        }
+
+        [Test]
+        public void AwarenessWrittenInTheSettingsReachesTheSpec()
+        {
+            _stealth.Settings.CopyFrom(new AwarenessSpec(
+                fieldOfViewDegrees: 90f,
+                gainPerSecond: 2f,
+                noticeThreshold: 0.3f,
+                alertThreshold: 0.7f,
+                engagedHoldThreshold: 0.9f,
+                alarmRadius: 8f,
+                investigateLevel: 0.8f));
+
+            var spec = _stealth.CreateSpec();
+
+            Assert.That(spec.FieldOfViewDegrees, Is.EqualTo(90f));
+            Assert.That(spec.GainPerSecond, Is.EqualTo(2f));
+            Assert.That(spec.NoticeThreshold, Is.EqualTo(0.3f));
+            Assert.That(spec.AlertThreshold, Is.EqualTo(0.7f));
+            Assert.That(spec.EngagedHoldThreshold, Is.EqualTo(0.9f));
+            Assert.That(spec.AlarmRadius, Is.EqualTo(8f));
+            Assert.That(spec.InvestigateLevel, Is.EqualTo(0.8f));
+            Assert.That(spec.FootstepGain, Is.EqualTo(AwarenessSpec.DefaultFootstepGain));
+        }
+
+        [Test]
+        public void AnInvalidNoticeThresholdNamesTheValue()
+        {
+            var serialized = new SerializedObject(_stealth);
+            serialized.FindProperty("_settings._noticeThreshold").floatValue = 0.9f;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            LogAssert.Expect(LogType.Error, new Regex(@"^\[Stealth\] id=enemy-1 の設定が不正です: .*noticeThreshold"));
+            Assert.That(_stealth.TryInitialize(), Is.False);
+            Assert.That(_stealth.Awareness, Is.Null);
+        }
+
+        [Test]
+        public void AsAMeleeWitnessItReportsItsStage()
+        {
+            IMeleeWitness witness = _stealth;
+            Assert.That(witness.IsUnaware, Is.True, "not initialized yet");
+            Assert.That(witness.StageName, Is.EqualTo("Unaware"));
+
+            Assert.That(_stealth.TryInitialize(), Is.True);
+            _stealth.Awareness.Rule = Stealth.On;
+            _stealth.Awareness.Meter.Raise(_stealth.Awareness.Spec.NoticeThreshold);
+
+            Assert.That(witness.Id, Is.EqualTo("enemy-1"));
+            Assert.That(witness.gameObject, Is.SameAs(_host));
+            Assert.That(witness.IsUnaware, Is.False);
+            Assert.That(witness.StageName, Is.EqualTo(AwarenessStage.Noticed.ToString()));
+        }
+
+        [Test]
+        public void WitnessingRaisesOnlyAnEnemyLookingAtTheAttackerWithStealthOn()
+        {
+            Assert.That(_stealth.TryInitialize(), Is.True);
+            _stealth.Awareness.Rule = Stealth.On;
+            var attackerHost = new GameObject("Attacker");
+            try
+            {
+                var attacker = attackerHost.AddComponent<Damageable>();
+                attacker.Initialize("attacker", 100);
+
+                _agent.Target = attacker;
+                Assert.That(_stealth.Witness(attacker, 1f), Is.False, "not looking");
+                Assert.That(_stealth.Stage, Is.EqualTo(AwarenessStage.Unaware));
+
+                _agent.Target = null;
+                SeeTheTarget();
+                var level = _stealth.Level;
+                Assert.That(_stealth.Witness(attacker, 1f), Is.False, "looking at someone else");
+                Assert.That(_stealth.Level, Is.EqualTo(level));
+
+                _agent.Target = attacker;
+                _stealth.Awareness.Rule = Stealth.Off;
+                _stealth.Witness(attacker, 1f);
+                Assert.That(_stealth.Stage, Is.EqualTo(AwarenessStage.Unaware), "stealth off keeps the old behavior");
+
+                _stealth.Awareness.Rule = Stealth.On;
+                LogAssert.Expect(LogType.Log, new Regex(@"^\[Stealth\] id=enemy-1 stage=Engaged "));
+                Assert.That(_stealth.Witness(attacker, 1f), Is.True);
+                Assert.That(_stealth.Stage, Is.EqualTo(AwarenessStage.Engaged));
+                Assert.That(_stealth.Awareness.RaisedByAlarm, Is.False);
+                Assert.That(_stealth.Awareness.LastSeen, Is.EqualTo(attacker.GroundPoint.ToNumerics()));
+            }
+            finally
+            {
+                Object.DestroyImmediate(attackerHost);
+            }
+        }
+
+        private void SeeTheTarget()
+        {
+            _stealth.Awareness.Meter.Tick(0f, EnemySpec.DefaultSightRange, new AwarenessSighting(true, 4f, 0f, AwarenessPosture.Standing, 1f, 0f));
+            Assert.That(_stealth.Awareness.Meter.IsSeeing, Is.True);
         }
 
         private static SoundStimulus Clatter(Vector3 at)

@@ -6,6 +6,7 @@
   "shotNoiseRadius": 60,
   "weight": 7.6,
   "moveSpeedMultiplier": 0.6,
+  "drawSeconds": 1.1,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.075

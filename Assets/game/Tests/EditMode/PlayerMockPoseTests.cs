@@ -227,6 +227,30 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void SwitchingLowersTheGunOutOfTheViewAndBringsItBack()
+        {
+            var held = PlayerMockPose.ViewModel(State(PlayerActionConditions.Grounded, ViewMode.FirstPerson));
+            var half = PlayerMockPose.ViewModel(Lowering(0.5f));
+            var away = PlayerMockPose.ViewModel(Lowering(1f));
+
+            Assert.That(PlayerMockPose.ViewModel(Lowering(0f)), Is.EqualTo(held));
+            Assert.That(away.Position, Is.EqualTo(PlayerMockPose.ViewLoweredPosition));
+            Assert.That(away.Rotation, Is.EqualTo(Quaternion.Euler(PlayerMockPose.ViewLoweredEuler)));
+            Assert.That(half.Position.y, Is.LessThan(held.Position.y).And.GreaterThan(away.Position.y));
+            Assert.That((away.Rotation * Vector3.forward).y, Is.LessThan(0f), "the muzzle points down when put away");
+
+            var pitch = Quaternion.identity;
+            var bodyAway = PlayerMockPose.BodyGun(Lowering(1f), pitch);
+            Assert.That(bodyAway.Position, Is.EqualTo(PlayerMockPose.BodyLoweredGunPosition));
+            Assert.That(bodyAway.Position.y, Is.LessThan(PlayerMockPose.BodyGun(State(PlayerActionConditions.Grounded), pitch).Position.y));
+        }
+
+        private static PlayerActionState Lowering(float lowering)
+        {
+            return new PlayerActionState(PlayerActionConditions.Grounded, 0f, null, ShoulderSide.Right, ViewMode.FirstPerson, "Rifle", 0f, lowering);
+        }
+
+        [Test]
         public void KickPullsBackAndTipsUpThenRecovers()
         {
             var pose = new MockPartPose(new Vector3(0.2f, -0.2f, 0.4f), Quaternion.identity);

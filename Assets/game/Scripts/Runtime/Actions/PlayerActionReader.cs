@@ -179,7 +179,8 @@ namespace Shooter.Runtime
                 _rig.Shoulder,
                 _rig.Mode,
                 weapon != null ? weapon.Spec.LogName : string.Empty,
-                _blindFire.SpreadDegrees);
+                _blindFire.SpreadDegrees,
+                _weapon.SwitchLowering);
             return _current;
         }
 

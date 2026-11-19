@@ -80,6 +80,8 @@ namespace Shooter.Runtime
 
         public bool IsSwitching => _loadout != null && !_unarmed && _loadout.IsSwitching;
 
+        public float SwitchLowering => IsSwitching ? _loadout.SwitchLowering : 0f;
+
         public GameRules Rules
         {
             get => _rules;

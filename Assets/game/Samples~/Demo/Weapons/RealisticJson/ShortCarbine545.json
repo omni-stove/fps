@@ -1,11 +1,12 @@
 {
   "id": "057635c9-2994-4251-bb0c-a413948a4252",
   "nameKey": "weapon.real.shortCarbine545",
-  "description": "Battlefield 6 の AK-205 (実銃は AK-205) を参考。20@0m→17.7@9m→15@21m→14.3@36m→12.5@75m・720 RPM・31 発 (薬室の 1 発込み)・弾速 708 m/s。段階で減るダメージを 9〜75 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "description": "Battlefield 6 の AK-205 (実銃は AK-205) を参考。20@0m→17.7@9m→15@21m→14.3@36m→12.5@75m・720 RPM・31 発 (薬室の 1 発込み)・弾速 708 m/s。段階で減るダメージを 9〜75 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "AssaultRifle",
   "shotNoiseRadius": 50,
   "weight": 3.2,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 0.8,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.0833

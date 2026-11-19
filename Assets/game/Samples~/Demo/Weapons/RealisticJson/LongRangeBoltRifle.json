@@ -1,11 +1,12 @@
 {
   "id": "a21e791d-cf45-4f05-981d-17480c5a791b",
   "nameKey": "weapon.real.longRangeBoltRifle",
-  "description": "Battlefield 6 の L115 (実銃は Accuracy International L115A3) を参考。80@0m→62.5@200m・46.3 RPM・6 発 (薬室の 1 発込み)・弾速 742 m/s。頭は BF の 1.34 倍ではなくキットの 2 倍。BF6 は 0 m で 80、一定の距離帯でだけ 100 になるが、キットでは距離で上がるダメージを表せないので 80 から始めた。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "description": "Battlefield 6 の L115 (実銃は Accuracy International L115A3) を参考。80@0m→62.5@200m・46.3 RPM・6 発 (薬室の 1 発込み)・弾速 742 m/s。頭は BF の 1.34 倍ではなくキットの 2 倍。BF6 は 0 m で 80、一定の距離帯でだけ 100 になるが、キットでは距離で上がるダメージを表せないので 80 から始めた。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "SniperRifle",
   "shotNoiseRadius": 90,
   "weight": 6.8,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 1,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.2,

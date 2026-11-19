@@ -62,7 +62,9 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.Grenade, "<Keyboard>/g", "<Gamepad>/leftShoulder")]
         [TestCase(InputActionPaths.Ping, "<Mouse>/middleButton", "<Gamepad>/dpad/up")]
         [TestCase(InputActionPaths.UseStreak, "<Keyboard>/4", "<Gamepad>/dpad/right")]
-        public void NewButtonsAreBoundToOneKeyAndOneGamepadControlUsedByNoOtherPlayerAction(string path, string key, string gamepad)
+        [TestCase(InputActionPaths.Emote, "<Keyboard>/j", "<Gamepad>/dpad/up")]
+        [TestCase(InputActionPaths.Countermeasure, "<Keyboard>/f", "<Gamepad>/rightShoulder")]
+        public void NewButtonsAreBoundToOneKeyAndOneGamepadControlUsedByNoOtherPlayerActionUnlessKeySharingAllowsIt(string path, string key, string gamepad)
         {
             var action = Find(path);
 
@@ -77,8 +79,23 @@ namespace Shooter.Tests.EditMode
                     continue;
                 }
 
-                Assert.That(other.bindings, Has.None.Matches<InputBinding>(b => b.path == key || b.path == gamepad), other.name);
+                Assert.That(other.bindings, Has.None.Matches<InputBinding>(b => b.path == key), other.name);
+                if (!KitTuning.KeySharing.Allows(action.name, other.name))
+                {
+                    Assert.That(other.bindings, Has.None.Matches<InputBinding>(b => b.path == gamepad), other.name);
+                }
             }
+        }
+
+        [TestCase(InputActionPaths.Emote, InputActionPaths.Ping, "<Gamepad>/dpad/up")]
+        [TestCase(InputActionPaths.Countermeasure, InputActionPaths.Cover, "<Gamepad>/rightShoulder")]
+        public void EmoteAndCountermeasureShareTheirGamepadButtonWithTheirPartner(string path, string partnerPath, string gamepad)
+        {
+            var action = Find(path);
+            var partner = Find(partnerPath);
+
+            Assert.That(partner.bindings, Has.Some.Matches<InputBinding>(b => b.path == gamepad && b.groups == "Gamepad"));
+            Assert.That(KitTuning.KeySharing.Allows(action.name, partner.name), Is.True);
         }
 
         [Test]
@@ -113,8 +130,6 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.TeamChat, "<Keyboard>/u")]
         [TestCase(InputActionPaths.PushToTalk, "<Keyboard>/capsLock")]
         [TestCase(InputActionPaths.SwitchStreak, "<Keyboard>/3")]
-        [TestCase(InputActionPaths.Emote, "<Keyboard>/j")]
-        [TestCase(InputActionPaths.Countermeasure, "<Keyboard>/f")]
         public void KeyboardOnlyButtonsAreBoundToOneKeyUsedByNoOtherPlayerAction(string path, string key)
         {
             var action = Find(path);

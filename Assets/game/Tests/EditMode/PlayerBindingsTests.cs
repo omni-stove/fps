@@ -83,12 +83,27 @@ namespace Shooter.Tests.EditMode
         [TestCase("Chat")]
         [TestCase("TeamChat")]
         [TestCase("PushToTalk")]
-        [TestCase("Emote")]
-        [TestCase("Countermeasure")]
         public void KeyboardOnlyButtonsHaveOnlyAKeyboardRow(string actionName)
         {
             Assert.That(PlayerBindings.Slots, Has.Member(new RebindSlot(actionName, InputDeviceKind.KeyboardMouse)));
             Assert.That(PlayerBindings.Slots, Has.No.Member(new RebindSlot(actionName, InputDeviceKind.Gamepad)));
+        }
+
+        [TestCase("Emote", "<Gamepad>/dpad/up", "Ping")]
+        [TestCase("Countermeasure", "<Gamepad>/rightShoulder", "Cover")]
+        public void EmoteAndCountermeasureHaveAGamepadRowSharedOnlyWithTheirPartner(string actionName, string path, string partner)
+        {
+            var slot = new RebindSlot(actionName, InputDeviceKind.Gamepad);
+
+            Assert.That(PlayerBindings.Slots, Has.Member(slot));
+            Assert.That(_bindings.PathOf(slot), Is.EqualTo(path));
+            Assert.That(_bindings.FindConflicts(slot).Select(c => c.ActionName), Is.EqualTo(new[] { partner }), "without key sharing the partner overlaps");
+            using (var bundled = new PlayerBindings(_asset))
+            {
+                Assert.That(bundled.FindConflicts(slot), Is.Empty, "the bundled key-sharing.json allows the pair");
+                Assert.That(bundled.FindConflicts(new RebindSlot(partner, InputDeviceKind.Gamepad)), Is.Empty, "the rule works from either side");
+                Assert.That(bundled.FindConflicts(slot, "<Gamepad>/buttonSouth").Select(c => c.ActionName), Is.EqualTo(new[] { "Jump" }), "other buttons still conflict");
+            }
         }
 
         [TestCase("LeanLeft", "<Mouse>/backButton")]
@@ -155,11 +170,18 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheDefaultBindingsDoNotOverlap()
+        public void TheDefaultBindingsOverlapOnlyWhereTheBundledKeySharingAllowsIt()
         {
-            foreach (var slot in PlayerBindings.Slots)
+            using (var bundled = new PlayerBindings(_asset))
             {
-                Assert.That(_bindings.FindConflicts(slot), Is.Empty, slot.ToString());
+                foreach (var slot in PlayerBindings.Slots)
+                {
+                    Assert.That(bundled.FindConflicts(slot), Is.Empty, slot.ToString());
+                    foreach (var conflict in _bindings.FindConflicts(slot))
+                    {
+                        Assert.That(KitTuning.KeySharing.Allows(slot.ActionName, conflict.ActionName), Is.True, slot + " overlaps " + conflict);
+                    }
+                }
             }
         }
 

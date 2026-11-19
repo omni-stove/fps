@@ -59,6 +59,9 @@ namespace Shooter.Runtime
 
         public static InfectedSpec Infected => Load(c => c.InfectedTuning, InfectedJson.ResourcePath, InfectedJson.Parse, InfectedSpec.Default);
 
+        public static IReadOnlyList<GameRulesMutator> Mutators =>
+            Load(c => c.MutatorsTuning, MutatorsResourcePath, MutatorJson.Parse, MutatorJson.Empty);
+
         public static void Reload()
         {
             _loaded.Clear();

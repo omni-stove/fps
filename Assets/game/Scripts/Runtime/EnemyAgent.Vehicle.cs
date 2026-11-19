@@ -99,7 +99,10 @@ namespace Shooter.Runtime
                 return ordered;
             }
 
-            return vehicle != null ? vehicle.GetComponent<VehicleRoute>() : null;
+            var onVehicle = vehicle != null ? vehicle.GetComponent<VehicleRoute>() : null;
+
+            // 点が空の道は直下の子を点にするが、乗り物の子は座席など乗り物と一緒に動くので、着かない道になる。
+            return onVehicle != null && onVehicle.Points.Count > 0 ? onVehicle : null;
         }
 
         void IVehicleRider.OnBoarded(VehicleSeat seat)

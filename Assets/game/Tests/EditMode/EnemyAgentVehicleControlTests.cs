@@ -352,9 +352,11 @@ namespace Shooter.Tests.EditMode
         }
 
         // 部品の名前は GameObject の名前なので、乗り物に付けた道の名前は乗り物の名前になる。
-        private static VehicleRoute AddRoute(Vehicle vehicle)
+        private VehicleRoute AddRoute(Vehicle vehicle)
         {
-            return vehicle.gameObject.AddComponent<VehicleRoute>();
+            var route = vehicle.gameObject.AddComponent<VehicleRoute>();
+            route.SetPoints(Point("RoutePoint", vehicle.transform.position + new Vector3(50f, 0f, 0f)));
+            return route;
         }
 
         private VehicleRoute CreateRoute(string name)

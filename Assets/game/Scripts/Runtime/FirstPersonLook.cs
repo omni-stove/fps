@@ -18,8 +18,16 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("マウスの 1 ピクセルあたりの回転 (度)")]
         private float _mouseSensitivity = DefaultMouseSensitivity;
 
+        public const float DefaultGyroSensitivity = 1f;
+
         [SerializeField, Min(0f), Tooltip("スティックを倒し切ったときの毎秒の回転 (度)")]
         private float _stickSensitivity = DefaultStickSensitivity;
+
+        [SerializeField, Min(0f), Tooltip("ジャイロのある機器を 1 度傾けたときの視点の回転 (度)")]
+        private float _gyroSensitivity = DefaultGyroSensitivity;
+
+        [NonSerialized]
+        private GyroLook _gyroLook = new GyroLook();
 
         private readonly LookAngles _angles = new LookAngles();
         private Transform _pitchPivot;
@@ -85,6 +93,35 @@ namespace Shooter.Runtime
             get => _stickSensitivity;
             set => _stickSensitivity = Mathf.Max(0f, value);
         }
+
+        public float GyroSensitivity
+        {
+            get => _gyroSensitivity;
+            set => _gyroSensitivity = Mathf.Max(0f, value);
+        }
+
+        public float EffectiveGyroSensitivity => _gyroSensitivity * _sensitivityMultiplier;
+
+        public GyroLook Gyro
+        {
+            get => _gyroLook;
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+
+                if (value != _gyroLook)
+                {
+                    _gyroLook.Release();
+                    _gyroLook = value;
+                }
+            }
+        }
+
+        // 覗き込みの部品を参照せず値で受けるのは、覗き込みが無い体 (乗り物など) でもこの部品だけで回せるようにするため。
+        public bool Aiming { get; set; }
 
         // 保存する設定ではないので、シリアライズしない。
         public float SensitivityMultiplier
@@ -193,11 +230,17 @@ namespace Shooter.Runtime
                 AppliedControlSettings.Changed -= HandleSettingsChanged;
                 _listeningToSettings = false;
             }
+
+            _gyroLook.Release();
         }
 
         private void HandleSettingsChanged(ControlSettings settings)
         {
             _controlSettings = settings;
+            if (!settings.GyroEnabled)
+            {
+                _gyroLook.Release();
+            }
         }
 
         private void OnEnable()
@@ -235,6 +278,7 @@ namespace Shooter.Runtime
             _enabledLookAction = false;
             // 止めている間 (死亡など) に溜まった吸い付きを、戻ったときに一度に回さないよう捨てる。
             _pendingAssistDegrees = Vector2.zero;
+            _gyroLook.Release();
             LockCursor(false);
         }
 
@@ -278,12 +322,25 @@ namespace Shooter.Runtime
             }
 
             var fromPointer = _lookAction != null && _lookAction.activeControl?.device is Pointer;
-            Turn(ReadLookDegrees(Time.deltaTime), fromPointer);
+            var deltaSeconds = Time.deltaTime;
+            Turn(ReadLookDegrees(deltaSeconds), fromPointer, ReadGyroDegrees(deltaSeconds));
         }
 
         public void Turn(Vector2 lookDegrees, bool fromPointer)
         {
+            Turn(lookDegrees, fromPointer, Vector2.zero);
+        }
+
+        // ジャイロはスティックの弱さを補うものではないので、エイムアシストの倍率を掛けずに足す。
+        public void Turn(Vector2 lookDegrees, bool fromPointer, Vector2 gyroDegrees)
+        {
+            if (!IsFinite(gyroDegrees.x) || !IsFinite(gyroDegrees.y))
+            {
+                throw new ArgumentOutOfRangeException(nameof(gyroDegrees), gyroDegrees, "gyro degrees must be finite");
+            }
+
             var degrees = fromPointer ? lookDegrees : (lookDegrees * _assistLookScale) + _pendingAssistDegrees;
+            degrees += gyroDegrees;
             _pendingAssistDegrees = Vector2.zero;
             degrees *= _turnMultiplier;
             if (degrees == Vector2.zero)
@@ -315,6 +372,11 @@ namespace Shooter.Runtime
             }
 
             return ToLookDegrees(raw, action.activeControl?.device is Pointer, deltaSeconds);
+        }
+
+        public Vector2 ReadGyroDegrees(float deltaSeconds)
+        {
+            return _gyroLook.ReadLookDegrees(_controlSettings, Aiming, EffectiveGyroSensitivity, deltaSeconds);
         }
 
         public Vector2 ToLookDegrees(Vector2 raw, bool fromPointer, float deltaSeconds)

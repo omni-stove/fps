@@ -1782,6 +1782,25 @@
     background-color: rgba(0, 0, 0, 0.4);
 }
 
+.wallet__money {
+    margin: 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgb(140, 220, 120);
+    -unity-font-style: bold;
+}
+
+/* 準備の時間 (買える間) は枠を縁取り、買えることを示す。 */
+.wallet--buy-time {
+    border-width: 2px;
+    border-color: rgb(140, 220, 120);
+}
+
+/* 上限まで貯まり、これ以上は受け取れない。 */
+.wallet--full .wallet__money {
+    color: rgb(255, 196, 64);
+}
+
 /* 偵察ドローンを操縦している間の枠。画面全体に広げ、電池・範囲外・戻す操作の行を下中央に並べる。 */
 .drone-hud {
     position: absolute;

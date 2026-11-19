@@ -1,0 +1,124 @@
+/*
+ * 準備の時間に開く購入画面。Shooter.Runtime.BuyMenuPanel が入れ物に読み込む。
+ * 入れ物は BuyMenuView が HUD の根に足すので、画面の中央に重ねる。
+ */
+
+.buy-menu {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    min-width: 480px;
+    max-height: 80%;
+    padding: 20px 28px;
+    border-radius: 8px;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+
+.buy-menu__title {
+    margin: 0 0 4px 0;
+    padding: 0;
+    font-size: 32px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.buy-menu__money {
+    margin: 0 0 12px 0;
+    padding: 0;
+    font-size: 22px;
+    color: rgb(140, 220, 120);
+    -unity-font-style: bold;
+}
+
+.buy-menu__list {
+    flex-direction: column;
+    flex-shrink: 1;
+}
+
+.buy-menu__item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 0 8px 0;
+    padding: 8px 16px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+.buy-menu__item:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.buy-menu__item:focus {
+    border-color: rgb(255, 255, 255);
+}
+
+.buy-menu__item:disabled {
+    opacity: 0.5;
+}
+
+/* お金が足りない品。押せば理由を出すので、押せるまま薄くする。 */
+.buy-menu__item--unaffordable {
+    opacity: 0.55;
+}
+
+/* 送って答えを待っている品。 */
+.buy-menu__item--pending {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 196, 64, 0.25);
+}
+
+.buy-menu__item-name {
+    margin: 0;
+    padding: 0;
+    font-size: 24px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+}
+
+.buy-menu__item-detail {
+    margin: 2px 0 0 0;
+    padding: 0;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.buy-menu__item-price {
+    margin: 0 0 0 24px;
+    padding: 0;
+    font-size: 24px;
+    color: rgb(140, 220, 120);
+    -unity-font-style: bold;
+}
+
+.buy-menu__item--unaffordable .buy-menu__item-price {
+    color: rgb(230, 80, 60);
+}
+
+.buy-menu__empty {
+    margin: 0 0 12px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.buy-menu__status {
+    margin: 4px 0 8px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgb(255, 255, 255);
+}
+
+.buy-menu__status--error {
+    color: rgb(255, 120, 100);
+}
+
+.buy-menu__close {
+    align-self: flex-end;
+    margin: 4px 0 0 0;
+    padding: 6px 20px;
+    font-size: 20px;
+}

@@ -6,14 +6,14 @@ namespace Shooter.Core.Tests
 {
     public sealed class RespawnAnchorOrderTests
     {
-        private static readonly RespawnAnchor[] BeaconSquadBase = { RespawnAnchor.Beacon, RespawnAnchor.Squad, RespawnAnchor.Base };
+        private static readonly RespawnAnchor[] _beaconSquadBase = { RespawnAnchor.Beacon, RespawnAnchor.Squad, RespawnAnchor.Base };
 
         [Test]
         public void TheFirstAnchorThatCanBeUsedIsChosenAndLaterOnesAreNotTried()
         {
             var tried = new List<RespawnAnchor>();
 
-            var chosen = RespawnAnchorOrder.Choose(BeaconSquadBase, a =>
+            var chosen = RespawnAnchorOrder.Choose(_beaconSquadBase, a =>
             {
                 tried.Add(a);
                 return true;
@@ -28,7 +28,7 @@ namespace Shooter.Core.Tests
         {
             var tried = new List<RespawnAnchor>();
 
-            var chosen = RespawnAnchorOrder.Choose(BeaconSquadBase, a =>
+            var chosen = RespawnAnchorOrder.Choose(_beaconSquadBase, a =>
             {
                 tried.Add(a);
                 return a == RespawnAnchor.Squad;
@@ -58,7 +58,7 @@ namespace Shooter.Core.Tests
         {
             var tried = new List<RespawnAnchor>();
 
-            var chosen = RespawnAnchorOrder.Choose(BeaconSquadBase, a =>
+            var chosen = RespawnAnchorOrder.Choose(_beaconSquadBase, a =>
             {
                 tried.Add(a);
                 return false;
@@ -99,7 +99,7 @@ namespace Shooter.Core.Tests
         public void NullArgumentsAreRejected()
         {
             Assert.Throws<ArgumentNullException>(() => RespawnAnchorOrder.Choose(null, _ => true));
-            Assert.Throws<ArgumentNullException>(() => RespawnAnchorOrder.Choose(BeaconSquadBase, null));
+            Assert.Throws<ArgumentNullException>(() => RespawnAnchorOrder.Choose(_beaconSquadBase, null));
         }
     }
 }

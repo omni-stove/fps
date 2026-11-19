@@ -481,7 +481,7 @@ namespace Shooter.Runtime
         }
 
         // 床が無い所 (崖の外や空を飛ぶ機体の下) と、壁や置き物に体が重なる所には戻さない。体どうしの重なりは SquadSpawnSelector が見る。
-        private static bool TryStandAt(SideMember member, Vector3 position, out Vector3 ground)
+        private bool TryStandAt(SideMember member, Vector3 position, out Vector3 ground)
         {
             ground = position;
             var from = position + (Vector3.up * GroundProbeAbove);
@@ -498,13 +498,21 @@ namespace Shooter.Runtime
             var top = ground + (Vector3.up * Mathf.Max(height - radius, radius + BodyLift));
             foreach (var overlap in Physics.OverlapCapsule(bottom, top, radius, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore))
             {
-                if (SideMember.Of(overlap.gameObject) == null)
+                var other = SideMember.Of(overlap.gameObject);
+                // ダウン中の味方の体は場に残るので、体どうしの判定 (Selector) では避けられず、ここで重なりとして扱う。
+                if (other == null || (other != member && IsDownedBody(other)))
                 {
                     return false;
                 }
             }
 
             return true;
+        }
+
+        private bool IsDownedBody(SideMember other)
+        {
+            var otherId = _members.IndexOf(other);
+            return otherId >= 0 && _session.HasPlayer(otherId) && _session.IsDown(otherId);
         }
 
         private Quaternion FacingOfNearestMate(SideMember member, Vector3 position)

@@ -140,6 +140,7 @@ namespace Shooter.Core.Tests
                 (nameof(ActionRules.Emote), a => a.WithEmote(Emote.Off), Emote.Off),
                 (nameof(ActionRules.Stamina), a => a.WithStamina(Stamina.Off), Stamina.Off),
                 (nameof(ActionRules.ReloadInterruptedBy), a => a.WithReloadInterruptedBy(new[] { ReloadInterrupt.Grenade }), new[] { ReloadInterrupt.Grenade }),
+                (nameof(ActionRules.AimWhileReloading), a => a.WithAimWhileReloading(AimWhileReloading.Off), AimWhileReloading.Off),
             };
 
             // Cover は BlindFire が On のままでは Off にできないので、BlindFire を切った値から確かめる。
@@ -241,6 +242,7 @@ namespace Shooter.Core.Tests
             AssertRejected(() => _actions.WithJump((Jump)99), "jump");
             AssertRejected(() => _actions.WithEmote((Emote)99), "emote");
             AssertRejected(() => _actions.WithStamina((Stamina)99), "stamina");
+            AssertRejected(() => _actions.WithAimWhileReloading((AimWhileReloading)99), "aimWhileReloading");
         }
 
         [Test]

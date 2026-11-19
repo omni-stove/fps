@@ -32,6 +32,9 @@ namespace Shooter.Protocol
         public Spectating Spectating { get; set; }
         public Abilities Abilities { get; set; }
 
+        // aimWhileReloading と reloadInterruptedBy の Aim を別々に送らず決めた答えだけ送るのは、クライアントが使うのは構えを止めるかだけで、取り消しはサーバーが行うため。
+        public bool BlocksAimWhileReloading { get; set; }
+
         public string WeatherId { get; set; }
 
         public string TimeOfDayId { get; set; }
@@ -81,6 +84,7 @@ namespace Shooter.Protocol
                 TextChat = rules.TextChat,
                 Spectating = rules.Spectating,
                 Abilities = actions.Abilities,
+                BlocksAimWhileReloading = actions.BlocksAimWhileReloading(),
             };
         }
 
@@ -106,6 +110,7 @@ namespace Shooter.Protocol
                 && TextChat == other.TextChat
                 && Spectating == other.Spectating
                 && Abilities == other.Abilities
+                && BlocksAimWhileReloading == other.BlocksAimWhileReloading
                 && string.Equals(WeatherId ?? "", other.WeatherId ?? "", System.StringComparison.Ordinal)
                 && string.Equals(TimeOfDayId ?? "", other.TimeOfDayId ?? "", System.StringComparison.Ordinal);
         }
@@ -132,6 +137,7 @@ namespace Shooter.Protocol
             writer.WriteByte((byte)TextChat);
             writer.WriteByte((byte)Spectating);
             writer.WriteByte((byte)Abilities);
+            writer.WriteBool(BlocksAimWhileReloading);
             writer.WriteString(WeatherId, MatchProtocol.MaxContentIdBytes);
             writer.WriteString(TimeOfDayId, MatchProtocol.MaxContentIdBytes);
         }
@@ -160,6 +166,7 @@ namespace Shooter.Protocol
                 TextChat = (TextChat)reader.ReadByteBelow(EnumRange<TextChat>.Count, "text chat rule"),
                 Spectating = (Spectating)reader.ReadByteBelow(EnumRange<Spectating>.Count, "spectating rule"),
                 Abilities = (Abilities)reader.ReadByteBelow(EnumRange<Abilities>.Count, "abilities rule"),
+                BlocksAimWhileReloading = reader.ReadBool(),
                 WeatherId = reader.ReadString(MatchProtocol.MaxContentIdBytes, previous.WeatherId),
                 TimeOfDayId = reader.ReadString(MatchProtocol.MaxContentIdBytes, previous.TimeOfDayId),
             };

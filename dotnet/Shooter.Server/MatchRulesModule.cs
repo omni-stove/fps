@@ -46,6 +46,9 @@ namespace Shooter.Server
 
         public GameRules Rules => _data?.Rules;
 
+        // Start の前は null。目的 (Extraction など) が送り先と調整値を引くための口。目的を作るのは Start の中なので、目的の Start からは引ける
+        internal ServerContext Context => _context;
+
         public void Start(ServerContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -315,7 +318,8 @@ namespace Shooter.Server
 
         public IReadOnlyList<WeaponSpec> WeaponsFor(int playerId)
         {
-            return TryGunGameWeapons(playerId, out var gunGame) ? gunGame : LoadoutFor(playerId);
+            var weapons = TryGunGameWeapons(playerId, out var gunGame) ? gunGame : LoadoutFor(playerId);
+            return _objective != null ? _objective.FilterWeapons(playerId, weapons) : weapons;
         }
 
         public void FillMatch(ref MatchSnapshot snapshot)
@@ -542,6 +546,9 @@ namespace Shooter.Server
                 _log.WriteLine(MatchLog.Tag + " spawn protection player=" + Text(playerId)
                     + " seconds=" + protection.ToString("0.##", CultureInfo.InvariantCulture));
             }
+
+            // 目的が配る物を決める (出撃で持ち物庫から取るなど) のを、配るより先に済ませる
+            _objective?.PlayerSpawning(playerId);
 
             // 選んだ並びはここで初めて配る (倒れる前・試合の途中では持ち替えない)
             PlayerSpawned?.Invoke(playerId);

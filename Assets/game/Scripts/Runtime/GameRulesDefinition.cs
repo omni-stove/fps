@@ -129,8 +129,11 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("走る・跳ぶなどでスタミナを使い、尽きたらできなくなるか")]
         private Stamina _stamina = Stamina.Off;
 
-        [SerializeField, Tooltip("始めたときにリロードを取り消し、している間はリロードを始めさせない動作。空ならどの動作でも止めない")]
+        [SerializeField, Tooltip("始めたときにリロードを取り消し、している間はリロードを始めさせない動作。空ならどの動作でも止めない。Aim は構え始めたときに取り消すだけで、構えたままのリロードは止めない")]
         private ReloadInterrupt[] _reloadInterruptedBy = { ReloadInterrupt.Melee, ReloadInterrupt.Grenade };
+
+        [SerializeField, Tooltip("リロード中に構えられるか。Off ならリロードが終わるまで構えない (reloadInterruptedBy に Aim があればそちらを優先し、構えでリロードを取り消す)")]
+        private AimWhileReloading _aimWhileReloading = AimWhileReloading.On;
 
         [Header("体力とダメージ")]
         [SerializeField, Min(1), Tooltip("プレイヤーの最大体力")]
@@ -435,6 +438,12 @@ namespace Shooter.Runtime
             set => _reloadInterruptedBy = value != null ? (ReloadInterrupt[])value.Clone() : null;
         }
 
+        public AimWhileReloading AimWhileReloading
+        {
+            get => _aimWhileReloading;
+            set => _aimWhileReloading = value;
+        }
+
         // 写しを渡し受けするのは、呼んだ側が配列を書き換えてもアセットの値が黙って変わらないようにするため。
         public RespawnAnchor[] RespawnAnchors
         {
@@ -589,7 +598,8 @@ namespace Shooter.Runtime
                         _reviveRange,
                         _emote,
                         _stamina,
-                        _reloadInterruptedBy ?? Array.Empty<ReloadInterrupt>()),
+                        _reloadInterruptedBy ?? Array.Empty<ReloadInterrupt>(),
+                        _aimWhileReloading),
                     _spawnProtectionSeconds,
                     _fallDamage,
                     _hudDensity,
@@ -710,6 +720,8 @@ namespace Shooter.Runtime
             {
                 _reloadInterruptedBy[i] = actions.ReloadInterruptedBy[i];
             }
+
+            _aimWhileReloading = actions.AimWhileReloading;
         }
 
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed game rules)" : name;

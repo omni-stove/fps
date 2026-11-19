@@ -105,6 +105,18 @@ namespace Shooter.Server
             }
         }
 
+        // 構えている間ずっと取り消すと、構えたまま送ったリロードがすぐ消えて弾を込められないので、押し始めた tick だけ取り消す。
+        private void InterruptReloadOnAim(Fighter fighter)
+        {
+            var aiming = _movement.IsAiming(fighter.PlayerId);
+            if (aiming && !fighter.WasAiming)
+            {
+                InterruptReload(fighter.PlayerId, ReloadInterrupt.Aim);
+            }
+
+            fighter.WasAiming = aiming;
+        }
+
         private bool IsReloadHeldOff(Fighter fighter)
         {
             var actions = _data.Rules.Actions;
@@ -151,6 +163,7 @@ namespace Shooter.Server
             _now += deltaSeconds;
             foreach (var fighter in _fighters.Values)
             {
+                InterruptReloadOnAim(fighter);
                 fighter.Weapons.Tick(deltaSeconds);
                 if (_bodies.TryGet(fighter.PlayerId, out var body))
                 {
@@ -300,14 +313,27 @@ namespace Shooter.Server
         private void HandlePlayerSpawned(int playerId)
         {
             var fighter = GetOrAdd(playerId);
-            fighter.Weapons.Equip(_rules.WeaponsFor(playerId), _data.File.SwitchSeconds, _data.Rules);
+            EquipChosen(fighter, playerId);
             RefillGrenades(fighter);
         }
 
         // Gun Game で段が上がった人は、出直しを待たずにその場で次の段の武器に持ち替える (オフラインの GunGameRunner と同じ)
         private void HandleWeaponsChanged(int playerId)
         {
-            GetOrAdd(playerId).Weapons.Equip(_rules.WeaponsFor(playerId), _data.File.SwitchSeconds, _data.Rules);
+            EquipChosen(GetOrAdd(playerId), playerId);
+        }
+
+        // 目的が配る武器を無しにする (Extraction で持ち込める物が無い) ときは、前の出撃の武器を残さず手ぶらにする
+        private void EquipChosen(Fighter fighter, int playerId)
+        {
+            var specs = _rules.WeaponsFor(playerId);
+            if (specs.Count == 0)
+            {
+                fighter.Weapons.Clear();
+                return;
+            }
+
+            fighter.Weapons.Equip(specs, _data.File.SwitchSeconds, _data.Rules);
         }
 
         // ルールのモジュールは続けて全員を出現させるので、持ち替え (HandlePlayerSpawned) とグレネードの数はそこで新しいルールのものになる
@@ -576,6 +602,8 @@ namespace Shooter.Server
             public ServerShotSequence Shots { get; } = new ServerShotSequence();
 
             public Vector3 LastHitDirection { get; set; }
+
+            public bool WasAiming { get; set; }
         }
     }
 }

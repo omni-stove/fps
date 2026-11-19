@@ -58,6 +58,13 @@ namespace Shooter.Server
 
         public int Seed => _seed;
 
+        // Start から Stop までの間。箱を置く・開ける・持ち物を数える口はこの間だけ使える
+        internal bool IsRunning => _match != null;
+
+        // 箱を開けた人と、その人に入った物 (武器は持ち物の表の武器の物の Id で 1 つ) を、入れた後に知らせる。
+        // 入り切らずに失った分は含めないので、持ち帰る物を数える目的 (Extraction) は入った物だけを数えられる
+        internal event Action<int, IReadOnlyList<ItemCount>> Given;
+
         public void Start(ServerContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -190,25 +197,92 @@ namespace Shooter.Server
             }
 
             var box = new Box(NextItemId(), ObjectiveItemKind.DeathBox, body.Position, _dropReach, playerId);
-            foreach (var (spec, attachments) in _combat.WeaponsOf(playerId).Take())
-            {
-                box.Weapons.Add(spec);
-                foreach (var attachment in attachments)
-                {
-                    Merge(box.Items, attachment, 1);
-                }
-            }
-
-            foreach (var item in _inventories.Take(playerId))
-            {
-                Merge(box.Items, item.ItemId, item.Count);
-            }
-
-            // 持ち物の武器の写しも手放した武器に揃える
-            _inventories.HoldWeapons(playerId);
+            TakeAll(playerId, box.Weapons, box.Items);
             _boxes.Add(box);
             _log.WriteLine(ServerLootLog.Box(box.ItemId, box.Kind, ServerLootLog.PlayerSource(playerId), box.Position, box.Weapons.Count, box.Items.Count));
             return box.ItemId;
+        }
+
+        // 今持っている武器 (持ち物の表の武器の物の Id で 1 つずつ)・付けた物・持ち物の数。取り出さずに数えるだけ。
+        // 表に無い武器は持ち物庫に入れられないので数えない
+        internal IReadOnlyList<ItemCount> HeldItems(int playerId)
+        {
+            RequireStarted();
+            var held = new List<ItemCount>();
+            var weapons = _combat.WeaponsOf(playerId);
+            foreach (var spec in weapons.Specs)
+            {
+                if (_items.TryFindWeapon(spec.Id, out var weaponItem))
+                {
+                    Merge(held, weaponItem.Id, 1);
+                }
+
+                foreach (var attachment in weapons.AttachmentsOf(spec.Id))
+                {
+                    Merge(held, attachment, 1);
+                }
+            }
+
+            var inventory = _inventories.InventoryOf(playerId);
+            if (inventory != null)
+            {
+                foreach (var stack in inventory.Stacks)
+                {
+                    if (inventory.WeaponIdOf(stack.Handle) == null)
+                    {
+                        Merge(held, stack.ItemId, stack.Count);
+                    }
+                }
+            }
+
+            return held;
+        }
+
+        // 脱出した人のように、持ち物を場から外す人の武器と持ち物を取り出して捨てる。外した数をログに出す
+        internal void Stow(int playerId)
+        {
+            RequireStarted();
+            var weapons = new List<WeaponSpec>();
+            var items = new List<ItemCount>();
+            TakeAll(playerId, weapons, items);
+            var count = 0;
+            foreach (var item in items)
+            {
+                count += item.Count;
+            }
+
+            _log.WriteLine(ServerLootLog.Stowed(playerId, weapons.Count, count));
+        }
+
+        // まだ開いていない箱のうち、水平に最も近いもの。無ければ false
+        internal bool TryFindClosedBox(Vector3 from, out int itemId, out Vector3 position)
+        {
+            Box nearest = null;
+            var best = float.PositiveInfinity;
+            foreach (var box in _boxes)
+            {
+                if (box.Opened)
+                {
+                    continue;
+                }
+
+                var distance = HorizontalDistanceSquared(box.Position, from);
+                if (distance < best)
+                {
+                    best = distance;
+                    nearest = box;
+                }
+            }
+
+            itemId = nearest?.ItemId ?? 0;
+            position = nearest?.Position ?? Vector3.Zero;
+            return nearest != null;
+        }
+
+        internal bool IsInReach(int itemId, int playerId)
+        {
+            var box = Find(itemId);
+            return box != null && IsInReach(box, playerId);
         }
 
         internal bool TryGetContents(int itemId, out IReadOnlyList<WeaponSpec> weapons, out IReadOnlyList<ItemCount> items)
@@ -263,11 +337,16 @@ namespace Shooter.Server
             var weapons = _combat.WeaponsOf(playerId);
             var loadout = _rules.Loadout;
             var weaponsGiven = 0;
+            var given = new List<ItemCount>();
             foreach (var spec in box.Weapons)
             {
                 if (loadout != null && weapons.Give(spec, loadout.SwitchSeconds, _rules.Rules))
                 {
                     weaponsGiven++;
+                    if (_items.TryFindWeapon(spec.Id, out var weaponItem))
+                    {
+                        Merge(given, weaponItem.Id, 1);
+                    }
                 }
             }
 
@@ -285,10 +364,39 @@ namespace Shooter.Server
             foreach (var item in box.Items)
             {
                 items += item.Count;
-                itemsGiven += _inventories.Give(playerId, item.ItemId, item.Count);
+                var put = _inventories.Give(playerId, item.ItemId, item.Count);
+                itemsGiven += put;
+                if (put > 0)
+                {
+                    Merge(given, item.ItemId, put);
+                }
             }
 
             _log.WriteLine(ServerLootLog.Opened(box.ItemId, box.Kind, playerId, weaponsGiven, box.Weapons.Count, itemsGiven, items));
+            if (given.Count > 0)
+            {
+                Given?.Invoke(playerId, given);
+            }
+        }
+
+        // 武器 (付けた物は持ち物として) と持ち物を取り出して渡された並びに足し、持ち物の武器の写しも手放した武器に揃える
+        private void TakeAll(int playerId, List<WeaponSpec> weapons, List<ItemCount> items)
+        {
+            foreach (var (spec, attachments) in _combat.WeaponsOf(playerId).Take())
+            {
+                weapons.Add(spec);
+                foreach (var attachment in attachments)
+                {
+                    Merge(items, attachment, 1);
+                }
+            }
+
+            foreach (var item in _inventories.Take(playerId))
+            {
+                Merge(items, item.ItemId, item.Count);
+            }
+
+            _inventories.HoldWeapons(playerId);
         }
 
         // 同じ試合の箱は種と置いた順で決まるので、地点ファイルの並びの順に引く。

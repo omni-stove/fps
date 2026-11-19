@@ -40,7 +40,7 @@ namespace Shooter.Editor
             BuildAt(ViewmodelFolder, CatalogPath);
         }
 
-        public static IReadOnlyList<(string Name, WeaponSpec Spec)> Weapons() => WeaponAssetBuilder.RangeWeaponSources();
+        public static IReadOnlyList<(string Name, WeaponSpec Spec)> Weapons() => WeaponAssetBuilder.AllWeaponSources();
 
         public static IReadOnlyList<WeaponSpec> WeaponSpecs()
         {

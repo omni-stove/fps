@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Shooter.Core;
@@ -76,6 +77,14 @@ namespace Shooter.Server
         {
             return InteractVerdict.Refused(InteractRefusal.NotInteractable);
         }
+
+        // 出現した直後、武器と持ち物を配る (MatchRulesModule.PlayerSpawned) 前に呼ぶ。出撃の始まりのように、配る物を目的が決める目的のため
+        void PlayerSpawning(int playerId)
+        {
+        }
+
+        // 出現で配る武器の並び (選んだ並び・Gun Game の段) を目的が絞る口。持ち込める物を持ち物庫で決める目的 (Extraction) のため
+        IReadOnlyList<WeaponSpec> FilterWeapons(int playerId, IReadOnlyList<WeaponSpec> weapons) => weapons;
 
         // この Bot を向かわせる先。null なら ServerBots は BotRally か出現地点を巡らせる。
         // 先を少しずつ動かすと Bot の巡る路を毎回作り直すので、同じ先の間は同じ値を返す

@@ -86,6 +86,11 @@ namespace Shooter.Core
 
         public IReadOnlyList<ReloadInterrupt> ReloadInterruptedBy { get; }
 
+        public AimWhileReloading AimWhileReloading { get; }
+
+        // 構えでリロードを止めるなら、構えを押したときにリロードの方を取り消すので、構えは止めない。
+        public bool BlocksAimWhileReloading() => AimWhileReloading == AimWhileReloading.Off && !InterruptsReload(ReloadInterrupt.Aim);
+
         public ActionRules(
             Downed downed,
             float downedBleedoutSeconds,
@@ -116,7 +121,8 @@ namespace Shooter.Core
             float reviveRange = ReviveReach.DefaultRange,
             Emote emote = Emote.Off,
             Stamina stamina = Stamina.Off,
-            IReadOnlyList<ReloadInterrupt> reloadInterruptedBy = null)
+            IReadOnlyList<ReloadInterrupt> reloadInterruptedBy = null,
+            AimWhileReloading aimWhileReloading = AimWhileReloading.On)
         {
             if (!Enum.IsDefined(typeof(Downed), downed))
             {
@@ -202,6 +208,7 @@ namespace Shooter.Core
 
             RequireDefined(emote, nameof(emote));
             RequireDefined(stamina, nameof(stamina));
+            RequireDefined(aimWhileReloading, nameof(aimWhileReloading));
             var interrupts = reloadInterruptedBy == null ? DefaultReloadInterruptedBy : CopyInterrupts(reloadInterruptedBy);
 
             Downed = downed;
@@ -234,6 +241,7 @@ namespace Shooter.Core
             Emote = emote;
             Stamina = stamina;
             ReloadInterruptedBy = interrupts;
+            AimWhileReloading = aimWhileReloading;
         }
 
         public bool InterruptsReload(ReloadInterrupt action)
@@ -310,6 +318,8 @@ namespace Shooter.Core
         public ActionRules WithReloadInterruptedBy(IReadOnlyList<ReloadInterrupt> value) =>
             Copy(reloadInterruptedBy: value ?? throw new ArgumentNullException(nameof(value)));
 
+        public ActionRules WithAimWhileReloading(AimWhileReloading value) => Copy(aimWhileReloading: value);
+
         // 空は許すのは、どの動作でもリロードを止めないゲームもあるため。
         private static ReadOnlyCollection<ReloadInterrupt> CopyInterrupts(IReadOnlyList<ReloadInterrupt> reloadInterruptedBy)
         {
@@ -372,7 +382,8 @@ namespace Shooter.Core
             float? reviveRange = null,
             Emote? emote = null,
             Stamina? stamina = null,
-            IReadOnlyList<ReloadInterrupt> reloadInterruptedBy = null)
+            IReadOnlyList<ReloadInterrupt> reloadInterruptedBy = null,
+            AimWhileReloading? aimWhileReloading = null)
         {
             return new ActionRules(
                 downed ?? Downed,
@@ -404,7 +415,8 @@ namespace Shooter.Core
                 reviveRange ?? ReviveRange,
                 emote ?? Emote,
                 stamina ?? Stamina,
-                reloadInterruptedBy ?? ReloadInterruptedBy);
+                reloadInterruptedBy ?? ReloadInterruptedBy,
+                aimWhileReloading ?? AimWhileReloading);
         }
     }
 }

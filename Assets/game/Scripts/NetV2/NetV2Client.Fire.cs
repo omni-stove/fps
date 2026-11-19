@@ -93,7 +93,8 @@ namespace Shooter.NetV2
                 SendContinuous(direction, _heldContinuousWeaponId, _heldContinuous.Spec, default, TriggerEdge.Released, owner);
             }
 
-            _local.BlocksAds = trigger != null && trigger.BlocksAds;
+            var reloading = owner != null && owner.Weapon.IsReloading;
+            _local.BlocksAds = (trigger != null && trigger.BlocksAds) || (reloading && latest.Match.Rules.BlocksAimWhileReloading);
             if (trigger == null)
             {
                 _hud?.ShowCharge(null);

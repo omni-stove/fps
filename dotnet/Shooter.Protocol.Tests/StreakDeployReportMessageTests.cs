@@ -13,7 +13,7 @@ namespace Shooter.Protocol.Tests
         [Test]
         public void TheProtocolVersionIs28()
         {
-            Assert.That(MatchProtocol.Version, Is.EqualTo(28));
+            Assert.That(MatchProtocol.Version, Is.EqualTo(29));
         }
 
         [Test]

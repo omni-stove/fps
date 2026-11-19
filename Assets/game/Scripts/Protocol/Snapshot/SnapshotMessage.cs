@@ -8,7 +8,7 @@ namespace Shooter.Protocol
     // 壊れた建物の部品のように滅多に変わらず大きい状態は、毎 tick の差分に載せずに StructureStateMessage で送る。
     public sealed class SnapshotMessage : IMessage
     {
-        public const byte CurrentVersion = 22;
+        public const byte CurrentVersion = 23;
 
         public const int NoBaseline = -1;
 

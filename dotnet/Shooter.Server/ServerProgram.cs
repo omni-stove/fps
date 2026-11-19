@@ -91,6 +91,25 @@ namespace Shooter.Server
 
             output.WriteLine(rules.LogLine);
 
+            // 持ち物庫を置けない Extraction の試合を始めると、脱出しても持ち帰れないので、待ち受ける前に止める
+            problem = launch.StashProblem(Objectives(rules, playlist));
+            if (problem != null)
+            {
+                error.WriteLine(LogTag + " " + problem);
+                return ExitMisconfigured;
+            }
+
+            if (launch.StashDirectory != null)
+            {
+                if (!ServerStashStore.TryOpen(launch.StashDirectory, output, out var stashes, out problem))
+                {
+                    error.WriteLine(ExtractionRulesLog.StashTag + " " + problem);
+                    return ExitMisconfigured;
+                }
+
+                output.WriteLine(ExtractionRulesLog.StashDirectory(stashes.Directory));
+            }
+
             // コードを当てれば非公開の試合に入れるので、続きを読まれうる System.Random ではなく JoinCode と同じ暗号の乱数で作る
             rules = rules.WithSettings(launch.ApplyPrivacy(rules.Settings, RandomNumberGenerator.GetInt32, out var generatedJoinCode));
             output.WriteLine(ServerLaunch.PrivacyLogLine(rules.Settings, generatedJoinCode));
@@ -194,6 +213,22 @@ namespace Shooter.Server
                 var stopped = Shutdown(server, error);
                 return stopped == ExitOk ? server.ExitCode : stopped;
             }
+        }
+
+        // プレイリストなら、どの項目の目的も試合になりうるので全部を返す
+        internal static IReadOnlyList<MatchObjective> Objectives(ServerRulesData rules, ServerPlaylist playlist)
+        {
+            ArgumentNullException.ThrowIfNull(rules);
+            var objectives = new List<MatchObjective> { rules.Rules.Objective };
+            if (playlist != null)
+            {
+                foreach (var entry in playlist.Entries)
+                {
+                    objectives.Add(entry.Rules.Objective);
+                }
+            }
+
+            return objectives;
         }
 
         // 項目のマップを先に並べ、最初の項目のルールの mapPool を後ろに足す。投票はこの全部から候補を選ぶので、mapPool のマップへも投票で替えられる

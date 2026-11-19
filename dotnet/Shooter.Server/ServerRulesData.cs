@@ -24,6 +24,11 @@ namespace Shooter.Server
         // 箱の中身を引く表。Unity の Resources (Tuning/loot) と同じ書き方で、表の Id はマップの地点ファイルの箱が引く
         public const string LootTuningFileName = "loot.json";
 
+        // Extraction の出撃の時間・脱出と持ち物庫の広さ。Unity の Resources (Tuning/extraction・Tuning/stash) と同じ書き方
+        public const string ExtractionTuningFileName = "extraction.json";
+
+        public const string StashTuningFileName = "stash.json";
+
         // プレイリストはルールの並びなので、rules と並べて server-data の下に置く
         public const string PlaylistsDirectoryName = "playlists";
 
@@ -34,9 +39,14 @@ namespace Shooter.Server
             NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null,
             KnockbackSpec knockback = null, string knockbackPath = null, AssistSpec assist = null, string assistPath = null,
             NetMatchSettings settings = null, ChatWordFilterSpec chatWords = null, string chatWordsPath = null,
-            EconomyRules buyList = null, string economyPath = null, LootSpec loot = null, string lootPath = null)
+            EconomyRules buyList = null, string economyPath = null, LootSpec loot = null, string lootPath = null,
+            ExtractionSpec extraction = null, string extractionPath = null, StashSpec stash = null, string stashPath = null)
         {
             _settings = settings;
+            Extraction = extraction ?? ExtractionSpec.Default;
+            ExtractionPath = extractionPath;
+            Stash = stash ?? StashSpec.Default;
+            StashPath = stashPath;
             Loot = loot ?? LootSpec.Default;
             LootPath = lootPath;
             BuyList = buyList;
@@ -111,6 +121,15 @@ namespace Shooter.Server
 
         public string LootPath { get; }
 
+        // 置いていなければ Core の既定で動かす
+        public ExtractionSpec Extraction { get; }
+
+        public string ExtractionPath { get; }
+
+        public StashSpec Stash { get; }
+
+        public string StashPath { get; }
+
         // 額は試合の設定から取るので、設定を差し替えた (WithSettings) 後もその額で組む
         public EconomyRules Economy => BuyList == null ? null : new EconomyRules(Settings.Economy, BuyList.Catalog, BuyList.ResetOnSwap);
 
@@ -119,7 +138,7 @@ namespace Shooter.Server
             ArgumentNullException.ThrowIfNull(settings);
             return new ServerRulesData(
                 Name, File, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
-                settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath);
+                settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath, Extraction, ExtractionPath, Stash, StashPath);
         }
 
         // ルールのファイルを作り直すのは、NetMatchFile が目的に要る設定とロードアウトを作るときに確かめるので、
@@ -132,7 +151,7 @@ namespace Shooter.Server
                 File.Catalog, File.Motor);
             return new ServerRulesData(
                 Name, file, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
-                _settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath);
+                _settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath, Extraction, ExtractionPath, Stash, StashPath);
         }
 
         public string LogLine => ServerProgram.LogTag + " rules " + Name
@@ -148,6 +167,8 @@ namespace Shooter.Server
             + " chatWords=" + (ChatWordsPath ?? "default")
             + " economy=" + (EconomyPath ?? "none")
             + " loot=" + (LootPath ?? "default")
+            + " extraction=" + (ExtractionPath ?? "default")
+            + " stash=" + (StashPath ?? "default")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
@@ -388,9 +409,51 @@ namespace Shooter.Server
                 lootPath = null;
             }
 
+            // 出撃と持ち物庫も Unity では Resources の JSON (Tuning/extraction・Tuning/stash) から読むので、無ければ同じく既定値で動かす
+            var extractionPath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, ExtractionTuningFileName));
+            var extraction = ExtractionSpec.Default;
+            if (System.IO.File.Exists(extractionPath))
+            {
+                try
+                {
+                    extraction = ExtractionJson.Parse(System.IO.File.ReadAllText(extractionPath), extractionPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read extraction tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                extractionPath = null;
+            }
+
+            var stashPath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, StashTuningFileName));
+            var stash = StashSpec.Default;
+            if (System.IO.File.Exists(stashPath))
+            {
+                try
+                {
+                    stash = StashJson.Parse(System.IO.File.ReadAllText(stashPath), stashPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read stash tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                stashPath = null;
+            }
+
             data = new ServerRulesData(
                 name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath, knockback, knockbackPath, assist, assistPath,
-                chatWords: chatWords, chatWordsPath: chatWordsPath, buyList: buyList, economyPath: economyPath, loot: loot, lootPath: lootPath);
+                chatWords: chatWords, chatWordsPath: chatWordsPath, buyList: buyList, economyPath: economyPath, loot: loot, lootPath: lootPath,
+                extraction: extraction, extractionPath: extractionPath, stash: stash, stashPath: stashPath);
             error = null;
             return true;
         }

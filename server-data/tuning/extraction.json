@@ -1,0 +1,7 @@
+{
+  "raidSeconds": 900,
+  "extractHoldSeconds": 8,
+  "openPoints": 2,
+  "openAfterSeconds": 0,
+  "keepCarriedOnDeath": false
+}

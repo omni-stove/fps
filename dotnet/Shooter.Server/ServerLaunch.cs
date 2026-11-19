@@ -41,6 +41,9 @@ namespace Shooter.Server
 
         public const string TelemetryDirectoryFlag = "--telemetry-dir";
 
+        // Extraction の持ち物庫をアカウントごとに置くフォルダ (ServerStashStore)
+        public const string StashDirectoryFlag = "--stash-dir";
+
         private ServerLaunch(
             NetLaunchOptions options,
             string version,
@@ -52,8 +55,10 @@ namespace Shooter.Server
             string banFile,
             string region,
             ServerRecordsLaunch records,
-            string playlist)
+            string playlist,
+            string stashDirectory)
         {
+            StashDirectory = stashDirectory;
             Playlist = playlist;
             BanFile = banFile;
             Region = region;
@@ -103,10 +108,40 @@ namespace Shooter.Server
         // 通報・統計・テレメトリの残し方。どれも運用する人が起動で頼んだときだけ使う。
         public ServerRecordsLaunch Records { get; }
 
+        // null なら持ち物庫を置けないので、Extraction の試合では起動しない (ServerProgram が断る)
+        public string StashDirectory { get; }
+
         public ServerLaunch WithOptions(NetLaunchOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
-            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode, BanFile, Region, Records, Playlist);
+            return new ServerLaunch(
+                options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode, BanFile, Region, Records, Playlist, StashDirectory);
+        }
+
+        // 持ち物庫の無い Extraction は、脱出しても持ち帰れず、持ち込んだ物も戻らないので、遊ばせずに理由を返す。遊べるなら null
+        public string StashProblem(IReadOnlyList<MatchObjective> objectives)
+        {
+            ArgumentNullException.ThrowIfNull(objectives);
+            if (StashDirectory != null || !Contains(objectives, MatchObjective.Extraction))
+            {
+                return null;
+            }
+
+            return "the " + MatchObjective.Extraction + " rules keep each account's stash on disk; pass " + StashDirectoryFlag
+                + " <directory> to say where (run " + RulesFlag + " with another objective to play without a stash)";
+        }
+
+        private static bool Contains(IReadOnlyList<MatchObjective> objectives, MatchObjective objective)
+        {
+            foreach (var candidate in objectives)
+            {
+                if (candidate == objective)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // 起動のオプションをルールの JSON より優先する。ルールの値を消さずに重ねるのは、JSON だけで非公開にする運用も残すため。
@@ -226,6 +261,11 @@ namespace Shooter.Server
                 return false;
             }
 
+            if (!TryParseStashDirectory(args, out var stashDirectory, out error))
+            {
+                return false;
+            }
+
             if (!TryParseRegion(args, options, out var region, out error))
             {
                 return false;
@@ -252,7 +292,38 @@ namespace Shooter.Server
                 banFile,
                 region,
                 records,
-                playlist);
+                playlist,
+                stashDirectory);
+            return true;
+        }
+
+        // 値の先頭の - を断るのは、パスを書き忘れたときに次のフラグをフォルダの名前として読み、持ち物庫を思わぬ場所へ書かないため (--ban-file と同じ)
+        private static bool TryParseStashDirectory(IReadOnlyList<string> args, out string stashDirectory, out string error)
+        {
+            stashDirectory = null;
+            for (var i = 0; i < args.Count; i++)
+            {
+                if (!string.Equals(args[i], StashDirectoryFlag, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (i + 1 >= args.Count || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1][0] == '-')
+                {
+                    error = StashDirectoryFlag + " requires a directory";
+                    return false;
+                }
+
+                if (stashDirectory != null)
+                {
+                    error = StashDirectoryFlag + " is given more than once";
+                    return false;
+                }
+
+                stashDirectory = args[++i];
+            }
+
+            error = null;
             return true;
         }
 

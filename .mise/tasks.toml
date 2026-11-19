@@ -14,7 +14,7 @@ run = [
 
 [build-scenes]
 description = "Rebuild every demo scene (and write the net maps' server data, as export-server-data does) with the Unity editor in batch mode via Shooter.Editor.SceneBuildSteps.BuildAll, the Shooter/Build All Scenes menu (close the Editor first). Commit the result"
-run = "unity --non-interactive run . -- -quit -executeMethod Shooter.Editor.SceneBuildSteps.BuildAll"
+run = "unity --non-interactive run . -- -executeMethod Shooter.Editor.SceneBuildSteps.BuildAll"
 
 [update]
 description = "Pull skill-kit and re-sync this repo"

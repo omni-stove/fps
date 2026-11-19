@@ -28,6 +28,8 @@ namespace Shooter.Runtime
         private static readonly Dictionary<MainMenuPanelKind, Func<VisualElement, IMainMenuPanel>> _defaults =
             new Dictionary<MainMenuPanelKind, Func<VisualElement, IMainMenuPanel>>();
 
+        private static readonly HashSet<MainMenuPanelKind> _hidden = new HashSet<MainMenuPanelKind>();
+
         public static readonly IReadOnlyList<MainMenuPanelKind> Kinds = new[]
         {
             MainMenuPanelKind.Stats,
@@ -43,6 +45,7 @@ namespace Shooter.Runtime
         {
             Validate(kind);
             _factories[kind] = open ?? throw new ArgumentNullException(nameof(open));
+            _hidden.Remove(kind);
             Changed?.Invoke(kind);
         }
 
@@ -57,7 +60,14 @@ namespace Shooter.Runtime
         public static bool Unregister(MainMenuPanelKind kind)
         {
             Validate(kind);
-            if (!_factories.Remove(kind))
+            var removed = _factories.Remove(kind);
+            // 既定は消さず隠す印だけ残すのは、既定の登録が後から (UseDefault で) 入り直してもゲームが消したボタンを戻さないため。
+            if (_defaults.ContainsKey(kind) && _hidden.Add(kind))
+            {
+                removed = true;
+            }
+
+            if (!removed)
             {
                 return false;
             }
@@ -68,18 +78,30 @@ namespace Shooter.Runtime
 
         public static bool IsRegistered(MainMenuPanelKind kind)
         {
-            return _factories.ContainsKey(kind) || _defaults.ContainsKey(kind);
+            return TryGet(kind, out _);
         }
 
         public static bool TryGet(MainMenuPanelKind kind, out Func<VisualElement, IMainMenuPanel> open)
         {
-            return _factories.TryGetValue(kind, out open) || _defaults.TryGetValue(kind, out open);
+            if (_factories.TryGetValue(kind, out open))
+            {
+                return true;
+            }
+
+            if (_hidden.Contains(kind))
+            {
+                open = null;
+                return false;
+            }
+
+            return _defaults.TryGetValue(kind, out open);
         }
 
         public static void Clear()
         {
             foreach (var kind in Kinds)
             {
+                _hidden.Remove(kind);
                 var removed = _defaults.Remove(kind);
                 if (!Unregister(kind) && removed)
                 {

@@ -438,6 +438,22 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void UnregisteringHidesTheDefaultScreenButton()
+        {
+            MainMenuPanels.UseDefault(MainMenuPanelKind.Stats, slot => new FakeMenuPanel(slot));
+            _screen.Bind(_root);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.True);
+
+            Assert.That(MainMenuPanels.Unregister(MainMenuPanelKind.Stats), Is.True);
+            Assert.That(MainMenuPanels.IsRegistered(MainMenuPanelKind.Stats), Is.False);
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.False);
+            Assert.That(MainMenuPanels.Unregister(MainMenuPanelKind.Stats), Is.False);
+
+            MainMenuPanels.Register(MainMenuPanelKind.Stats, slot => new FakeMenuPanel(slot));
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.StatsButtonName), Is.True, "a new registration shows the button again");
+        }
+
+        [Test]
         public void AScreenStaysOpenWhenItIsUnregisteredUntilBackIsPressed()
         {
             FakeMenuPanel opened = null;

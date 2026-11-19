@@ -13,6 +13,8 @@ namespace Shooter.Core.Tests
             "weapon.rifle", "weapon.burstRifle", "weapon.handgun", "weapon.ricochetPistol", "weapon.shotgun",
             "item.redDot", "item.scope4x", "item.holoSight", "item.thermalScope", "item.suppressor", "item.compensator", "item.foregrip", "item.extendedMagazine",
         };
+        private static readonly string[] _thermalNameKeys = { "item.thermalScope" };
+        private static readonly string[] _thermalWeaponNameKeys = { "weapon.rifle", "weapon.burstRifle" };
         private static readonly string[] _usableNameKeys = { "item.bandage", "item.medkit", "item.armorPlate" };
 
         [Test]
@@ -99,7 +101,7 @@ namespace Shooter.Core.Tests
             foreach (var catalog in new[] { unity, server })
             {
                 var thermal = catalog.Items.Where(i => i.IsAttachment && i.Attachment.Sight != null && i.Attachment.Sight.VisionMode != VisionMode.None).ToList();
-                Assert.That(thermal.Select(i => i.NameKey), Is.EqualTo(new[] { "item.thermalScope" }));
+                Assert.That(thermal.Select(i => i.NameKey), Is.EqualTo(_thermalNameKeys));
 
                 var scope = thermal.Single();
                 Assert.That(scope.Id, Is.EqualTo("c8e4f2a1-7b3d-4e95-a6c0-1d2f3b4a5e67"));
@@ -109,7 +111,7 @@ namespace Shooter.Core.Tests
                 Assert.That(scope.Attachment.Sight.ReticleId, Is.EqualTo("scope4x"));
                 Assert.That(
                     catalog.Items.Where(w => w.IsWeapon && catalog.CanAttach(w.WeaponId, scope.Id)).Select(w => w.NameKey),
-                    Is.EqualTo(new[] { "weapon.rifle", "weapon.burstRifle" }));
+                    Is.EqualTo(_thermalWeaponNameKeys));
             }
         }
 

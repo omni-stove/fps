@@ -1,11 +1,12 @@
 {
   "id": "aa7e7cf5-6840-4b20-b0ec-ae5d1dfb9c5c",
   "nameKey": "weapon.real.gpmg762",
-  "description": "Battlefield 6 の M/60 (実銃は M60E6) を参考。33.4@0m→25@21m→20@75m・514 RPM・100 発 (薬室の 1 発込み)・弾速 680 m/s。段階で減るダメージを 21〜75 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "description": "Battlefield 6 の M/60 (実銃は M60E6) を参考。33.4@0m→25@21m→20@75m・514 RPM・100 発 (薬室の 1 発込み)・弾速 680 m/s。段階で減るダメージを 21〜75 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "LightMachineGun",
   "shotNoiseRadius": 60,
   "weight": 8.5,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 1.1,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.1167

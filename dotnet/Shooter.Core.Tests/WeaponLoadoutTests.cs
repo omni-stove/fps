@@ -167,6 +167,29 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void EachWeaponsHolsterSecondsComeBeforeTheNextDraw()
+        {
+            var slowRifle = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, holsterSeconds: 0.5f);
+            var quickHandgun = new WeaponSpec(_handgunId, "weapon.handgun", WeaponCategory.Handgun, drawSeconds: 0.25f);
+            var loadout = WeaponLoadout.Create(new[] { slowRifle, quickHandgun }, GameRules.Default, 0.4f);
+
+            Assert.That(loadout.SwitchSecondsTo(1), Is.EqualTo(0.75f));
+            Assert.That(loadout.SelectNext(), Is.True);
+            Assert.That(loadout.IsHolstering, Is.True);
+        }
+
+        [Test]
+        public void RestoreHoldsTheEquippedWeaponReadyAfterHolsteringTheFirst()
+        {
+            var slowRifle = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle, holsterSeconds: 0.5f);
+            var loadout = WeaponLoadout.Restore(
+                new[] { slowRifle, _handgun }, Array.Empty<WeaponAmmo>(), _handgunId, GameRules.Default, 0.4f, out _);
+
+            Assert.That(loadout.CurrentIndex, Is.EqualTo(1));
+            Assert.That(loadout.IsSwitching, Is.False, "the restored handgun is already in hand");
+        }
+
+        [Test]
         public void RestoreHoldsAWeaponWithItsOwnDrawTimeReady()
         {
             var slowHandgun = new WeaponSpec(_handgunId, "weapon.handgun", WeaponCategory.Handgun, drawSeconds: 1f);

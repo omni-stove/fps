@@ -1,11 +1,12 @@
 {
   "id": "7770a9a9-46e8-4905-91c3-b7efdb926788",
   "nameKey": "weapon.real.integrallySuppressedRifle",
-  "description": "Battlefield 6 の VSSM (実銃は VSS ヴィントレス) を参考。35.2@0m→27.5@9m→21.6@21m→20.7@36m→17.1@75m・800 RPM・21 発 (薬室の 1 発込み)・弾速 321 m/s。段階で減るダメージを 9〜75 m の直線に置き換えた。頭は BF の 1.5 倍ではなくキットの 2 倍。消音器と一体なので銃声の届く距離を短くした。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "description": "Battlefield 6 の VSSM (実銃は VSS ヴィントレス) を参考。35.2@0m→27.5@9m→21.6@21m→20.7@36m→17.1@75m・800 RPM・21 発 (薬室の 1 発込み)・弾速 321 m/s。段階で減るダメージを 9〜75 m の直線に置き換えた。頭は BF の 1.5 倍ではなくキットの 2 倍。消音器と一体なので銃声の届く距離を短くした。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "MarksmanRifle",
   "shotNoiseRadius": 15,
   "weight": 2.6,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 0.8,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.075

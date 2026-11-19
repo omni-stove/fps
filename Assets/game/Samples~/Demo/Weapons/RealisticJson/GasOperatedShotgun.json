@@ -1,11 +1,12 @@
 {
   "id": "87354932-530d-4c00-ad07-20e9de06f0a4",
   "nameKey": "weapon.real.gasOperatedShotgun",
-  "description": "Battlefield 6 の M1014 (実銃は Benelli M4) を参考。1 粒 7.2@0m→5@9m→3.1@16m→2.3@22m × 16 粒・200 RPM・7 発 (薬室の 1 発込み)・弾速 400 m/s。段階で減るダメージを 9〜22 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。粒の広がりはデータに無いので推測で 2.5 度にした。BF に合わせて Projectile にしたが、30 m 以内で使うので着弾までの時間はほぼ 0。弾 1 発ごとに発射を送る分 Hitscan より重いので、狭いマップ向けなら round.delivery を Hitscan にしてよい。",
+  "description": "Battlefield 6 の M1014 (実銃は Benelli M4) を参考。1 粒 7.2@0m→5@9m→3.1@16m→2.3@22m × 16 粒・200 RPM・7 発 (薬室の 1 発込み)・弾速 400 m/s。段階で減るダメージを 9〜22 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。粒の広がりはデータに無いので推測で 2.5 度にした。BF に合わせて Projectile にしたが、30 m 以内で使うので着弾までの時間はほぼ 0。弾 1 発ごとに発射を送る分 Hitscan より重いので、狭いマップ向けなら round.delivery を Hitscan にしてよい。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "Shotgun",
   "shotNoiseRadius": 60,
   "weight": 3.8,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 0.8,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.3

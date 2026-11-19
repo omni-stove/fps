@@ -1,11 +1,12 @@
 {
   "id": "51713158-d2a5-4f24-a93e-001501c10fe3",
   "nameKey": "weapon.real.enhancedMarksmanRifle",
-  "description": "Battlefield 6 の M39 EMR (実銃は M39 EMR) を参考。40@0m→37.5@21m→33.4@75m・257 RPM・21 発 (薬室の 1 発込み)・弾速 760 m/s。段階で減るダメージを 21〜75 m の直線に置き換えた。頭は BF の 1.5 倍ではなくキットの 2 倍。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "description": "Battlefield 6 の M39 EMR (実銃は M39 EMR) を参考。40@0m→37.5@21m→33.4@75m・257 RPM・21 発 (薬室の 1 発込み)・弾速 760 m/s。段階で減るダメージを 21〜75 m の直線に置き換えた。頭は BF の 1.5 倍ではなくキットの 2 倍。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "MarksmanRifle",
   "shotNoiseRadius": 50,
   "weight": 7.5,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 0.9,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.2335

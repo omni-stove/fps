@@ -115,6 +115,9 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("この武器へ持ち替えて構えるまでの秒数")]
         private float _drawSeconds;
 
+        [SerializeField, Min(0f), Tooltip("この武器から持ち替えるとき、構える前にこの武器をしまう秒数。0 なら持ち替え先を構える秒数だけ待つ")]
+        private float _holsterSeconds = WeaponSpec.DefaultHolsterSeconds;
+
         [Header("撃ち方")]
         [SerializeField]
         private BurstSettings _burst = new BurstSettings();
@@ -374,6 +377,12 @@ namespace Shooter.Runtime
             }
         }
 
+        public float HolsterSeconds
+        {
+            get => _holsterSeconds;
+            set => _holsterSeconds = value;
+        }
+
         public float HipSpreadDegrees
         {
             get => _hipSpreadDegrees;
@@ -552,7 +561,7 @@ namespace Shooter.Runtime
                     _swayDegrees,
                     Sight.ToSpec());
                 return new WeaponSpec(
-                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description, DrawSeconds);
+                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description, DrawSeconds, _holsterSeconds);
             }
             catch (ArgumentException e)
             {

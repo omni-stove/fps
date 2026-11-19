@@ -1,11 +1,12 @@
 {
   "id": "f8d44ede-2228-425e-a408-1d01a5ed5648",
   "nameKey": "weapon.real.doubleBarrelPumpShotgun",
-  "description": "Battlefield 6 の DB-12 (実銃は Standard Manufacturing DP-12) を参考。1 粒 5@0m→3.3@16m→2.5@22m × 16 粒・360 RPM・16 発 (薬室の 1 発込み)・弾速 400 m/s。段階で減るダメージを 16〜22 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。2 発ごとのポンプは入れず続けて撃てる。1 回 0.866 秒で 2 発込めるのを 1 発 0.43 秒にした。BF に合わせて Projectile にしたが、30 m 以内で使うので着弾までの時間はほぼ 0。弾 1 発ごとに発射を送る分 Hitscan より重いので、狭いマップ向けなら round.delivery を Hitscan にしてよい。",
+  "description": "Battlefield 6 の DB-12 (実銃は Standard Manufacturing DP-12) を参考。1 粒 5@0m→3.3@16m→2.5@22m × 16 粒・360 RPM・16 発 (薬室の 1 発込み)・弾速 400 m/s。段階で減るダメージを 16〜22 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。2 発ごとのポンプは入れず続けて撃てる。1 回 0.866 秒で 2 発込めるのを 1 発 0.43 秒にした。BF に合わせて Projectile にしたが、30 m 以内で使うので着弾までの時間はほぼ 0。弾 1 発ごとに発射を送る分 Hitscan より重いので、狭いマップ向けなら round.delivery を Hitscan にしてよい。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "Shotgun",
   "shotNoiseRadius": 60,
   "weight": 4.4,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 0.8,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.1667

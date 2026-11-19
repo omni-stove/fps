@@ -1,11 +1,12 @@
 {
   "id": "c5171e80-7b9c-44f0-bdd5-3e4fdd67f585",
   "nameKey": "weapon.real.pistol45",
-  "description": "Battlefield 6 の M45A1 (実銃は Colt M45A1 (1911 系)) を参考。33.4@0m→25@9m→20@21m→16.7@36m→14.3@54m→12.5@75m・327 RPM・8 発 (薬室の 1 発込み)・弾速 336 m/s。段階で減るダメージを 9〜75 m の直線に置き換えた。頭は BF の 1.25 倍ではなくキットの 2 倍。BF に合わせて Projectile にしたが、30 m 以内で使うので着弾までの時間はほぼ 0。弾 1 発ごとに発射を送る分 Hitscan より重いので、狭いマップ向けなら round.delivery を Hitscan にしてよい。",
+  "description": "Battlefield 6 の M45A1 (実銃は Colt M45A1 (1911 系)) を参考。33.4@0m→25@9m→20@21m→16.7@36m→14.3@54m→12.5@75m・327 RPM・8 発 (薬室の 1 発込み)・弾速 336 m/s。段階で減るダメージを 9〜75 m の直線に置き換えた。頭は BF の 1.25 倍ではなくキットの 2 倍。BF に合わせて Projectile にしたが、30 m 以内で使うので着弾までの時間はほぼ 0。弾 1 発ごとに発射を送る分 Hitscan より重いので、狭いマップ向けなら round.delivery を Hitscan にしてよい。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "Handgun",
   "shotNoiseRadius": 50,
   "weight": 1.1,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 0.5,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.1835

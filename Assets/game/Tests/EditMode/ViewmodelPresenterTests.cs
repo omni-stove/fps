@@ -165,6 +165,17 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheModelDropsWhileSwitchingAndIsBackWhenDrawn()
+        {
+            var held = new Vector3(0.2f, -0.2f, 0.4f);
+
+            Assert.That(ViewmodelPresenter.LoweredPosition(held, 0f), Is.EqualTo(held));
+            Assert.That(ViewmodelPresenter.LoweredPosition(held, 1f), Is.EqualTo(held + (Vector3.down * ViewmodelPresenter.LoweredDrop)));
+            Assert.That(ViewmodelPresenter.LoweredPosition(held, 0.5f).y, Is.EqualTo(-0.2f - (ViewmodelPresenter.LoweredDrop / 2f)).Within(1e-5f));
+            Assert.That(ViewmodelPresenter.LoweredDrop, Is.GreaterThan(0f));
+        }
+
+        [Test]
         public void AScopeOverlayStopsDrawingTheModelButKeepsItsSockets()
         {
             var view = SightView.None;

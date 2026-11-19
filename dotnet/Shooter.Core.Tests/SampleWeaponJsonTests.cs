@@ -180,6 +180,95 @@ namespace Shooter.Core.Tests
             Assert.That(specs.Where(spec => spec.Category == WeaponCategory.SniperRifle).All(spec => spec.Damage * DamageCalculator.HeadMultiplier >= 100), Is.True, "a sniper kills with one headshot");
         }
 
+        [TestCaseSource(nameof(_referenceFolders))]
+        public void EveryReferenceWeaponHasItsOwnDrawSeconds(string folder)
+        {
+            foreach (var spec in ReadAll(ReferenceWeaponJsonFolder(folder)))
+            {
+                Assert.That(spec.DrawSeconds, Is.Not.Null, spec.NameKey);
+                Assert.That(spec.DrawSeconds.Value, Is.InRange(0.25f, 1.5f), spec.NameKey);
+            }
+        }
+
+        [TestCase("ReferenceJson", "MagnumSniper", 1.3f)]
+        [TestCase("ReferenceJson", "BullpupRifle", 1.2f)]
+        [TestCase("ReferenceJson", "SuppressedPistol", 1f)]
+        [TestCase("ReferenceJson", "HeavySniper", 1.5f)]
+        [TestCase("ReferenceJson", "RampingLmg", 1.25f)]
+        [TestCase("ReferenceJson", "MachinePistol", 0.75f)]
+        [TestCase("ReferenceJson", "RapidFireSmg", 0.35f)]
+        [TestCase("ReferenceJson", "FiftyCalSniper", 1.2f)]
+        [TestCase("ReferenceJson", "QuadRocketLauncher", 0.5f)]
+        [TestCase("ReferenceJson", "BreakActionGrenadeLauncher", 0.25f)]
+        [TestCase("RealisticJson", "Pistol45", 0.5f)]
+        [TestCase("RealisticJson", "TopLoadingPdw", 0.7f)]
+        [TestCase("RealisticJson", "ServiceRifle", 0.8f)]
+        [TestCase("RealisticJson", "Gpmg762x54", 1.1f)]
+        [TestCase("RealisticJson", "ShoulderFiredRocket", 1.5f)]
+        public void ReferenceWeaponsDrawInTheSecondsOfTheGameTheyAreModelledOn(string folder, string name, float seconds)
+        {
+            Assert.That(Read(folder, name).DrawSeconds, Is.EqualTo(seconds));
+        }
+
+        [TestCase("ReferenceJson", "RapidFireSmg", 0.3f)]
+        [TestCase("ReferenceJson", "LightAssaultRifle", 0.55f)]
+        [TestCase("ReferenceJson", "ScoutRifle", 0.5f)]
+        [TestCase("ReferenceJson", "LeverShotgun", 0.4f)]
+        [TestCase("ReferenceJson", "DrumLmg", 0.75f)]
+        [TestCase("ReferenceJson", "FiftyCalSniper", 0.8f)]
+        [TestCase("ReferenceJson", "RocketPropelledGrenade", 0.4f)]
+        [TestCase("ReferenceJson", "BreakActionGrenadeLauncher", 0.2f)]
+        [TestCase("ReferenceJson", "MagnumSniper", 0f)]
+        [TestCase("ReferenceJson", "HeavySniper", 0f)]
+        [TestCase("ReferenceJson", "QuadRocketLauncher", 0f)]
+        [TestCase("RealisticJson", "ServiceRifle", 0f)]
+        public void ReferenceWeaponsHolsterInTheSecondsOfTheGameTheyAreModelledOn(string folder, string name, float seconds)
+        {
+            Assert.That(Read(folder, name).HolsterSeconds, Is.EqualTo(seconds));
+        }
+
+        [Test]
+        public void SwitchingFromTheApexSmgToTheKraberWaitsForBothHands()
+        {
+            var smg = Read("ReferenceJson", "RapidFireSmg");
+            var kraber = Read("ReferenceJson", "FiftyCalSniper");
+            var loadout = WeaponLoadout.Create(new[] { smg, kraber }, GameRules.Default, 0.4f);
+
+            Assert.That(loadout.SwitchSecondsTo(1), Is.EqualTo(0.3f + 1.2f).Within(1e-5f));
+            Assert.That(loadout.SelectNext(), Is.True);
+            loadout.Tick(0.25f);
+            Assert.That(loadout.IsHolstering, Is.True, "the R-99 takes 0.3 s to put away");
+            loadout.Tick(1.2f);
+            Assert.That(loadout.IsSwitching, Is.True);
+            loadout.Tick(0.1f);
+            Assert.That(loadout.IsSwitching, Is.False);
+        }
+
+        [Test]
+        public void AReferencePistolIsDrawnBeforeAReferenceSniperRifleOfTheSameGame()
+        {
+            var loadout = new Loadout<WeaponSpec>(
+                new[] { Read("RealisticJson", "ServiceRifle"), Read("RealisticJson", "Pistol45"), Read("RealisticJson", "LongRangeBoltRifle") },
+                0.4f,
+                null,
+                spec => spec.DrawSeconds);
+
+            Assert.That(loadout.SwitchSecondsTo(1), Is.EqualTo(0.5f));
+            Assert.That(loadout.SwitchSecondsTo(2), Is.EqualTo(1f));
+
+            Assert.That(loadout.TrySelect(2), Is.True);
+            loadout.Tick(0.9f);
+            Assert.That(loadout.IsSwitching, Is.True, "the bolt rifle is still being drawn after 0.9 s");
+            loadout.Tick(0.2f);
+            Assert.That(loadout.IsSwitching, Is.False);
+        }
+
+        private static WeaponSpec Read(string folder, string name)
+        {
+            var path = Path.Combine(ReferenceWeaponJsonFolder(folder), name + ".json");
+            return WeaponSpecJson.Parse(File.ReadAllText(path), path);
+        }
+
         private static List<WeaponSpec> ReadAll(string folder)
         {
             return Directory.GetFiles(folder, "*.json").Select(path => WeaponSpecJson.Parse(File.ReadAllText(path), path)).ToList();

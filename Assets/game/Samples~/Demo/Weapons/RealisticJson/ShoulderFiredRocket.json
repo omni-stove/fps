@@ -1,11 +1,12 @@
 {
   "id": "148acbfc-9d35-4c65-96fc-36bea468eaa4",
   "nameKey": "weapon.real.shoulderFiredRocket",
-  "description": "Battlefield 4 の RPG-7V2 (実銃は RPG-7) を参考。歩兵には爆発 112・半径 4 m。BF4 では 30 m/s で出て 80 m/s まで加速するが、キットは一定の速さなので 60 m/s にした。0.5 秒までの不発は入れていない。",
+  "description": "Battlefield 4 の RPG-7V2 (実銃は RPG-7) を参考。歩兵には爆発 112・半径 4 m。BF4 では 30 m/s で出て 80 m/s まで加速するが、キットは一定の速さなので 60 m/s にした。0.5 秒までの不発は入れていない。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "Launcher",
   "shotNoiseRadius": 50,
   "weight": 7,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 1.5,
   "trigger": {
     "fireMode": "Semi",
     "fireInterval": 0.8

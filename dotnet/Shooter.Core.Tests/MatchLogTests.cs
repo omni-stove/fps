@@ -130,6 +130,17 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void FormatsRulesChanged()
+        {
+            Assert.That(
+                MatchLog.RulesChanged(MatchObjective.None, MatchObjective.Domination),
+                Is.EqualTo("[Match] rules changed objective from=None to=Domination"));
+            Assert.That(
+                MatchLog.RulesChanged(MatchObjective.Domination, MatchObjective.Domination),
+                Is.EqualTo("[Match] rules changed objective from=Domination to=Domination"));
+        }
+
+        [Test]
         public void FormatsNextMatch()
         {
             Assert.That(MatchLog.NextMatch(10f), Is.EqualTo("[Match] next match in=10.0s"));

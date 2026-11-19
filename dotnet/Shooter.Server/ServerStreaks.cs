@@ -77,6 +77,7 @@ namespace Shooter.Server
             _match.MapChanged += HandleMapChanged;
             _match.TeamChanged += HandleTeamChanged;
             _rules.MatchStarted += HandleMatchStarted;
+            _rules.RulesChanged += HandleRulesChanged;
             _combat.PlayerKilled += HandlePlayerKilled;
 
             foreach (var player in _match.Players)
@@ -127,10 +128,18 @@ namespace Shooter.Server
             _match.MapChanged -= HandleMapChanged;
             _match.TeamChanged -= HandleTeamChanged;
             _rules.MatchStarted -= HandleMatchStarted;
+            _rules.RulesChanged -= HandleRulesChanged;
             _combat.PlayerKilled -= HandlePlayerKilled;
             _trackers.Clear();
             _marks.Clear();
             _shells.Clear();
+        }
+
+        // 貯めた数は続く MatchStarted で試合ごとに戻るので、ここでは使えるかどうかだけを替える
+        private void HandleRulesChanged(ServerRulesData data)
+        {
+            _rule = data.Rules.Streaks;
+            _log.WriteLine(ServerStreakLog.Rule(_rule, Spec));
         }
 
         public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)

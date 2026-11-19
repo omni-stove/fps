@@ -10,8 +10,8 @@ namespace Shooter.Server
         public const int HistoryLength = 32;
 
         private readonly List<ISnapshotContributor> _contributors;
-        private readonly MatchRulesSync _rules;
-        private readonly MatchObjective _objective;
+        private MatchRulesSync _rules;
+        private MatchObjective _objective;
         private readonly Dictionary<ConnectionId, ClientHistory> _clients = new Dictionary<ConnectionId, ClientHistory>();
         private ServerContext _context;
 
@@ -37,6 +37,7 @@ namespace Shooter.Server
         public void Start(ServerContext context)
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
+            _context.Match.RulesChanged += HandleRulesChanged;
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -88,7 +89,19 @@ namespace Shooter.Server
 
         public void Stop()
         {
+            if (_context != null)
+            {
+                _context.Match.RulesChanged -= HandleRulesChanged;
+            }
+
             _clients.Clear();
+        }
+
+        // 目的を持つモジュールが無い試合でも、次の試合の目的とルールを載せる。持つモジュールは Contribute で同じ値を書き直す
+        private void HandleRulesChanged(GameRules rules)
+        {
+            _rules = MatchRulesSync.From(rules);
+            _objective = rules.Objective;
         }
 
         private void Fill(SnapshotMessage snapshot, int tick, ServerPlayer receiver)

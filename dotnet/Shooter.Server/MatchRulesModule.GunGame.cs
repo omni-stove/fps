@@ -28,26 +28,32 @@ namespace Shooter.Server
                 return;
             }
 
-            var file = _data.File;
+            FillGunGameWeapons(_data, _gunGameWeapons);
+        }
+
+        // 受け付けるとき (CheckNextRules) と作り直すときで同じ確認を使う
+        private static void FillGunGameWeapons(ServerRulesData data, Dictionary<string, WeaponSpec> weapons)
+        {
+            var file = data.File;
             foreach (var weapon in file.LoadoutWeapons)
             {
-                _gunGameWeapons[weapon.Id] = weapon;
+                weapons[weapon.Id] = weapon;
             }
 
             if (file.Catalog != null)
             {
                 foreach (var weapon in file.Catalog.All)
                 {
-                    _gunGameWeapons[weapon.Id] = weapon;
+                    weapons[weapon.Id] = weapon;
                 }
             }
 
-            var tiers = _data.Settings.GunGame.TierWeaponIds;
+            var tiers = data.Settings.GunGame.TierWeaponIds;
             for (var i = 0; i < tiers.Count; i++)
             {
-                if (!_gunGameWeapons.ContainsKey(tiers[i]))
+                if (!weapons.ContainsKey(tiers[i]))
                 {
-                    throw new InvalidOperationException(GunGameRulesLog.MissingTierWeapon(i + 1, tiers[i], _data.Name));
+                    throw new InvalidOperationException(GunGameRulesLog.MissingTierWeapon(i + 1, tiers[i], data.Name));
                 }
             }
         }

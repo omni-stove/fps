@@ -325,7 +325,7 @@ namespace Shooter.Server.Tests
             Assert.That(playlist.Entries[0].Rules.Objective, Is.EqualTo(MatchObjective.None));
             Assert.That(playlist.Entries[1].Rules.Objective, Is.EqualTo(MatchObjective.Domination));
             Assert.That(playlist.Entries[2].Rules.Objective, Is.EqualTo(MatchObjective.Payload));
-            Assert.That(playlist.Entries.Select(entry => entry.Map), Is.EqualTo(new[] { "NetArena01", "NetTest", "NetArena01" }));
+            Assert.That(playlist.Entries.Select(entry => entry.Map), Is.EqualTo(ExampleMaps));
             Assert.That(playlist.Entries[0].Data.Settings.MapVoteSeconds, Is.Zero, "without a map vote each entry only has to fit its own map");
 
             // 投票しないので、項目のモードが要るものは項目のマップにだけあればよい (NetTest に台車の道筋は無い)
@@ -334,6 +334,8 @@ namespace Shooter.Server.Tests
             Assert.That(ServerMapData.TryLoad("NetArena01", roots, out var payload, out error), Is.True, error);
             Assert.That(payload.Points.Payload, Is.Not.Null, "the Payload entry needs a payload route on its map");
         }
+
+        private static readonly string[] ExampleMaps = { "NetArena01", "NetTest", "NetArena01" };
 
         private static int Position(PlaylistCursor cursor)
         {

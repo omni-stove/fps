@@ -7,6 +7,30 @@ namespace Shooter.Core
     {
         private const float _minLength = 1e-6f;
 
+        // 向かう先を決める。囮に一度誘われたら、その囮が消えるまで追い続ける。近づくと囮と相手の見える角度が開き、相手へ戻ってしまうため。
+        public static Vector3? Seek(ILockOnDecoy decoy, Vector3 position, Vector3? target, int? luredBy, out int? lure)
+        {
+            lure = null;
+            if (decoy == null)
+            {
+                return target;
+            }
+
+            if (luredBy.HasValue && decoy.TryLocate(luredBy.Value, out var kept))
+            {
+                lure = luredBy;
+                return kept;
+            }
+
+            if (target.HasValue && decoy.TryLure(position, target.Value, out var decoyId, out var decoyPoint))
+            {
+                lure = decoyId;
+                return decoyPoint;
+            }
+
+            return target;
+        }
+
         public static Vector3 Steer(HomingSpec homing, Vector3 position, Vector3 velocity, Vector3? targetPosition, float deltaSeconds)
         {
             if (homing == null)

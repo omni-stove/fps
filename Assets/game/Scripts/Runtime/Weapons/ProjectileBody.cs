@@ -148,7 +148,13 @@ namespace Shooter.Runtime
                 return;
             }
 
-            var step = _flight.Step(deltaSeconds, _request.HomingTarget?.Invoke());
+            var lured = _flight.LuredDecoyId;
+            var step = _flight.Step(deltaSeconds, _request.HomingTarget?.Invoke(), _request.HomingDecoy);
+            if (_flight.LuredDecoyId.HasValue && _flight.LuredDecoyId != lured)
+            {
+                Debug.Log(CountermeasureLog.Lured(_request.WeaponId, _flight.LuredDecoyId.Value), this);
+            }
+
             Place();
             switch (step.State)
             {

@@ -90,6 +90,12 @@ namespace Shooter.Runtime
             return id.HasValue && Targets != null ? Targets.Follow(id.Value) : null;
         }
 
+        public ILockOnDecoy DecoyOfLocked()
+        {
+            var id = LockedTargetId;
+            return id.HasValue && Targets != null ? Targets.Decoy(id.Value) : null;
+        }
+
         public void ShowOn(HudModel model)
         {
             if (model == null)

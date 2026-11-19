@@ -306,6 +306,34 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void EverySupplyCrateHoldsARifleHealthAndAmmo()
+        {
+            var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
+            try
+            {
+                var contents = BattleRoyaleSceneBuilder.SupplyCrateContents(rifle);
+
+                Assert.That(contents.Count, Is.EqualTo(3));
+                Assert.That(contents[0].Kind, Is.EqualTo(PickupKind.Weapon));
+                Assert.That(contents[0].Weapon, Is.SameAs(rifle));
+                Assert.That(contents[1].Kind, Is.EqualTo(PickupKind.Health));
+                Assert.That(contents[1].Amount, Is.EqualTo(BattleRoyaleSceneBuilder.HealthPickupAmount));
+                Assert.That(contents[2].Kind, Is.EqualTo(PickupKind.ReserveAmmo));
+                Assert.That(contents[2].Amount, Is.EqualTo(BattleRoyaleSceneBuilder.AmmoPickupAmount));
+                foreach (var content in contents)
+                {
+                    Assert.That(() => content.ToSpec(), Throws.Nothing);
+                }
+
+                Assert.Throws<ArgumentNullException>(() => BattleRoyaleSceneBuilder.SupplyCrateContents(null));
+            }
+            finally
+            {
+                Object.DestroyImmediate(rifle);
+            }
+        }
+
+        [Test]
         public void HillsAreGentleAndFollowTheProfile()
         {
             Assert.That(TerrainHill.Profile(0f), Is.EqualTo(1f).Within(Epsilon));

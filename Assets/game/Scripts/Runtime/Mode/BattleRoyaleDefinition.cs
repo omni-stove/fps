@@ -27,6 +27,9 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("パラシュートで降ろすとき、出現点からどれだけ上に出すか (m)")]
         private float _dropHeight = BattleRoyaleRunner.DefaultDropHeight;
 
+        [SerializeField, Tooltip("補給の投下の調整値の JSON (supply-drops.json の形)。空なら SupplyDropper の設定を使う")]
+        private TextAsset _supplyDropTuning;
+
         public int SquadCount
         {
             get => _squadCount;
@@ -61,6 +64,20 @@ namespace Shooter.Runtime
         {
             get => _dropHeight;
             set => _dropHeight = value;
+        }
+
+        public TextAsset SupplyDropTuning
+        {
+            get => _supplyDropTuning;
+            set => _supplyDropTuning = value;
+        }
+
+        // 空なら null を返し、SupplyDropper の設定を使わせる。
+        public SupplyDropSpec ReadSupplyDrops()
+        {
+            return _supplyDropTuning != null
+                ? KitTuning.Read(_supplyDropTuning.text, $"TextAsset '{_supplyDropTuning.name}'", SupplyDropJson.Parse, SupplyDropSpec.Default)
+                : null;
         }
 
         public BattleRoyaleSession CreateBattleRoyale(ActionRules actions)

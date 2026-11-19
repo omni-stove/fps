@@ -39,7 +39,6 @@ namespace Shooter.NetV2
         private readonly List<int> _goneGrenades = new List<int>();
         private readonly List<INetV2ClientPart> _parts = new List<INetV2ClientPart>();
         private readonly ClientMapChange _mapChange = new ClientMapChange();
-        private readonly ClientVoteKick _voteKick = new ClientVoteKick();
         private GrenadeCarrier _grenadeCarrier;
         private string _loadingMap;
         private string _joinCode;
@@ -87,8 +86,6 @@ namespace Shooter.NetV2
         public ReplayRecorder Recorder => _recorder;
 
         public ClientMatch Match => _match;
-
-        public ClientVoteKick VoteKick => _voteKick;
 
         public NetV2LocalPlayer LocalPlayer => _local;
 

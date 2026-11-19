@@ -8,6 +8,8 @@ namespace Shooter.NetV2.Tests
     public sealed class ClientLootTests
     {
         // 送る知らせは使い回しなので、送ったときの箱の Id を写しておく
+        private static readonly int[] ExpectedSeven = { 7 };
+        private static readonly int[] ExpectedFive = { 5 };
         private readonly List<int> _sent = new List<int>();
         private readonly List<string> _log = new List<string>();
         private bool _connected;
@@ -107,7 +109,7 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(_loot.OpenNearest(Vector3.Zero), Is.True);
 
-            Assert.That(_sent, Is.EqualTo(new[] { 7 }));
+            Assert.That(_sent, Is.EqualTo(ExpectedSeven));
             Assert.That(_loot.PendingItemId, Is.EqualTo(7));
             Assert.That(_log, Does.Contain("[Loot] net open request item=7 kind=LootBox distance=1.00 sent=True"));
         }
@@ -120,7 +122,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_loot.OpenNearest(Vector3.Zero), Is.True);
             Assert.That(_loot.OpenNearest(Vector3.Zero), Is.False);
 
-            Assert.That(_sent, Is.EqualTo(new[] { 5 }));
+            Assert.That(_sent, Is.EqualTo(ExpectedFive));
         }
 
         [Test]

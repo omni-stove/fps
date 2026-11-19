@@ -179,17 +179,18 @@ namespace Shooter.Server.Tests
         {
             var settings = new NetMatchSettings(gunGame: new GunGameSpec(600f, 2f, new[] { TestRules.RifleId }, Array.Empty<string>(), true));
 
+            using var stashes = new TempDirectory();
+            var parts = Parts(stashes.Path);
+
             foreach (var objective in Enum.GetValues<MatchObjective>())
             {
-                // Battle Royale・Extraction は設定と型だけを先に足し、サーバーのルールは後から足すので、
-                // それまでは下のテストで断ることを確かめる
-                if (objective == MatchObjective.BattleRoyale
-                    || objective == MatchObjective.Extraction)
-                {
-                    continue;
-                }
+                var rules = ServerObjectiveFactory.Create(objective, settings, _host, parts);
 
-                Assert.DoesNotThrow(() => ServerObjectiveFactory.Create(objective, settings, _host), objective.ToString());
+                Assert.That(rules.Objective, Is.EqualTo(objective));
+                Assert.That(
+                    rules.UsesLoot,
+                    Is.EqualTo(objective == MatchObjective.BattleRoyale || objective == MatchObjective.Extraction),
+                    objective + ": only the modes that open boxes get the map boxes");
             }
         }
 
@@ -231,12 +232,69 @@ namespace Shooter.Server.Tests
 
         [TestCase(MatchObjective.BattleRoyale, "BattleRoyale")]
         [TestCase(MatchObjective.Extraction, "Extraction")]
-        public void AMatchIsRefusedUntilTheServerHasItsRules(MatchObjective objective, string name)
+        public void WithoutTheMatchPartsTheBoxModesAreRefused(MatchObjective objective, string name)
         {
             var e = Assert.Throws<InvalidOperationException>(
                 () => ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host));
 
-            Assert.That(e.Message, Is.EqualTo("the dedicated server has no rules for the match objective " + name));
+            Assert.That(e.Message, Is.EqualTo(
+                "the " + name + " rules need the loot module and the match world; create the server modules with ServerModules.Create"));
+        }
+
+        [Test]
+        public void BattleRoyaleIsMadeWithTheWorldOfThePartsAndTheDefaultTuningBeforeRulesAreLoaded()
+        {
+            using var stashes = new TempDirectory();
+
+            var objective = ServerObjectiveFactory.Create(MatchObjective.BattleRoyale, new NetMatchSettings(), _host, Parts(stashes.Path));
+
+            Assert.That(objective, Is.TypeOf<BattleRoyaleRules>());
+            Assert.That(((BattleRoyaleRules)objective).Spec, Is.SameAs(BattleRoyaleSpec.Default), "the rules module has loaded no rules yet");
+            Assert.That(objective.KeepsMatchScore, Is.True);
+            Assert.That(objective.PlaysInRounds, Is.False);
+        }
+
+        [Test]
+        public void ExtractionIsMadeWithTheStashStoreOfTheParts()
+        {
+            using var stashes = new TempDirectory();
+
+            var objective = ServerObjectiveFactory.Create(MatchObjective.Extraction, new NetMatchSettings(), _host, Parts(stashes.Path));
+
+            Assert.That(objective, Is.TypeOf<ExtractionRules>());
+            Assert.That(objective.Objective, Is.EqualTo(MatchObjective.Extraction));
+            Assert.That(objective.UsesLoot, Is.True);
+        }
+
+        // 試合の途中で Extraction に替えようとしたときも、起動のときと同じ理由で断る
+        [Test]
+        public void ExtractionWithoutAStashStoreIsRefusedWithTheReasonOfTheLaunch()
+        {
+            var parts = Parts(null);
+
+            var e = Assert.Throws<InvalidOperationException>(
+                () => ServerObjectiveFactory.Create(MatchObjective.Extraction, new NetMatchSettings(), _host, parts));
+
+            Assert.That(ServerLaunch.TryParse(Array.Empty<string>(), _ => null, out var launch, out var error), Is.True, error);
+            Assert.That(e.Message, Is.EqualTo(launch.StashProblem(new[] { MatchObjective.Extraction })));
+            Assert.That(e.Message, Does.StartWith("the Extraction rules keep each account's stash on disk; pass --stash-dir <directory>"));
+            Assert.DoesNotThrow(
+                () => ServerObjectiveFactory.Create(MatchObjective.BattleRoyale, new NetMatchSettings(), _host, parts),
+                "Battle Royale keeps no stash");
+        }
+
+        [Test]
+        public void ThePartsNeedTheRulesTheLootAndTheWorld()
+        {
+            var rules = new MatchRulesModule();
+            var combat = new ServerCombat(rules, new ServerMovement(ServerMotorSettings.Default));
+            var loot = new ServerLoot(rules, combat, new ServerInventories(rules, combat));
+            var world = new BattleRoyaleTestWorld();
+
+            Assert.Throws<ArgumentNullException>(() => new ServerObjectiveParts(null, loot, world, null));
+            Assert.Throws<ArgumentNullException>(() => new ServerObjectiveParts(rules, null, world, null));
+            Assert.Throws<ArgumentNullException>(() => new ServerObjectiveParts(rules, loot, null, null));
+            Assert.That(new ServerObjectiveParts(rules, loot, world, null).Stashes, Is.Null, "a server without --stash-dir has no stash store");
         }
 
         [TestCase(MatchObjective.CaptureTheFlag, "flag")]
@@ -256,6 +314,21 @@ namespace Shooter.Server.Tests
         {
             Assert.Throws<ArgumentNullException>(() => ServerObjectiveFactory.Create(MatchObjective.None, null, _host));
             Assert.Throws<ArgumentNullException>(() => ServerObjectiveFactory.Create(MatchObjective.None, new NetMatchSettings(), null));
+        }
+
+        // 目的を作るだけで試合は始めないので、モジュールは Start しない。directory が null なら持ち物庫の無いサーバー
+        private ServerObjectiveParts Parts(string directory)
+        {
+            var rules = new MatchRulesModule();
+            var combat = new ServerCombat(rules, new ServerMovement(ServerMotorSettings.Default));
+            var loot = new ServerLoot(rules, combat, new ServerInventories(rules, combat), 1);
+            ServerStashStore store = null;
+            if (directory != null)
+            {
+                Assert.That(ServerStashStore.TryOpen(directory, _log, out store, out var error), Is.True, error);
+            }
+
+            return new ServerObjectiveParts(rules, loot, new BattleRoyaleTestWorld(), store, 1);
         }
 
         // Session を作る前の目的だけを確かめるので、Session と体は持たない

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using Shooter.Core;
 using Shooter.Protocol;
 
 namespace Shooter.Server
@@ -21,6 +22,12 @@ namespace Shooter.Server
         public static string NoPoints(string mapName)
         {
             return LogTag + " placed boxes=0 map=" + mapName + " (no points file)";
+        }
+
+        public static string NotUsed(string mapName, MatchObjective? objective)
+        {
+            return LogTag + " placed boxes=0 map=" + mapName + " (objective " + (objective.HasValue ? objective.Value.ToString() : "none")
+                + " opens no boxes)";
         }
 
         public static string Box(int itemId, ObjectiveItemKind kind, string source, Vector3 position, int weapons, int items)

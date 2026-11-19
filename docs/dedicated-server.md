@@ -53,6 +53,8 @@ make server-dotnet ARGS="-rules FreeForAll"
 | `KillConfirmed` | `KillConfirmed` | `killConfirmed` | チームの出現地点 |
 | `GunGame` | `GunGame` | `gunGame` (`tierWeaponIds` は 1 つ以上) | 出現地点 |
 | `Payload` | `Payload` | `payload`・`respawnSeconds` | 台車の道筋 (`payload`) |
+| `BattleRoyale` | `BattleRoyale` | `server-data/tuning/battle-royale.json` | エリア (`zone`) |
+| `Extraction` | `Extraction` | `server-data/tuning/extraction.json`・`stash.json` (起動に `--stash-dir`) | 脱出地点 (`extractionPoints`) 1 つ以上 |
 
 - マップに要るものが無いと、起動のときにマップの名前と足りないものを添えたエラー (`[Server] failed to start: ...`) で終了コード 1 になる。`mapPool` の他のマップも起動のうちに確かめる。
   例のマップ (`NetArena01`・`NetTest`) には両チームの旗の台 (`FlagBase`) を自陣の出現地点の奥に置いてあり、`make export-server-rules` で `<map>.points.json` の `flagBases` に書き出す。
@@ -70,8 +72,10 @@ make server-dotnet ARGS="-rules FreeForAll"
   箱の中身は試合の始まりに `server-data/tuning/loot.json` (クライアントの `Resources/Tuning/loot.json` と同じ中身) の表の `table` から引き、
   ログの `[Loot] seed=` の種が同じなら同じ中身になる。表に無い `table` の箱は空のまま開く (`[Loot] table=... is not in loot.json`)。
   箱を開けられるのは、届く距離 (`reach`) の内に立つ生きている人で、目的が開けることを許すときだけ。断った理由は `[Loot] open ... refused=` に出る。
+  箱を置くのは箱を開ける目的 (`BattleRoyale`・`Extraction`) の試合だけで、ほかの目的では箱のあるマップでも `[Loot] placed boxes=0 map=... (objective ... opens no boxes)` になる。
 - `Extraction` の目的 (`server-data/rules/Extraction.json`) は持ち物庫をアカウントごとにディスクに置くので、`--stash-dir <フォルダ>` を付けて立てる。
   付けないと `[Server] the Extraction rules keep each account's stash on disk; pass --stash-dir ...` で終了コード 3 になる (プレイリストの項目にあっても同じ)。
+  試合の途中で次のルールを Extraction に替えようとしたときも、同じ理由を添えて替えずに断る。
   持ち物庫は `<フォルダ>/<アカウントの ID>.json` (Unity の持ち物庫と同じ `StashSave` の JSON) で、ID は承認の鍵 (EOS でつないだ人は ProductUserId)、Bot は `bot.<番号>`。
   鍵を送らない人の持ち物庫は保存しない。読めないファイルは `.broken` を付けて退け、`startingItems` から始める。
   出撃の時間・脱出・持ち物庫の広さは `server-data/tuning/extraction.json`・`stash.json` (クライアントの `Resources/Tuning/` と同じ中身) から読む。
@@ -91,6 +95,10 @@ make server-dotnet ARGS="-rules FreeForAll"
   箱と脱出地点の見た目はクライアントがスナップショットから出すので、シーンの部品は形も当たりも持たない書き出しの印にしてある。
   `make export-server-rules` は `BattleRoyale`・`Extraction` のルール (`rules.objective` が `BattleRoyale`・`Extraction`) を NetMatch の並びに無くても書き出し、
   `loot.json`・`supply-drops.json`・`redeploy.json` を `server-data/tuning` に写す。ルールのアセットの目的が違うと書き出しを止めるので、`make build-scenes` で作り直す。
+  Bot は人が 1 人もいないと置かれないので、`make server-dotnet ARGS="-rules BattleRoyale -map NetBattleRoyale -bots 7"`・
+  `make server-dotnet ARGS="-rules Extraction -map NetBattleRoyale -bots 7 --stash-dir ./stashes"` で立ててクライアントを 1 人つなぐと、
+  Bot が `[BattleRoyale] state=Ended winner=`・`[Extraction] ended outcome=Extracted ... account=bot.<番号>` まで進む。
+  `loot.json` に表が無く箱が空のままだと Bot は武器を拾えないので、BR の決着はエリアのダメージと `battle-royale.json` の `timeLimitSeconds` に頼ることになる。
 - `GunGame` の段の武器 (`tierWeaponIds`) は、同じ JSON の `loadout` か `catalog` にある武器の Id にする。無い Id があると起動しない。
   近接で倒した相手の段を下げるには、`meleeWeaponIds` の先頭に近接の Id を書く。サーバーの近接はその Id で倒したことにする。
 - 近接 (`rules.actions.melee`)・ストリーク (`rules.streaks`)・キルカム (`rules.deathCamera` が `KillCam`) はどのモードでも使え、

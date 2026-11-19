@@ -54,6 +54,8 @@ namespace Shooter.Server
 
         public MatchObjective Objective => MatchObjective.Extraction;
 
+        public bool UsesLoot => true;
+
         public bool PlaysInRounds => false;
 
         public bool KeepsMatchScore => true;

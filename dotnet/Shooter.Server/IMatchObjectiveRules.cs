@@ -79,6 +79,9 @@ namespace Shooter.Server
             return !AreHostile(a, aTeam, b, bTeam);
         }
 
+        // true なら箱のモジュール (ServerLoot) が試合の始まりにマップの箱を置く。箱を開けない目的の試合に、開けられない箱を見せないため
+        bool UsesLoot => false;
+
         // 場に置いた物 (箱など) を開ける要求。開ける物を持たない目的は断る
         InteractVerdict Interact(int playerId, int itemId)
         {

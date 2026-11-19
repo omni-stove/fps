@@ -21,6 +21,9 @@ namespace Shooter.Editor
         public static string LauncherPath => Folder + "/Launcher.asset";
         public static string KnifePath => Folder + "/Knife.asset";
 
+        // JsonFolder の RiotShield.json から作るので、ほかの JSON の武器と同じく Folder に置かれる。
+        public static string RiotShieldPath => Folder + "/RiotShield.asset";
+
         public static string JsonFolder => Folder + "/Json";
 
         public static string RangeWeaponsPath => Folder + "/RangeWeapons.asset";
@@ -45,6 +48,7 @@ namespace Shooter.Editor
         public const string HandgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
         public const string LauncherId = "e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96";
         public const string KnifeId = "f4df3778-7da1-49c7-88a6-3f4769c23f9e";
+        public const string RiotShieldId = "3e7b9c41-5a2d-4f86-b1c3-9d4e7a2f6b18";
 
         public const string RifleNameKey = "weapon.rifle";
         public const string HandgunNameKey = "weapon.handgun";
@@ -248,6 +252,19 @@ namespace Shooter.Editor
         public static WeaponDefinition LoadLauncher()
         {
             return LoadDefinition(LauncherPath);
+        }
+
+        // 名前でなく Id で射撃場の一覧から引き、JSON のファイル名を変えても同じ盾を拾えるようにする。
+        public static WeaponDefinition LoadRiotShield()
+        {
+            var shield = FindInCatalog(LoadRangeWeapons(), "riot shield", RiotShieldId);
+            if (!shield.ToSpec().IsShield)
+            {
+                throw new InvalidOperationException(
+                    $"{LogTag} weapon '{RiotShieldId}' in '{RangeWeaponsPath}' has no shield; give its JSON in '{JsonFolder}' a \"shield\" and rerun {MenuPath}");
+            }
+
+            return shield;
         }
 
         public static LoadoutDefinition LoadDefaultLoadout()

@@ -164,8 +164,8 @@ namespace Shooter.Tests.EditMode
                 var roots = scene.GetRootGameObjects();
                 Assert.That(
                     roots,
-                    Has.Length.EqualTo(6),
-                    $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers, the weapon table, the perimeter, the platforms and the lock-on pen");
+                    Has.Length.EqualTo(7),
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers, the weapon table, the perimeter, the platforms, the lock-on pen and the gear table");
                 Assert.That(roots[0].GetComponent<GameBootstrap>(), Is.Not.Null);
                 Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
                 AssertCovers(roots[1]);
@@ -180,6 +180,24 @@ namespace Shooter.Tests.EditMode
                 var lockOnWeapon = VehicleRangeSceneBuilder.PickLockOnWeapon(WeaponAssetBuilder.LoadRangeWeapons().Weapons);
                 Assert.That(lockOnWeapon, Is.Not.Null, $"run {nameof(WeaponAssetBuilder)}.Build");
                 AssertLockOnPen(roots[5], lockOnWeapon);
+                Assert.That(roots[6].name, Is.EqualTo(BootstrapSceneBuilder.GearTableName), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the gear table");
+                var gear = roots[6].GetComponentsInChildren<PickupSpawnPoint>();
+                Assert.That(
+                    gear.Where(p => p.Contents.Kind == PickupKind.Weapon).Select(p => p.Contents.Weapon.Id),
+                    Is.EqualTo(BootstrapSceneBuilder.GearWeaponIds),
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build");
+                Assert.That(
+                    gear.Where(p => p.Contents.Kind == PickupKind.Item).Select(p => p.Contents.ItemId),
+                    Is.EqualTo(BootstrapSceneBuilder.GearItemIds),
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build");
+                Assert.That(
+                    roots[0].GetComponent<GameBootstrap>().AbilityDefinitions,
+                    Is.EqualTo(new AbilityDefinition[]
+                    {
+                        AssetDatabase.LoadAssetAtPath<VisionGogglesDefinition>(AbilityAssetBuilder.VisionGogglesAbilityPath),
+                        AssetDatabase.LoadAssetAtPath<DroneDeployDefinition>(AbilityAssetBuilder.DroneAbilityPath),
+                    }),
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build to give the player the goggles and the drone");
                 Assert.That(
                     roots[2].GetComponentsInChildren<PickupSpawnPoint>().Select(p => p.Contents.Weapon.Id),
                     Is.EqualTo(BootstrapSceneBuilder.FeaturedWeaponIds),
@@ -678,6 +696,97 @@ namespace Shooter.Tests.EditMode
             {
                 EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        [Test]
+        public void TheGearIsTheRiotShieldAndARifleThatTakesTheThermalScope()
+        {
+            var gear = BootstrapSceneBuilder.LoadGearWeapons(WeaponAssetBuilder.LoadRangeWeapons());
+
+            Assert.That(gear.Select(w => w.Id), Is.EqualTo(new[] { WeaponAssetBuilder.RiotShieldId, WeaponAssetBuilder.RifleId }));
+            Assert.That(gear[0].ToSpec().IsShield, Is.True);
+            Assert.That(BootstrapSceneBuilder.GearItemIds, Is.EqualTo(new[] { "c8e4f2a1-7b3d-4e95-a6c0-1d2f3b4a5e67" }));
+            Assert.That(KitTuning.Items.TryFindAttachment(BootstrapSceneBuilder.GearItemIds[0], out var scope), Is.True);
+            Assert.That(scope.Attachment.Sight.VisionMode, Is.EqualTo(VisionMode.Thermal));
+            Assert.That(KitTuning.Items.CanAttach(gear[1].Id, scope.Id), Is.True, "the thermal scope fits the rifle on the gear table");
+            Assert.That(KitTuning.Items.CanAttach(gear[0].Id, scope.Id), Is.False, "the shield takes no scope");
+        }
+
+        [Test]
+        public void TheGearTableLinesUpWeaponsThenItemsBehindTheSpawn()
+        {
+            var gear = BootstrapSceneBuilder.LoadGearWeapons(WeaponAssetBuilder.LoadRangeWeapons());
+            var scene = TestScenes.NewAdditive();
+            try
+            {
+                var table = BootstrapSceneBuilder.CreateGearTable(scene, gear, BootstrapSceneBuilder.GearItemIds);
+
+                Assert.That(table.name, Is.EqualTo(BootstrapSceneBuilder.GearTableName));
+                var points = table.GetComponentsInChildren<PickupSpawnPoint>();
+                Assert.That(points, Has.Length.EqualTo(3));
+                Assert.That(points[0].Contents.Weapon, Is.SameAs(gear[0]));
+                Assert.That(points[1].Contents.Weapon, Is.SameAs(gear[1]));
+                Assert.That(points[2].Contents.Kind, Is.EqualTo(PickupKind.Item));
+                Assert.That(points[2].Contents.ItemId, Is.EqualTo(BootstrapSceneBuilder.GearItemIds[0]));
+                Assert.That(points[2].Contents.Amount, Is.EqualTo(1));
+
+                var feet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
+                var positions = BootstrapSceneBuilder.GearTablePositions(3);
+                var tablePositions = BootstrapSceneBuilder.WeaponTablePositions(16);
+                for (var i = 0; i < points.Length; i++)
+                {
+                    var position = points[i].transform.position;
+                    Assert.That(position, Is.EqualTo(positions[i]));
+                    Assert.That(position.z, Is.EqualTo(feet.z - BootstrapSceneBuilder.GearTableDistance).Within(1e-5f), "behind the spawn");
+                    Assert.That(points[i].CollectMode, Is.EqualTo(PickupCollectMode.Look));
+                    Assert.That(Vector3.Distance(position, feet), Is.GreaterThan(points[i].Radius), $"{points[i].name} is not picked up at the spawn");
+                    foreach (var other in tablePositions)
+                    {
+                        Assert.That(Vector3.Distance(position, other), Is.GreaterThan(points[i].Radius * 2f), $"{points[i].name} is apart from the weapon table");
+                    }
+                }
+
+                Assert.That(positions[0].x, Is.EqualTo(-2f).Within(1e-5f));
+                Assert.That(positions[1].x, Is.EqualTo(0f).Within(1e-5f));
+                Assert.That(positions[2].x, Is.EqualTo(2f).Within(1e-5f));
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
+        public void CreateGearTableRejectsAnEmptyWeaponOrAnUnknownItem()
+        {
+            var gear = BootstrapSceneBuilder.LoadGearWeapons(WeaponAssetBuilder.LoadRangeWeapons());
+            var scene = TestScenes.NewAdditive();
+            try
+            {
+                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.CreateGearTable(scene, null, BootstrapSceneBuilder.GearItemIds));
+                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.CreateGearTable(scene, gear, null));
+                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreateGearTable(scene, new WeaponDefinition[] { null }, BootstrapSceneBuilder.GearItemIds));
+                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreateGearTable(scene, gear, new[] { "00000000-0000-4000-8000-000000000000" }));
+                Assert.Throws<ArgumentOutOfRangeException>(() => BootstrapSceneBuilder.GearTablePositions(-1));
+                Assert.That(scene.rootCount, Is.Zero, "nothing is placed when the gear is invalid");
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
+        }
+
+        [Test]
+        public void TheRangeAbilitiesAreTheNightGogglesThenTheDrone()
+        {
+            var abilities = BootstrapSceneBuilder.LoadAbilities();
+
+            Assert.That(abilities, Has.Length.EqualTo(AbilityHost.SlotCount));
+            Assert.That(abilities[0], Is.InstanceOf<VisionGogglesDefinition>());
+            Assert.That(((VisionGogglesDefinition)abilities[0]).ToMode(), Is.EqualTo(VisionMode.Night));
+            Assert.That(abilities[1], Is.InstanceOf<DroneDeployDefinition>());
+            Assert.That(AssetDatabase.GetAssetPath(abilities[0]), Is.EqualTo(AbilityAssetBuilder.VisionGogglesAbilityPath));
+            Assert.That(AssetDatabase.GetAssetPath(abilities[1]), Is.EqualTo(AbilityAssetBuilder.DroneAbilityPath));
         }
 
         [Test]

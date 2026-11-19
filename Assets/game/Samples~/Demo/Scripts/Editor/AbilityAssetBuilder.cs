@@ -56,6 +56,23 @@ namespace Shooter.Editor
 
         public const float DistractionWindupSeconds = 0.15f;
 
+        public const string VisionGogglesAbilityId = "vision-goggles";
+        public const VisionMode VisionGogglesMode = VisionMode.Night;
+
+        // 外すと使った 1 回が戻る (VisionGogglesAbility) ので、1 回あれば掛け外しを繰り返せる。
+        public const int VisionGogglesMaxCharges = 1;
+        public const float VisionGogglesRechargeSeconds = 5f;
+        public const float VisionGogglesCooldownSeconds = 1f;
+
+        // 掛ける動きの間だけ待たせる。外すときは待たない。
+        public const float VisionGogglesWindupSeconds = 0.4f;
+
+        public const string DroneAbilityId = "deploy-drone";
+        public const int DroneAbilityMaxCharges = 1;
+        public const float DroneAbilityRechargeSeconds = 30f;
+        public const float DroneAbilityCooldownSeconds = 1f;
+        public const float DroneAbilityWindupSeconds = 0f;
+
         public const string GrappleAbilityId = "grapple";
         public const int GrappleMaxCharges = 2;
         public const float GrappleRechargeSeconds = 8f;
@@ -84,6 +101,10 @@ namespace Shooter.Editor
 
         public static string DistractionAbilityPath => Folder + "/DistractionThrow.asset";
 
+        public static string VisionGogglesAbilityPath => Folder + "/VisionGoggles.asset";
+
+        public static string DroneAbilityPath => Folder + "/DeployDrone.asset";
+
         // タレットは武器のアセットを指すので、WeaponAssetBuilder.Build の後に走らせる (武器が無ければ例外で止まる)。
         [MenuItem(MenuPath)]
         public static void Build()
@@ -96,6 +117,57 @@ namespace Shooter.Editor
             BuildMineAt(MineAbilityPath);
             BuildRemoteChargeAt(RemoteChargeAbilityPath);
             BuildDistractionAt(DistractionAbilityPath);
+            BuildVisionGogglesAt(VisionGogglesAbilityPath);
+            BuildDroneAt(DroneAbilityPath);
+        }
+
+        public static VisionGogglesDefinition BuildVisionGogglesAt(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+            SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'));
+            var ability = SceneBuildHelpers.CreateOrUpdateAsset<VisionGogglesDefinition>(path, ConfigureVisionGoggles);
+            Debug.Log($"{LogTag} saved '{path}'");
+            return ability;
+        }
+
+        // 手で調整した値を射撃場を作り直すたびに消さないよう、あれば中身は上書きしない。
+        public static VisionGogglesDefinition LoadOrBuildVisionGogglesAbility()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<VisionGogglesDefinition>(VisionGogglesAbilityPath);
+            if (existing != null)
+            {
+                existing.ToSpec();
+                existing.ToMode();
+                return existing;
+            }
+
+            Debug.Log($"{LogTag} '{VisionGogglesAbilityPath}' is missing; building it");
+            return BuildVisionGogglesAt(VisionGogglesAbilityPath);
+        }
+
+        public static DroneDeployDefinition BuildDroneAt(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+            SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'));
+            var ability = SceneBuildHelpers.CreateOrUpdateAsset<DroneDeployDefinition>(path, ConfigureDrone);
+            Debug.Log($"{LogTag} saved '{path}'");
+            return ability;
+        }
+
+        // 手で調整した値を射撃場を作り直すたびに消さないよう、あれば中身は上書きしない。
+        public static DroneDeployDefinition LoadOrBuildDroneAbility()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<DroneDeployDefinition>(DroneAbilityPath);
+            if (existing != null)
+            {
+                existing.ToSpec();
+                existing.ToDeploySpec();
+                existing.ToDroneSpec();
+                return existing;
+            }
+
+            Debug.Log($"{LogTag} '{DroneAbilityPath}' is missing; building it");
+            return BuildDroneAt(DroneAbilityPath);
         }
 
         public static DecoyDeployDefinition BuildDecoyAt(string path)
@@ -452,6 +524,49 @@ namespace Shooter.Editor
             ability.ToSpec();
             ability.ToDeploySpec();
             ability.ToMineSpec();
+        }
+
+        // 見た目と音は差し替えのカタログ (VisionVisualCatalog) から取るので、ここで決めるのは見え方と回数だけ。
+        private static void ConfigureVisionGoggles(VisionGogglesDefinition ability)
+        {
+            ability.Id = VisionGogglesAbilityId;
+            ability.MaxCharges = VisionGogglesMaxCharges;
+            ability.RechargeSeconds = VisionGogglesRechargeSeconds;
+            ability.CooldownSeconds = VisionGogglesCooldownSeconds;
+            ability.WindupSeconds = VisionGogglesWindupSeconds;
+            ability.Mode = VisionGogglesMode;
+            ability.ToSpec();
+            ability.ToMode();
+        }
+
+        // 飛び方と見回し方はキットの既定 (DroneSpec.Default*) のまま。見た目 (Prefab) は空にし、胴と羽の仮の形をコードで作る。
+        private static void ConfigureDrone(DroneDeployDefinition ability)
+        {
+            ability.Id = DroneAbilityId;
+            ability.MaxCharges = DroneAbilityMaxCharges;
+            ability.RechargeSeconds = DroneAbilityRechargeSeconds;
+            ability.CooldownSeconds = DroneAbilityCooldownSeconds;
+            ability.WindupSeconds = DroneAbilityWindupSeconds;
+            ability.MaxActive = DroneSpec.DefaultMaxActive;
+            ability.Overflow = Shooter.Core.DeploySpec.DefaultOverflow;
+            ability.MaxHealth = DroneSpec.DefaultMaxHealth;
+            ability.MaxRange = Shooter.Core.DeploySpec.DefaultMaxRange;
+            ability.MaxSlopeDegrees = Shooter.Core.DeploySpec.DefaultMaxSlopeDegrees;
+            ability.MaxStepHeight = Shooter.Core.DeploySpec.DefaultMaxStepHeight;
+            ability.Size = new Vector3(DroneSpec.DefaultWidth, DroneSpec.DefaultHeight, DroneSpec.DefaultDepth);
+            ability.Prefab = null;
+            ability.PreviewPrefab = null;
+            ability.NameKey = DroneSpec.DefaultNameKey;
+            ability.RecallTapSeconds = DroneSpec.DefaultRecallTapSeconds;
+            ability.Speed = DroneSpec.DefaultSpeed;
+            ability.ControlRange = DroneSpec.DefaultControlRange;
+            ability.BatterySeconds = DroneSpec.DefaultBatterySeconds;
+            ability.SpotRadius = DroneSpec.DefaultSpotRadius;
+            ability.SpotIntervalSeconds = DroneSpec.DefaultSpotIntervalSeconds;
+            ability.RevealSeconds = DroneSpec.DefaultRevealSeconds;
+            ability.ToSpec();
+            ability.ToDeploySpec();
+            ability.ToDroneSpec();
         }
 
         // 貼ったときの音はキットに無いので空のまま。ゲームが音と見た目 (Prefab) を差し込む。

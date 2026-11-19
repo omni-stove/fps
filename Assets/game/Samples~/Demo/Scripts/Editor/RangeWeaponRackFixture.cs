@@ -16,7 +16,8 @@ namespace Shooter.Editor
         public const string PickupNamePrefix = "WeaponPickup-";
         public const int FixtureOrder = 570;
 
-        public const int Columns = 8;
+        // 列でなく横に広げるのは、奥 (z) へ 1 列足すと射撃場の床の端 (TpsRangeSceneBuilder.FloorHalfExtent) を越えるため。
+        public const int Columns = 10;
         public const int Rows = 3;
         public const float ColumnSpacing = 2.5f;
         public const float RowSpacing = 3f;

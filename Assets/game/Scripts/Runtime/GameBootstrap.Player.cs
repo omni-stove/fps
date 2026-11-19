@@ -62,6 +62,7 @@ namespace Shooter.Runtime
                 // ルールが Off でも入れておくのは、キャンペーンや差し替えたルールで On になったときにそのまま使えるようにするため。
                 abilities = PlayerActions.GetOrAdd<AbilityHost>(player);
                 abilities.Equip(abilityDefinitions);
+                AttachVision(player, damageable);
                 PlayerActions.Attach(player, rules);
                 AttachVehicleRider(player, mover, weapon);
                 mover.ApplyRules(rules);
@@ -84,6 +85,31 @@ namespace Shooter.Runtime
             }
 
             return player;
+        }
+
+        // GameSignals.Vision は画面に 1 つの値なので、敵やネットの体にも付ける CharacterComponents でなく、手元のプレイヤーにだけ付ける。
+        private static VisionModeController AttachVision(GameObject player, Damageable damageable)
+        {
+            if (player == null)
+            {
+                throw new ArgumentNullException(nameof(player));
+            }
+
+            var vision = player.GetComponent<VisionModeController>();
+            if (vision == null)
+            {
+                vision = player.AddComponent<VisionModeController>();
+            }
+
+            vision.BindDamageable(damageable);
+            var thermal = player.GetComponent<ThermalHighlighter>();
+            if (thermal == null)
+            {
+                thermal = player.AddComponent<ThermalHighlighter>();
+            }
+
+            thermal.Controller = vision;
+            return vision;
         }
 
         private static void ConfigurePlayer(

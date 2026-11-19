@@ -11,8 +11,10 @@ namespace Shooter.Core.Tests
         {
             "item.bandage", "item.medkit", "item.armorPlate", "item.keycard", "item.toolbox", "item.ammo9mm", "item.ammo556", "item.ammo12ga",
             "weapon.rifle", "weapon.burstRifle", "weapon.handgun", "weapon.ricochetPistol", "weapon.shotgun",
-            "item.redDot", "item.scope4x", "item.holoSight", "item.suppressor", "item.compensator", "item.foregrip", "item.extendedMagazine",
+            "item.redDot", "item.scope4x", "item.holoSight", "item.thermalScope", "item.suppressor", "item.compensator", "item.foregrip", "item.extendedMagazine",
         };
+        private static readonly string[] _thermalNameKeys = { "item.thermalScope" };
+        private static readonly string[] _thermalWeaponNameKeys = { "weapon.rifle", "weapon.burstRifle" };
         private static readonly string[] _usableNameKeys = { "item.bandage", "item.medkit", "item.armorPlate" };
 
         [Test]
@@ -86,6 +88,30 @@ namespace Shooter.Core.Tests
                     catalog.Items.Any(w => w.IsWeapon && catalog.CanAttach(w.WeaponId, attachment.Id)),
                     Is.True,
                     attachment.NameKey + " fits a shipped weapon");
+            }
+        }
+
+        [Test]
+        public void OnlyTheThermalScopeSeesInThermalAndTheServerReadsItTheSame()
+        {
+            var root = RepositoryRoot();
+            var unity = InventoryJson.Parse(File.ReadAllText(UnityPath(root)), "inventory.json");
+            var server = InventoryJson.Parse(File.ReadAllText(Path.Combine(root, "server-data", "tuning", "inventory.json")), "inventory.json");
+
+            foreach (var catalog in new[] { unity, server })
+            {
+                var thermal = catalog.Items.Where(i => i.IsAttachment && i.Attachment.Sight != null && i.Attachment.Sight.VisionMode != VisionMode.None).ToList();
+                Assert.That(thermal.Select(i => i.NameKey), Is.EqualTo(_thermalNameKeys));
+
+                var scope = thermal.Single();
+                Assert.That(scope.Id, Is.EqualTo("c8e4f2a1-7b3d-4e95-a6c0-1d2f3b4a5e67"));
+                Assert.That(scope.Attachment.IsOptic, Is.True);
+                Assert.That(scope.Attachment.Sight.VisionMode, Is.EqualTo(VisionMode.Thermal));
+                Assert.That(scope.Attachment.Sight.ScopeOverlay, Is.True);
+                Assert.That(scope.Attachment.Sight.ReticleId, Is.EqualTo("scope4x"));
+                Assert.That(
+                    catalog.Items.Where(w => w.IsWeapon && catalog.CanAttach(w.WeaponId, scope.Id)).Select(w => w.NameKey),
+                    Is.EqualTo(_thermalWeaponNameKeys));
             }
         }
 

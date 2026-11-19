@@ -76,6 +76,25 @@ namespace Shooter.Core.Tests
             Assert.That(result.IsWall, Is.True, "the wall is still there, only the angle is off");
         }
 
+        [TestCase(3f, 40f)]
+        [TestCase(4f, 45f)]
+        [TestCase(2f, -45f)]
+        public void FarWallsCannotBeEnteredFromASlantThatShiftsTheHitPointSideways(float distance, float yaw)
+        {
+            var result = CoverProbe.Evaluate(Sample(distance), Facing(yaw), MotorSpec.Default);
+
+            Assert.That(result.IsWall, Is.True);
+            Assert.That(result.CanEnter, Is.False);
+        }
+
+        [TestCase(4f, 0f)]
+        [TestCase(4f, 8f)]
+        [TestCase(3f, 10f)]
+        public void FarWallsCanBeEnteredFromNearlyHeadOn(float distance, float yaw)
+        {
+            Assert.That(CoverProbe.Evaluate(Sample(distance), Facing(yaw), MotorSpec.Default).CanEnter, Is.True);
+        }
+
         [Test]
         public void IgnoresThePitchOfTheFacing()
         {

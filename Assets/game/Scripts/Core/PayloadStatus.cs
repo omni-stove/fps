@@ -12,8 +12,14 @@ namespace Shooter.Core
             int checkpointCount,
             int pushers,
             bool isContested,
-            bool isRollingBack)
+            bool isRollingBack,
+            int minPushers = PayloadSpec.DefaultMinPushers)
         {
+            if (minPushers < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(minPushers), minPushers, "minPushers must be at least 1");
+            }
+
             if (!(progress >= 0f && progress <= 1f))
             {
                 throw new ArgumentOutOfRangeException(nameof(progress), progress, "progress must be between 0 and 1");
@@ -42,7 +48,10 @@ namespace Shooter.Core
             Pushers = pushers;
             IsContested = isContested;
             IsRollingBack = isRollingBack;
+            MinPushers = minPushers;
         }
+
+        public int MinPushers { get; }
 
         public Side Attackers { get; }
 
@@ -72,7 +81,8 @@ namespace Shooter.Core
                 payload.Route.CheckpointCount,
                 payload.Pushers,
                 payload.IsContested,
-                payload.IsRollingBack);
+                payload.IsRollingBack,
+                payload.Spec.MinPushers);
         }
     }
 }

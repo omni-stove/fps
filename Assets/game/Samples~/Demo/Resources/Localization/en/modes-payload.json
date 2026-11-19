@@ -1,0 +1,12 @@
+{
+  "mode.payload.attacking": "{0} attacking",
+  "mode.payload.defending": "{0} defending",
+  "mode.payload.progress": "Payload {0}%",
+  "mode.payload.checkpoints": "Checkpoints {0}/{1}",
+  "mode.payload.pushing": "{0} pushing",
+  "mode.payload.contested": "Payload contested",
+  "mode.payload.rollingBack": "Payload rolling back",
+  "mode.payload.idle": "Payload stopped",
+  "mode.payload.youAttack": "You attack: stay by the payload to push it to the end",
+  "mode.payload.youDefend": "You defend: stand by the payload to stop it until time runs out"
+}

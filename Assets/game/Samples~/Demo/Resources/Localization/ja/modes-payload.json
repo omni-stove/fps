@@ -1,0 +1,12 @@
+{
+  "mode.payload.attacking": "{0} 攻め",
+  "mode.payload.defending": "{0} 守り",
+  "mode.payload.progress": "台車 {0}%",
+  "mode.payload.checkpoints": "中継点 {0}/{1}",
+  "mode.payload.pushing": "{0} 人が押している",
+  "mode.payload.contested": "台車を止められている",
+  "mode.payload.rollingBack": "台車が戻っている",
+  "mode.payload.idle": "台車は止まっている",
+  "mode.payload.youAttack": "あなたは攻め: 台車のそばにいて終点まで押す",
+  "mode.payload.youDefend": "あなたは守り: 台車のそばに立って時間切れまで止める"
+}

@@ -116,6 +116,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ThePayloadModeTextsAreReadFromTheModesPayloadTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var modes = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("modes-payload.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(modes.Keys.All(key => key.StartsWith("mode.payload.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(modes.Contains("mode.payload.progress"), Is.True, code);
+                Assert.That(modes.Contains("mode.payload.checkpoints"), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("modes-payload.json", StringComparison.Ordinal))
+                .Value;
+            Assert.That(japanese.Get("mode.payload.checkpoints"), Is.EqualTo("中継点 {0}/{1}"));
+        }
+
+        [Test]
         public void TheSurvivalModeTextsAreReadFromTheJapaneseModesSurvivalTable()
         {
             var modes = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)

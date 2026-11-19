@@ -16,7 +16,7 @@ namespace Shooter.Runtime
         private int _stop;
 
         [SerializeField, Tooltip("プレイヤーとみなす Collider のタグ")]
-        private string _playerTag = ObjectiveAreaBase.DefaultPlayerTag;
+        private string _playerTag = GameBootstrap.PlayerTag;
 
         [SerializeField, Tooltip("Collider が無いときに作る踏む範囲の大きさ (m)")]
         private Vector3 _size = DefaultSize;

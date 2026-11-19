@@ -23,6 +23,7 @@ namespace Shooter.Tests.EditMode
             GameSignals.ResetAll();
             MinimapReveals.ResetAll();
             MinimapReveals.Clock = () => _now;
+            MinimapObjectives.ResetAll();
         }
 
         [TearDown]
@@ -39,6 +40,7 @@ namespace Shooter.Tests.EditMode
             _objects.Clear();
             GameSignals.ResetAll();
             MinimapReveals.ResetAll();
+            MinimapObjectives.ResetAll();
         }
 
         [Test]
@@ -199,6 +201,37 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ListsTheRegisteredObjectivesThatAreShownBeforeTheModeObjectives()
+        {
+            var player = Player(Vector3.zero, yaw: 0f, side: 0);
+            Track(new GameObject("Point")).AddComponent<ControlPointZone>().transform.position = new Vector3(10f, 0f, 0f);
+            var shown = new Objective(new Vector3(3f, 0f, 4f), true);
+            var hidden = new Objective(new Vector3(-3f, 0f, 4f), false);
+            MinimapObjectives.Add(shown);
+            MinimapObjectives.Add(hidden);
+            var publisher = Publisher(player);
+
+            Assert.That(Objectives(publisher), Is.EqualTo(new[]
+            {
+                new MinimapContact(MinimapContactKind.Objective, new System.Numerics.Vector3(3f, 0f, 4f), 0f, null),
+                new MinimapContact(MinimapContactKind.Objective, new System.Numerics.Vector3(10f, 0f, 0f), 0f, null),
+            }));
+
+            shown.Position = new Vector3(5f, 0f, 5f);
+            hidden.Shows = true;
+            Assert.That(Objectives(publisher), Is.EqualTo(new[]
+            {
+                new MinimapContact(MinimapContactKind.Objective, new System.Numerics.Vector3(5f, 0f, 5f), 0f, null),
+                new MinimapContact(MinimapContactKind.Objective, new System.Numerics.Vector3(-3f, 0f, 4f), 0f, null),
+                new MinimapContact(MinimapContactKind.Objective, new System.Numerics.Vector3(10f, 0f, 0f), 0f, null),
+            }), "the publisher reads the objectives again on each refresh");
+
+            MinimapObjectives.Remove(shown);
+            MinimapObjectives.Remove(hidden);
+            Assert.That(Objectives(publisher).Length, Is.EqualTo(1), "a removed objective is no longer listed");
+        }
+
+        [Test]
         public void PublishesOncePerUpdateInterval()
         {
             var player = Player(Vector3.zero, yaw: 0f, side: 0);
@@ -305,6 +338,21 @@ namespace Shooter.Tests.EditMode
         {
             _objects.Add(go);
             return go;
+        }
+
+        private sealed class Objective : IMinimapObjective
+        {
+            public Objective(Vector3 position, bool shows)
+            {
+                Position = position;
+                Shows = shows;
+            }
+
+            public Vector3 Position { get; set; }
+
+            public bool Shows { get; set; }
+
+            public bool ShowsOnMinimap => Shows;
         }
     }
 }

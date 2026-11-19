@@ -142,7 +142,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            _device = DetectDevice(_deviceActions, _device);
+            _device = InputKeyLabels.DetectDevice(_deviceActions, _device);
             Tick(Time.deltaTime, _reader.Current, _reader.transform.position, _device);
         }
 
@@ -265,25 +265,6 @@ namespace Shooter.Runtime
             _running = false;
             ClearStatus();
             enabled = false;
-        }
-
-        public static InputDeviceKind DetectDevice(InputAction[] actions, InputDeviceKind fallback)
-        {
-            if (actions == null)
-            {
-                return fallback;
-            }
-
-            foreach (var action in actions)
-            {
-                // スティックの小さな揺れで表記が行き来しないよう、押したと言える大きさのときだけ機器を見る
-                if (action != null && action.enabled && action.IsPressed())
-                {
-                    return InputDeviceKinds.Of(action, fallback);
-                }
-            }
-
-            return fallback;
         }
 
         public static string ActionPathFor(TutorialStep step)

@@ -4,9 +4,9 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    public abstract class ObjectiveAreaBase : MonoBehaviour
+    public abstract class ObjectiveAreaBase : MonoBehaviour, IMinimapObjective
     {
-        public const string DefaultPlayerTag = "Player";
+        public const string DefaultPlayerTag = GameBootstrap.PlayerTag;
 
         [SerializeField, Tooltip("進める MissionRunner。空ならシーンから探す")]
         private MissionRunner _runner;
@@ -42,6 +42,11 @@ namespace Shooter.Runtime
 
         public bool IsBound => _zone != null;
 
+        public Vector3 Position => transform.position;
+
+        // 達成した・まだ始まっていない目標は、今向かう先ではないので印を出さない。
+        public bool ShowsOnMinimap => isActiveAndEnabled && _zone != null && _zone.IsActive;
+
         protected abstract ObjectiveZoneMode Mode { get; }
 
         protected virtual void Start()
@@ -50,6 +55,16 @@ namespace Shooter.Runtime
             {
                 enabled = false;
             }
+        }
+
+        protected virtual void OnEnable()
+        {
+            MinimapObjectives.Add(this);
+        }
+
+        protected virtual void OnDisable()
+        {
+            MinimapObjectives.Remove(this);
         }
 
         protected virtual void OnDestroy()

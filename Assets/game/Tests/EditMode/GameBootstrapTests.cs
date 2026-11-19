@@ -925,6 +925,14 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ThePlayerTagIsTheOneTheTriggersLookForByDefault()
+        {
+            Assert.That(GameBootstrap.PlayerTag, Is.EqualTo("Player"), "Unity's built-in Player tag, so no tag has to be added to the project");
+            Assert.That(ObjectiveAreaBase.DefaultPlayerTag, Is.EqualTo(GameBootstrap.PlayerTag));
+            Assert.That(CoopInteractable.DefaultPlayerTag, Is.EqualTo(GameBootstrap.PlayerTag));
+        }
+
+        [Test]
         public void PlayerFeetRestOnTheFloor()
         {
             var bottom = _world.Player.transform.position.y + _world.Controller.center.y - _world.Controller.height / 2f;

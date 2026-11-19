@@ -90,6 +90,15 @@ namespace Shooter.Core
             return LogTag + " could not save the save times: " + Require(problem, nameof(problem));
         }
 
+        public static string RegisteredLate(int startupSlots)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} save slots were registered after the sync started; {1} startup slot(s) are checked from the next start",
+                LogTag,
+                startupSlots);
+        }
+
         private static string Require(string value, string name)
         {
             if (value == null)

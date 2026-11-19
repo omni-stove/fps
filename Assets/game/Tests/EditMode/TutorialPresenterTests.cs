@@ -319,14 +319,5 @@ namespace Shooter.Tests.EditMode
                 () => _presenter.Tick(-1f, State(PlayerActionConditions.None), Vector3.zero, InputDeviceKind.KeyboardMouse));
             Assert.Throws<ArgumentNullException>(() => _presenter.Store = null);
         }
-
-        [Test]
-        public void DetectDeviceKeepsTheLastDeviceWhenNothingIsPressed()
-        {
-            Assert.That(TutorialPresenter.DetectDevice(null, InputDeviceKind.Gamepad), Is.EqualTo(InputDeviceKind.Gamepad));
-            Assert.That(
-                TutorialPresenter.DetectDevice(new UnityEngine.InputSystem.InputAction[] { null }, InputDeviceKind.KeyboardMouse),
-                Is.EqualTo(InputDeviceKind.KeyboardMouse));
-        }
     }
 }

@@ -14,7 +14,7 @@ namespace Shooter.Runtime
 
         public const string InteractActionPath = InputActionPaths.Interact;
 
-        public const string DefaultPlayerTag = ObjectiveAreaBase.DefaultPlayerTag;
+        public const string DefaultPlayerTag = GameBootstrap.PlayerTag;
 
         // 足元の位置が床に置いたトリガーの下の面にちょうど乗っても、浮動小数の誤差で外と判定しない程度の幅。
         private const float RangeToleranceMeters = 0.05f;

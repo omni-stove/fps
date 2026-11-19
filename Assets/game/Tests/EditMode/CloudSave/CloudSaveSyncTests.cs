@@ -16,6 +16,10 @@ namespace Shooter.Tests.EditMode
         private const string OldProfile = "{\"xp\":100}";
         private const string NewProfile = "{\"xp\":900}";
 
+        // 本体はキャンペーンのスロットを知らないので、テストでもキャンペーンと同じ名前の付け方の判定を登録して使う。
+        private const string LegacySlot = "campaign";
+        private const string SlotPrefix = "campaign-";
+
         private long _clock;
         private double _time;
 
@@ -24,6 +28,14 @@ namespace Shooter.Tests.EditMode
         {
             _clock = 1000;
             _time = 0d;
+            CloudSaveBootstrap.ClearRegisteredSlots();
+            CloudSaveBootstrap.RegisterSlots(OwnsCampaignSlot, new[] { LegacySlot }, text => true);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            CloudSaveBootstrap.ClearRegisteredSlots();
         }
 
         [Test]
@@ -173,11 +185,11 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void CampaignSavesListedInTheCloudAreTakenEvenIfThisDeviceNeverHadThem()
+        public void RegisteredSavesListedInTheCloudAreTakenEvenIfThisDeviceNeverHadThem()
         {
             var local = new MemorySaveStorage();
             var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
-            var mission = CampaignSaveSlots.For("Mission02");
+            const string mission = "campaign-Mission02";
             backend.Files[mission + ".json"] = CloudSaveEnvelope.Saved(mission, 3000, "{\"checkpoint\":\"b\"}").ToJson();
             backend.Files["notes.json"] = "{}";
             backend.Files["campaign-Mission03.bin"] = "x";
@@ -213,7 +225,7 @@ namespace Shooter.Tests.EditMode
         public void DeletingASaveSendsTheDeletionToOtherDevices()
         {
             var files = new Dictionary<string, string>(StringComparer.Ordinal);
-            var mission = CampaignSaveSlots.For("Mission01");
+            const string mission = "campaign-Mission01";
             var first = new MemorySaveStorage();
             var second = new MemorySaveStorage();
             var firstSync = Create(first, new FakeCloudSaveBackend(files) { SignedInAccount = Account });
@@ -243,11 +255,11 @@ namespace Shooter.Tests.EditMode
             var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
             var sync = Create(local, backend);
             Drain(sync);
-            sync.Delete(CampaignSaveSlots.Legacy);
+            sync.Delete(LegacySlot);
             Drain(sync);
             backend.Calls.Clear();
 
-            sync.Delete(CampaignSaveSlots.Legacy);
+            sync.Delete(LegacySlot);
 
             Assert.That(sync.PendingCount, Is.Zero);
             Assert.That(backend.Calls, Is.Empty);
@@ -420,7 +432,7 @@ namespace Shooter.Tests.EditMode
         {
             var local = new MemorySaveStorage();
             var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
-            var other = CloudSaveEnvelope.Saved(CampaignSaveSlots.Legacy, 5000, "x").ToJson();
+            var other = CloudSaveEnvelope.Saved(LegacySlot, 5000, "x").ToJson();
             backend.Files[ProfileFile] = other;
             var sync = Create(local, backend);
 
@@ -439,7 +451,7 @@ namespace Shooter.Tests.EditMode
             var sync = Create(local, backend);
             Drain(sync);
             backend.Calls.Clear();
-            var mission = CampaignSaveSlots.For("Mission01");
+            const string mission = "campaign-Mission01";
 
             LogAssert.Expect(LogType.Warning, CloudSaveLog.NameTooLong(mission, 16));
             sync.Write(mission, "{}");
@@ -505,15 +517,90 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheDefaultSyncCoversTheProfileAndTheCampaign()
+        public void TheProfileIsAlwaysSyncedAndOtherSlotsOnlyOnceRegistered()
         {
+            CloudSaveBootstrap.ClearRegisteredSlots();
+
             Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.True);
-            Assert.That(CloudSaveBootstrap.Syncs(CampaignSaveSlots.Legacy), Is.True);
-            Assert.That(CloudSaveBootstrap.Syncs(CampaignSaveSlots.For("Campaign01")), Is.True);
+            Assert.That(CloudSaveBootstrap.Syncs(LegacySlot), Is.False, "nothing but the profile is synced before a registration");
+            Assert.That(CloudSaveBootstrap.Syncs("campaign-Campaign01"), Is.False);
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot }));
+
+            CloudSaveBootstrap.RegisterSlots(OwnsCampaignSlot, new[] { LegacySlot }, text => true);
+
+            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.True);
+            Assert.That(CloudSaveBootstrap.Syncs(LegacySlot), Is.True);
+            Assert.That(CloudSaveBootstrap.Syncs("campaign-Campaign01"), Is.True);
             Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.RejectedSlot), Is.False);
             Assert.That(CloudSaveBootstrap.Syncs(CloudSaveSync.StampsSlot), Is.False);
             Assert.That(CloudSaveBootstrap.Syncs(CloudSaveSync.ReplacedPrefix + ProfileStore.Slot), Is.False);
-            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, CampaignSaveSlots.Legacy }));
+            Assert.That(CloudSaveBootstrap.Syncs(null), Is.False);
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, LegacySlot }));
+        }
+
+        [Test]
+        public void RegisteringTheSameSlotsAgainReplacesTheEarlierRegistration()
+        {
+            CloudSaveBootstrap.RegisterSlots(OwnsCampaignSlot, new[] { LegacySlot }, text => false);
+            CloudSaveBootstrap.RegisterSlots(OwnsNotes, new[] { "notes" }, text => true);
+
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, LegacySlot, "notes" }));
+            Assert.That(CloudSaveBootstrap.CanRead(LegacySlot, "{}"), Is.False, "the later judgement replaced the earlier one");
+            Assert.That(CloudSaveBootstrap.CanRead("notes", "{}"), Is.True);
+        }
+
+        [Test]
+        public void TheRegisteredJudgementDecidesWhetherACloudSaveCanBeRead()
+        {
+            CloudSaveBootstrap.RegisterSlots(OwnsNotes, new string[0], text => text == "ok");
+            CloudSaveBootstrap.RegisterSlots(OwnsStrict, new string[0], text => throw new FormatException("not a save"));
+
+            Assert.That(CloudSaveBootstrap.CanRead("notes", "ok"), Is.True);
+            Assert.That(CloudSaveBootstrap.CanRead("notes", "bad"), Is.False);
+            Assert.That(CloudSaveBootstrap.CanRead("strict", "{}"), Is.False, "a FormatException means the content cannot be read");
+            Assert.That(CloudSaveBootstrap.CanRead("nobody-owns-this", "{}"), Is.False, "a slot nobody registered is never taken");
+            Assert.That(CloudSaveBootstrap.CanRead(ProfileStore.Slot, new PlayerProfile(300, 2, 1, 1, 1).ToJson()), Is.True);
+            Assert.That(CloudSaveBootstrap.CanRead(ProfileStore.Slot, "{\"version\":999}"), Is.False);
+        }
+
+        [Test]
+        public void ARegisteredSlotIsSyncedAndItsUnreadableCloudCopyIsLeftAlone()
+        {
+            CloudSaveBootstrap.ClearRegisteredSlots();
+            CloudSaveBootstrap.RegisterSlots(OwnsNotes, new[] { "notes" }, text => text != "unreadable");
+            var local = new MemorySaveStorage();
+            var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
+            backend.Files["notes.json"] = CloudSaveEnvelope.Saved("notes", 3000, "unreadable").ToJson();
+            backend.Files["campaign-Mission01.json"] = CloudSaveEnvelope.Saved("campaign-Mission01", 3000, "{}").ToJson();
+            var sync = CloudSaveBootstrap.Create(local, backend);
+
+            LogAssert.Expect(LogType.Warning, CloudSaveLog.CloudRejected("notes", "the saved content cannot be read by this version"));
+            Drain(sync);
+
+            Assert.That(backend.Calls, Does.Contain("read notes.json"), "the registered startup slot is checked");
+            Assert.That(local.Has("notes"), Is.False);
+            Assert.That(backend.Calls, Does.Not.Contain("read campaign-Mission01.json"), "slots nobody registered are not synced");
+            Assert.That(local.Has("campaign-Mission01"), Is.False);
+
+            sync.Write("notes", "mine");
+            Assert.That(sync.TryGetStamp("notes", out var stamp), Is.True, "a registered slot is stamped when written");
+            Assert.That(stamp.Deleted, Is.False);
+        }
+
+        [Test]
+        public void RegisterSlotsRejectsMissingAndForeignArguments()
+        {
+            CloudSaveBootstrap.ClearRegisteredSlots();
+            Func<string, bool> always = _ => true;
+
+            Assert.Throws<ArgumentNullException>(() => CloudSaveBootstrap.RegisterSlots(null, new string[0], always));
+            Assert.Throws<ArgumentNullException>(() => CloudSaveBootstrap.RegisterSlots(OwnsNotes, null, always));
+            Assert.Throws<ArgumentNullException>(() => CloudSaveBootstrap.RegisterSlots(OwnsNotes, new string[0], null));
+            Assert.Throws<ArgumentException>(() => CloudSaveBootstrap.RegisterSlots(OwnsNotes, new[] { "" }, always));
+            Assert.Throws<ArgumentException>(
+                () => CloudSaveBootstrap.RegisterSlots(OwnsNotes, new[] { LegacySlot }, always),
+                "a startup slot must be one the registration owns");
+            Assert.That(CloudSaveBootstrap.Syncs("notes"), Is.False, "a rejected registration is not kept");
         }
 
         [Test]
@@ -535,6 +622,21 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => new CloudSaveSync(local, null, null, new string[0], clock));
             Assert.Throws<ArgumentNullException>(() => new CloudSaveSync(local, null, CloudSaveBootstrap.Syncs, null, clock));
             Assert.Throws<ArgumentNullException>(() => new CloudSaveSync(local, null, CloudSaveBootstrap.Syncs, new string[0], null));
+        }
+
+        private static bool OwnsCampaignSlot(string slot)
+        {
+            return slot == LegacySlot || (slot != null && slot.StartsWith(SlotPrefix, StringComparison.Ordinal) && slot.Length > SlotPrefix.Length);
+        }
+
+        private static bool OwnsNotes(string slot)
+        {
+            return slot == "notes";
+        }
+
+        private static bool OwnsStrict(string slot)
+        {
+            return slot == "strict";
         }
 
         private CloudSaveSync Create(MemorySaveStorage local, FakeCloudSaveBackend backend)

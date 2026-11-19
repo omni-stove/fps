@@ -9,8 +9,8 @@ using UnityEngine;
 
 namespace Shooter.Editor
 {
-    // 試合が数分かかるので SmokeSuite には入れていない。
     // batchmode には入力が無いので、プレイヤーは出現点に立ったまま (エリアに追われて倒れる) で、戦うのは bot だけになる。
+    // 復帰は倒れた段階と残りの回数で戻るかが変わり、誰がいつ倒れるかは撃ち合い次第なので、実際に戻ったかではなく、倒れるたびに戻るかを決めた (復帰が入っている) ことを確かめる。
     // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
     // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
@@ -47,17 +47,39 @@ namespace Shooter.Editor
         private static readonly string _eliminatedPrefix = BattleRoyaleLog.Tag + " eliminated ";
         private static readonly string _endedPrefix = ModeLog.Tag + " ended winner=";
         private static readonly string _placementsPrefix = BattleRoyaleLog.Tag + " placements winner=";
+        private static readonly string _redeployPrefix = BattleRoyaleLog.Tag + " redeploy ";
+        private static readonly string _redeployWaitingPart = " verdict=" + RedeployVerdict.Waiting + " ";
+        private static readonly string _crateDroppedPrefix = SupplyDropLog.Tag + " dropped ";
+        private static readonly string _crateLandedPrefix = SupplyDropLog.Tag + " landed ";
 
         private static readonly List<string> _errors = new List<string>();
         private static Step _step;
         private static int _collectErrands;
         private static int _kills;
         private static int _eliminations;
+        private static int _cratesDropped;
+        private static int _cratesLanded;
+        private static int _redeployDecisions;
+        private static int _redeploysWaiting;
         private static string _endedLine;
         private static string _placementsLine;
         private static int? _winner;
         private static double _playStartedAt = -1d;
         private static bool _finished;
+
+        public enum LineKind
+        {
+            Other,
+            CollectErrand,
+            Kill,
+            Eliminated,
+            Ended,
+            Placements,
+            CrateDropped,
+            CrateLanded,
+            RedeployWaiting,
+            RedeployRefused,
+        }
 
         private enum Step
         {
@@ -216,6 +238,10 @@ namespace Shooter.Editor
             _collectErrands = 0;
             _kills = 0;
             _eliminations = 0;
+            _cratesDropped = 0;
+            _cratesLanded = 0;
+            _redeployDecisions = 0;
+            _redeploysWaiting = 0;
             _endedLine = null;
             _placementsLine = null;
             _winner = null;
@@ -243,34 +269,87 @@ namespace Shooter.Editor
                 return;
             }
 
-            if (condition == null)
+            switch (Classify(condition))
             {
-                return;
+                case LineKind.CollectErrand:
+                    _collectErrands++;
+                    break;
+                case LineKind.Kill:
+                    _kills++;
+                    break;
+                case LineKind.Eliminated:
+                    _eliminations++;
+                    break;
+                case LineKind.Ended:
+                    _endedLine = condition;
+                    break;
+                case LineKind.Placements:
+                    _placementsLine = condition;
+                    break;
+                case LineKind.CrateDropped:
+                    _cratesDropped++;
+                    break;
+                case LineKind.CrateLanded:
+                    _cratesLanded++;
+                    break;
+                case LineKind.RedeployWaiting:
+                    _redeployDecisions++;
+                    _redeploysWaiting++;
+                    break;
+                case LineKind.RedeployRefused:
+                    _redeployDecisions++;
+                    break;
+            }
+        }
+
+        public static LineKind Classify(string line)
+        {
+            if (line == null)
+            {
+                return LineKind.Other;
             }
 
-            if (condition.StartsWith(_errandPrefix, StringComparison.Ordinal))
+            if (line.StartsWith(_errandPrefix, StringComparison.Ordinal))
             {
-                if (condition.Contains(_collectSuffix))
-                {
-                    _collectErrands++;
-                }
+                return line.Contains(_collectSuffix) ? LineKind.CollectErrand : LineKind.Other;
             }
-            else if (condition.StartsWith(_killPrefix, StringComparison.Ordinal))
+
+            if (line.StartsWith(_killPrefix, StringComparison.Ordinal))
             {
-                _kills++;
+                return LineKind.Kill;
             }
-            else if (condition.StartsWith(_eliminatedPrefix, StringComparison.Ordinal))
+
+            if (line.StartsWith(_eliminatedPrefix, StringComparison.Ordinal))
             {
-                _eliminations++;
+                return LineKind.Eliminated;
             }
-            else if (condition.StartsWith(_endedPrefix, StringComparison.Ordinal))
+
+            if (line.StartsWith(_endedPrefix, StringComparison.Ordinal))
             {
-                _endedLine = condition;
+                return LineKind.Ended;
             }
-            else if (condition.StartsWith(_placementsPrefix, StringComparison.Ordinal))
+
+            if (line.StartsWith(_placementsPrefix, StringComparison.Ordinal))
             {
-                _placementsLine = condition;
+                return LineKind.Placements;
             }
+
+            if (line.StartsWith(_crateDroppedPrefix, StringComparison.Ordinal))
+            {
+                return LineKind.CrateDropped;
+            }
+
+            if (line.StartsWith(_crateLandedPrefix, StringComparison.Ordinal))
+            {
+                return LineKind.CrateLanded;
+            }
+
+            if (line.StartsWith(_redeployPrefix, StringComparison.Ordinal))
+            {
+                return line.Contains(_redeployWaitingPart) ? LineKind.RedeployWaiting : LineKind.RedeployRefused;
+            }
+
+            return LineKind.Other;
         }
 
         private static void OnUpdate()
@@ -378,6 +457,16 @@ namespace Shooter.Editor
                 return "the shrinking zone did not start";
             }
 
+            if (runner.RunningSupplyDropper == null)
+            {
+                return $"the supply drops did not start; rerun {BattleRoyaleSceneBuilder.MenuPath}";
+            }
+
+            if (!battleRoyale.RedeployRules.IsEnabled)
+            {
+                return $"redeploys are off (charges {battleRoyale.RedeployRules.Charges}); check Resources/Tuning/redeploy.json or the BattleRoyaleDefinition";
+            }
+
             _step = Step.WaitEnd;
             return null;
         }
@@ -413,6 +502,16 @@ namespace Shooter.Editor
                 return "no bot went to collect a pickup";
             }
 
+            if (_cratesDropped == 0 || _cratesLanded == 0)
+            {
+                return $"{_cratesDropped} supply crate(s) dropped and {_cratesLanded} landed before the end; expected at least one of each";
+            }
+
+            if (_redeployDecisions == 0)
+            {
+                return $"nobody who fell was considered for a redeploy ({_kills} kill(s))";
+            }
+
             _step = Step.Done;
             return null;
         }
@@ -429,7 +528,7 @@ namespace Shooter.Editor
             var played = _playStartedAt >= 0d ? EditorApplication.timeSinceStartup - _playStartedAt : 0d;
             Debug.Log(string.Format(
                 CultureInfo.InvariantCulture,
-                "{0} step={1} played={2:0.#}s collect errands={3} kills={4} eliminated={5} ended={6} placements={7} errors={8}",
+                "{0} step={1} played={2:0.#}s collect errands={3} kills={4} eliminated={5} crates dropped={9} landed={10} redeploys decided={11} waiting={12} ended={6} placements={7} errors={8}",
                 LogTag,
                 _step,
                 played,
@@ -438,7 +537,11 @@ namespace Shooter.Editor
                 _eliminations,
                 _endedLine ?? "-",
                 _placementsLine ?? "-",
-                _errors.Count));
+                _errors.Count,
+                _cratesDropped,
+                _cratesLanded,
+                _redeployDecisions,
+                _redeploysWaiting));
 
             if (problems.Count == 0 && _step == Step.Done && _winner.HasValue)
             {
@@ -471,6 +574,11 @@ namespace Shooter.Editor
             else
             {
                 Debug.LogError(line);
+            }
+
+            if (SmokeSuite.TakeOver(LogTag, exitCode))
+            {
+                return;
             }
 
             if (Application.isBatchMode)

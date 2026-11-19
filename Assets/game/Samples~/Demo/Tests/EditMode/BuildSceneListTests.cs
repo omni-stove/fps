@@ -106,24 +106,37 @@ namespace Shooter.Tests.EditMode
             Assert.That(BuildSceneList.CaptureTheFlagScene, Is.EqualTo(BuildSceneList.ModeScene(GameRulesAssetBuilder.CaptureTheFlagName)));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.CaptureTheFlagScene));
             Assert.That(BuildSceneList.BattleRoyaleScene, Is.EqualTo(BuildSceneList.ModeScene(GameRulesAssetBuilder.BattleRoyaleName)));
+            Assert.That(BuildSceneList.PayloadScene, Is.EqualTo(BuildSceneList.ModeScene(GameRulesAssetBuilder.PayloadName)));
             Assert.Throws<ArgumentException>(() => BuildSceneList.ModeScene("TeamDeathmatch"));
             Assert.That(BuildSceneList.Scenes.Last(), Is.EqualTo(BuildSceneList.NetTestScene), "the mode scenes go before the net scene");
         }
 
         [Test]
-        public void ListHasTheInfectedAndExtractionScenesRightAfterTheBattleRoyale()
+        public void ListHasTheInfectedExtractionAndPayloadScenesRightAfterTheBattleRoyale()
         {
             var scenes = BuildSceneList.Scenes.ToList();
 
             Assert.That(BuildSceneList.InfectedScene, Is.EqualTo(DemoSample.Root + "/Scenes/Infected.unity"));
             Assert.That(BuildSceneList.ExtractionScene, Is.EqualTo(DemoSample.Root + "/Scenes/Extraction.unity"));
+            Assert.That(BuildSceneList.PayloadScene, Is.EqualTo(DemoSample.Root + "/Scenes/Payload.unity"));
             Assert.That(BuildSceneList.ModeScene(GameRulesAssetBuilder.InfectedName), Is.EqualTo(BuildSceneList.InfectedScene));
             Assert.That(BuildSceneList.ModeScene(GameRulesAssetBuilder.ExtractionName), Is.EqualTo(BuildSceneList.ExtractionScene));
+            Assert.That(BuildSceneList.ModeScene(GameRulesAssetBuilder.PayloadName), Is.EqualTo(BuildSceneList.PayloadScene));
             var start = scenes.IndexOf(BuildSceneList.BattleRoyaleScene) + 1;
             Assert.That(
-                scenes.Skip(start).Take(3),
-                Is.EqualTo(new[] { BuildSceneList.InfectedScene, BuildSceneList.ExtractionScene, BuildSceneList.ModeTestScene }));
+                scenes.Skip(start).Take(4),
+                Is.EqualTo(new[] { BuildSceneList.InfectedScene, BuildSceneList.ExtractionScene, BuildSceneList.PayloadScene, BuildSceneList.ModeTestScene }));
             Assert.That(BuildSceneList.WebScenes, Has.No.Member(BuildSceneList.InfectedScene), "the menu has no button for the modes");
+            Assert.That(BuildSceneList.WebScenes, Has.No.Member(BuildSceneList.PayloadScene), "the browser build has no mode scenes");
+        }
+
+        [Test]
+        public void ThePayloadSceneIsBuiltWhereTheListExpectsIt()
+        {
+            Assert.That(PayloadSceneBuilder.ScenePathValue, Is.EqualTo(BuildSceneList.PayloadScene));
+            Assert.That(new PayloadSceneBuilder().ScenePath, Is.EqualTo(BuildSceneList.PayloadScene));
+            Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.PayloadScene));
+            Assert.That(BuildSceneList.ServerScenes, Has.No.Member(BuildSceneList.PayloadScene), "the dedicated server runs only the net maps");
         }
 
         [Test]

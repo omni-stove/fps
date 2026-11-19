@@ -136,6 +136,64 @@ namespace Shooter.Core.Tests
             Assert.That(japanese.Get("mode.payload.checkpoints"), Is.EqualTo("中継点 {0}/{1}"));
         }
 
+        // Payload・購入・プレイリストは Demo のシーンとルールにつないだので、片方の言語だけに足したキーが画面に出ないよう、ファイルごとにキーをそろえる。
+        [TestCase("modes-payload.json")]
+        [TestCase("economy.json")]
+        [TestCase("playlist.json")]
+        public void ThePayloadEconomyAndPlaylistFilesHaveTheSameKeysInEnglishAndJapanese(string file)
+        {
+            var english = LayerOf(GameLanguage.English, file);
+            var japanese = LayerOf(GameLanguage.Japanese, file);
+
+            Assert.That(english.Count, Is.GreaterThan(0), "en/" + file);
+            Assert.That(english.Keys.Except(japanese.Keys, StringComparer.Ordinal), Is.Empty, "only in en/" + file);
+            Assert.That(japanese.Keys.Except(english.Keys, StringComparer.Ordinal), Is.Empty, "missing from en/" + file);
+            foreach (var key in japanese.Keys)
+            {
+                Assert.That(StringTable.PlaceholdersOf(english.Get(key)), Is.EqualTo(StringTable.PlaceholdersOf(japanese.Get(key))), file + " " + key);
+            }
+        }
+
+        [Test]
+        public void TheEconomyTableNamesEveryPurchaseVerdictAndItemKind()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var economy = LayerOf(language, "economy.json");
+                var code = GameLanguages.Code(language);
+
+                Assert.That(economy.Keys.All(key => key.StartsWith("economy.", StringComparison.Ordinal)), Is.True, code);
+                foreach (PurchaseVerdict verdict in Enum.GetValues(typeof(PurchaseVerdict)))
+                {
+                    Assert.That(economy.Contains(BuyMenuPanel.VerdictKeyOf(verdict)), Is.True, $"{code}: {verdict}");
+                }
+
+                foreach (BuyItemKind kind in Enum.GetValues(typeof(BuyItemKind)))
+                {
+                    Assert.That(economy.Contains(BuyMenuPanel.KindKeyOf(kind)), Is.True, $"{code}: {kind}");
+                }
+            }
+        }
+
+        [Test]
+        public void ThePlaylistTableNamesTheDemoModesInEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var playlist = LayerOf(language, "playlist.json");
+                var code = GameLanguages.Code(language);
+
+                Assert.That(playlist.Keys.All(key => key.StartsWith("playlist.", StringComparison.Ordinal)), Is.True, code);
+                foreach (var scene in new[] { "Payload", "SearchAndDestroy", "BattleRoyale" })
+                {
+                    Assert.That(playlist.Contains(PlaylistPanel.ModeKeyOf(scene)), Is.True, $"{code}: {scene}");
+                }
+            }
+
+            Assert.That(LayerOf(GameLanguage.Japanese, "playlist.json").Get("playlist.mode.Payload"), Is.EqualTo("ペイロード"));
+            Assert.That(LayerOf(GameLanguage.English, "playlist.json").Get("playlist.mode.SearchAndDestroy"), Is.EqualTo("Search and Destroy"));
+        }
+
         [Test]
         public void TheSurvivalModeTextsAreReadFromTheJapaneseModesSurvivalTable()
         {
@@ -461,6 +519,13 @@ namespace Shooter.Core.Tests
         private static StringTable Load(GameLanguage language)
         {
             return JapaneseGameTextSetUp.LoadTable(language);
+        }
+
+        private static StringTable LayerOf(GameLanguage language, string file)
+        {
+            return JapaneseGameTextSetUp.LoadLayers(language)
+                .Single(layer => string.Equals(System.IO.Path.GetFileName(layer.Key), file, StringComparison.Ordinal))
+                .Value;
         }
 
         // 和文の句読点・かな・漢字 (U+3000〜U+9FFF) と全角の記号 (U+FF00〜U+FFEF)。

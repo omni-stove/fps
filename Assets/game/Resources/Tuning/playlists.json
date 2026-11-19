@@ -1,3 +1,23 @@
 {
-  "playlists": []
+  "playlists": [
+    {
+      "id": "demo-objectives",
+      "order": "Sequential",
+      "nextDelaySeconds": 10,
+      "entries": [
+        { "scene": "Payload" },
+        { "scene": "SearchAndDestroy" },
+        { "scene": "BattleRoyale" }
+      ]
+    },
+    {
+      "id": "demo-mutated",
+      "order": "Shuffle",
+      "nextDelaySeconds": 10,
+      "entries": [
+        { "scene": "Payload", "mutators": ["low-health"] },
+        { "scene": "BattleRoyale", "mutators": ["no-regen"] }
+      ]
+    }
+  ]
 }

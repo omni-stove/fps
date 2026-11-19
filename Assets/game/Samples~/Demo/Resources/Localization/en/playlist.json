@@ -13,5 +13,10 @@
   "playlist.mutator.low-health": "Half health",
   "playlist.mutator.headshots-only": "Headshots only",
   "playlist.mutator.no-regen": "No regeneration",
-  "playlist.mutator.infinite-ammo": "Infinite ammo"
+  "playlist.mutator.infinite-ammo": "Infinite ammo",
+  "playlist.name.demo-objectives": "Objective rotation",
+  "playlist.name.demo-mutated": "Mutated mix",
+  "playlist.mode.Payload": "Payload",
+  "playlist.mode.SearchAndDestroy": "Search and Destroy",
+  "playlist.mode.BattleRoyale": "Battle Royale"
 }

@@ -52,7 +52,8 @@ namespace Shooter.Server
             float restartDelaySeconds = ServerMatch.DefaultRestartDelaySeconds,
             ServerRulesData rules = null,
             IReadOnlyList<ServerMapData> maps = null,
-            ServerBanList bans = null)
+            ServerBanList bans = null,
+            ServerPlaylist playlist = null)
         {
             _bans = bans;
             _rules = rules;
@@ -72,6 +73,11 @@ namespace Shooter.Server
                 MaxPlayers = MaxPlayers,
             };
             Match.UseMaps(map, maps);
+            if (playlist != null)
+            {
+                Match.UsePlaylist(playlist);
+            }
+
             Messenger = new ServerMessenger(transport);
             Match.Ended += _ => _matchEndedWhileDraining |= _drain.IsDraining;
         }
@@ -106,6 +112,15 @@ namespace Shooter.Server
             _started = true;
             var options = _launch.Options;
             _host.Start(new ServerContext(options, _launch.Version, _log, _map, Match, Messenger, this, _rules, Bodies, _transport as IConnectionUserIds, _transport as IConnectionAddresses));
+
+            // 待ち受ける前に断るのは、使えない項目のあるプレイリストで人を入れてから、試合の合間に気づくことにしないため
+            var playlistProblem = Match.CheckPlaylist();
+            if (playlistProblem != null)
+            {
+                StopHostAfterFailedStart();
+                throw new InvalidOperationException(playlistProblem);
+            }
+
             try
             {
                 _transport.Listen(options.Address, options.Port);
@@ -113,15 +128,7 @@ namespace Shooter.Server
             catch (Exception e) when (e is InvalidOperationException || e is ArgumentException)
             {
                 ListenFailed = true;
-                try
-                {
-                    _host.Stop();
-                }
-                catch (AggregateException stopFailure)
-                {
-                    _log.WriteLine(ServerHost.LogTag + " " + stopFailure.Message);
-                }
-
+                StopHostAfterFailedStart();
                 throw;
             }
 
@@ -133,6 +140,18 @@ namespace Shooter.Server
             if (_events.Enabled)
             {
                 _events.Write(ServerEventLog.ServerStarted(_utcNow(), _launch.ServerVersion, options.Transport, options.Endpoint));
+            }
+        }
+
+        private void StopHostAfterFailedStart()
+        {
+            try
+            {
+                _host.Stop();
+            }
+            catch (AggregateException stopFailure)
+            {
+                _log.WriteLine(ServerHost.LogTag + " " + stopFailure.Message);
             }
         }
 

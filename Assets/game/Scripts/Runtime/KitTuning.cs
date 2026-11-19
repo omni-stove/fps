@@ -29,6 +29,8 @@ namespace Shooter.Runtime
 
         public const string SupplyDropsResourcePath = "Tuning/supply-drops";
 
+        public const string RedeployResourcePath = RedeployJson.ResourcePath;
+
         public const string MutatorsResourcePath = "Tuning/mutators";
 
         public const string PlaylistsResourcePath = "Tuning/playlists";
@@ -61,6 +63,9 @@ namespace Shooter.Runtime
 
         public static IReadOnlyList<GameRulesMutator> Mutators =>
             Load(c => c.MutatorsTuning, MutatorsResourcePath, MutatorJson.Parse, MutatorJson.Empty);
+
+        public static IReadOnlyList<Playlist> Playlists =>
+            Load(c => c.PlaylistsTuning, PlaylistsResourcePath, PlaylistJson.Parse, PlaylistJson.Empty);
 
         public static void Reload()
         {

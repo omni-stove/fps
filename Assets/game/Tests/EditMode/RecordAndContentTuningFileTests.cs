@@ -142,6 +142,7 @@ namespace Shooter.Tests.EditMode
             (KitTuning.PayloadResourcePath, c => c.PayloadTuning, (c, v) => c.PayloadTuning = v),
             (KitTuning.EconomyResourcePath, c => c.EconomyTuning, (c, v) => c.EconomyTuning = v),
             (KitTuning.SupplyDropsResourcePath, c => c.SupplyDropsTuning, (c, v) => c.SupplyDropsTuning = v),
+            (KitTuning.RedeployResourcePath, c => c.RedeployTuning, (c, v) => c.RedeployTuning = v),
             (KitTuning.MutatorsResourcePath, c => c.MutatorsTuning, (c, v) => c.MutatorsTuning = v),
             (KitTuning.PlaylistsResourcePath, c => c.PlaylistsTuning, (c, v) => c.PlaylistsTuning = v),
         };
@@ -173,7 +174,7 @@ namespace Shooter.Tests.EditMode
                 paths.Add(slot.path);
             }
 
-            Assert.That(paths, Is.EqualTo(new[] { "Tuning/payload", "Tuning/economy", "Tuning/supply-drops", "Tuning/mutators", "Tuning/playlists" }));
+            Assert.That(paths, Is.EqualTo(new[] { "Tuning/payload", "Tuning/economy", "Tuning/supply-drops", "Tuning/redeploy", "Tuning/mutators", "Tuning/playlists" }));
             Assert.That(paths, Is.Unique);
         }
 

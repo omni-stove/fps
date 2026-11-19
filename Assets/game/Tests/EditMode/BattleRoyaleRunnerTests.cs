@@ -356,6 +356,124 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ABledOutPlayerWaitsThenRedeploysByParachuteFromTheDropHeight()
+        {
+            _runner.DropHeight = 30f;
+            var player = Member("Player", 0, ZeroSpawn);
+            var parachute = AttachParachute(player, Parachute.On);
+            var mate = Member("Bot-0-1", 0, ZeroSpawnTwo);
+            var enemy = Member("Bot-1-1", 1, OneSpawn);
+            var enemyMate = Member("Bot-1-2", 1, OneSpawnTwo);
+            Begin(new[] { player, mate, enemy, enemyMate }, player, new RedeploySpec(charges: 1, lastPhaseIndex: 1, delaySeconds: 8f));
+
+            KillBy(enemy, player);
+            Assert.That(player.Damageable.IsDowned, Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Mode] redeploy player=0 verdict=Waiting phase=1 left=0 in=8.00");
+            BleedOut();
+
+            Assert.That(player.IsAlive, Is.False);
+            Assert.That(_runner.BattleRoyale.IsAwaitingRedeploy(0), Is.True);
+            Assert.That(Detail().LocalRedeploySeconds, Is.EqualTo(3f), "the wait started in the 5-second tick that bled out");
+            Assert.That(Detail().LocalRedeploysLeft, Is.EqualTo(0));
+
+            _runner.Tick(2f);
+            Assert.That(player.IsAlive, Is.False);
+
+            LogAssert.Expect(LogType.Log, "[Mode] drop player=0 height=30.00 parachute=Open");
+            _runner.Tick(1f);
+
+            Assert.That(player.IsAlive, Is.True);
+            Assert.That(parachute.IsOpen, Is.True);
+            Assert.That(player.transform.position.y, Is.EqualTo(ZeroSpawn.y + 30f).Within(1e-2f));
+            Assert.That(_runner.BattleRoyale.IsStanding(0), Is.True);
+            Assert.That(Detail().LocalRedeploySeconds, Is.Null);
+            Assert.That(Detail().LocalRedeploysLeft, Is.EqualTo(0), "the redeploy is still open but this player has used theirs");
+            Assert.That(_runner.Status.RespawnSeconds, Is.Null);
+        }
+
+        [Test]
+        public void NoOneRedeploysOnceTheZoneHasPassedTheLastPhase()
+        {
+            var zone = Track(new GameObject("Zone")).AddComponent<ShrinkingZone>();
+            zone.ShowsBoundary = false;
+            zone.BeginsOnStart = false;
+            zone.UseRandomSeed = false;
+            zone.InitialRadius = 30f;
+            zone.SetPhases(new[] { new ShrinkingZone.PhaseSettings(1f, 1f, 28f, 1f), new ShrinkingZone.PhaseSettings(100f, 1f, 26f, 1f) });
+            _runner.Zone = zone;
+            var player = Member("Player", 0, ZeroSpawn);
+            var mate = Member("Bot-0-1", 0, ZeroSpawnTwo);
+            var enemy = Member("Bot-1-1", 1, OneSpawn);
+            var enemyMate = Member("Bot-1-2", 1, OneSpawnTwo);
+            Begin(new[] { player, mate, enemy, enemyMate }, player, new RedeploySpec(charges: 1, lastPhaseIndex: 0, delaySeconds: 1f));
+
+            Assert.That(Detail().LocalRedeploysLeft, Is.EqualTo(1), "the first circle still allows a redeploy");
+
+            zone.Tick(3f);
+            _runner.Tick(0f);
+
+            Assert.That(_runner.BattleRoyale.ZonePhaseIndex, Is.EqualTo(1));
+            Assert.That(Detail().LocalRedeploysLeft, Is.Null, "past the last phase the HUD no longer counts the redeploys");
+
+            KillBy(enemy, player);
+            LogAssert.Expect(LogType.Log, "[Mode] redeploy player=0 verdict=PastPhase phase=2 left=1");
+            BleedOut();
+            _runner.Tick(5f);
+
+            Assert.That(player.IsAlive, Is.False);
+            Assert.That(_runner.BattleRoyale.IsAwaitingRedeploy(0), Is.False);
+            Assert.That(Detail().LocalRedeploySeconds, Is.Null);
+        }
+
+        [Test]
+        public void ASquadWipedWhileWaitingStaysOut()
+        {
+            var player = Member("Player", 0, ZeroSpawn);
+            var mate = Member("Bot-0-1", 0, ZeroSpawnTwo);
+            var enemy = Member("Bot-1-1", 1, OneSpawn);
+            var other = Member("Bot-2-1", 2, new Vector3(-8f, 0f, 0f));
+            Begin(new[] { player, mate, enemy, other }, player, new RedeploySpec(charges: 1, lastPhaseIndex: 1, delaySeconds: 8f));
+            KillBy(enemy, player);
+            BleedOut();
+            Assert.That(_runner.BattleRoyale.IsAwaitingRedeploy(0), Is.True);
+
+            LogAssert.Expect(LogType.Log, "[Mode] redeploy player=1 verdict=SquadWiped phase=1 left=1");
+            KillBy(enemy, mate);
+            _runner.Tick(10f);
+
+            Assert.That(player.IsAlive, Is.False);
+            Assert.That(_runner.BattleRoyale.GetPlacement(new Side(0)), Is.EqualTo(3));
+            Assert.That(Detail().LocalRedeploySeconds, Is.Null);
+        }
+
+        [Test]
+        public void TheRedeployTuningComesFromTheDefinitionBeforeTheBundledFile()
+        {
+            var bundled = _runner.EffectiveRedeploy;
+            Assert.That(BattleRoyaleRunner.RedeployTuning.Charges, Is.EqualTo(RedeploySpec.DefaultCharges), "the kit ships Resources/Tuning/redeploy.json with the defaults");
+            Assert.That(BattleRoyaleRunner.RedeployTuning.LastPhaseIndex, Is.EqualTo(RedeploySpec.DefaultLastPhaseIndex));
+            Assert.That(BattleRoyaleRunner.RedeployTuning.DelaySeconds, Is.EqualTo(RedeploySpec.DefaultDelaySeconds));
+
+            var json = new TextAsset("{ \"charges\": 3, \"lastPhaseIndex\": 2, \"delaySeconds\": 4 }") { name = "Redeploy" };
+            _objects.Add(json);
+            var definition = ScriptableObject.CreateInstance<BattleRoyaleDefinition>();
+            _objects.Add(definition);
+            definition.RedeployTuning = json;
+            _runner.Definition = definition;
+
+            Assert.That(_runner.EffectiveRedeploy.Charges, Is.EqualTo(3));
+            Assert.That(definition.ReadRedeploy().LastPhaseIndex, Is.EqualTo(2));
+            var br = _runner.CreateConfiguredBattleRoyale(ActionRules.Default);
+            Assert.That(br.RedeployRules.DelaySeconds, Is.EqualTo(4f));
+            Assert.That(definition.CreateBattleRoyale(ActionRules.Default).RedeployRules, Is.SameAs(RedeploySpec.None));
+
+            definition.RedeployTuning = null;
+            Assert.That(definition.ReadRedeploy(), Is.Null);
+            Assert.That(_runner.EffectiveRedeploy.Charges, Is.EqualTo(bundled.Charges));
+        }
+
+        [Test]
         public void BeginNeedsABattleRoyaleSession()
         {
             var player = Member("Player", 0, ZeroSpawn);
@@ -432,10 +550,17 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentOutOfRangeException>(() => _runner.DropHeight = float.NaN);
         }
 
-        private void Begin(IReadOnlyList<SideMember> members, SideMember localPlayer)
+        private void Begin(IReadOnlyList<SideMember> members, SideMember localPlayer, RedeploySpec redeploy = null)
         {
-            var br = BattleRoyaleRunner.CreateBattleRoyale(4, 2, 0f, ActionRules.Default);
+            var br = BattleRoyaleRunner.CreateBattleRoyale(4, 2, 0f, ActionRules.Default, redeploy);
             _runner.Begin(br, members, _spawns, localPlayer);
+        }
+
+        // 失血は 15 秒。倒れる Tick を 5 秒にして、その Tick で戻る待ちがどれだけ進むかを決まった値にする。
+        private void BleedOut()
+        {
+            _runner.Tick(ActionRules.DefaultDownedBleedoutSeconds - 5f);
+            _runner.Tick(5f);
         }
 
         private static void KillBy(SideMember killer, SideMember victim)

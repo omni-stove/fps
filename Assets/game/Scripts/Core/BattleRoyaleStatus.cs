@@ -24,6 +24,17 @@ namespace Shooter.Core
             IsLocalPlayerAtSupplyDrop = localPlayerId.HasValue && isLocalPlayerAtSupplyDrop;
             InteractKeyLabel = interactKeyLabel;
 
+            if (localPlayerId.HasValue && session.Mode.HasPlayer(localPlayerId.Value))
+            {
+                LocalRedeploySeconds = session.GetRedeployRemaining(localPlayerId.Value);
+                var squadOut = session.GetPlacement(session.Mode.GetSide(localPlayerId.Value)).HasValue;
+                var downedWithoutReturn = session.Mode.IsDown(localPlayerId.Value) && !LocalRedeploySeconds.HasValue;
+                LocalRedeploysLeft = (session.IsRedeployOpen && !squadOut && !downedWithoutReturn)
+                    || LocalRedeploySeconds.HasValue
+                    ? session.GetRedeploysLeft(localPlayerId.Value)
+                    : (int?)null;
+            }
+
             foreach (var drop in SupplyDrops)
             {
                 if (drop.HasLanded)
@@ -57,6 +68,10 @@ namespace Shooter.Core
         public bool IsLocalPlayerAtSupplyDrop { get; }
 
         public string InteractKeyLabel { get; }
+
+        public float? LocalRedeploySeconds { get; }
+
+        public int? LocalRedeploysLeft { get; }
 
         private static SupplyDropMark[] Copy(IReadOnlyList<SupplyDropMark> drops)
         {

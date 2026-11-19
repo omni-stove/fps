@@ -20,18 +20,24 @@ namespace Shooter.Core
 
         public event Action<Side?> Ended;
 
+        // 倒れた人ごとに、戻る待ちに入ったか、なぜ戻らないかを知らせる。待ちが 0 秒なら、この後すぐ Mode.RespawnReady が来る。
+        public event Action<int, RedeployVerdict> RedeployDecided;
+
         private readonly ModeSession _mode;
 
         private readonly DownedTracker _downed;
+
+        private readonly Redeploy _redeploy;
 
         private readonly Dictionary<Side, int> _placements = new Dictionary<Side, int>();
         private readonly List<Side> _entrants = new List<Side>();
 
         private readonly Dictionary<Side, long> _finalCounts = new Dictionary<Side, long>();
 
-        public BattleRoyaleSession(int squadCount, int squadSize, float timeLimitSeconds, ActionRules actions)
+        public BattleRoyaleSession(int squadCount, int squadSize, float timeLimitSeconds, ActionRules actions, RedeploySpec redeploy = null)
         {
             Actions = actions ?? throw new ArgumentNullException(nameof(actions));
+            _redeploy = new Redeploy(redeploy ?? RedeploySpec.None);
             if (actions.Downed == Downed.Revive)
             {
                 // ダウン中は撃っても倒れないので、DownedTracker のダウン中の体力は使わない。1 以上でないと作れないので 1 を入れる。
@@ -42,7 +48,7 @@ namespace Shooter.Core
                 new Squads(squadCount, squadSize),
                 timeLimitSeconds,
                 Array.Empty<IScoreRule>(),
-                new NoRespawn(),
+                new RedeployPolicy(this),
                 new IWinCondition[] { new LastSquadStanding(this), new MostStandingAtTimeUp(this) });
             _mode.Ended += OnModeEnded;
         }
@@ -58,6 +64,12 @@ namespace Shooter.Core
         public int EntrantCount => _entrants.Count;
 
         public int SquadsRemaining => _entrants.Count - _placements.Count;
+
+        public RedeploySpec RedeployRules => _redeploy.Spec;
+
+        public int ZonePhaseIndex => _redeploy.PhaseIndex;
+
+        public bool IsRedeployOpen => _redeploy.IsOpen;
 
         public void Start()
         {
@@ -83,6 +95,19 @@ namespace Shooter.Core
         }
 
         public bool IsDowned(int playerId) => _downed != null && _downed.IsDowned(playerId);
+
+        // 戻れるかは倒されたときの段階で決めるので、待っている間に段階が進んでも待ちは続く。
+        public void SetZonePhase(int phaseIndex) => _redeploy.SetPhase(phaseIndex);
+
+        public int GetRedeploysLeft(int playerId)
+        {
+            RequirePlayer(playerId, nameof(playerId));
+            return _redeploy.ChargesLeft(playerId);
+        }
+
+        public bool IsAwaitingRedeploy(int playerId) => IsLive && _mode.HasPlayer(playerId) && _mode.IsAwaitingRespawn(playerId);
+
+        public float? GetRedeployRemaining(int playerId) => IsAwaitingRedeploy(playerId) ? _redeploy.GetRemaining(playerId) : null;
 
         public IReadOnlyList<int> GetDownedIds() => _downed != null ? _downed.GetDownedIds() : (IReadOnlyList<int>)Array.Empty<int>();
 
@@ -344,12 +369,34 @@ namespace Shooter.Core
             foreach (var squad in eliminated)
             {
                 _placements[squad] = place;
+                CancelRedeploys(squad);
             }
 
             foreach (var squad in eliminated)
             {
                 SquadEliminated?.Invoke(squad, place);
             }
+        }
+
+        private void CancelRedeploys(Side squad)
+        {
+            foreach (var id in _mode.GetPlayerIds())
+            {
+                if (_mode.GetSide(id) == squad)
+                {
+                    _redeploy.Cancel(id);
+                }
+            }
+        }
+
+        // ダウンした味方しか残っていない分隊も、起こせる人がいないので全滅として扱う。
+        private RedeployVerdict DecideRedeploy(int playerId)
+        {
+            var verdict = HasOtherStanding(_mode.GetSide(playerId), playerId)
+                ? _redeploy.Begin(playerId)
+                : RedeployVerdict.SquadWiped;
+            RedeployDecided?.Invoke(playerId, verdict);
+            return verdict;
         }
 
         private bool IsOut(Side squad) => _mode.CountMembers(squad) == 0 || _mode.IsSideEliminated(squad);
@@ -405,6 +452,72 @@ namespace Shooter.Core
             {
                 throw new ArgumentOutOfRangeException(paramName, playerId, "no player with this id");
             }
+        }
+
+        // 戻るかは分隊に立っている人がいるかで変わり、IndividualRespawn では見られないので、このセッションを見る口を ModeSession に渡す。
+        private sealed class RedeployPolicy : IRespawnPolicy
+        {
+            private readonly BattleRoyaleSession _owner;
+
+            public RedeployPolicy(BattleRoyaleSession owner)
+            {
+                _owner = owner;
+            }
+
+            public float? SecondsUntilNextWave => null;
+
+            public bool WillReturn(ModeSession session, int playerId)
+            {
+                return _owner._redeploy.IsWaiting(playerId) && _owner.HasOtherStanding(session.GetSide(playerId), playerId);
+            }
+
+            public bool BeginWait(ModeSession session, int playerId)
+            {
+                return _owner.DecideRedeploy(playerId) == RedeployVerdict.Waiting && _owner._redeploy.Land(playerId);
+            }
+
+            public void Cancel(int playerId) => _owner._redeploy.Cancel(playerId);
+
+            public void CancelAll() => _owner._redeploy.CancelAll();
+
+            public void Reset() => _owner._redeploy.Reset();
+
+            public void Tick(ModeSession session, float elapsedSeconds, Action<int> respawn)
+            {
+                if (session == null)
+                {
+                    throw new ArgumentNullException(nameof(session));
+                }
+
+                if (respawn == null)
+                {
+                    throw new ArgumentNullException(nameof(respawn));
+                }
+
+                foreach (var playerId in _owner._redeploy.Tick(elapsedSeconds))
+                {
+                    if (session.State != GameModeState.Playing)
+                    {
+                        return;
+                    }
+
+                    if (!_owner._redeploy.IsReady(playerId))
+                    {
+                        continue;
+                    }
+
+                    if (!session.HasPlayer(playerId) || !_owner.HasOtherStanding(session.GetSide(playerId), playerId))
+                    {
+                        _owner._redeploy.Cancel(playerId);
+                        continue;
+                    }
+
+                    _owner._redeploy.Land(playerId);
+                    respawn(playerId);
+                }
+            }
+
+            public float? GetRemaining(int playerId) => _owner._redeploy.GetRemaining(playerId);
         }
 
         // LastSideStandingWin は誰もいない分隊を勝ちにしうるので使わない。

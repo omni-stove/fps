@@ -47,6 +47,7 @@ namespace Shooter.Tests.EditMode
             nameof(BattleRoyaleSmokeRun),
             nameof(DominationSmokeRun),
             nameof(CaptureTheFlagSmokeRun),
+            nameof(PayloadSmokeRun),
         };
 
         [Test]

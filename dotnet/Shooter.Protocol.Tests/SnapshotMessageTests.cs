@@ -59,6 +59,69 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void AKillConfirmedMatchCarriesItsDeniedCountsBesideItsConfirms()
+        {
+            var sent = Build(100, 0f);
+            sent.Match.Objective = MatchObjective.KillConfirmed;
+            sent.Match.AlphaPoints = 4;
+            sent.Match.BravoPoints = 2;
+            sent.Match.AlphaDenied = 3;
+            sent.Match.BravoDenied = 5;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Match.AlphaPoints, Is.EqualTo(4));
+            Assert.That(got.Match.BravoPoints, Is.EqualTo(2));
+            Assert.That(got.Match.AlphaDenied, Is.EqualTo(3));
+            Assert.That(got.Match.BravoDenied, Is.EqualTo(5));
+        }
+
+        [Test]
+        public void AChangedDeniedCountSendsTheObjectivePartAndResolves()
+        {
+            // 目的の部分は目的の種類 (1 バイト)、点 2 つと阻止の数 2 つ (4 バイトずつ)
+            const int objectiveBytes = 1 + 4 + 4 + 4 + 4;
+            var baseline = Build(100, 0f);
+            var unchanged = Build(101, 0f);
+            var current = Build(101, 0f);
+            current.Match.BravoDenied = 1;
+            var received = Send(baseline, null);
+
+            var got = Send(current, baseline);
+
+            Assert.That(Size(current, baseline) - Size(unchanged, baseline), Is.EqualTo(objectiveBytes));
+            Assert.That(got.TryResolve(received), Is.True);
+            AssertSame(current, got);
+        }
+
+        [Test]
+        public void AnUnchangedDeniedCountIsTakenFromTheBaseline()
+        {
+            var baseline = Build(100, 0f);
+            baseline.Match.AlphaDenied = 2;
+            var current = Build(101, 0f);
+            current.Match.AlphaDenied = 2;
+            current.Match.AlphaScore = 9;
+            var received = Send(baseline, null);
+
+            var got = Send(current, baseline);
+            Assert.That(got.TryResolve(received), Is.True);
+
+            Assert.That(got.Match.AlphaDenied, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ANegativeDeniedCountIsNotRead()
+        {
+            var sent = Build(100, 0f);
+            sent.Match.BravoDenied = -1;
+            var writer = new MessageWriter();
+            writer.WriteMessage(sent);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(writer.AsSegment()));
+        }
+
+        [Test]
         public void AMatchWithoutRoundsCarriesNoRoundPhase()
         {
             var sent = Build(100, 0f);
@@ -842,6 +905,8 @@ namespace Shooter.Protocol.Tests
             Assert.That(am.Objective, Is.EqualTo(em.Objective));
             Assert.That(am.AlphaPoints, Is.EqualTo(em.AlphaPoints));
             Assert.That(am.BravoPoints, Is.EqualTo(em.BravoPoints));
+            Assert.That(am.AlphaDenied, Is.EqualTo(em.AlphaDenied));
+            Assert.That(am.BravoDenied, Is.EqualTo(em.BravoDenied));
             Assert.That(am.HasRound, Is.EqualTo(em.HasRound));
             Assert.That(am.Round, Is.EqualTo(em.Round));
             Assert.That(am.HasActivePoint, Is.EqualTo(em.HasActivePoint));

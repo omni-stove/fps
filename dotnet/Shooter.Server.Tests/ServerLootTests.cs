@@ -37,6 +37,7 @@ namespace Shooter.Server.Tests
         private ServerMatch _match;
         private ServerContext _context;
         private ServerHost _host;
+        private ServerMovement _movement;
         private MatchRulesModule _rules;
         private ServerCombat _combat;
         private ServerInventories _inventories;
@@ -421,6 +422,57 @@ namespace Shooter.Server.Tests
             Assert.That(_loot.IsOpened(nextArmory), Is.False);
         }
 
+        // BR の目的が触れる口 (ServerBattleRoyaleWorld) が、同じ試合の移動・戦闘・持ち物・箱のモジュールに届くこと
+        [Test]
+        public void TheBattleRoyaleWorldReachesTheModulesOfTheMatch()
+        {
+            Start();
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var world = new ServerBattleRoyaleWorld(_movement, _combat, _inventories, _loot);
+
+            var boxes = new List<ServerLootBox>();
+            world.CollectUnopenedBoxes(boxes);
+            Assert.That(boxes.Select(b => b.ItemId), Is.EqualTo(new[] { _firstBox, _armoryBox }), _log.ToString());
+            Assert.That(boxes[0].HasWeapon, Is.False);
+            Assert.That(boxes[1].HasWeapon, Is.True);
+            Assert.That(boxes[1].Kind, Is.EqualTo(ObjectiveItemKind.LootBox));
+            Assert.That(boxes[1].Position, Is.EqualTo(_armoryAt));
+            Assert.That(boxes[1].Reach, Is.EqualTo(1.6f));
+
+            Assert.That(world.IsArmed(1), Is.True);
+            world.Disarm(1);
+            Assert.That(world.IsArmed(1), Is.False);
+            Assert.That(_inventories.InventoryOf(1).HoldsWeapon(TestRules.RifleId), Is.False, "the copy in the inventory goes too");
+
+            MoveTo(1, _armoryAt);
+            Assert.That(world.Open(1, _armoryBox).IsAccepted, Is.True, _log.ToString());
+            Assert.That(world.IsArmed(1), Is.True, "the shotgun from the box");
+            boxes.Clear();
+            world.CollectUnopenedBoxes(boxes);
+            Assert.That(boxes.Select(b => b.ItemId), Is.EqualTo(new[] { _firstBox }), "an opened box is no longer offered");
+
+            var crate = world.SpawnCrate(new Vector3(0f, 0.5f, 20f), _armory, ServerLoot.DefaultDropReach);
+            Assert.That(_loot.TryGetContents(crate, out _, out _), Is.True);
+
+            var health = _rules.Session.GetHealth(2);
+            Assert.That(world.HurtByZone(2, 7), Is.EqualTo(DamageOutcome.Damaged));
+            Assert.That(_rules.Session.GetHealth(2), Is.EqualTo(health - 7));
+
+            Assert.That(world.Drop(2, new Vector3(5f, 40f, 0f)), Is.True);
+            Assert.That(world.Drop(9, new Vector3(5f, 40f, 0f)), Is.False, "no mover for a player who is not here");
+
+            var dropped = world.SpawnDeathBox(2);
+            Assert.That(dropped.HasValue, Is.True);
+            Assert.That(world.IsArmed(2), Is.False, "the weapons went into the box");
+
+            Assert.Throws<ArgumentNullException>(() => new ServerBattleRoyaleWorld(null, _combat, _inventories, _loot));
+            Assert.Throws<ArgumentNullException>(() => new ServerBattleRoyaleWorld(_movement, null, _inventories, _loot));
+            Assert.Throws<ArgumentNullException>(() => new ServerBattleRoyaleWorld(_movement, _combat, null, _loot));
+            Assert.Throws<ArgumentNullException>(() => new ServerBattleRoyaleWorld(_movement, _combat, _inventories, null));
+        }
+
         [Test]
         public void TheConstructorChecksItsArguments()
         {
@@ -515,6 +567,7 @@ namespace Shooter.Server.Tests
                 new StubControl(),
                 data);
             var movement = new ServerMovement(ServerModules.MotorSettingsFrom(data));
+            _movement = movement;
             _rules = new MatchRulesModule((_, _, _) => _objective);
             _combat = new ServerCombat(_rules, movement);
             _inventories = new ServerInventories(_rules, _combat);

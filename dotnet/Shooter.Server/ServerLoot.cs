@@ -169,9 +169,15 @@ namespace Shooter.Server
         }
 
         // 物資投下の箱。表に無い Id なら空の箱を置く (オフラインの SupplyDropper と同じ)。返すのはスナップショットの物の Id
-        internal int SpawnCrate(Vector3 position, string tableId)
+        // reach を渡さなければコンストラクタの届く距離。物資投下の設定の値はここから渡す
+        internal int SpawnCrate(Vector3 position, string tableId, float? reach = null)
         {
             ArgumentNullException.ThrowIfNull(tableId);
+            if (reach.HasValue && (!(reach.Value > 0f) || float.IsInfinity(reach.Value)))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reach), reach, "reach must be positive and finite");
+            }
+
             if (!float.IsFinite(position.X) || !float.IsFinite(position.Y) || !float.IsFinite(position.Z))
             {
                 throw new ArgumentOutOfRangeException(nameof(position), position, "position must be finite");
@@ -179,7 +185,7 @@ namespace Shooter.Server
 
             RequireStarted();
 
-            var box = new Box(NextItemId(), ObjectiveItemKind.SupplyCrate, position, _dropReach, null);
+            var box = new Box(NextItemId(), ObjectiveItemKind.SupplyCrate, position, reach ?? _dropReach, null);
             Fill(box, tableId, "crate");
             _boxes.Add(box);
             _log.WriteLine(ServerLootLog.Box(box.ItemId, box.Kind, "crate:" + tableId, position, box.Weapons.Count, box.Items.Count));
@@ -296,6 +302,19 @@ namespace Shooter.Server
         internal bool IsOpened(int itemId)
         {
             return Find(itemId)?.Opened ?? false;
+        }
+
+        // Bot の行き先 (BR の BattleRoyaleBotPlanner) を選ぶために、まだ開けていない箱を置いた順に足す。並びを空にしないのは、呼ぶ側が使い回すため
+        internal void CollectUnopened(List<ServerLootBox> boxes)
+        {
+            ArgumentNullException.ThrowIfNull(boxes);
+            foreach (var box in _boxes)
+            {
+                if (!box.Opened)
+                {
+                    boxes.Add(new ServerLootBox(box.ItemId, box.Kind, box.Position, box.Reach, box.Weapons.Count > 0));
+                }
+            }
         }
 
         // 断る理由は安いものから確かめ、目的に尋ねるのは最後にする。目的が受けたことを数える (開けた数など) なら、その後で断って数え違えさせないため

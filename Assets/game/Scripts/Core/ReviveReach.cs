@@ -3,7 +3,7 @@ using System.Numerics;
 
 namespace Shooter.Core
 {
-    // TeamDeathmatchSession は距離を見ないので、サーバーはここで距離・チーム・状態をそろえて確かめてから TryRevive に渡す。
+    // TeamDeathmatchSession は距離を見ないので、サーバーはここで距離・味方 (AreAllies)・状態をそろえて確かめてから TryRevive に渡す。
     public static class ReviveReach
     {
         public const float DefaultRange = 1.5f;
@@ -41,7 +41,7 @@ namespace Shooter.Core
                 return ReviveRejection.Self;
             }
 
-            if (session.GetTeam(reviverId) != session.GetTeam(targetId))
+            if (!session.AreAllies(reviverId, targetId))
             {
                 return ReviveRejection.Enemy;
             }

@@ -31,7 +31,6 @@ namespace Shooter.Core
 
         public const float DefaultReconnectGraceSeconds = 60f;
 
-        private static readonly Team[] _teams = { Team.Alpha, Team.Bravo };
         private static readonly int[] _noAssisters = Array.Empty<int>();
 
         private readonly TeamDeathmatch _match;
@@ -42,6 +41,7 @@ namespace Shooter.Core
         private readonly SpawnSelector _selector;
         private SpawnPoint[] _spawnPoints;
         private readonly Func<int, Vector3> _positionOf;
+        private readonly Func<int, int, bool> _areAllies;
 
         // playerId の昇順に回して、同じ入力なら同じ結果になるようにする。
         private readonly SortedDictionary<int, Health> _health = new SortedDictionary<int, Health>();
@@ -97,7 +97,8 @@ namespace Shooter.Core
             Func<int, Vector3> positionOf,
             float? restartDelaySeconds = null,
             float reconnectGraceSeconds = DefaultReconnectGraceSeconds,
-            AssistSpec assist = null)
+            AssistSpec assist = null,
+            Func<int, int, bool> areAllies = null)
         {
             if (spec == null)
             {
@@ -125,6 +126,7 @@ namespace Shooter.Core
             _spawnPoints = CopySpawnPoints(spawnPoints, nameof(spawnPoints));
             _selector = selector ?? throw new ArgumentNullException(nameof(selector));
             _positionOf = positionOf ?? throw new ArgumentNullException(nameof(positionOf));
+            _areAllies = areAllies;
             MaxHealth = maxHealth;
             _ledger = new DamageLedger(assist ?? AssistSpec.Default);
             _restartDelaySeconds = restartDelaySeconds;
@@ -157,6 +159,15 @@ namespace Shooter.Core
         public bool HasPlayer(int playerId) => _health.ContainsKey(playerId);
 
         public Team GetTeam(int playerId) => _match.GetTeam(playerId);
+
+        // 2 チームより細かい組 (Battle Royale の分隊) で戦う試合が、チームの数を増やさずにその組で味方撃ち・ダウン・蘇生・出現の選び方を
+        // 決められるよう、areAllies を外から渡せるようにする。渡さなければチームが同じかで決める
+        public bool AreAllies(int a, int b)
+        {
+            FindHealth(a, nameof(a));
+            FindHealth(b, nameof(b));
+            return a == b || (_areAllies != null ? _areAllies(a, b) : GetTeam(a) == GetTeam(b));
+        }
 
         public int GetKills(int playerId) => _match.GetKills(playerId);
 
@@ -382,7 +393,7 @@ namespace Shooter.Core
                 return DamageOutcome.Ignored;
             }
 
-            if (attackerId == victimId || GetTeam(attackerId) != GetTeam(victimId))
+            if (attackerId == victimId || !AreAllies(attackerId, victimId))
             {
                 return Damage(attackerId, victimId, victim, amount, byAlly: false);
             }
@@ -550,26 +561,19 @@ namespace Shooter.Core
             _busy++;
             try
             {
-                foreach (var team in _teams)
+                // 味方の組はチームとは限らない (AreAllies) ので、チームごとでなくダウン中の人ごとに、起こせる味方が立っているかを見る
+                foreach (var playerId in _downed.GetDownedIds())
                 {
-                    if (HasStanding(team))
+                    // キルで点数が上限に届いて終わったら、残りは倒さない
+                    if (State != GameModeState.Playing)
                     {
-                        continue;
+                        return;
                     }
 
-                    foreach (var playerId in _downed.GetDownedIds())
+                    // 受け手が抜けさせた人は飛ばす
+                    if (_downed.IsDowned(playerId) && _health.ContainsKey(playerId) && !HasOtherStandingAlly(playerId))
                     {
-                        // キルで点数が上限に届いて終わったら、残りは倒さない
-                        if (State != GameModeState.Playing)
-                        {
-                            return;
-                        }
-
-                        // 受け手が抜けさせた人は飛ばす
-                        if (_downed.IsDowned(playerId) && _health.ContainsKey(playerId) && GetTeam(playerId) == team)
-                        {
-                            KillByBleedout(playerId);
-                        }
+                        KillByBleedout(playerId);
                     }
                 }
             }
@@ -602,7 +606,7 @@ namespace Shooter.Core
                 || reviverId == targetId
                 || !_downed.IsDowned(targetId)
                 || reviver.IsDead
-                || GetTeam(reviverId) != GetTeam(targetId))
+                || !AreAllies(reviverId, targetId))
             {
                 return false;
             }
@@ -744,6 +748,20 @@ namespace Shooter.Core
             }
         }
 
+        // RespawnAll と同じく点数・キル数・残り時間を戻さずに、倒れている 1 人だけを出直させる。出直す時を外が決める試合
+        // (RespawnsByRound で Session が自分では出直させない Battle Royale の復帰) のための口。立っている人・ダウン中の人と試合の外では何もせず false
+        public bool RespawnPlayer(int playerId)
+        {
+            var health = FindHealth(playerId);
+            if (State != GameModeState.Playing || IsAliveWith(playerId, health))
+            {
+                return false;
+            }
+
+            Defer(() => Respawn(playerId));
+            return true;
+        }
+
         // Session を作り直さないのは、成績・切断した人の保持・チーム分けを捨てずに出現地点だけを替えるため。
         public void ReplaceSpawnPoints(IReadOnlyList<SpawnPoint> spawnPoints)
         {
@@ -763,7 +781,7 @@ namespace Shooter.Core
                 }
 
                 var position = _positionOf(pair.Key);
-                if (GetTeam(pair.Key) == team)
+                if (AreAllies(pair.Key, playerId))
                 {
                     allies.Add(position);
                 }
@@ -784,13 +802,12 @@ namespace Shooter.Core
                 return null;
             }
 
-            var team = GetTeam(playerId);
             var from = _positionOf(playerId);
             int? nearest = null;
             var nearestDistance = float.PositiveInfinity;
             foreach (var pair in _health)
             {
-                if (pair.Value.IsDead || GetTeam(pair.Key) == team)
+                if (pair.Value.IsDead || AreAllies(pair.Key, playerId))
                 {
                     continue;
                 }
@@ -1000,25 +1017,11 @@ namespace Shooter.Core
         private bool IsDownedUnchecked(int playerId) => _downed != null && _downed.IsDowned(playerId);
 
         // ダウン中の人も Health は 0 のままなので、IsDead でないことが「動ける」ことになる
-        private bool HasStanding(Team team)
-        {
-            foreach (var pair in _health)
-            {
-                if (!pair.Value.IsDead && GetTeam(pair.Key) == team)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private bool HasOtherStandingAlly(int playerId)
         {
-            var team = GetTeam(playerId);
             foreach (var pair in _health)
             {
-                if (pair.Key != playerId && !pair.Value.IsDead && GetTeam(pair.Key) == team)
+                if (pair.Key != playerId && !pair.Value.IsDead && AreAllies(pair.Key, playerId))
                 {
                     return true;
                 }

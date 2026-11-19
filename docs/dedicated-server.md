@@ -79,6 +79,12 @@ make server-dotnet ARGS="-rules FreeForAll"
   持ち込んだ物と箱から入った物のうち今も持っている物を持ち物庫に入れて保存する (`[Extraction] ended outcome=Extracted ... stored=`・`[Stash] saved ...`)。
   倒れるか抜けると持っている物を失い、その場に箱が残る。全員の出撃が終わるか時間が切れると試合を終え、倒れた人は次の試合まで出直さない。
   Bot は近い箱へ向かって開け、何か入ったら開いている脱出地点へ向かう。
+- `BattleRoyale` (`server-data/rules/BattleRoyale.json`) の分隊の数と人数・制限時間・エリアの段階 (`zone.phases`)・物資投下 (`supplyDrops`)・
+  復帰 (`redeploy`) は `server-data/tuning/battle-royale.json` から読む (無ければ Core の既定。節の項目はクライアントの `supply-drops.json`・`redeploy.json` と同じ)。
+  最初の円と降ろす高さはマップの `zone`・`dropHeight` を使い、`zone` の無いマップは起動しない。入った順に分隊へ振り分け、同じ分隊の人には当たらない。
+  始まりに全員の武器を空にして `dropHeight` からパラシュートで降ろし (`[BattleRoyale] drop`)、エリアの外の人に段階のダメージを与え (`[Zone] outside`)、
+  次の円の中へ物資投下の箱を落とし (`[SupplyDrop] landed`)、倒れきった人の持ち物を箱にし、最後の分隊が残ると `[Mode] placements winner=` を出して終える。
+  ダウン・蘇生は分隊の味方で数え、復帰は倒されたときの段階と回数で決まる (`[Mode] redeploy ... verdict=`)。
 - 例のマップ `NetBattleRoyale` (160m 四方) は Battle Royale と Extraction のためのマップで、チームを決めない出現地点 8 つ、箱 12 個 (`net-br-box-01`〜`12`)、
   脱出地点 4 つ (`net-br-exit-north`・`east`・`south`・`west`)、半径 75m のエリアを置いてある。シーンは `make build-scenes` (`NetSceneBuilder.BuildBattleRoyale`) が作る。
   箱の `table` は Demo の Extraction のシーンと同じ `demo-supplies`・`demo-valuables` で、キットの `loot.json` には無いので、ゲームが `loot.json` に表を足すまで箱は空のまま開く。

@@ -210,6 +210,8 @@ namespace Shooter.Runtime
             aim.AimSource = () => new Ray(Head.position, Head.forward);
             aim.Targets = _targets;
             aim.TargetLookup = _targets.Find;
+            // Id は作り直しごとに振り直すため、古い捕捉を残すと別の体を捉えた扱いになる。
+            aim.Tracker.Clear();
         }
 
         private RoundSpec Round()

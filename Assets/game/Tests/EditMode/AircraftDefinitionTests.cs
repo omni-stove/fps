@@ -182,6 +182,22 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheWarningBlockStartsFromTheDefaultsAndSurvivesARoundTrip()
+        {
+            var definition = NewDefinition("Trainer");
+
+            Assert.That(definition.ToWarningSpec().StallAngleDegrees, Is.EqualTo(AircraftWarningSpec.DefaultStallAngleDegrees));
+            Assert.That(definition.ToWarningSpec().StallSpeed, Is.EqualTo(AircraftWarningSpec.DefaultStallSpeed));
+
+            definition.Warning.CopyFrom(new AircraftWarningSpec(stallAngleDegrees: 18f, stallSpeed: 42f));
+            var warning = definition.ToWarningSpec();
+
+            Assert.That(warning.StallAngleDegrees, Is.EqualTo(18f));
+            Assert.That(warning.StallSpeed, Is.EqualTo(42f));
+            Assert.Throws<ArgumentNullException>(() => definition.Warning.CopyFrom(null));
+        }
+
+        [Test]
         public void TheEmptyBlocksStillGiveASpec()
         {
             var definition = NewDefinition("Trainer");

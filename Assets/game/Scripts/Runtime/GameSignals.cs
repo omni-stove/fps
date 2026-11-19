@@ -99,6 +99,8 @@ namespace Shooter.Runtime
 
         public static GameSignal<StashStatus?> Stash { get; } = new GameSignal<StashStatus?>(nameof(Stash));
 
+        public static GameSignal<AircraftStatus?> Aircraft { get; } = new GameSignal<AircraftStatus?>(nameof(Aircraft));
+
         // ドメインの再読み込みを切った Play でも、前の Play の値や消えた UI の購読が残らないよう、シーンを読む前にすべて空に戻す。
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -143,6 +145,7 @@ namespace Shooter.Runtime
             Replays.Reset();
             Cosmetics.Reset();
             Stash.Reset();
+            Aircraft.Reset();
         }
     }
 }

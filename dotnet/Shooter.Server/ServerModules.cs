@@ -87,13 +87,15 @@ namespace Shooter.Server
             // 持ち物は出現 (ルール) の後に持たせ直し、その tick のうちに持ち主へ送る
             modules.Add(new ServerInventories(rules, combat));
 
+            // 設置物は戦闘が当たり判定を作る (Start) より前につなぐ必要があるので、登録より先に作る。Bot は囮を見るので同じものを渡す
+            var deployables = new ServerDeployables(rules, combat, tuning.Deployables, tuning.DeployablesPath);
+
             // Bot は戦闘がこの tick の当たり判定を記録した後の位置へ撃ち、スナップショットには動いた後の位置を載せる
-            modules.Add(new ServerBots(rules, movement, combat));
+            modules.Add(new ServerBots(rules, movement, combat, deployables));
 
             // 近接・ストリーク・設置物は戦闘の DealDamage・Explode でダメージを与え、キルカムは戦闘が出すキルでクリップを送るので、戦闘より後。
             // キルカムは Bot が動いた後の姿勢を残すので、Bot より後
             var streaks = new ServerStreaks(rules, combat, tuning.Streaks);
-            var deployables = new ServerDeployables(rules, combat, tuning.Deployables, tuning.DeployablesPath);
             modules.Add(new ServerMelee(combat, movement, tuning.Melee, meleeWeaponId));
             modules.Add(streaks);
             modules.Add(deployables);

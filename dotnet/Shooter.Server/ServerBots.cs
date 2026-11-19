@@ -19,6 +19,8 @@ namespace Shooter.Server
         private readonly MatchRulesModule _rules;
         private readonly ServerMovement _movement;
         private readonly ServerCombat _combat;
+        private readonly ServerDeployables _deployables;
+        private readonly List<ServerDecoy> _decoys = new List<ServerDecoy>();
         private readonly SortedDictionary<int, ServerBotAgent> _agents = new SortedDictionary<int, ServerBotAgent>();
         private readonly List<int> _ids = new List<int>();
         private readonly Queue<Team> _trimRequests = new Queue<Team>();
@@ -37,11 +39,13 @@ namespace Shooter.Server
         private int _loggedDesired = -1;
         private bool _unavailable;
 
-        public ServerBots(MatchRulesModule rules, ServerMovement movement, ServerCombat combat)
+        // deployables が null なら、囮に気を引かれない (置いた物の無いサーバー)
+        public ServerBots(MatchRulesModule rules, ServerMovement movement, ServerCombat combat, ServerDeployables deployables = null)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _movement = movement ?? throw new ArgumentNullException(nameof(movement));
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
+            _deployables = deployables;
         }
 
         public string Name => "bots";
@@ -550,7 +554,7 @@ namespace Shooter.Server
             var healthFraction = session.MaxHealth > 0 ? Math.Clamp((float)health / session.MaxHealth, 0f, 1f) : 1f;
             // 目がくらんでいる間は、撃たれても誰に撃たれたか分からないままにする
             var heard = !blind && seen == null && wasHit && nearest != null;
-            return new EnemyPerception(
+            var perception = new EnemyPerception(
                 self.Position,
                 seen?.Position,
                 seen != null,
@@ -559,6 +563,15 @@ namespace Shooter.Server
                 false,
                 null,
                 healthFraction);
+            if (_deployables == null)
+            {
+                return perception;
+            }
+
+            // 同じ tick の先の Bot が撃って壊した囮を見ないよう、Bot ごとに集め直す
+            _deployables.CollectDecoys(_decoys);
+            return agent.Decoys.Contribute(
+                perception, Side.FromTeam(team), !blind, sight, _decoys, point => HasLineOfSight(agent, eye, point), _log);
         }
 
         // 壊れた建物の部品は世界の当たりから外れているので、その穴越しには見える

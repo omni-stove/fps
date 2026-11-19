@@ -225,6 +225,7 @@ namespace Shooter.Server
             var structures = _structures.ApplyAround(center, explosion.StructureDamageAtCenter, explosion.Damage.Radius, _changedStructures, _log);
             SendStructureChanges();
             var vehicles = _vehicles?.ApplyExplosion(center, explosion.Damage, thrower) ?? 0;
+            var deployables = _deployables?.ApplyExplosion(center, explosion.Damage, thrower) ?? 0;
 
             _explosion.Center = center;
             _explosion.HasThrower = thrower.HasValue;
@@ -233,7 +234,7 @@ namespace Shooter.Server
             SendToAll(_explosion);
             _log.WriteLine(string.Format(
                 CultureInfo.InvariantCulture,
-                "{0} net exploded thrower={1} at=({2:0.0}, {3:0.0}, {4:0.0}) damaged={5} killed={6} structures={7} vehicles={8}",
+                "{0} net exploded thrower={1} at=({2:0.0}, {3:0.0}, {4:0.0}) damaged={5} killed={6} structures={7} vehicles={8} deployables={9}",
                 tag,
                 throwerId,
                 center.X,
@@ -242,7 +243,8 @@ namespace Shooter.Server
                 damaged,
                 killed,
                 structures,
-                vehicles));
+                vehicles,
+                deployables));
             return (damaged, killed);
         }
 
@@ -269,7 +271,7 @@ namespace Shooter.Server
                 head = bodyCenter;
             }
 
-            // 人とグレネードは .fpsmap に無いので、爆風を遮るのは世界の物だけ
+            // 人とグレネードは爆風を遮らない。遮るのは世界の物と、壁として置かれる車体・置いた物 (オフラインの Explosion.Blocks と同じ)
             var obstructed = IsLineBlocked(center, bodyCenter) && IsLineBlocked(center, head);
             var damage = explosion.At(distance, obstructed);
             if (damage <= 0)
@@ -357,7 +359,8 @@ namespace Shooter.Server
             var length = offset.Length();
             return length >= 1e-4f
                 && (_context.World.Raycast(from, offset / length, length, ServerHitboxes.RaycastLayers, out _)
-                    || (_vehicles != null && _vehicles.BlocksLine(from, to, float.MaxValue, PlayerIds.None)));
+                    || (_vehicles != null && _vehicles.BlocksLine(from, to, float.MaxValue, PlayerIds.None))
+                    || (_deployables != null && _deployables.BlocksLine(from, to, null)));
         }
 
         private void ContributeGrenades(SnapshotList<GrenadeSnapshot> list)

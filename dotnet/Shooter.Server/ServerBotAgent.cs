@@ -30,9 +30,12 @@ namespace Shooter.Server
             Brain.SetPatrolRoute(route);
             Driver = new BotDriver(spec.Input, random);
             Route = new ServerBotRoute(navigation, spec);
+            Decoys = new ServerDecoyPerception(playerId);
         }
 
         public int PlayerId { get; }
+
+        public ServerDecoyPerception Decoys { get; }
 
         public EnemyBrain Brain { get; }
 

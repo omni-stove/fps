@@ -803,7 +803,7 @@
                 {
                     "name": "",
                     "id": "8f2c6b14-e5a7-4930-b8d1-2e7f4a9c6b05",
-                    "path": "<Keyboard>/v",
+                    "path": "<Keyboard>/x",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",
@@ -935,7 +935,7 @@
                 {
                     "name": "",
                     "id": "8a4f2c6e-1d93-4b70-a5e8-3f7b9d1c0e62",
-                    "path": "<Keyboard>/x",
+                    "path": "<Keyboard>/v",
                     "interactions": "",
                     "processors": "",
                     "groups": "Keyboard&Mouse",

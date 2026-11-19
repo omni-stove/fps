@@ -51,7 +51,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void NothingIsPressedWithoutInput()
         {
-            var melee = new InputAction("Melee", InputActionType.Button, "<Keyboard>/x");
+            var melee = new InputAction("Melee", InputActionType.Button, "<Keyboard>/v");
             try
             {
                 _reader.SetCommandAction(PlayerCommands.Melee, melee);

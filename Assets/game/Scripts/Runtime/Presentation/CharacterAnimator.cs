@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Shooter.Core;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 using UnityEngine.Rendering;
 
 namespace Shooter.Runtime
@@ -68,6 +70,9 @@ namespace Shooter.Runtime
         private CharacterPoseParameters _parameters;
         private bool _hasParameters;
 
+        private PlayableGraph _emoteGraph;
+        private AnimationClip _emoteClip;
+
         private static readonly int SpeedHash = Animator.StringToHash(CharacterPose.SpeedParameter);
         private static readonly int CrouchHash = Animator.StringToHash(CharacterPose.CrouchParameter);
         private static readonly int AimHash = Animator.StringToHash(CharacterPose.AimParameter);
@@ -118,6 +123,10 @@ namespace Shooter.Runtime
 
         public CharacterPose Pose => _pose;
 
+        public bool IsPlayingEmote => _emoteGraph.IsValid();
+
+        public AnimationClip EmoteClip => IsPlayingEmote ? _emoteClip : null;
+
         private void Awake()
         {
             // 専用サーバーには画面が無く、見せる相手がいない。
@@ -159,9 +168,46 @@ namespace Shooter.Runtime
             Refresh(Time.deltaTime);
         }
 
+        private void OnDisable()
+        {
+            StopEmote();
+        }
+
         private void OnDestroy()
         {
             Dismantle();
+        }
+
+        // AnimatorController に状態を足さずに別のグラフで上書きするのは、ゲームが差し替えるリグのコントローラーにエモートごとの状態を作らせないため。
+        // グラフを壊せば Animator は自分のコントローラーの姿勢へ戻る。
+        public bool PlayEmote(AnimationClip clip)
+        {
+            if (clip == null)
+            {
+                throw new ArgumentNullException(nameof(clip));
+            }
+
+            StopEmote();
+            if (_animator == null || !_animator.isActiveAndEnabled)
+            {
+                return false;
+            }
+
+            AnimationPlayableUtilities.PlayClip(_animator, clip, out _emoteGraph);
+            _emoteClip = clip;
+            Debug.Log(EmoteLog.ClipStarted(name, clip.name), this);
+            return true;
+        }
+
+        public void StopEmote()
+        {
+            if (_emoteGraph.IsValid())
+            {
+                _emoteGraph.Destroy();
+            }
+
+            _emoteGraph = default;
+            _emoteClip = null;
         }
 
         public bool TryBind()
@@ -423,6 +469,7 @@ namespace Shooter.Runtime
 
         public void Dismantle()
         {
+            StopEmote();
             UnsubscribeHealthReset();
             if (_rig != null && _ownsRig)
             {

@@ -227,6 +227,24 @@ namespace Shooter.Tests.EditMode
             Assert.That(left, Does.Contain("StreakIcons"), "the entry lists the streak icons as a slot to fill");
         }
 
+        [Test]
+        public void TheEmoteCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.EmoteAnimations, Is.Null);
+            Assert.That(EmoteCatalog.Load(), Is.SameAs(Resources.Load<EmoteCatalog>(EmoteCatalog.ResourcePath)));
+
+            content.EmoteAnimations = Track(ScriptableObject.CreateInstance<EmoteCatalog>());
+            Assert.That(EmoteCatalog.Load(), Is.SameAs(content.EmoteAnimations));
+
+            var left = GameContentAssets.FillEmpty(
+                Track(ScriptableObject.CreateInstance<GameContent>()), _ => new Object[0], _ => new TextAsset[0]);
+            Assert.That(left, Does.Contain("EmoteAnimations"), "the entry lists the emote animations as a slot to fill");
+            Assert.That(left, Does.Contain("EmotesTuning"), "the entry lists the emote JSON as a slot to fill");
+        }
+
+        [TestCase("_emoteAnimations", "Resources/Presentation/EmoteCatalog")]
         [TestCase("_cosmeticVisuals", "Resources/Presentation/CosmeticVisualCatalog")]
         [TestCase("_streakIcons", "Resources/Presentation/StreakIconCatalog")]
         [TestCase("_reticles", "Resources/Presentation/ReticleCatalog")]
@@ -293,6 +311,7 @@ namespace Shooter.Tests.EditMode
                 (() => content.AchievementsTuning, v => content.AchievementsTuning = v),
                 (() => content.LeaderboardsTuning, v => content.LeaderboardsTuning = v),
                 (() => content.CosmeticsTuning, v => content.CosmeticsTuning = v),
+                (() => content.EmotesTuning, v => content.EmotesTuning = v),
                 (() => content.WeatherTuning, v => content.WeatherTuning = v),
                 (() => content.TelemetryTuning, v => content.TelemetryTuning = v),
                 (() => content.InfectedTuning, v => content.InfectedTuning = v),

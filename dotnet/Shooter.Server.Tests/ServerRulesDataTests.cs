@@ -108,7 +108,7 @@ namespace Shooter.Server.Tests
             Assert.That(data.EconomyPath, Is.Null);
             Assert.That(data.Loot, Is.SameAs(LootSpec.Default));
             Assert.That(data.LootPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default economy=none loot=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default economy=none loot=default extraction=default stash=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
         }
 
         [Test]
@@ -390,6 +390,59 @@ namespace Shooter.Server.Tests
             Assert.That(data.LogLine, Does.Contain(" loot=" + data.LootPath + " "));
             Assert.That(data.WithSettings(data.Settings.WithPrivacy(true, "FRIENDS")).Loot, Is.SameAs(data.Loot));
             Assert.That(data.WithRules(GameRules.Default).LootPath, Is.EqualTo(data.LootPath));
+        }
+
+        [Test]
+        public void ReadsTheExtractionAndStashTuningBesideTheRulesAndKeepsThemThroughChanges()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.ExtractionTuningFileName), "{\"raidSeconds\": 300, \"extractHoldSeconds\": 4, \"openPoints\": 1}");
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.StashTuningFileName), "{\"capacity\": 12}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Extraction.RaidSeconds, Is.EqualTo(300f));
+            Assert.That(data.Extraction.ExtractHoldSeconds, Is.EqualTo(4f));
+            Assert.That(data.Extraction.OpenPoints, Is.EqualTo(1));
+            Assert.That(data.Extraction.OpenAfterSeconds, Is.EqualTo(ExtractionSpec.DefaultOpenAfterSeconds));
+            Assert.That(data.Stash.Capacity, Is.EqualTo(12));
+            Assert.That(data.ExtractionPath, Does.EndWith(ServerRulesData.ExtractionTuningFileName));
+            Assert.That(data.StashPath, Does.EndWith(ServerRulesData.StashTuningFileName));
+            Assert.That(data.LogLine, Does.Contain(" extraction=" + data.ExtractionPath + " stash=" + data.StashPath + " "));
+            var changed = data.WithSettings(data.Settings.WithPrivacy(true, "FRIENDS"));
+            Assert.That(changed.Extraction, Is.SameAs(data.Extraction));
+            Assert.That(changed.Stash, Is.SameAs(data.Stash));
+            Assert.That(data.WithRules(GameRules.Default).ExtractionPath, Is.EqualTo(data.ExtractionPath));
+            Assert.That(data.WithRules(GameRules.Default).StashPath, Is.EqualTo(data.StashPath));
+        }
+
+        [Test]
+        public void WithoutExtractionTuningTheDefaultsAreUsed()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Extraction, Is.SameAs(ExtractionSpec.Default));
+            Assert.That(data.Stash, Is.SameAs(StashSpec.Default));
+            Assert.That(data.ExtractionPath, Is.Null);
+            Assert.That(data.StashPath, Is.Null);
+        }
+
+        // 開くまでの時間と待つ時間が出撃の時間を超えると、誰も脱出できない (ExtractionSpec が断る)
+        [TestCase(ServerRulesData.ExtractionTuningFileName, "{\"raidSeconds\": 10, \"extractHoldSeconds\": 8, \"openAfterSeconds\": 5}", "cannot read extraction tuning: ", "openAfterSeconds")]
+        [TestCase(ServerRulesData.StashTuningFileName, "{\"capacity\": 0}", "cannot read stash tuning: ", "capacity")]
+        public void BrokenExtractionOrStashTuningStopsTheLoad(string fileName, string json, string prefix, string item)
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, fileName), json);
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith(prefix).And.Contain(item));
         }
 
         [Test]

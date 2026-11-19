@@ -70,6 +70,15 @@ make server-dotnet ARGS="-rules FreeForAll"
   箱の中身は試合の始まりに `server-data/tuning/loot.json` (クライアントの `Resources/Tuning/loot.json` と同じ中身) の表の `table` から引き、
   ログの `[Loot] seed=` の種が同じなら同じ中身になる。表に無い `table` の箱は空のまま開く (`[Loot] table=... is not in loot.json`)。
   箱を開けられるのは、届く距離 (`reach`) の内に立つ生きている人で、目的が開けることを許すときだけ。断った理由は `[Loot] open ... refused=` に出る。
+- `Extraction` の目的 (`server-data/rules/Extraction.json`) は持ち物庫をアカウントごとにディスクに置くので、`--stash-dir <フォルダ>` を付けて立てる。
+  付けないと `[Server] the Extraction rules keep each account's stash on disk; pass --stash-dir ...` で終了コード 3 になる (プレイリストの項目にあっても同じ)。
+  持ち物庫は `<フォルダ>/<アカウントの ID>.json` (Unity の持ち物庫と同じ `StashSave` の JSON) で、ID は承認の鍵 (EOS でつないだ人は ProductUserId)、Bot は `bot.<番号>`。
+  鍵を送らない人の持ち物庫は保存しない。読めないファイルは `.broken` を付けて退け、`startingItems` から始める。
+  出撃の時間・脱出・持ち物庫の広さは `server-data/tuning/extraction.json`・`stash.json` (クライアントの `Resources/Tuning/` と同じ中身) から読む。
+  出現で、選んだ武器 (選んでいなければ既定の並び) のうち持ち物庫にある物だけを持ち込み、持ち物庫から取る。開いた脱出地点で待ち切ると、
+  持ち込んだ物と箱から入った物のうち今も持っている物を持ち物庫に入れて保存する (`[Extraction] ended outcome=Extracted ... stored=`・`[Stash] saved ...`)。
+  倒れるか抜けると持っている物を失い、その場に箱が残る。全員の出撃が終わるか時間が切れると試合を終え、倒れた人は次の試合まで出直さない。
+  Bot は近い箱へ向かって開け、何か入ったら開いている脱出地点へ向かう。
 - 例のマップ `NetBattleRoyale` (160m 四方) は Battle Royale と Extraction のためのマップで、チームを決めない出現地点 8 つ、箱 12 個 (`net-br-box-01`〜`12`)、
   脱出地点 4 つ (`net-br-exit-north`・`east`・`south`・`west`)、半径 75m のエリアを置いてある。シーンは `make build-scenes` (`NetSceneBuilder.BuildBattleRoyale`) が作る。
   箱の `table` は Demo の Extraction のシーンと同じ `demo-supplies`・`demo-valuables` で、キットの `loot.json` には無いので、ゲームが `loot.json` に表を足すまで箱は空のまま開く。
@@ -169,6 +178,7 @@ docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -regist
   名前はクライアントの設定の候補 (Demo では `Resources/Settings/QuickMatchRegions.json`) と揃える。
 - `--private` か `--join-code <コード>` で、参加コードの合う人だけを入れる。コードを省くと作ってログに出す。
 - `--ban-file <パス>` で BAN の一覧を読み書きする ([キックと BAN](#キックと-ban))。
+- `--stash-dir <フォルダ>` で Extraction の持ち物庫を置く。無ければ作り、書けなければ終了コード 3。docker ではボリュームにする (`-v ./stashes:/stashes` と `--stash-dir /stashes`)。
 - `--report-file`・`--stats`・`--telemetry` は [通報・統計・テレメトリ](#通報統計テレメトリ)。
 - `-eac` は [anti-cheat.md](anti-cheat.md)。
 

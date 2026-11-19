@@ -150,13 +150,105 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void AnEntryTheMapsCannotPlayIsFoundBeforeTheServerListens()
+        public void AnEntryItsMapCannotPlayIsFoundBeforeTheServerListens()
         {
             Start(mapVoteSeconds: 0f, _firstMap, _secondMap, controlPoints: 0);
 
             Assert.That(_match.CheckPlaylist(), Is.EqualTo(
                 "playlist rotation entry 2/3 cannot use rules Domination: cannot use the rules with objective Domination for the next match: "
+                + "cannot change to map NetArena01 for the Domination match: it has no control points"));
+        }
+
+        [Test]
+        public void WithoutAMapVoteAnEntryOnlyHasToFitItsOwnMap()
+        {
+            // Domination の項目は NetArena01 にあり、拠点の無い NetTest へは TDM と Kill Confirmed でしか行かない
+            Start(mapVoteSeconds: 0f, true, new[] { _firstMap, _secondMap }, name => TestRules.Points(name == _secondMap ? 3 : 0), Playlist);
+
+            Assert.That(_match.CheckPlaylist(), Is.Null);
+        }
+
+        [Test]
+        public void WithAMapVoteAnEntryHasToFitEveryMap()
+        {
+            // 投票は項目のマップ以外も選べるので、Domination の項目は拠点の無い NetTest でも遊べなければならない
+            Start(mapVoteSeconds: 1f, true, new[] { _firstMap, _secondMap }, name => TestRules.Points(name == _secondMap ? 3 : 0), Playlist);
+
+            Assert.That(_match.CheckPlaylist(), Is.EqualTo(
+                "playlist rotation entry 2/3 cannot use rules Domination: cannot use the rules with objective Domination for the next match: "
                 + "cannot change to map NetTest for the Domination match: it has no control points"));
+        }
+
+        [Test]
+        public void TheSameRulesAreCheckedOnTheMapOfEveryEntryThatUsesThem()
+        {
+            // 1 項目目と 3 項目目は同じ Domination のルールで、3 項目目のマップ (NetTest) には拠点が無い
+            Start(mapVoteSeconds: 0f, true, new[] { _secondMap, _firstMap }, name => TestRules.Points(name == _secondMap ? 3 : 0), settings =>
+            {
+                var source = new Playlist("repeat", PlaylistOrder.Sequential, new[]
+                {
+                    new PlaylistEntry(_secondMap, "Domination"),
+                    new PlaylistEntry(_secondMap, "TeamDeathmatch"),
+                    new PlaylistEntry(_firstMap, "Domination"),
+                });
+                var domination = TestRules.Data(Plain().WithObjective(MatchObjective.Domination), settings, name: "Domination");
+                return new ServerPlaylist(
+                    source,
+                    new[]
+                    {
+                        new ServerPlaylistEntry(0, source.Entries[0], "Domination", domination),
+                        new ServerPlaylistEntry(1, source.Entries[1], "TeamDeathmatch", TestRules.Data(Plain(), settings)),
+                        new ServerPlaylistEntry(2, source.Entries[2], "Domination", domination),
+                    },
+                    0);
+            });
+
+            Assert.That(_rules.Rules.Objective, Is.EqualTo(MatchObjective.Domination), "the first map has control points, so the module starts");
+            Assert.That(_match.CheckPlaylist(), Is.EqualTo(
+                "playlist repeat entry 3/3 cannot use rules Domination: cannot use the rules with objective Domination for the next match: "
+                + "cannot change to map NetTest for the Domination match: it has no control points"));
+        }
+
+        // Issue の確認手順の並び。台車の道筋は NetArena01 にしか無く、Domination の拠点は NetTest にしか無い
+        [Test]
+        public void TeamDeathmatchDominationAndPayloadTakeTurnsOnTheirOwnMaps()
+        {
+            Start(
+                mapVoteSeconds: 0f,
+                true,
+                new[] { _secondMap, _firstMap },
+                name => name == _secondMap ? TestRules.PayloadPoints() : TestRules.Points(3),
+                PayloadPlaylist);
+            Assert.That(_match.CheckPlaylist(), Is.Null);
+            Join(1);
+            Join(2);
+            Assert.That(_match.Map.Name, Is.EqualTo(_secondMap));
+            Assert.That(LatestMatch(1).Objective, Is.EqualTo(MatchObjective.None));
+
+            Assert.That(_rules.ApplyDamage(1, 2, 100), Is.EqualTo(DamageOutcome.Killed));
+            Step(1.1f);
+
+            Assert.That(_match.Map.Name, Is.EqualTo(_firstMap));
+            Assert.That(_rules.Rules, Is.SameAs(_playlist.Entries[1].Rules));
+            Assert.That(LatestMatch(1).Objective, Is.EqualTo(MatchObjective.Domination));
+
+            FinishTheMatch();
+
+            Assert.That(_match.Map.Name, Is.EqualTo(_secondMap));
+            Assert.That(_rules.Rules, Is.SameAs(_playlist.Entries[2].Rules));
+            Assert.That(_rules.Objective, Is.TypeOf<PayloadRules>());
+            Assert.That(LatestMatch(1).Objective, Is.EqualTo(MatchObjective.Payload));
+            var log = _log.ToString();
+            Assert.That(log, Does.Contain("[Match] rules changed objective from=Domination to=Payload"));
+            Assert.That(log, Does.Contain("[Payload] net attackers=Alpha"));
+            Assert.That(log, Does.Not.Contain(ServerPlaylistLog.RulesRefused(_playlist, _playlist.Entries[2], string.Empty)));
+
+            FinishTheMatch();
+
+            Assert.That(_match.Map.Name, Is.EqualTo(_secondMap));
+            Assert.That(_rules.Rules, Is.SameAs(_playlist.Entries[0].Rules));
+            Assert.That(_playlist.Round, Is.EqualTo(1));
+            Assert.That(LatestMatch(1).Objective, Is.EqualTo(MatchObjective.None));
         }
 
         [Test]
@@ -232,22 +324,50 @@ namespace Shooter.Server.Tests
             Start(mapVoteSeconds, true, new[] { first, second }, controlPoints);
         }
 
+        // TDM (NetArena01) → Domination (NetTest) → Payload (NetArena01)
+        private static ServerPlaylist PayloadPlaylist(NetMatchSettings settings)
+        {
+            var source = new Playlist("rotation", PlaylistOrder.Sequential, new[]
+            {
+                new PlaylistEntry(_secondMap, "TeamDeathmatch"),
+                new PlaylistEntry(_firstMap, "Domination"),
+                new PlaylistEntry(_secondMap, "Payload"),
+            });
+            return new ServerPlaylist(
+                source,
+                new[]
+                {
+                    new ServerPlaylistEntry(0, source.Entries[0], "TeamDeathmatch", TestRules.Data(Plain(), settings)),
+                    new ServerPlaylistEntry(
+                        1, source.Entries[1], "Domination", TestRules.Data(Plain().WithObjective(MatchObjective.Domination), settings, name: "Domination")),
+                    new ServerPlaylistEntry(
+                        2, source.Entries[2], "Payload", TestRules.Data(Plain().WithObjective(MatchObjective.Payload), settings, name: "Payload")),
+                },
+                0);
+        }
+
         private void Start(float mapVoteSeconds, bool usePlaylist, params string[] maps)
         {
             Start(mapVoteSeconds, usePlaylist, maps, 3);
         }
 
-        // MatchServer と同じく、試合の枠にマップとプレイリストを渡してからモジュールを始める
         private void Start(float mapVoteSeconds, bool usePlaylist, string[] maps, int controlPoints)
+        {
+            Start(mapVoteSeconds, usePlaylist, maps, _ => TestRules.Points(controlPoints), Playlist);
+        }
+
+        // MatchServer と同じく、試合の枠にマップとプレイリストを渡してからモジュールを始める
+        private void Start(
+            float mapVoteSeconds, bool usePlaylist, string[] maps, Func<string, NetMapPoints> pointsOf, Func<NetMatchSettings, ServerPlaylist> playlistOf)
         {
             var settings = new NetMatchSettings(
                 scoreLimit: 1, respawnSeconds: 0f, restartDelaySeconds: 1f, mapPool: maps, mapVoteSeconds: mapVoteSeconds);
-            _playlist = Playlist(settings);
+            _playlist = playlistOf(settings);
             var data = _playlist.Entries[0].Data;
             _match = new ServerMatch(
                 settings.RestartDelaySeconds, _log, new ServerEventWriter(true, _json, _log), () => _time, settings.MaxTeamSizeDifference,
                 settings.MapVoteSeconds);
-            var loaded = maps.Select(name => TestMaps.Data(name, TestRules.Points(controlPoints))).ToArray();
+            var loaded = maps.Select(name => TestMaps.Data(name, pointsOf(name))).ToArray();
             _match.UseMaps(loaded[0], loaded);
             if (usePlaylist)
             {

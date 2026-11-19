@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using Shooter.Core;
 
@@ -323,12 +324,15 @@ namespace Shooter.Server.Tests
             Assert.That(playlist.Entries, Has.Count.EqualTo(3));
             Assert.That(playlist.Entries[0].Rules.Objective, Is.EqualTo(MatchObjective.None));
             Assert.That(playlist.Entries[1].Rules.Objective, Is.EqualTo(MatchObjective.Domination));
-            Assert.That(playlist.Entries[2].Rules.Objective, Is.EqualTo(MatchObjective.KillConfirmed));
-            foreach (var map in playlist.MapNames)
-            {
-                Assert.That(ServerMapData.TryLoad(map, roots, out var data, out error), Is.True, error);
-                Assert.That(data.Points.ControlPoints, Is.Not.Empty, "the Domination entry needs control points on every map of the playlist");
-            }
+            Assert.That(playlist.Entries[2].Rules.Objective, Is.EqualTo(MatchObjective.Payload));
+            Assert.That(playlist.Entries.Select(entry => entry.Map), Is.EqualTo(new[] { "NetArena01", "NetTest", "NetArena01" }));
+            Assert.That(playlist.Entries[0].Data.Settings.MapVoteSeconds, Is.Zero, "without a map vote each entry only has to fit its own map");
+
+            // 投票しないので、項目のモードが要るものは項目のマップにだけあればよい (NetTest に台車の道筋は無い)
+            Assert.That(ServerMapData.TryLoad("NetTest", roots, out var domination, out error), Is.True, error);
+            Assert.That(domination.Points.ControlPoints, Is.Not.Empty, "the Domination entry needs control points on its map");
+            Assert.That(ServerMapData.TryLoad("NetArena01", roots, out var payload, out error), Is.True, error);
+            Assert.That(payload.Points.Payload, Is.Not.Null, "the Payload entry needs a payload route on its map");
         }
 
         private static int Position(PlaylistCursor cursor)

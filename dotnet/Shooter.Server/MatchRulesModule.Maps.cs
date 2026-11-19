@@ -15,8 +15,14 @@ namespace Shooter.Server
         }
 
         // 替えた先で始められないと分かるのが試合の合間だと、遊んでいる人を残して止めるしかないので、起動のうちに断る
+        // 投票しないプレイリストでは始めのルールのまま他のマップへ移らないので、他のマップは項目ごとに ServerMatch.CheckPlaylist に確かめさせる
         private void CheckOtherMaps()
         {
+            if (_match.Playlist != null && !_match.HoldsMapVote)
+            {
+                return;
+            }
+
             foreach (var map in _match.Maps)
             {
                 if (ReferenceEquals(map, _context.Map))

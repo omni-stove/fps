@@ -13,7 +13,36 @@
     "kind": "Magazine",
     "magazineSize": 1,
     "reserveAmmo": 0,
-    "reloadSeconds": 1
+    "reloadSeconds": 1,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.5,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 100,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 25,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 0,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0,
+    "recoilPitchDegrees": 0,
+    "recoilYawDegrees": 0,
+    "recoilRecoveryPerSecond": 0,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [50],
+    "swayDegrees": 0
   },
   "shield": {
     "blockArcDegrees": 120,

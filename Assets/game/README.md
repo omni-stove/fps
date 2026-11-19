@@ -291,6 +291,8 @@ public sealed class HealthOnlyHud : MonoBehaviour
    - `AircraftWheels` が返す `AircraftGroundContact` は、どれかの車輪が接地しているかと、地面からの高さ (`HeightAboveGround`、m) を持つ。高さは浮いているときに一番低い車輪の底から真下へ `HeightProbeDistance` まで測り、地面が無ければ null。機体自身の当たり判定は数えない。
 4. `AircraftControlScheme` は、視線の方へ機首を向け、移動の前後でスロットルを開け閉めし (閉じ切ってさらに下げるとエアブレーキ)、左右でロールを足す。強さはアセットの Aim の欄か `Configure(AircraftAimSpec)` で入れる。
    - 乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれは、そのまま曲がり続ける速さになる。上下は視線の高さへ機首が合う。
+   - 同じ GameObject の `SimpleAircraftMotor.State` を読み、G が `MaxLoadFactor` の `LoadFactorMargin` 手前を越えるか、迎え角が `CriticalAngleOfAttack` (度) の `AngleOfAttackMargin` 手前を越えると、機首を上げる舵を上限で 0 になるまで絞る (下げる向きは負の G・迎え角で同じく絞る)。接地中は絞らない。
+   - `MinSinkRate` (m/s) より速く降りていて、真下へのレイ (`GroundMask` のレイヤー、機体自身の当たり判定は除く) で測った地面まで `GroundWarningSeconds` を切ると、視線の代わりに真上へ機首を向け、ロールのキーを無視して引き起こす。0 秒にすると引き起こさない。判定は `AircraftAim.ShouldPullUp`・`AircraftAim.LimitPitch` で引ける。
    - 視線を使わずに操縦桿で直接操るときは、`AircraftControlScheme` の代わりに `AircraftStickControlScheme` を付ける。移動の前後がピッチ (既定では前で機首下げ)、左右がロール、上下 (`Vertical`) がラダー。デッドゾーン・指数・スロットルの変わる速さ・ピッチの向きはアセットの Stick の欄か `Configure(AircraftStickSpec)` で入れる。
    - スロットルは ThrottleAction の欄の 1 軸のアクション (0〜1) を狙いの開き具合として読む。空ならブーストを押している間だけ開き、離すと同じ速さで閉じる。
 5. 見た目と音は `AircraftEffects` を機体に付けると、`SimpleAircraftMotor` の入力と `State` から毎フレーム動く。サーバー専用ビルドでは止まる。

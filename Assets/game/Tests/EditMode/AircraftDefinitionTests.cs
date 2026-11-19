@@ -58,6 +58,12 @@ namespace Shooter.Tests.EditMode
             Assert.That(aim.RollGain, Is.EqualTo(AircraftAimSpec.DefaultRollGain));
             Assert.That(aim.LevelGain, Is.EqualTo(AircraftAimSpec.DefaultLevelGain));
             Assert.That(aim.ThrottleRate, Is.EqualTo(AircraftAimSpec.DefaultThrottleRate));
+            Assert.That(aim.MaxLoadFactor, Is.EqualTo(AircraftAimSpec.DefaultMaxLoadFactor));
+            Assert.That(aim.LoadFactorMargin, Is.EqualTo(AircraftAimSpec.DefaultLoadFactorMargin));
+            Assert.That(aim.CriticalAngleOfAttack, Is.EqualTo(AircraftAimSpec.DefaultCriticalAngleOfAttack));
+            Assert.That(aim.AngleOfAttackMargin, Is.EqualTo(AircraftAimSpec.DefaultAngleOfAttackMargin));
+            Assert.That(aim.GroundWarningSeconds, Is.EqualTo(AircraftAimSpec.DefaultGroundWarningSeconds));
+            Assert.That(aim.MinSinkRate, Is.EqualTo(AircraftAimSpec.DefaultMinSinkRate));
 
             var ground = definition.ToGroundSpec();
             Assert.That(ground.MaxSteerAngle, Is.EqualTo(AircraftGroundSpec.DefaultMaxSteerAngle));
@@ -125,7 +131,18 @@ namespace Shooter.Tests.EditMode
         {
             var definition = NewDefinition("Trainer");
 
-            definition.Aim.CopyFrom(new AircraftAimSpec(pitchGain: 2f, yawGain: 0.5f, rollGain: 4f, levelGain: 1f, throttleRate: 0.25f));
+            definition.Aim.CopyFrom(new AircraftAimSpec(
+                pitchGain: 2f,
+                yawGain: 0.5f,
+                rollGain: 4f,
+                levelGain: 1f,
+                throttleRate: 0.25f,
+                maxLoadFactor: 5f,
+                loadFactorMargin: 1f,
+                criticalAngleOfAttack: 18f,
+                angleOfAttackMargin: 3f,
+                groundWarningSeconds: 2.5f,
+                minSinkRate: 6f));
             var aim = definition.ToAimSpec();
 
             Assert.That(aim.PitchGain, Is.EqualTo(2f));
@@ -133,6 +150,12 @@ namespace Shooter.Tests.EditMode
             Assert.That(aim.RollGain, Is.EqualTo(4f));
             Assert.That(aim.LevelGain, Is.EqualTo(1f));
             Assert.That(aim.ThrottleRate, Is.EqualTo(0.25f));
+            Assert.That(aim.MaxLoadFactor, Is.EqualTo(5f));
+            Assert.That(aim.LoadFactorMargin, Is.EqualTo(1f));
+            Assert.That(aim.CriticalAngleOfAttack, Is.EqualTo(18f));
+            Assert.That(aim.AngleOfAttackMargin, Is.EqualTo(3f));
+            Assert.That(aim.GroundWarningSeconds, Is.EqualTo(2.5f));
+            Assert.That(aim.MinSinkRate, Is.EqualTo(6f));
         }
 
         [Test]

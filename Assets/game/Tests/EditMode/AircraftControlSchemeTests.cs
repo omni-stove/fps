@@ -112,6 +112,82 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => _scheme.Configure(null));
         }
 
+        [Test]
+        public void TheMotorsAngleOfAttackEasesOffThePitch()
+        {
+            var motor = AddMotor();
+            _scheme.transform.position = new Vector3(0f, 5000f, 0f);
+            motor.Body.linearVelocity = new Vector3(0f, -20f, 40f);
+
+            var before = _scheme.ToMotorInput(null, Seat(Vector2.zero, Vector3.up), 0.02f);
+            motor.Step();
+            var after = _scheme.ToMotorInput(null, Seat(Vector2.zero, Vector3.up), 0.02f);
+
+            Assert.That(motor.State.AngleOfAttackRadians * Mathf.Rad2Deg, Is.GreaterThan(AircraftAimSpec.DefaultCriticalAngleOfAttack));
+            Assert.That(before[AircraftFlight.PitchAxis], Is.EqualTo(1f), "with no state yet the stick is untouched");
+            Assert.That(after[AircraftFlight.PitchAxis], Is.EqualTo(0f), "past the stall angle the nose is not raised");
+            Assert.That(
+                after[AircraftFlight.PitchAxis],
+                Is.EqualTo(AircraftAim.LimitPitch(_scheme.Spec, 1f, motor.State)),
+                "the scheme passes the motor's state to the limiter");
+        }
+
+        [Test]
+        public void DivingTowardTheGroundPullsUp()
+        {
+            var motor = AddMotor();
+            var noseDown = Quaternion.Euler(45f, 0f, 0f);
+            _scheme.transform.rotation = noseDown;
+            motor.Body.rotation = noseDown;
+            motor.Body.linearVelocity = (noseDown * Vector3.forward) * 40f;
+            var ownBelly = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ownBelly.transform.SetParent(_scheme.transform, false);
+            ownBelly.transform.localPosition = new Vector3(0f, -1f, 0f);
+            ownBelly.transform.localScale = new Vector3(4f, 1f, 4f);
+            Physics.SyncTransforms();
+            var atTheGround = noseDown * Vector3.forward;
+
+            var clear = _scheme.ToMotorInput(null, Seat(Vector2.zero, atTheGround), 0.02f);
+
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(ground);
+            ground.transform.position = new Vector3(0f, -50.5f, 0f);
+            ground.transform.localScale = new Vector3(200f, 1f, 200f);
+            Physics.SyncTransforms();
+            var pulled = _scheme.ToMotorInput(null, Seat(new Vector2(1f, 0f), atTheGround), 0.02f);
+
+            _scheme.GroundMask = 0;
+            var masked = _scheme.ToMotorInput(null, Seat(Vector2.zero, atTheGround), 0.02f);
+
+            Assert.That(clear[AircraftFlight.PitchAxis], Is.EqualTo(0f).Within(Epsilon), "its own colliders are not the ground");
+            Assert.That(pulled[AircraftFlight.PitchAxis], Is.EqualTo(1f), "50 m below at 28 m/s down is under 2 seconds");
+            Assert.That(pulled[AircraftFlight.RollAxis], Is.EqualTo(0f).Within(Epsilon), "the roll keys wait until it has pulled up");
+            Assert.That(masked[AircraftFlight.PitchAxis], Is.EqualTo(0f).Within(Epsilon), "layers outside the mask are not the ground");
+        }
+
+        [Test]
+        public void AGentleDescentIsNotPulledUp()
+        {
+            var motor = AddMotor();
+            motor.Body.linearVelocity = new Vector3(0f, -2f, 30f);
+            var ground = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _created.Add(ground);
+            ground.transform.position = new Vector3(0f, -3.5f, 0f);
+            ground.transform.localScale = new Vector3(200f, 1f, 200f);
+            Physics.SyncTransforms();
+
+            var input = _scheme.ToMotorInput(null, Seat(Vector2.zero, Vector3.forward), 0.02f);
+
+            Assert.That(input[AircraftFlight.PitchAxis], Is.EqualTo(0f).Within(Epsilon));
+        }
+
+        private SimpleAircraftMotor AddMotor()
+        {
+            var motor = _scheme.gameObject.AddComponent<SimpleAircraftMotor>();
+            motor.Body.useGravity = false;
+            return motor;
+        }
+
         private static VehicleSeatInput Seat(Vector2 move, Vector3 aim)
         {
             return new VehicleSeatInput(move, 0f, false, false, false, false, Vector3.zero, aim);

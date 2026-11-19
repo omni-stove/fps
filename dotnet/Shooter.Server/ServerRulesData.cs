@@ -24,6 +24,9 @@ namespace Shooter.Server
         // 箱の中身を引く表。Unity の Resources (Tuning/loot) と同じ書き方で、表の Id はマップの地点ファイルの箱が引く
         public const string LootTuningFileName = "loot.json";
 
+        // Battle Royale の分隊・エリアの段階・物資投下・復帰。最初の円と降ろす高さはマップの地点ファイルが持つ
+        public const string BattleRoyaleTuningFileName = "battle-royale.json";
+
         // プレイリストはルールの並びなので、rules と並べて server-data の下に置く
         public const string PlaylistsDirectoryName = "playlists";
 
@@ -34,9 +37,12 @@ namespace Shooter.Server
             NetBotSpec bots = null, string botsPath = null, ItemCatalog items = null, string itemsPath = null,
             KnockbackSpec knockback = null, string knockbackPath = null, AssistSpec assist = null, string assistPath = null,
             NetMatchSettings settings = null, ChatWordFilterSpec chatWords = null, string chatWordsPath = null,
-            EconomyRules buyList = null, string economyPath = null, LootSpec loot = null, string lootPath = null)
+            EconomyRules buyList = null, string economyPath = null, LootSpec loot = null, string lootPath = null,
+            BattleRoyaleSpec battleRoyale = null, string battleRoyalePath = null)
         {
             _settings = settings;
+            BattleRoyale = battleRoyale ?? BattleRoyaleSpec.Default;
+            BattleRoyalePath = battleRoyalePath;
             Loot = loot ?? LootSpec.Default;
             LootPath = lootPath;
             BuyList = buyList;
@@ -111,6 +117,11 @@ namespace Shooter.Server
 
         public string LootPath { get; }
 
+        // 置いていなければ Core の既定 (BattleRoyaleSpec.Default) で動かす
+        public BattleRoyaleSpec BattleRoyale { get; }
+
+        public string BattleRoyalePath { get; }
+
         // 額は試合の設定から取るので、設定を差し替えた (WithSettings) 後もその額で組む
         public EconomyRules Economy => BuyList == null ? null : new EconomyRules(Settings.Economy, BuyList.Catalog, BuyList.ResetOnSwap);
 
@@ -119,7 +130,7 @@ namespace Shooter.Server
             ArgumentNullException.ThrowIfNull(settings);
             return new ServerRulesData(
                 Name, File, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
-                settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath);
+                settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath, BattleRoyale, BattleRoyalePath);
         }
 
         // ルールのファイルを作り直すのは、NetMatchFile が目的に要る設定とロードアウトを作るときに確かめるので、
@@ -132,7 +143,7 @@ namespace Shooter.Server
                 File.Catalog, File.Motor);
             return new ServerRulesData(
                 Name, file, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
-                _settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath);
+                _settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath, BattleRoyale, BattleRoyalePath);
         }
 
         public string LogLine => ServerProgram.LogTag + " rules " + Name
@@ -148,6 +159,7 @@ namespace Shooter.Server
             + " chatWords=" + (ChatWordsPath ?? "default")
             + " economy=" + (EconomyPath ?? "none")
             + " loot=" + (LootPath ?? "default")
+            + " battleRoyale=" + (BattleRoyalePath ?? "default")
             + " walk=" + Motor.Motor.WalkSpeed.ToString(CultureInfo.InvariantCulture)
             + " sprint=" + Motor.Motor.SprintSpeed.ToString(CultureInfo.InvariantCulture)
             + " height=" + Motor.Stance.Standing.Height.ToString(CultureInfo.InvariantCulture)
@@ -388,9 +400,31 @@ namespace Shooter.Server
                 lootPath = null;
             }
 
+            // BR の調整値は Unity ではシーンの ShrinkingZone・SupplyDropper と Resources の JSON にある。サーバーは 1 つのファイルにまとめ、無ければ Core の既定で動かす
+            var battleRoyalePath = System.IO.Path.GetFullPath(
+                System.IO.Path.Combine(root, ServerMapData.DataDirectoryName, TuningDirectoryName, BattleRoyaleTuningFileName));
+            var battleRoyale = BattleRoyaleSpec.Default;
+            if (System.IO.File.Exists(battleRoyalePath))
+            {
+                try
+                {
+                    battleRoyale = BattleRoyaleJson.Parse(System.IO.File.ReadAllText(battleRoyalePath), battleRoyalePath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is TuningJsonException)
+                {
+                    error = "cannot read battle royale tuning: " + e.Message;
+                    return false;
+                }
+            }
+            else
+            {
+                battleRoyalePath = null;
+            }
+
             data = new ServerRulesData(
                 name, file, ping, path, pingPath, grenades, grenadePath, bots, botsPath, items, itemsPath, knockback, knockbackPath, assist, assistPath,
-                chatWords: chatWords, chatWordsPath: chatWordsPath, buyList: buyList, economyPath: economyPath, loot: loot, lootPath: lootPath);
+                chatWords: chatWords, chatWordsPath: chatWordsPath, buyList: buyList, economyPath: economyPath, loot: loot, lootPath: lootPath,
+                battleRoyale: battleRoyale, battleRoyalePath: battleRoyalePath);
             error = null;
             return true;
         }

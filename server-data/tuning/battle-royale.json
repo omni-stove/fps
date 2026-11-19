@@ -1,0 +1,33 @@
+{
+  "squadCount": 4,
+  "squadSize": 2,
+  "timeLimitSeconds": 0,
+  "botSearchRadius": 25,
+  "botPlanIntervalSeconds": 0.5,
+  "zone": {
+    "damageIntervalSeconds": 1,
+    "phases": [
+      { "waitSeconds": 30, "shrinkSeconds": 20, "radius": 35, "damagePerSecond": 1 },
+      { "waitSeconds": 20, "shrinkSeconds": 15, "radius": 18, "damagePerSecond": 3 },
+      { "waitSeconds": 15, "shrinkSeconds": 10, "radius": 6, "damagePerSecond": 8 }
+    ]
+  },
+  "supplyDrops": {
+    "tableId": "",
+    "dropHeight": 40,
+    "fallSpeed": 6,
+    "placeFraction": 0.8,
+    "reach": 2.5,
+    "botSearchRadius": 80,
+    "stages": [
+      { "count": 1, "delaySeconds": 5, "intervalSeconds": 10 },
+      { "count": 2, "delaySeconds": 5, "intervalSeconds": 10 },
+      { "count": 2, "delaySeconds": 5, "intervalSeconds": 8 }
+    ]
+  },
+  "redeploy": {
+    "charges": 1,
+    "lastPhaseIndex": 1,
+    "delaySeconds": 5
+  }
+}

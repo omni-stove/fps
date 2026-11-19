@@ -64,7 +64,8 @@ namespace Shooter.Server
         // Bot に巡らせる場所。null なら ServerBots はマップの出現地点を巡らせる。動く目的 (台車) は Tick ごとに今の場所を返す
         ObjectiveRally? BotRally => null;
 
-        // 敵味方を目的が決める (分隊で戦う BR など) ための口。陣営を引数で渡すのは、目的が Session を持たずに既定のチームの判定を返せるようにするため
+        // 敵味方を目的が決める (分隊で戦う BR など) ための口。戦闘・Bot に加えて Session も味方撃ち・ダウン・蘇生の味方をこれで決める。
+        // 陣営を引数で渡すのは、目的が Session を持たずに既定のチームの判定を返せるようにするため
         bool AreHostile(int a, Team aTeam, int b, Team bTeam)
         {
             return a != b && aTeam != bTeam;

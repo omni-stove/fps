@@ -66,6 +66,41 @@ namespace Shooter.Server.Tests
             Assert.That(_combat.CanAfflict(attacker, ally), Is.True);
         }
 
+        // Session も味方撃ちを目的の敵味方で決めるので、分隊で戦う目的ではチームが同じでも当たり、チームが違っても当たらないことがある
+        [Test]
+        public void TheSessionLandsDamageByTheHostilityOfTheObjective()
+        {
+            var objective = new TestObjectiveRules { Hostile = (a, _, b, _) => a != b };
+            Start(Rules().WithFriendlyFire(FriendlyFire.Off), objective: objective);
+            Join(1);
+            Join(2);
+            Join(3);
+            Step(0.2f);
+            var (attacker, ally, _) = Sides();
+
+            _combat.DamageOverTime(attacker, ally, 10, TestRules.RifleId);
+
+            Assert.That(_rules.Session.AreAllies(attacker, ally), Is.False);
+            Assert.That(_rules.Session.GetHealth(ally), Is.EqualTo(NetMatchSettings.DefaultMaxHealth - 10), _log.ToString());
+        }
+
+        [Test]
+        public void AnObjectiveThatMakesNobodyHostileKeepsEnemiesFromBeingHurt()
+        {
+            var objective = new TestObjectiveRules { Hostile = (_, _, _, _) => false };
+            Start(Rules().WithFriendlyFire(FriendlyFire.Off), objective: objective);
+            Join(1);
+            Join(2);
+            Join(3);
+            Step(0.2f);
+            var (attacker, _, enemy) = Sides();
+
+            _combat.DamageOverTime(attacker, enemy, 10, TestRules.RifleId);
+
+            Assert.That(_rules.Session.AreAllies(attacker, enemy), Is.True);
+            Assert.That(_rules.Session.GetHealth(enemy), Is.EqualTo(NetMatchSettings.DefaultMaxHealth), _log.ToString());
+        }
+
         [Test]
         public void TheDefaultObjectiveRefusesToInteractAndHasNoBotGoal()
         {

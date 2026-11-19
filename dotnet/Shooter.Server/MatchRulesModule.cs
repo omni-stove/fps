@@ -492,7 +492,7 @@ namespace Shooter.Server
         private void HandleKilled(int killerId, int victimId, IReadOnlyList<int> assisterIds)
         {
             _lastKillers[victimId] = killerId;
-            var byAlly = killerId != victimId && _session.GetTeam(killerId) == _session.GetTeam(victimId);
+            var byAlly = killerId != victimId && !AreHostile(killerId, victimId);
             _log.WriteLine(byAlly ? MatchLog.TeamKill(killerId, victimId) : MatchLog.Kill(killerId, victimId, assisterIds));
             _match.WriteKill(killerId, victimId, byAlly, assisterIds);
             var entry = KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds);

@@ -70,6 +70,12 @@ make server-dotnet ARGS="-rules FreeForAll"
   箱の中身は試合の始まりに `server-data/tuning/loot.json` (クライアントの `Resources/Tuning/loot.json` と同じ中身) の表の `table` から引き、
   ログの `[Loot] seed=` の種が同じなら同じ中身になる。表に無い `table` の箱は空のまま開く (`[Loot] table=... is not in loot.json`)。
   箱を開けられるのは、届く距離 (`reach`) の内に立つ生きている人で、目的が開けることを許すときだけ。断った理由は `[Loot] open ... refused=` に出る。
+- `BattleRoyale` (`server-data/rules/BattleRoyale.json`) の分隊の数と人数・制限時間・エリアの段階 (`zone.phases`)・物資投下 (`supplyDrops`)・
+  復帰 (`redeploy`) は `server-data/tuning/battle-royale.json` から読む (無ければ Core の既定。節の項目はクライアントの `supply-drops.json`・`redeploy.json` と同じ)。
+  最初の円と降ろす高さはマップの `zone`・`dropHeight` を使い、`zone` の無いマップは起動しない。入った順に分隊へ振り分け、同じ分隊の人には当たらない。
+  始まりに全員の武器を空にして `dropHeight` からパラシュートで降ろし (`[BattleRoyale] drop`)、エリアの外の人に段階のダメージを与え (`[Zone] outside`)、
+  次の円の中へ物資投下の箱を落とし (`[SupplyDrop] landed`)、倒れきった人の持ち物を箱にし、最後の分隊が残ると `[Mode] placements winner=` を出して終える。
+  ダウン・蘇生は分隊の味方で数え、復帰は倒されたときの段階と回数で決まる (`[Mode] redeploy ... verdict=`)。
 - `GunGame` の段の武器 (`tierWeaponIds`) は、同じ JSON の `loadout` か `catalog` にある武器の Id にする。無い Id があると起動しない。
   近接で倒した相手の段を下げるには、`meleeWeaponIds` の先頭に近接の Id を書く。サーバーの近接はその Id で倒したことにする。
 - 近接 (`rules.actions.melee`)・ストリーク (`rules.streaks`)・キルカム (`rules.deathCamera` が `KillCam`) はどのモードでも使え、

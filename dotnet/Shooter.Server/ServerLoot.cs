@@ -224,6 +224,19 @@ namespace Shooter.Server
             return Find(itemId)?.Opened ?? false;
         }
 
+        // Bot の行き先 (BR の BattleRoyaleBotPlanner) を選ぶために、まだ開けていない箱を置いた順に足す。並びを空にしないのは、呼ぶ側が使い回すため
+        internal void CollectUnopened(List<ServerLootBox> boxes)
+        {
+            ArgumentNullException.ThrowIfNull(boxes);
+            foreach (var box in _boxes)
+            {
+                if (!box.Opened)
+                {
+                    boxes.Add(new ServerLootBox(box.ItemId, box.Kind, box.Position, box.Reach, box.Weapons.Count > 0));
+                }
+            }
+        }
+
         // 断る理由は安いものから確かめ、目的に尋ねるのは最後にする。目的が受けたことを数える (開けた数など) なら、その後で断って数え違えさせないため
         internal InteractVerdict Open(int playerId, int itemId)
         {

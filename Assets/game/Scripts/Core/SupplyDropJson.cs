@@ -35,20 +35,23 @@ namespace Shooter.Core
 
         public static SupplyDropSpec Parse(string text, string sourceName)
         {
-            return SpecJsonReader.Read(text, sourceName, _kind, ItemNames, fields =>
-            {
-                var stages = SpecJsonReader.ReadList(fields, StagesItem, StageItemNames, ReadStage);
-                var tableId = fields.ReadString(TableIdItem, SupplyDropSpec.DefaultTableId);
-                var dropHeight = fields.ReadFloat(DropHeightItem, SupplyDropSpec.DefaultDropHeight);
-                var fallSpeed = fields.ReadFloat(FallSpeedItem, SupplyDropSpec.DefaultFallSpeed);
-                var placeFraction = fields.ReadFloat(PlaceFractionItem, SupplyDropSpec.DefaultPlaceFraction);
-                var reach = fields.ReadFloat(ReachItem, SupplyDropSpec.DefaultReach);
-                var botSearchRadius = fields.ReadFloat(BotSearchRadiusItem, SupplyDropSpec.DefaultBotSearchRadius);
-                return SpecJsonReader.Build(
-                    fields,
-                    ItemNames,
-                    () => new SupplyDropSpec(stages, tableId, dropHeight, fallSpeed, placeFraction, reach, botSearchRadius));
-            });
+            return SpecJsonReader.Read(text, sourceName, _kind, ItemNames, Read);
+        }
+
+        // 別の調整値のファイルの中の節 (battle-royale.json の supplyDrops) からも同じ項目で読めるよう、節を受け取る口を分ける
+        internal static SupplyDropSpec Read(ServerDataJson.Fields fields)
+        {
+            var stages = SpecJsonReader.ReadList(fields, StagesItem, StageItemNames, ReadStage);
+            var tableId = fields.ReadString(TableIdItem, SupplyDropSpec.DefaultTableId);
+            var dropHeight = fields.ReadFloat(DropHeightItem, SupplyDropSpec.DefaultDropHeight);
+            var fallSpeed = fields.ReadFloat(FallSpeedItem, SupplyDropSpec.DefaultFallSpeed);
+            var placeFraction = fields.ReadFloat(PlaceFractionItem, SupplyDropSpec.DefaultPlaceFraction);
+            var reach = fields.ReadFloat(ReachItem, SupplyDropSpec.DefaultReach);
+            var botSearchRadius = fields.ReadFloat(BotSearchRadiusItem, SupplyDropSpec.DefaultBotSearchRadius);
+            return SpecJsonReader.Build(
+                fields,
+                ItemNames,
+                () => new SupplyDropSpec(stages, tableId, dropHeight, fallSpeed, placeFraction, reach, botSearchRadius));
         }
 
         // 数と間隔は書き忘れると落ちる数が変わってしまうので必須にし、最初の待ちだけ省けるようにする。

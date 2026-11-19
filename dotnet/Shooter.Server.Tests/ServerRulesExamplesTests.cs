@@ -130,6 +130,27 @@ namespace Shooter.Server.Tests
             Assert.That(e.Message, Does.StartWith("cannot start the Payload match on map NetTest: it has no payload route"));
         }
 
+        // BR は目的の工場にまだつないでいないので、ルールの例と調整値から直に作る。例のマップはエリアを書き出していないので断る
+        [Test]
+        public void TheBattleRoyaleExampleReadsItsRulesAndRefusesAMapWithoutAZone()
+        {
+            Assert.That(ServerRulesData.TryLoad("BattleRoyale", Roots(), out var data, out var error), Is.True, error);
+            Assert.That(ServerMapData.TryLoad(_map, Roots(), out var map, out error), Is.True, error);
+
+            Assert.That(data.Rules.Objective, Is.EqualTo(MatchObjective.BattleRoyale));
+            Assert.That(data.File.Name, Is.EqualTo("BattleRoyale"));
+            Assert.That(data.Rules.Actions.Downed, Is.EqualTo(Downed.Revive));
+            Assert.That(data.Rules.Actions.Parachute, Is.EqualTo(Parachute.On));
+            Assert.That(data.Rules.Actions.Melee, Is.EqualTo(Melee.On));
+            Assert.That(data.BattleRoyalePath, Does.EndWith(ServerRulesData.BattleRoyaleTuningFileName), "the committed tuning sits beside the rules");
+            var rules = new BattleRoyaleRules(new NoSessionHost(), data.BattleRoyale, new BattleRoyaleTestWorld(), 1);
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.BattleRoyale));
+
+            var e = Assert.Throws<InvalidOperationException>(() => rules.CheckMap(map, map.Points));
+
+            Assert.That(e.Message, Does.StartWith("cannot change to map " + _map + " for the BattleRoyale match: it has no zone"));
+        }
+
         [Test]
         public void TheGunGameExampleClimbsTheLoadoutWeapons()
         {

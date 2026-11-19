@@ -108,7 +108,9 @@ namespace Shooter.Server.Tests
             Assert.That(data.EconomyPath, Is.Null);
             Assert.That(data.Loot, Is.SameAs(LootSpec.Default));
             Assert.That(data.LootPath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default economy=none loot=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
+            Assert.That(data.BattleRoyale, Is.SameAs(BattleRoyaleSpec.Default));
+            Assert.That(data.BattleRoyalePath, Is.Null);
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default economy=none loot=default battleRoyale=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
         }
 
         [Test]
@@ -402,6 +404,74 @@ namespace Shooter.Server.Tests
 
             Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
             Assert.That(error, Does.StartWith("cannot read loot tuning: ").And.Contain("entries"));
+        }
+
+        [Test]
+        public void ReadsTheBattleRoyaleTuningBesideTheRulesAndKeepsItThroughChanges()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(
+                Path.Combine(tuning, ServerRulesData.BattleRoyaleTuningFileName),
+                "{\"squadCount\": 3, \"squadSize\": 4, \"zone\": {\"phases\": [{\"waitSeconds\": 1, \"shrinkSeconds\": 2, \"radius\": 5, \"damagePerSecond\": 4}]},"
+                + " \"redeploy\": {\"charges\": 2}}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            var spec = data.BattleRoyale;
+            Assert.That(spec.SquadCount, Is.EqualTo(3));
+            Assert.That(spec.SquadSize, Is.EqualTo(4));
+            Assert.That(spec.Zone.Phases.Count, Is.EqualTo(1));
+            Assert.That(spec.Zone.Phases[0].DamagePerSecond, Is.EqualTo(4f));
+            Assert.That(spec.Redeploy.Charges, Is.EqualTo(2));
+            Assert.That(spec.Redeploy.DelaySeconds, Is.EqualTo(RedeploySpec.DefaultDelaySeconds), "an item left out keeps the default of its section");
+            Assert.That(spec.SupplyDrops, Is.SameAs(SupplyDropSpec.Default), "a section left out keeps the Core default");
+            Assert.That(data.BattleRoyalePath, Does.EndWith(ServerRulesData.BattleRoyaleTuningFileName));
+            Assert.That(data.LogLine, Does.Contain(" battleRoyale=" + data.BattleRoyalePath + " "));
+            Assert.That(data.WithSettings(data.Settings.WithPrivacy(true, "FRIENDS")).BattleRoyale, Is.SameAs(spec));
+            Assert.That(data.WithRules(GameRules.Default).BattleRoyalePath, Is.EqualTo(data.BattleRoyalePath));
+        }
+
+        [Test]
+        public void BrokenBattleRoyaleTuningStopsTheLoad()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(
+                Path.Combine(tuning, ServerRulesData.BattleRoyaleTuningFileName),
+                "{\"zone\": {\"phases\": [{\"waitSeconds\": 1, \"shrinkSeconds\": 2, \"radius\": 5}]}}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("cannot read battle royale tuning: ").And.Contain("zone.phases[0].damagePerSecond"));
+        }
+
+        [Test]
+        public void TheCommittedBattleRoyaleTuningReadsTheOfflineDefaults()
+        {
+            var path = Path.Combine(
+                RepositoryRoot(), ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName, ServerRulesData.BattleRoyaleTuningFileName);
+            var spec = BattleRoyaleJson.Parse(File.ReadAllText(path), path);
+
+            Assert.That(spec.SquadCount, Is.EqualTo(BattleRoyaleSpec.DefaultSquadCount));
+            Assert.That(spec.SquadSize, Is.EqualTo(BattleRoyaleSpec.DefaultSquadSize));
+            Assert.That(spec.HasTimeLimit, Is.False);
+            Assert.That(spec.Zone.DamageIntervalSeconds, Is.EqualTo(ZoneSpec.DefaultDamageIntervalSeconds));
+            Assert.That(spec.Zone.Phases.Count, Is.EqualTo(ZoneSpec.DefaultPhases.Count));
+            for (var i = 0; i < spec.Zone.Phases.Count; i++)
+            {
+                Assert.That(spec.Zone.Phases[i].WaitSeconds, Is.EqualTo(ZoneSpec.DefaultPhases[i].WaitSeconds), "phase " + i);
+                Assert.That(spec.Zone.Phases[i].ShrinkSeconds, Is.EqualTo(ZoneSpec.DefaultPhases[i].ShrinkSeconds), "phase " + i);
+                Assert.That(spec.Zone.Phases[i].Radius, Is.EqualTo(ZoneSpec.DefaultPhases[i].Radius), "phase " + i);
+                Assert.That(spec.Zone.Phases[i].DamagePerSecond, Is.EqualTo(ZoneSpec.DefaultPhases[i].DamagePerSecond), "phase " + i);
+            }
+
+            Assert.That(spec.SupplyDrops.Stages.Count, Is.EqualTo(SupplyDropSpec.DefaultStages.Count));
+            Assert.That(spec.SupplyDrops.TableId, Is.EqualTo(SupplyDropSpec.DefaultTableId));
+            Assert.That(spec.Redeploy.Charges, Is.EqualTo(RedeploySpec.DefaultCharges));
+            Assert.That(spec.Redeploy.LastPhaseIndex, Is.EqualTo(RedeploySpec.DefaultLastPhaseIndex));
+            Assert.That(spec.Redeploy.DelaySeconds, Is.EqualTo(RedeploySpec.DefaultDelaySeconds));
         }
 
         [Test]

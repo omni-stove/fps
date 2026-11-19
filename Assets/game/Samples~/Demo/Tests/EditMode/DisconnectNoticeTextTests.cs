@@ -112,6 +112,18 @@ namespace Shooter.Tests.EditMode
             Assert.That(Localizer.Resolve(text), Does.Contain("放置"));
         }
 
+        [Test]
+        public void TheVoteKickedReasonSaysPlayersVotedThePlayerOut()
+        {
+            var text = For(DisconnectNotice.VoteKickedReason, true);
+
+            Assert.That(text, Is.EqualTo(DisconnectNoticeText.VoteKickedMessage));
+            Assert.That(text, Is.Not.EqualTo(DisconnectNoticeText.KickedMessage), "not the administrator's kick");
+            Assert.That(
+                Localizer.Resolve(text),
+                Is.EqualTo("プレイヤーの投票で試合から外されました (投票キック)。この試合が終わるまで入り直せません。"));
+        }
+
         [TestCase(null)]
         [TestCase("Disconnected due to host shutting down.")]
         [TestCase("shooter:something-new")]

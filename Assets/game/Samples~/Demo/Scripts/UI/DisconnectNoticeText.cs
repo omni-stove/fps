@@ -14,6 +14,7 @@ namespace Shooter.Runtime
         public static LocalizedText IdleKickedMessage => new LocalizedText("net.disconnect.idleKicked");
         public static LocalizedText BannedMessage => new LocalizedText("net.disconnect.banned");
         public static LocalizedText KickedMessage => new LocalizedText("net.disconnect.kicked");
+        public static LocalizedText VoteKickedMessage => new LocalizedText("net.disconnect.voteKicked");
 
         public static LocalizedText For(MenuReturnReason reason)
         {
@@ -46,6 +47,8 @@ namespace Shooter.Runtime
                     return ServerStoppedMessage;
                 case DisconnectKind.IdleKicked:
                     return IdleKickedMessage;
+                case DisconnectKind.VoteKicked:
+                    return VoteKickedMessage;
                 case DisconnectKind.VersionMismatch:
                     return VersionMismatchText(notice.ServerVersion, notice.LocalVersion);
                 case DisconnectKind.Rejected:

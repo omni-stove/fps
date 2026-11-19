@@ -1,0 +1,75 @@
+/*
+ * 投票キックの中身。Shooter.Runtime.VoteKickView が Hud.uxml の vote-kick の枠に付けて読み込む。HUD を組み替えたゲームでも枠に付いてくるよう、Hud.uss には枠の置き場所 (.vote-kick) だけを書く。
+ * 上から「誰が誰の投票を始めたか」「賛成の数 / 要る数と残り秒」「賛成・反対のボタン」の順に並べる。
+ */
+
+.vote-kick__title {
+    margin: 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgb(255, 255, 255);
+    -unity-font-style: bold;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.vote-kick__status {
+    flex-direction: row;
+    align-items: center;
+    margin: 4px 0 0 0;
+}
+
+.vote-kick__tally {
+    margin: 0 12px 0 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgb(255, 196, 64);
+    -unity-font-style: bold;
+    white-space: nowrap;
+}
+
+.vote-kick__timer {
+    margin: 0;
+    padding: 0;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+}
+
+.vote-kick__choices {
+    flex-direction: row;
+    margin: 6px 0 0 0;
+}
+
+.vote-kick__choice {
+    min-width: 96px;
+    margin: 0 8px 0 0;
+    padding: 4px 14px;
+    font-size: 18px;
+    color: rgb(255, 255, 255);
+    background-color: rgba(255, 255, 255, 0.1);
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+}
+
+.vote-kick__choice:hover,
+.vote-kick__choice:focus {
+    background-color: rgba(255, 255, 255, 0.25);
+}
+
+.vote-kick__yes.vote-kick__choice--mine {
+    background-color: rgba(80, 180, 90, 0.6);
+    border-color: rgba(140, 230, 150, 0.9);
+}
+
+.vote-kick__no.vote-kick__choice--mine {
+    background-color: rgba(220, 80, 60, 0.6);
+    border-color: rgba(255, 140, 120, 0.8);
+}
+
+/* 自分が対象の投票は、自分では止められないことが分かるよう枠を赤くする。 */
+.vote-kick--target-is-local {
+    border-width: 2px;
+    border-color: rgba(220, 80, 60, 0.9);
+}

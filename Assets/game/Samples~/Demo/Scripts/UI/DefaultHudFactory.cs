@@ -1,5 +1,6 @@
 using Shooter.Core;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Shooter.Runtime
 {
@@ -88,7 +89,34 @@ namespace Shooter.Runtime
                 return;
             }
 
+            // 足す前に Current へ入れるのは、足すのに失敗しても、作った HUD を Unregister や次の片付けで消せるようにするため。
             Current = Hud.Create(HudObjectName);
+            AddAircraftView(Current);
+        }
+
+        // Hud.AddViews に入れないのは、既定の HUD にだけ足し、Hud.Create で組むほかの HUD (オンラインの HUD など) の表示を変えずに済ませるため。
+        public static AircraftHudView AddAircraftView(Hud hud)
+        {
+            if (hud == null)
+            {
+                throw new System.ArgumentNullException(nameof(hud));
+            }
+
+            var view = hud.GetComponent<AircraftHudView>();
+            if (view == null)
+            {
+                view = hud.gameObject.AddComponent<AircraftHudView>();
+            }
+
+            // HUD はもう木を結び終えているので、後から足した表示は自分で結ぶ。Edit Mode では Start が走らないため、ここで結ぶ。
+            var document = hud.GetComponent<UIDocument>();
+            var root = document != null ? document.rootVisualElement : null;
+            if (view.Element == null && root != null && root.childCount > 0)
+            {
+                view.Bind(root);
+            }
+
+            return view;
         }
 
         private static void DestroyCurrent()

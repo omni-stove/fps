@@ -22,6 +22,8 @@ namespace Shooter.Tests.EditMode
         private WeaponDefinition _rifle;
         private WeaponDefinition _heatGun;
         private GameRulesDefinition _rules;
+        private AircraftDefinition _aircraft;
+        private AudioClip _engine;
 
         [SetUp]
         public void SetUp()
@@ -41,6 +43,12 @@ namespace Shooter.Tests.EditMode
             _rules.name = "Rules";
             _assets.Add(_rules);
             GameRulesAssetBuilder.Configure(_rules, GameRulesAssetBuilder.TpsRangeRules());
+            _aircraft = ScriptableObject.CreateInstance<AircraftDefinition>();
+            _aircraft.name = "Aircraft";
+            _assets.Add(_aircraft);
+            AircraftFixtureBuilder.Configure(_aircraft);
+            _engine = AudioClip.Create("Engine", 4410, 1, 44100, false);
+            _assets.Add(_engine);
         }
 
         [TearDown]
@@ -117,7 +125,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheGunCarWaitsBesideThePlayerWithItsDriverSeatClosest()
         {
-            var bootstrap = VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules);
+            var bootstrap = VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
 
             Assert.That(bootstrap.name, Is.EqualTo(VehicleRangeSceneBuilder.BootstrapObjectName));
             Assert.That(bootstrap.CreatesFloor, Is.False);
@@ -148,7 +156,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheRoofGunCanReachATargetWhereverTheCarStops()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules);
+            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
 
             var targets = Find(VehicleRangeSceneBuilder.TargetsName).GetComponentsInChildren<TargetDummy>();
             Assert.That(targets.Select(t => t.Damageable.Id), Is.EqualTo(new[] { "VehicleTarget0", "VehicleTarget1", "VehicleTarget2" }));
@@ -168,7 +176,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheMountedGunFacesTheCarItDestroysFromOutsideTheBlast()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules);
+            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
 
             var mounted = Find(VehicleRangeSceneBuilder.MountedGunName).GetComponent<MountedGun>();
             Assert.That(mounted.IsReady, Is.True);
@@ -192,7 +200,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheAircraftWaitsAtTheStartOfAClearRunway()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules);
+            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
             Physics.SyncTransforms();
 
             var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
@@ -205,7 +213,15 @@ namespace Shooter.Tests.EditMode
             var motor = aircraft.GetComponent<SimpleAircraftMotor>();
             var scheme = aircraft.GetComponent<AircraftControlScheme>();
             Assert.That(motor, Is.Not.Null);
-            Assert.That(motor.Body.mass, Is.EqualTo(AircraftSpec.DefaultMass));
+            Assert.That(motor.Body.mass, Is.EqualTo(AircraftSpec.DefaultMass), "the range asset starts from the kit defaults");
+            Assert.That(
+                AircraftFixtureBuilder.LeftWingCenter.x - (AircraftFixtureBuilder.WingSize.x / 2f),
+                Is.EqualTo(-AircraftFixtureBuilder.WingSpan / 2f).Within(Epsilon),
+                "the two wings reach the full span");
+            Assert.That(
+                AircraftFixtureBuilder.RightWingCenter.x - (AircraftFixtureBuilder.WingSize.x / 2f),
+                Is.EqualTo(AircraftFixtureBuilder.FuselageSize.x / 2f).Within(Epsilon),
+                "the wings start at the side of the fuselage");
             Assert.That(aircraft.GetComponent<VehicleMotorLink>(), Is.Not.Null);
             Assert.That(aircraft.GetComponent<VehicleImpactDamage>(), Is.Not.Null);
             Assert.That(VehicleControlSchemes.For(aircraft.gameObject), Is.SameAs(scheme));
@@ -215,7 +231,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(fuselageBottom, Is.GreaterThan(AircraftFixtureBuilder.NoseWheel.y - AircraftFixtureBuilder.WheelRadius), "the fuselage rides above the wheels");
 
             Assert.That(VehicleRangeSceneBuilder.RunwayLength, Is.EqualTo(125f).Within(Epsilon));
-            var halfSpan = (AircraftFixtureBuilder.WingSize.x / 2f) + 1f;
+            var halfSpan = (AircraftFixtureBuilder.WingSpan / 2f) + 1f;
             var runwayCenter = new Vector3(
                 VehicleRangeSceneBuilder.AircraftOrigin.x,
                 3f,
@@ -236,7 +252,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheEnemyStandsBeyondEarshotOfWhatTheSmokeFires()
         {
-            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules);
+            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
 
             var enemy = Find(VehicleRangeSceneBuilder.EnemiesName).GetComponentInChildren<EnemyAgent>();
             Assert.That(enemy.Id, Is.EqualTo(VehicleRangeSceneBuilder.EnemyId));
@@ -258,10 +274,117 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void ActorsNeedWeaponsAndRules()
         {
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, null, _heatGun, _rules));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, null, _rules));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, null));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, null, _heatGun, _rules, _aircraft));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, null, _rules, _aircraft));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, null, _aircraft));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, null));
             Assert.That(_scene.rootCount, Is.Zero, "nothing is placed when an argument is missing");
+        }
+
+        [Test]
+        public void AnInvalidAircraftAssetPlacesNothingAndNamesTheAsset()
+        {
+            _aircraft.MaxThrust = -1f;
+
+            var error = Assert.Throws<ArgumentException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft));
+
+            Assert.That(error.Message, Does.Contain("'Aircraft'"));
+            Assert.That(_scene.rootCount, Is.Zero);
+        }
+
+        [Test]
+        public void TheAircraftCarriesItsAssetWheelsPartsEffectsAndStatus()
+        {
+            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft, _engine);
+
+            var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
+            var motor = aircraft.GetComponent<SimpleAircraftMotor>();
+            Assert.That(motor.Definition, Is.SameAs(_aircraft));
+            Assert.That(motor.Body.mass, Is.EqualTo(_aircraft.Mass));
+            Assert.That(aircraft.GetComponent<AircraftControlScheme>().Definition, Is.SameAs(_aircraft));
+
+            var wheels = aircraft.GetComponent<AircraftWheels>();
+            Assert.That(wheels, Is.Not.Null);
+            Assert.That(wheels.Definition, Is.SameAs(_aircraft));
+            Assert.That(wheels.Wheels.Count, Is.EqualTo(3));
+            Assert.That(wheels.FrontWheels.Select(w => w.name), Is.EqualTo(new[] { "Wheel_Nose" }), "only the nose wheel is ahead of the centre of mass");
+
+            var damage = aircraft.GetComponent<AircraftPartDamage>();
+            Assert.That(damage, Is.Not.Null);
+            Assert.That(damage.Definition, Is.SameAs(_aircraft));
+            Assert.That(damage.Vehicle, Is.SameAs(aircraft));
+
+            var expected = new[]
+            {
+                (AircraftFixtureBuilder.LeftWingName, AircraftDamageSpec.DefaultLeftWingId),
+                (AircraftFixtureBuilder.RightWingName, AircraftDamageSpec.DefaultRightWingId),
+                (AircraftFixtureBuilder.TailName, AircraftDamageSpec.DefaultTailId),
+                (AircraftFixtureBuilder.EngineName, AircraftDamageSpec.DefaultEngineId),
+            };
+            var parts = aircraft.GetComponentsInChildren<VehiclePart>();
+            Assert.That(parts.Select(p => (p.name, p.PartId)), Is.EquivalentTo(expected));
+            foreach (var part in parts)
+            {
+                Assert.That(damage.Damage.Contains(part.PartId), Is.True, part.PartId);
+                Assert.That(aircraft.Spec.FindPart(part.PartId), Is.Not.Null, $"'{part.PartId}' is in the vehicle spec, so hits on it are not unscaled");
+                Assert.That(part.GetComponent<Hitbox>(), Is.Not.Null, part.PartId);
+                Assert.That(part.GetComponentsInChildren<Collider>(), Is.Not.Empty, $"'{part.PartId}' can be hit");
+            }
+
+            var effects = aircraft.GetComponent<AircraftEffects>();
+            Assert.That(effects, Is.Not.Null);
+            Assert.That(effects.Motor, Is.SameAs(motor));
+            Assert.That(effects.Spec.ElevatorAngle, Is.EqualTo(_aircraft.ToEffectsSpec().ElevatorAngle), "the effects read the motor's asset");
+            Assert.That(effects.EngineClip, Is.SameAs(_engine));
+            Assert.That(
+                effects.Surfaces.Select(s => s.Role),
+                Is.EquivalentTo(new[]
+                {
+                    AircraftControlSurfaceRole.Aileron, AircraftControlSurfaceRole.Aileron, AircraftControlSurfaceRole.Elevator, AircraftControlSurfaceRole.Rudder,
+                }));
+            Assert.That(effects.Surfaces.Select(s => s.Transform), Has.None.Null);
+            Assert.That(effects.Surfaces.Where(s => s.Role == AircraftControlSurfaceRole.Aileron).Count(s => s.Reversed), Is.EqualTo(1), "one aileron turns the other way");
+            foreach (var surface in effects.Surfaces)
+            {
+                Assert.That(surface.Transform.GetComponentsInChildren<Collider>(), Is.Empty, $"'{surface.Transform.name}' does not block hits on the wings");
+            }
+
+            Assert.That(effects.VaporAnchors.Select(a => a.localPosition.x), Is.EqualTo(new[] { -AircraftFixtureBuilder.WingSpan / 2f, AircraftFixtureBuilder.WingSpan / 2f }));
+            Assert.That(aircraft.GetComponent<AircraftStatusPublisher>(), Is.Not.Null);
+        }
+
+        [Test]
+        public void ShootingTheLeftWingThroughItsHitboxBreaksItsLift()
+        {
+            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
+
+            var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
+            var damage = aircraft.GetComponent<AircraftPartDamage>();
+            var wing = aircraft.transform.Find(AircraftFixtureBuilder.LeftWingName).GetComponent<Hitbox>();
+
+            wing.ApplyResolvedHit(AircraftDamageSpec.DefaultWingDurability, null, null, DamageKind.Bullet);
+
+            Assert.That(damage.Damage.IsBroken(AircraftDamageSpec.DefaultLeftWingId), Is.True);
+            Assert.That(damage.Condition.LeftLift, Is.EqualTo(AircraftDamageSpec.DefaultMinLift).Within(Epsilon));
+            Assert.That(damage.Condition.RightLift, Is.EqualTo(1f).Within(Epsilon));
+            Assert.That(aircraft.Damageable.Health.Current, Is.EqualTo(VehicleSpec.DefaultMaxHealth - AircraftDamageSpec.DefaultWingDurability), "the hit counts at the part multiplier of 1");
+        }
+
+        [Test]
+        public void APartTheAssetLeavesOutIsNotMarkedAndItsBoxHitsTheBody()
+        {
+            _aircraft.Damage.CopyFrom(new AircraftDamageSpec(new[]
+            {
+                new AircraftDamagePartSpec("left", AircraftDamageEffect.LeftLift, 100),
+                new AircraftDamagePartSpec("right", AircraftDamageEffect.RightLift, 100),
+            }));
+
+            VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft);
+
+            var aircraft = Find(VehicleRangeSceneBuilder.AircraftName).GetComponent<Vehicle>();
+            Assert.That(aircraft.GetComponentsInChildren<VehiclePart>().Select(p => p.PartId), Is.EquivalentTo(new[] { "left", "right" }));
+            Assert.That(aircraft.transform.Find(AircraftFixtureBuilder.TailName).GetComponent<VehiclePart>(), Is.Null);
+            Assert.That(aircraft.Spec.Parts.Select(p => p.Id), Is.EquivalentTo(new[] { "left", "right" }));
         }
 
         private float GroundHeight(float x)

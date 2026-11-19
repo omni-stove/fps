@@ -183,6 +183,27 @@
       }
     },
     {
+      "id": "c8e4f2a1-7b3d-4e95-a6c0-1d2f3b4a5e67",
+      "nameKey": "item.thermalScope",
+      "iconId": "thermalScope",
+      "weight": 0.8,
+      "width": 2,
+      "height": 1,
+      "attachment": {
+        "slot": "optic",
+        "weaponIds": ["6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83", "9795f821-8fac-4c4f-90f8-c0a80841de96"],
+        "adsSpreadMultiplier": 0.6,
+        "moveSpreadMultiplier": 1.2,
+        "zoomLevels": [30],
+        "sight": {
+          "reticleId": "scope4x",
+          "scopeOverlay": true,
+          "eyeViewInThirdPerson": true,
+          "visionMode": "Thermal"
+        }
+      }
+    },
+    {
       "id": "8d8c8546-59d4-4b4c-ba71-890664e5c260",
       "nameKey": "item.suppressor",
       "iconId": "suppressor",

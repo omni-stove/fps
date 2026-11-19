@@ -1,0 +1,62 @@
+{
+  "id": "3e7b9c41-5a2d-4f86-b1c3-9d4e7a2f6b18",
+  "nameKey": "weapon.riotShield",
+  "category": "Handgun",
+  "shotNoiseRadius": 0,
+  "weight": 6,
+  "moveSpeedMultiplier": 1,
+  "trigger": {
+    "fireMode": "Semi",
+    "fireInterval": 0.6
+  },
+  "ammo": {
+    "kind": "Magazine",
+    "magazineSize": 1,
+    "reserveAmmo": 0,
+    "reloadSeconds": 1,
+    "activeReloadWindowStart": 0.5,
+    "activeReloadWindowLength": 0.15,
+    "activeReloadFailSeconds": 0.5,
+    "reloadStyle": "Whole",
+    "reloadSecondsPerRound": 0
+  },
+  "round": {
+    "delivery": "Hitscan",
+    "range": 100,
+    "pelletCount": 1,
+    "pelletSpreadDegrees": 0,
+    "radius": 0
+  },
+  "impact": {
+    "damage": 25,
+    "falloff": "None",
+    "structureRadius": 0
+  },
+  "aim": {
+    "hipSpreadDegrees": 0,
+    "adsSpreadDegrees": 0,
+    "moveSpreadDegrees": 0,
+    "recoilPitchDegrees": 0,
+    "recoilYawDegrees": 0,
+    "recoilRecoveryPerSecond": 0,
+    "recoilRecoveryDelaySeconds": 0.15,
+    "blindFireSpreadDegrees": 0,
+    "zoomLevels": [50],
+    "swayDegrees": 0
+  },
+  "shield": {
+    "blockArcDegrees": 120,
+    "width": 0.6,
+    "height": 1.2,
+    "moveSpeedMultiplier": 0.8,
+    "bash": {
+      "damage": 40,
+      "reach": 1.6,
+      "arcDegrees": 90,
+      "swingSeconds": 0.6,
+      "cooldownSeconds": 0.5,
+      "impactSeconds": 0.25,
+      "lungeDistance": 0.5
+    }
+  }
+}

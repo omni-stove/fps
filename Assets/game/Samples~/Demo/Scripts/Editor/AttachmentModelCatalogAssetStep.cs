@@ -17,6 +17,7 @@ namespace Shooter.Editor
         public const string RedDotId = "2451a5a1-24e5-45ed-bbc1-8b23276152f8";
         public const string HoloSightId = "79fb2f9e-fc61-425a-b651-8baa8d1a6b2b";
         public const string Scope4xId = "a2c5e73b-69fa-4402-b0ef-3c4297973226";
+        public const string ThermalScopeId = "c8e4f2a1-7b3d-4e95-a6c0-1d2f3b4a5e67";
         public const string SuppressorId = "8d8c8546-59d4-4b4c-ba71-890664e5c260";
         public const string CompensatorId = "3fc98d19-5fb3-4680-bd5f-30d30d14f84e";
         public const string ForegripId = "6142e02c-15a1-4fe8-9f31-015752f1ca2e";
@@ -55,6 +56,7 @@ namespace Shooter.Editor
                 new AttachmentModelEntry(RedDotId, null, AttachmentAnchor.Top, new Vector3(0.035f, 0.04f, 0.06f)),
                 new AttachmentModelEntry(HoloSightId, null, AttachmentAnchor.Top, new Vector3(0.044f, 0.05f, 0.06f)),
                 new AttachmentModelEntry(Scope4xId, null, AttachmentAnchor.Top, new Vector3(0.04f, 0.045f, 0.18f)),
+                new AttachmentModelEntry(ThermalScopeId, null, AttachmentAnchor.Top, new Vector3(0.05f, 0.06f, 0.16f)),
                 new AttachmentModelEntry(SuppressorId, null, AttachmentAnchor.Front, new Vector3(0.035f, 0.035f, 0.16f)),
                 new AttachmentModelEntry(CompensatorId, null, AttachmentAnchor.Front, new Vector3(0.03f, 0.03f, 0.05f)),
                 new AttachmentModelEntry(ForegripId, null, AttachmentAnchor.Bottom, new Vector3(0.025f, 0.08f, 0.025f)),
@@ -72,6 +74,8 @@ namespace Shooter.Editor
                     return ModelPrefix + "HoloSight";
                 case Scope4xId:
                     return ModelPrefix + "Scope4x";
+                case ThermalScopeId:
+                    return ModelPrefix + "ThermalScope";
                 case SuppressorId:
                     return ModelPrefix + "Suppressor";
                 case CompensatorId:
@@ -120,6 +124,22 @@ namespace Shooter.Editor
                         parts.Add(new WeaponPart("ScopeLens_F", WeaponPartShape.Cylinder, new Vector3(0f, y, (length * 0.5f) + 0.001f), new Vector3(diameter * 0.85f, diameter * 0.85f, 0.002f), WeaponPaint.Glass));
                         parts.Add(new WeaponPart("ScopeLens_R", WeaponPartShape.Cylinder, new Vector3(0f, y, (-length * 0.5f) - 0.001f), new Vector3(diameter * 0.75f, diameter * 0.75f, 0.002f), WeaponPaint.Glass));
                         return new AttachmentShape(parts, WeaponSockets.SightName, new Vector3(0f, y, -length * 0.5f));
+                    }
+
+                // 4 倍のスコープと見分けられるよう、丸い筒でなく角ばった箱の筐体にし、横に電池の箱を付ける。
+                case ThermalScopeId:
+                    {
+                        const float width = 0.04f;
+                        const float height = 0.044f;
+                        const float length = 0.16f;
+                        const float mount = 0.012f;
+                        var y = mount + (height * 0.5f);
+                        parts.Add(new WeaponPart("ThermalMount", WeaponPartShape.Box, new Vector3(0f, mount * 0.5f, 0f), new Vector3(0.018f, mount, length * 0.6f), WeaponPaint.Furniture));
+                        parts.Add(new WeaponPart("ThermalHousing", WeaponPartShape.Box, new Vector3(0f, y, 0f), new Vector3(width, height, length), WeaponPaint.Body));
+                        parts.Add(new WeaponPart("ThermalBattery", WeaponPartShape.Box, new Vector3((width * 0.5f) + 0.006f, y, -length * 0.1f), new Vector3(0.012f, height * 0.7f, length * 0.4f), WeaponPaint.Furniture));
+                        parts.Add(new WeaponPart("ThermalLens", WeaponPartShape.Cylinder, new Vector3(0f, y, (length * 0.5f) + 0.001f), new Vector3(width * 0.85f, width * 0.85f, 0.002f), WeaponPaint.Glass));
+                        parts.Add(new WeaponPart("ThermalEyepiece", WeaponPartShape.Cylinder, new Vector3(0f, y, (-length * 0.5f) - 0.01f), new Vector3(width * 0.7f, width * 0.7f, 0.02f), WeaponPaint.Furniture));
+                        return new AttachmentShape(parts, WeaponSockets.SightName, new Vector3(0f, y, (-length * 0.5f) - 0.02f));
                     }
 
                 case SuppressorId:

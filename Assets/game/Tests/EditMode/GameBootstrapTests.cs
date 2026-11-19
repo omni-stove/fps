@@ -1239,6 +1239,20 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ThePlayerCarriesOneVisionControllerAndAThermalHighlighterBoundToIt()
+        {
+            var vision = _world.Player.GetComponents<VisionModeController>();
+            var thermal = _world.Player.GetComponents<ThermalHighlighter>();
+
+            Assert.That(vision, Has.Length.EqualTo(1), "goggles and thermal scopes need the controller to change the view");
+            Assert.That(thermal, Has.Length.EqualTo(1));
+            Assert.That(thermal[0].Controller, Is.SameAs(vision[0]));
+            Assert.That(vision[0].Damageable, Is.SameAs(_world.Player.GetComponent<Damageable>()));
+            Assert.That(vision[0].Goggles, Is.EqualTo(VisionMode.None), "the player starts without goggles");
+            Assert.That(thermal[0].IsActive, Is.False);
+        }
+
+        [Test]
         public void ThePlayerMovesWithTheCarryLoadOfTheWeaponAndTheInventory()
         {
             Assert.That(_world.Mover.CarryLoad, Is.InstanceOf<PlayerCarryLoad>());

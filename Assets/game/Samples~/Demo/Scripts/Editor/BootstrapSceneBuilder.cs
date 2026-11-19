@@ -96,6 +96,23 @@ namespace Shooter.Editor
         // 後ろの列も遮蔽物 (CoverDistance) より手前に収めるため、横の間隔より詰める。
         public const float WeaponTableRowSpacing = 1.5f;
 
+        public const string GearTableName = "GearTable";
+
+        // サーマルの照準は持ち物の表 (inventory.json) で付けられる武器が決まり、射撃場の Reference の武器には付かないので、付けられる rifle を一緒に置く。
+        public static readonly IReadOnlyList<string> GearWeaponIds = new[]
+        {
+            WeaponAssetBuilder.RiotShieldId,
+            WeaponAssetBuilder.RifleId,
+        };
+
+        public static readonly IReadOnlyList<string> GearItemIds = new[]
+        {
+            AttachmentModelCatalogAssetStep.ThermalScopeId,
+        };
+
+        // 出現位置の後ろに置き、前の武器の台・遮蔽物・標的への射線を塞がない。拾える範囲 (RangeWeaponRackFixture.PickupRadius) に出現位置が入らない距離にする。
+        public const float GearTableDistance = 2.5f;
+
         public const string PlatformsName = "Platforms";
 
         public const string ShuttleName = "Platform_Shuttle";
@@ -256,6 +273,8 @@ namespace Shooter.Editor
                 ?? throw new InvalidOperationException(
                     $"[BootstrapSceneBuilder] no range weapon has a homing round for the lock-on turret; add one to '{WeaponAssetBuilder.RangeWeaponsPath}'");
             var elevator = BuildElevatorSettings();
+            var gearWeapons = LoadGearWeapons(WeaponAssetBuilder.LoadRangeWeapons());
+            var abilities = LoadAbilities();
 
             var directory = Path.GetDirectoryName(path);
             if (!string.IsNullOrEmpty(directory))
@@ -263,7 +282,9 @@ namespace Shooter.Editor
                 Directory.CreateDirectory(directory);
             }
 
-            PopulateScene(scene, weapons, rules, featured, elevator, lockOnWeapon);
+            var bootstrap = PopulateScene(scene, weapons, rules, featured, elevator, lockOnWeapon);
+            bootstrap.GetComponent<GameBootstrap>().AbilityDefinitions = abilities;
+            CreateGearTable(scene, gearWeapons, GearItemIds);
 
             if (!EditorSceneManager.SaveScene(scene, path))
             {
@@ -520,15 +541,98 @@ namespace Shooter.Editor
             return FindAll(reference, FeaturedReferenceWeaponIds).Concat(FindAll(realistic, FeaturedRealisticWeaponIds)).ToArray();
         }
 
-        private static WeaponDefinition[] FindAll(WeaponCatalogAsset catalog, IReadOnlyList<string> ids)
+        public static WeaponDefinition[] LoadGearWeapons(WeaponCatalogAsset range)
+        {
+            return FindAll(range, GearWeaponIds, GearTableName);
+        }
+
+        // 能力の枠は 2 つ (AbilityHost.SlotCount) なので、射撃場で試すゴーグルとドローンで埋める。使えるかはルールの Abilities で決まる (射撃場の既定は Off)。
+        public static AbilityDefinition[] LoadAbilities()
+        {
+            return new AbilityDefinition[]
+            {
+                AbilityAssetBuilder.LoadOrBuildVisionGogglesAbility(),
+                AbilityAssetBuilder.LoadOrBuildDroneAbility(),
+            };
+        }
+
+        private static WeaponDefinition[] FindAll(WeaponCatalogAsset catalog, IReadOnlyList<string> ids, string placementId = WeaponTableName)
         {
             var weapons = new WeaponDefinition[ids.Count];
             for (var i = 0; i < weapons.Length; i++)
             {
-                weapons[i] = WeaponAssetBuilder.FindInCatalog(catalog, WeaponTableName, ids[i]);
+                weapons[i] = WeaponAssetBuilder.FindInCatalog(catalog, placementId, ids[i]);
             }
 
             return weapons;
+        }
+
+        public static Vector3[] GearTablePositions(int count)
+        {
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "count must not be negative");
+            }
+
+            var feet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
+            var offsets = LineLayout.CenteredOffsets(count, WeaponTableSpacing);
+            var positions = new Vector3[count];
+            for (var i = 0; i < count; i++)
+            {
+                positions[i] = feet + new Vector3(offsets[i], 0f, -GearTableDistance);
+            }
+
+            return positions;
+        }
+
+        // 武器のあとに持ち物を並べ、照準を付けられる武器の隣に照準が来るようにする。
+        public static GameObject CreateGearTable(Scene scene, IReadOnlyList<WeaponDefinition> weapons, IReadOnlyList<string> itemIds)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+            if (weapons == null)
+            {
+                throw new ArgumentNullException(nameof(weapons));
+            }
+
+            if (itemIds == null)
+            {
+                throw new ArgumentNullException(nameof(itemIds));
+            }
+
+            // 中身を先に作って検査し、不正なら何も置かない。
+            var contents = new PickupContents[weapons.Count + itemIds.Count];
+            var names = new string[contents.Length];
+            for (var i = 0; i < weapons.Count; i++)
+            {
+                if (weapons[i] == null)
+                {
+                    throw new ArgumentException($"gear weapon #{i} is empty", nameof(weapons));
+                }
+
+                contents[i] = PickupContents.ForWeapon(weapons[i], weapons[i].ToSpec().MagazineSize);
+                names[i] = weapons[i].name;
+            }
+
+            for (var i = 0; i < itemIds.Count; i++)
+            {
+                if (!KitTuning.Items.TryFind(itemIds[i], out _))
+                {
+                    throw new ArgumentException($"gear item '{itemIds[i]}' is not in the inventory tuning", nameof(itemIds));
+                }
+
+                contents[weapons.Count + i] = PickupContents.ForItem(itemIds[i], 1);
+                names[weapons.Count + i] = itemIds[i];
+            }
+
+            var root = new GameObject(GearTableName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            var positions = GearTablePositions(contents.Length);
+            for (var i = 0; i < contents.Length; i++)
+            {
+                RangeWeaponRackFixture.CreatePickup(root.transform, names[i], contents[i], positions[i]);
+            }
+
+            return root;
         }
 
         public static Vector3[] WeaponTablePositions(int count)

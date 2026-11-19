@@ -58,7 +58,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(stage, Is.EqualTo(VehicleDamageStage.Destroyed));
         }
 
-        private static readonly int[] _toldOnFirstSightAndChange ={ 0, 120, 300 };
+        private static readonly int[] _toldOnFirstSightAndChange = { 0, 120, 300 };
 
         [Test]
         public void ThePartsAreToldOnFirstSightAndWhenTheyChange()

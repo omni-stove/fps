@@ -17,5 +17,7 @@ namespace Shooter.Core
         Cancelled,
 
         RuleOff,
+
+        Riding,
     }
 }

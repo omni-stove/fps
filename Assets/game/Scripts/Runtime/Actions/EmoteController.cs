@@ -286,6 +286,12 @@ namespace Shooter.Runtime
                 return;
             }
 
+            if (_rider != null && _rider.IsRiding)
+            {
+                StopCurrent(EmoteStopReason.Riding);
+                return;
+            }
+
             if (_current.StopsOnMove && HasMoved())
             {
                 StopCurrent(EmoteStopReason.Moved);

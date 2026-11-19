@@ -269,6 +269,17 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheClockStopsWhenTheMatchEnds()
+        {
+            _status.Apply(Snapshot(100));
+            _status.Apply(Snapshot(125, state: GameModeState.Ended));
+            var changed = _status.Apply(Snapshot(200, state: GameModeState.Ended));
+
+            Assert.That(changed, Is.False);
+            Assert.That(_status.BattleRoyale.Game.ElapsedSeconds, Is.EqualTo(2d), "stopped at the first Ended snapshot");
+        }
+
+        [Test]
         public void TheClockCountsUpWithoutATimeLimit()
         {
             _status.Apply(Snapshot(100));

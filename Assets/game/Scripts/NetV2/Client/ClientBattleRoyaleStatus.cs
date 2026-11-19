@@ -24,6 +24,7 @@ namespace Shooter.NetV2
         private bool _tracking;
         private bool _ended;
         private int? _startTick;
+        private int? _endTick;
         private bool _hasTimeLimit;
         private int _nextSupplyNumber = 1;
         private Side? _winner;
@@ -85,6 +86,7 @@ namespace Shooter.NetV2
             else if (match.State == GameModeState.Ended && !_ended)
             {
                 _ended = true;
+                _endTick = snapshot.Tick;
                 PlaceRemaining(snapshot);
             }
 
@@ -179,6 +181,7 @@ namespace Shooter.NetV2
         {
             _ended = false;
             _startTick = null;
+            _endTick = null;
             _hasTimeLimit = false;
             _winner = null;
             _entrants.Clear();
@@ -195,7 +198,9 @@ namespace Shooter.NetV2
                 return 0d;
             }
 
-            return Math.Floor(Math.Max(0, snapshot.Tick - _startTick.Value) / (double)_tickRate);
+            // オフラインは決着した時刻で時計が止まるので、Ended の間は最初に受けた tick で数える
+            var tick = _endTick ?? snapshot.Tick;
+            return Math.Floor(Math.Max(0, tick - _startTick.Value) / (double)_tickRate);
         }
 
         private void PlaceEliminated(SnapshotMessage snapshot)

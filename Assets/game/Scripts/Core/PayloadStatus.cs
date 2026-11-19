@@ -51,7 +51,6 @@ namespace Shooter.Core
             MinPushers = minPushers;
         }
 
-        // これ未満の人数では台車は進まない
         public int MinPushers { get; }
 
         public Side Attackers { get; }

@@ -145,7 +145,7 @@ namespace Shooter.Tests.EditMode
             _runner.Tick(0f);
             var offer = Detail().Offer;
             Assert.That(offer.HasValue, Is.True, "the wall in reach is offered");
-            Assert.That(_runner.IsOfferingInteract, Is.True, "a shared key goes to the wall, not to melee");
+            Assert.That(_runner.IsOfferingInteract, Is.False, "a wall that cannot be repaired mid-wave leaves a shared key to melee");
             Assert.That(offer.Value.Action, Is.EqualTo(HordeFortificationAction.Repair));
             Assert.That(offer.Value.StructureName, Is.EqualTo("Wall"));
             Assert.That(offer.Value.Cost, Is.EqualTo(RepairCostPerPiece));
@@ -156,6 +156,7 @@ namespace Shooter.Tests.EditMode
 
             ClearWave();
             var currency = _runner.Horde.Currency;
+            Assert.That(_runner.IsOfferingInteract, Is.True, "a shared key goes to the wall once it can be repaired");
 
             Assert.That(_runner.TryInteract(), Is.EqualTo(HordePurchaseVerdict.Ok));
             Assert.That(structure.Pieces[0].IsBroken, Is.False);

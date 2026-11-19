@@ -177,7 +177,7 @@ namespace Shooter.Runtime
             get
             {
                 var local = LocalPlayer;
-                return _horde != null && local != null && _horde.Session.HasPlayer(LocalPlayerId) && Offer(local) != null;
+                return _horde != null && local != null && _horde.Session.HasPlayer(LocalPlayerId) && Offer(local)?.Verdict == HordePurchaseVerdict.Ok;
             }
         }
 

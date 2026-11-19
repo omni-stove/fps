@@ -184,6 +184,21 @@ namespace Shooter.Core
             return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' bot driver phase={2} target={3}", Tag, vehicle, phase, targetIndex);
         }
 
+        public static string BotTakesControls(string vehicle, string rider, bool flies, string route)
+        {
+            return $"{Tag} '{vehicle}' bot takes controls rider={rider} as={(flies ? "pilot" : "driver")} route={(string.IsNullOrEmpty(route) ? "none" : route)}";
+        }
+
+        public static string BotGivesUpControls(string vehicle, string rider)
+        {
+            return $"{Tag} '{vehicle}' bot gives up controls rider={rider}";
+        }
+
+        public static string BotRouteOrdered(string rider, string route)
+        {
+            return $"{Tag} bot route order rider={rider} route={(string.IsNullOrEmpty(route) ? "none" : route)}";
+        }
+
         public static string EffectsMissingMotor(string vehicle)
         {
             return $"{Tag} '{vehicle}' has no SimpleAircraftMotor; the aircraft effects show nothing";

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Shooter.Core;
 using UnityEngine;
 
@@ -8,7 +9,20 @@ namespace Shooter.Runtime
     public sealed partial class EnemyAgent : IVehicleRider
     {
         private readonly RiderVisibility _vehicleHidden = new RiderVisibility();
+        private readonly List<Transform> _wheelPoints = new List<Transform>();
         private VehicleSeat _vehicleSeat;
+
+        // 運転の部品を運転席に座っている間だけ付けるのは、降りた後も残すと、飛行機の舵を握ったままになり、借りた部品も元の持ち主へ戻らないため。
+        private Vehicle _wheelVehicle;
+        private BotVehicleDriver _wheelDriver;
+        private BotAircraftPilot _wheelPilot;
+        private VehicleRoute _wheelRoute;
+        private bool _ownsWheel;
+        private Vehicle _wheelPreviousVehicle;
+        private IVehicleRider _wheelPreviousRider;
+        private VehicleRoute _wheelPreviousRoute;
+        private bool _wheelPreviousUnmanned;
+        private Transform[] _wheelPreviousWaypoints = Array.Empty<Transform>();
 
         public VehicleSeat Seat => _vehicleSeat;
 
@@ -60,12 +74,41 @@ namespace Shooter.Runtime
             return vehicle != null && vehicle.TrySwitchToSeat(this, seatIndex);
         }
 
+        public BotVehicleDriver VehicleDriver => _wheelDriver;
+
+        public BotAircraftPilot AircraftPilot => _wheelPilot;
+
+        public bool IsDrivingVehicle => _wheelDriver != null || _wheelPilot != null;
+
+        // 飛行機かを動き方の部品で見るのは、BotAircraftPilot が舵を決めるのに SimpleAircraftMotor の飛び方を読むため。
+        public static bool FliesAsAircraft(Vehicle vehicle)
+        {
+            if (vehicle == null)
+            {
+                throw new ArgumentNullException(nameof(vehicle));
+            }
+
+            return vehicle.GetComponent<SimpleAircraftMotor>() != null;
+        }
+
+        // 乗り物に付いた道より指示を先にするのは、同じ乗り物でも乗る敵ごとに別の道を走らせられるようにするため。
+        public static VehicleRoute ChooseDriveRoute(VehicleRoute ordered, Vehicle vehicle)
+        {
+            if (ordered != null)
+            {
+                return ordered;
+            }
+
+            return vehicle != null ? vehicle.GetComponent<VehicleRoute>() : null;
+        }
+
         void IVehicleRider.OnBoarded(VehicleSeat seat)
         {
             _vehicleSeat = seat ?? throw new ArgumentNullException(nameof(seat));
             StopForVehicle();
             ApplySeatPose(seat);
             FollowSeat();
+            TakeWheel(seat);
         }
 
         void IVehicleRider.OnSeatChanged(VehicleSeat from, VehicleSeat to)
@@ -73,11 +116,13 @@ namespace Shooter.Runtime
             _vehicleSeat = to ?? throw new ArgumentNullException(nameof(to));
             ApplySeatPose(to);
             FollowSeat();
+            TakeWheel(to);
         }
 
         void IVehicleRider.OnLeft(VehicleSeat seat, VehicleLeaveReason reason, Vector3 feetPosition, Quaternion rotation)
         {
             _vehicleSeat = null;
+            GiveUpWheel();
 
             // 乗っている間に受けた吹き飛ばしと怯みは進まず残るので、降りるときに捨てる。
             _flight.Clear();
@@ -119,6 +164,12 @@ namespace Shooter.Runtime
 
             FollowSeat();
             return true;
+        }
+
+        // 乗ったまま消えると機体に付けた操縦の部品が、いない乗り手のために舵を握ったまま残るので返す。
+        private void GiveUpWheelOnDestroy()
+        {
+            GiveUpWheel(destroying: true);
         }
 
         private void LeaveVehicleOnDeath()
@@ -176,6 +227,237 @@ namespace Shooter.Runtime
                 seat.SitPosition + (Vector3.up * baseOffset),
                 Quaternion.Euler(0f, seat.SitYawDegrees, 0f));
             _lastFinitePosition = transform.position;
+        }
+
+        private void TakeWheel(VehicleSeat seat)
+        {
+            var vehicle = seat.Vehicle;
+            if (seat.Role != VehicleSeatRole.Driver || vehicle == null)
+            {
+                GiveUpWheel();
+                return;
+            }
+
+            if (IsDrivingVehicle && ReferenceEquals(_wheelVehicle, vehicle))
+            {
+                return;
+            }
+
+            GiveUpWheel();
+
+            // 運転している間は自分の銃を撃たず、撃つのは同乗者の座席 (銃手) に任せる。座席に留まる間は撃つ判断まで進まないので、押していた引き金をここで離す。
+            ReleaseTrigger();
+            _wheelVehicle = vehicle;
+            var flies = FliesAsAircraft(vehicle);
+            if (flies)
+            {
+                TakeStick(vehicle);
+            }
+            else
+            {
+                TakeSteeringWheel(vehicle);
+            }
+
+            var route = ChooseDriveRoute(_orderRoute, vehicle);
+            ApplyWheelRoute(route);
+            Debug.Log(VehicleLog.BotTakesControls(vehicle.name, Id, flies, route != null ? route.name : null), this);
+        }
+
+        // 乗り物に操縦の部品が置いてあればそれを借りるのは、ゲームが機体ごとに決めた飛ばし方の値 (BotAircraftPilotSettings) で飛ばすため。
+        private void TakeStick(Vehicle vehicle)
+        {
+            var pilot = vehicle.GetComponent<BotAircraftPilot>();
+            _ownsWheel = pilot == null;
+            if (_ownsWheel)
+            {
+                pilot = vehicle.gameObject.AddComponent<BotAircraftPilot>();
+            }
+            else
+            {
+                _wheelPreviousRider = ReferenceEquals(pilot.Rider, pilot) ? null : pilot.Rider;
+                _wheelPreviousWaypoints = CopyTransforms(pilot.Waypoints);
+            }
+
+            pilot.Rider = this;
+            _wheelPilot = pilot;
+        }
+
+        // 乗り物か自分に運転の部品が置いてあればそれを借りるのは、ゲームが決めた走り方の値で走らせるため。
+        private void TakeSteeringWheel(Vehicle vehicle)
+        {
+            var driver = vehicle.GetComponent<BotVehicleDriver>();
+            if (driver == null)
+            {
+                driver = GetComponent<BotVehicleDriver>();
+            }
+
+            _ownsWheel = driver == null;
+            if (_ownsWheel)
+            {
+                driver = gameObject.AddComponent<BotVehicleDriver>();
+            }
+            else
+            {
+                _wheelPreviousVehicle = driver.Vehicle;
+                _wheelPreviousRider = driver.Rider;
+                _wheelPreviousRoute = driver.Route;
+                _wheelPreviousUnmanned = driver.DrivesUnmanned;
+            }
+
+            // 代わりの運転手を先に止めるのは、運転席に座った自分を差し置いて、空いた座席を探しに行かせないため。
+            driver.DrivesUnmanned = false;
+            driver.SetVehicle(vehicle);
+            driver.SetRider(this);
+            _wheelDriver = driver;
+        }
+
+        private void RefreshWheelRoute()
+        {
+            if (!IsDrivingVehicle)
+            {
+                return;
+            }
+
+            var route = ChooseDriveRoute(_orderRoute, _wheelVehicle);
+            if (ReferenceEquals(route, _wheelRoute))
+            {
+                return;
+            }
+
+            ApplyWheelRoute(route);
+            Debug.Log(VehicleLog.BotTakesControls(VehicleName(_wheelVehicle), Id, _wheelPilot != null, route != null ? route.name : null), this);
+        }
+
+        // 道が無いときに借りた部品の道へ戻すのは、ゲームがその部品に置いた道を、乗った敵が消してしまわないようにするため。
+        private void ApplyWheelRoute(VehicleRoute route)
+        {
+            _wheelRoute = route;
+            if (_wheelDriver != null)
+            {
+                _wheelDriver.SetRoute(route != null || _ownsWheel ? route : _wheelPreviousRoute);
+            }
+
+            if (_wheelPilot != null)
+            {
+                if (route != null)
+                {
+                    route.CopyPoints(_wheelPoints);
+                    _wheelPilot.SetWaypoints(_wheelPoints.ToArray());
+                    _wheelPoints.Clear();
+                }
+                else
+                {
+                    _wheelPilot.SetWaypoints(_ownsWheel ? Array.Empty<Transform>() : _wheelPreviousWaypoints);
+                }
+
+                // 自分で付けた操縦の部品は置いたときの高さを保つ既定のままだと、地上で乗った機体が地面すれすれを飛ぶので、道の点の高さをなぞらせる。
+                if (_ownsWheel)
+                {
+                    _wheelPilot.FollowWaypointHeight = route != null;
+                }
+            }
+        }
+
+        private void GiveUpWheel(bool destroying = false)
+        {
+            if (ReferenceEquals(_wheelDriver, null) && ReferenceEquals(_wheelPilot, null))
+            {
+                return;
+            }
+
+            var vehicle = _wheelVehicle;
+            if (_wheelDriver != null)
+            {
+                GiveUpSteeringWheel(_wheelDriver, destroying);
+            }
+
+            if (_wheelPilot != null)
+            {
+                GiveUpStick(_wheelPilot);
+            }
+
+            _wheelVehicle = null;
+            _wheelDriver = null;
+            _wheelPilot = null;
+            _wheelRoute = null;
+            _ownsWheel = false;
+            _wheelPreviousVehicle = null;
+            _wheelPreviousRider = null;
+            _wheelPreviousRoute = null;
+            _wheelPreviousUnmanned = false;
+            _wheelPreviousWaypoints = Array.Empty<Transform>();
+            Debug.Log(VehicleLog.BotGivesUpControls(VehicleName(vehicle), Id), this);
+        }
+
+        private void GiveUpSteeringWheel(BotVehicleDriver driver, bool destroying)
+        {
+            if (_ownsWheel)
+            {
+                // 消すのはコマの終わりまで待つので、その間に Update で乗り物を走らせないよう先に止める。
+                driver.SetRider(null);
+                driver.enabled = false;
+
+                // 自分で付けた部品は自分と同じ GameObject にあり、自分が消えるときは一緒に消えるので、消している途中に二重に消さない。
+                if (!destroying)
+                {
+                    DestroyWheelPart(driver);
+                }
+
+                return;
+            }
+
+            driver.SetRider(_wheelPreviousRider);
+            driver.SetVehicle(_wheelPreviousVehicle);
+            driver.SetRoute(_wheelPreviousRoute);
+            driver.DrivesUnmanned = _wheelPreviousUnmanned;
+        }
+
+        private void GiveUpStick(BotAircraftPilot pilot)
+        {
+            pilot.Release();
+            if (_ownsWheel)
+            {
+                // 乗り手を外すと自分で操縦席に座りに行くので、乗り手は残したまま止めて消す。
+                pilot.enabled = false;
+                DestroyWheelPart(pilot);
+                return;
+            }
+
+            pilot.Rider = _wheelPreviousRider;
+            pilot.SetWaypoints(_wheelPreviousWaypoints);
+        }
+
+        private static Transform[] CopyTransforms(IReadOnlyList<Transform> source)
+        {
+            if (source == null || source.Count == 0)
+            {
+                return Array.Empty<Transform>();
+            }
+
+            var copy = new Transform[source.Count];
+            for (var i = 0; i < copy.Length; i++)
+            {
+                copy[i] = source[i];
+            }
+
+            return copy;
+        }
+
+        private static string VehicleName(Vehicle vehicle)
+        {
+            return vehicle != null ? vehicle.name : "-";
+        }
+
+        private static void DestroyWheelPart(Component part)
+        {
+            if (Application.isPlaying)
+            {
+                Destroy(part);
+            }
+            else
+            {
+                DestroyImmediate(part);
+            }
         }
     }
 }

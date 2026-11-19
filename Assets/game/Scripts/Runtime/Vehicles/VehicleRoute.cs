@@ -70,6 +70,34 @@ namespace Shooter.Runtime
             }
         }
 
+        // 位置でなく Transform を渡すのは、点を Transform で持つ部品 (BotAircraftPilot) にも、動かした点をそのまま追わせるため。
+        public void CopyPoints(List<Transform> into)
+        {
+            if (into == null)
+            {
+                throw new ArgumentNullException(nameof(into));
+            }
+
+            into.Clear();
+            if (_points.Length > 0)
+            {
+                foreach (var point in _points)
+                {
+                    if (point != null)
+                    {
+                        into.Add(point);
+                    }
+                }
+
+                return;
+            }
+
+            for (var i = 0; i < transform.childCount; i++)
+            {
+                into.Add(transform.GetChild(i));
+            }
+        }
+
         private void OnDrawGizmos()
         {
             var positions = _gizmoPositions;

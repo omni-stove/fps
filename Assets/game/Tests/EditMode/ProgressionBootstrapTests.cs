@@ -28,12 +28,58 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void WithoutARecorderEverythingIsAvailable()
+        public void WithoutARecorderThereIsNoGateAndEverythingIsAvailable()
         {
             Assert.That(ProgressionBootstrap.Recorder, Is.Null);
-            Assert.That(ProgressionBootstrap.IsUnlocked(ScopeId), Is.True);
-            Assert.Throws<ArgumentException>(() => ProgressionBootstrap.IsUnlocked(""));
-            Assert.Throws<ArgumentException>(() => ProgressionBootstrap.IsUnlocked(null));
+            Assert.That(Unlocks.Gate, Is.Null);
+            Assert.That(Unlocks.IsUnlocked(ScopeId), Is.True);
+        }
+
+        [Test]
+        public void InstallPutsTheGateInAndUninstallTakesItOut()
+        {
+            var recorder = ProgressionBootstrap.Install(new ProgressionRecorder(new MemorySaveStorage(), _spec, new OfflineParticipants()));
+
+            Assert.That(Unlocks.Gate, Is.Not.Null);
+            Assert.That(Unlocks.Gate.Target, Is.SameAs(recorder), "the gate asks the installed recorder");
+            Assert.That(Unlocks.IsUnlocked(ScopeId), Is.False, "level 1");
+
+            ProgressionBootstrap.Uninstall();
+
+            Assert.That(Unlocks.Gate, Is.Null);
+            Assert.That(Unlocks.IsUnlocked(ScopeId), Is.True);
+        }
+
+        [Test]
+        public void InstallingAgainSwapsTheGateForTheNewRecorder()
+        {
+            ProgressionBootstrap.Install(new ProgressionRecorder(new MemorySaveStorage(), _spec, new OfflineParticipants()));
+            var storage = new MemorySaveStorage();
+            new ProfileStore(storage).Save(new PlayerProfile(600, 3, 1, 2, 1));
+
+            var second = ProgressionBootstrap.Install(new ProgressionRecorder(storage, _spec, new OfflineParticipants()));
+
+            Assert.That(Unlocks.Gate.Target, Is.SameAs(second));
+            Assert.That(Unlocks.IsUnlocked(ScopeId), Is.True, "the second profile is level 2");
+        }
+
+        [Test]
+        public void UninstallLeavesAGateSomeoneElseInstalled()
+        {
+            ProgressionBootstrap.Install(new ProgressionRecorder(new MemorySaveStorage(), _spec, new OfflineParticipants()));
+            Func<string, bool> other = id => id != "rifle";
+            Unlocks.Install(other);
+            try
+            {
+                ProgressionBootstrap.Uninstall();
+
+                Assert.That(Unlocks.Gate, Is.SameAs(other));
+                Assert.That(Unlocks.IsUnlocked("rifle"), Is.False);
+            }
+            finally
+            {
+                Unlocks.Uninstall(other);
+            }
         }
 
         [Test]
@@ -44,14 +90,14 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(ProgressionBootstrap.Recorder, Is.SameAs(recorder));
             Assert.That(recorder.IsInstalled, Is.True);
-            Assert.That(ProgressionBootstrap.IsUnlocked(ScopeId), Is.False, "level 1");
-            Assert.That(ProgressionBootstrap.IsUnlocked("rifle"), Is.True, "ids outside the unlock table are always available");
+            Assert.That(Unlocks.IsUnlocked(ScopeId), Is.False, "level 1");
+            Assert.That(Unlocks.IsUnlocked("rifle"), Is.True, "ids outside the unlock table are always available");
 
             CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 0, 0, 0));
             CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
 
             Assert.That(recorder.Profile.Xp, Is.EqualTo(500));
-            Assert.That(ProgressionBootstrap.IsUnlocked(ScopeId), Is.True, "level 2 after 500 xp");
+            Assert.That(Unlocks.IsUnlocked(ScopeId), Is.True, "level 2 after 500 xp");
             Assert.That(new ProfileStore(storage).Load().Matches, Is.EqualTo(2), "each finished match is saved");
         }
 
@@ -65,7 +111,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(recorder.Profile, Is.EqualTo(new PlayerProfile(600, 3, 1, 2, 1)));
             Assert.That(recorder.Level, Is.EqualTo(2));
-            Assert.That(ProgressionBootstrap.IsUnlocked(ScopeId), Is.True);
+            Assert.That(Unlocks.IsUnlocked(ScopeId), Is.True);
         }
 
         [Test]
@@ -157,7 +203,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(recorder.Profile, Is.EqualTo(new PlayerProfile(600, 3, 1, 2, 1)));
             Assert.That(recorder.Level, Is.EqualTo(2));
-            Assert.That(ProgressionBootstrap.IsUnlocked(ScopeId), Is.True);
+            Assert.That(Unlocks.IsUnlocked(ScopeId), Is.True);
             Assert.That(changes, Is.EqualTo(1));
 
             CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
@@ -172,6 +218,7 @@ namespace Shooter.Tests.EditMode
             CloudSaveBootstrap.ClearRegisteredSlots();
             try
             {
+                ProgressionCloudSave.Register();
                 CloudSaveBootstrap.RegisterSlots(slot => slot == mission, new[] { mission }, text => true);
                 var storage = new MemorySaveStorage();
                 var backend = new FakeCloudSaveBackend { SignedInAccount = "account-1" };
@@ -197,6 +244,7 @@ namespace Shooter.Tests.EditMode
             finally
             {
                 CloudSaveBootstrap.ClearRegisteredSlots();
+                ProgressionCloudSave.Register();
             }
         }
 
@@ -219,6 +267,7 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => ProgressionBootstrap.Install((ProgressionRecorder)null));
             Assert.Throws<ArgumentNullException>(() => ProgressionBootstrap.Install((AchievementRecorder)null));
             Assert.That(ProgressionBootstrap.Recorder, Is.Null);
+            Assert.That(Unlocks.Gate, Is.Null);
         }
     }
 }

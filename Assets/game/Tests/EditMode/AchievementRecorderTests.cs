@@ -28,7 +28,7 @@ namespace Shooter.Tests.EditMode
         public void SetUp()
         {
             CombatEvents.ClearSubscribers();
-            GameSignals.Achievements.Clear();
+            ProgressionSignals.Achievements.Clear();
             _storage = new MemorySaveStorage();
             _now = 100d;
             (_progression, _recorder) = Recorders(_storage, AchievementSpec.Default);
@@ -42,7 +42,7 @@ namespace Shooter.Tests.EditMode
             _recorder.Uninstall();
             _progression.Uninstall();
             CombatEvents.ClearSubscribers();
-            GameSignals.Achievements.Clear();
+            ProgressionSignals.Achievements.Clear();
             GameContent.Use(null);
             KitTuning.Reload();
             foreach (var created in _created)
@@ -213,7 +213,7 @@ namespace Shooter.Tests.EditMode
         {
             Install();
 
-            Assert.That(GameSignals.Achievements.Value, Is.EqualTo(new[]
+            Assert.That(ProgressionSignals.Achievements.Value, Is.EqualTo(new[]
             {
                 new AchievementProgress("first-blood", 0, 1, false),
                 new AchievementProgress("marksman", 0, 50, false),
@@ -223,12 +223,24 @@ namespace Shooter.Tests.EditMode
 
             Kill(_player, _enemy, headshot: true, RifleId);
 
-            Assert.That(GameSignals.Achievements.Value[0], Is.EqualTo(new AchievementProgress("first-blood", 1, 1, true)));
-            Assert.That(GameSignals.Achievements.Value[1], Is.EqualTo(new AchievementProgress("marksman", 1, 50, false)));
+            Assert.That(ProgressionSignals.Achievements.Value[0], Is.EqualTo(new AchievementProgress("first-blood", 1, 1, true)));
+            Assert.That(ProgressionSignals.Achievements.Value[1], Is.EqualTo(new AchievementProgress("marksman", 1, 50, false)));
 
             _recorder.Uninstall();
 
-            Assert.That(GameSignals.Achievements.HasValue, Is.False);
+            Assert.That(ProgressionSignals.Achievements.HasValue, Is.False);
+        }
+
+        [Test]
+        public void TheProgressSignalIsEmptiedWithTheOtherSignals()
+        {
+            Install();
+            Assert.That(ProgressionSignals.Achievements.HasValue, Is.True);
+
+            GameSignals.ResetAll();
+
+            Assert.That(ProgressionSignals.Achievements.HasValue, Is.False);
+            Assert.That(ProgressionSignals.Achievements.ToString(), Does.StartWith("Achievements="));
         }
 
         [Test]

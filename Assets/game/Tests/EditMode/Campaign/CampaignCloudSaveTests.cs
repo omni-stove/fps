@@ -12,10 +12,13 @@ namespace Shooter.Tests.EditMode
             CloudSaveBootstrap.ClearRegisteredSlots();
         }
 
+        // 次のテストや Edit Mode の保存が、Play の開始時と同じ登録で動くよう戻す。
         [TearDown]
         public void TearDown()
         {
             CloudSaveBootstrap.ClearRegisteredSlots();
+            ProgressionCloudSave.Register();
+            CampaignCloudSave.Register();
         }
 
         [Test]
@@ -29,7 +32,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(CloudSaveBootstrap.Syncs(CampaignSaveSlots.For("Campaign01")), Is.True);
             Assert.That(CloudSaveBootstrap.Syncs(CampaignSaveSlots.For("Campaign02")), Is.True);
             Assert.That(CloudSaveBootstrap.Syncs(CampaignSaveSlots.Prefix), Is.False, "a prefix without a mission id is not a campaign slot");
-            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, CampaignSaveSlots.Legacy }));
+            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.False, "only the registered slots are synced");
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { CampaignSaveSlots.Legacy }));
         }
 
         [Test]
@@ -38,6 +42,16 @@ namespace Shooter.Tests.EditMode
             CampaignCloudSave.Register();
             CampaignCloudSave.Register();
 
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { CampaignSaveSlots.Legacy }));
+        }
+
+        [Test]
+        public void TheCampaignSlotsAreListedAfterTheProfileWhenBothRegister()
+        {
+            ProgressionCloudSave.Register();
+            CampaignCloudSave.Register();
+
+            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.True);
             Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, CampaignSaveSlots.Legacy }));
         }
 

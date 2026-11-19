@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Shooter.Core;
@@ -146,6 +147,31 @@ namespace Shooter.Tests.EditMode
             inventory.Attach(Handle(inventory, _suppressorId));
 
             Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.EqualTo(new[] { _suppressorId }), "other attachments still go on");
+        }
+
+        [Test]
+        public void WithoutAPredicateTheUnlockGateDecidesWhatCanBeAttached()
+        {
+            var magazineUnlocked = false;
+            Func<string, bool> gate = id => id != _magazineId || magazineUnlocked;
+            Unlocks.Install(gate);
+            try
+            {
+                var (inventory, weapons) = NewArmedPlayer();
+
+                inventory.Attach(Handle(inventory, _magazineId));
+                Assert.That(inventory.Inventory.CountOf(_magazineId), Is.EqualTo(1), "the gate keeps the magazine locked");
+                Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.Empty);
+
+                magazineUnlocked = true;
+
+                inventory.Attach(Handle(inventory, _magazineId));
+                Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.EqualTo(new[] { _magazineId }), "the gate is asked again on each attach");
+            }
+            finally
+            {
+                Unlocks.Uninstall(gate);
+            }
         }
 
         [Test]

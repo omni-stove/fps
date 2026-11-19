@@ -29,14 +29,17 @@ namespace Shooter.Tests.EditMode
             _clock = 1000;
             _time = 0d;
             CloudSaveBootstrap.ClearRegisteredSlots();
+            ProgressionCloudSave.Register();
             CloudSaveBootstrap.RegisterSlots(OwnsCampaignSlot, new[] { LegacySlot }, text => true);
         }
 
         [TearDown]
         public void TearDown()
         {
-            CloudSaveBootstrap.ClearRegisteredSlots();
+            // 動いている同期へ遅れて登録したと知らせないよう、同期を手放してから Play の開始時と同じ登録に戻す。
             CloudSaveBootstrap.EndPlay();
+            CloudSaveBootstrap.ClearRegisteredSlots();
+            ProgressionCloudSave.Register();
         }
 
         [Test]
@@ -539,12 +542,19 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheProfileIsAlwaysSyncedAndOtherSlotsOnlyOnceRegistered()
+        public void OnlyRegisteredSlotsAreSyncedAndTheProfileIsOneOfThem()
         {
             CloudSaveBootstrap.ClearRegisteredSlots();
 
+            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.False, "the kit itself knows no save, not even the profile");
+            Assert.That(CloudSaveBootstrap.Syncs(LegacySlot), Is.False);
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.Empty);
+            Assert.That(CloudSaveBootstrap.CanRead(ProfileStore.Slot, new PlayerProfile(300, 2, 1, 1, 1).ToJson()), Is.False);
+
+            ProgressionCloudSave.Register();
+
             Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.True);
-            Assert.That(CloudSaveBootstrap.Syncs(LegacySlot), Is.False, "nothing but the profile is synced before a registration");
+            Assert.That(CloudSaveBootstrap.Syncs(LegacySlot), Is.False, "nothing but the profile is synced before the campaign registers");
             Assert.That(CloudSaveBootstrap.Syncs("campaign-Campaign01"), Is.False);
             Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot }));
 
@@ -569,6 +579,10 @@ namespace Shooter.Tests.EditMode
             Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, LegacySlot, "notes" }));
             Assert.That(CloudSaveBootstrap.CanRead(LegacySlot, "{}"), Is.False, "the later judgement replaced the earlier one");
             Assert.That(CloudSaveBootstrap.CanRead("notes", "{}"), Is.True);
+
+            ProgressionCloudSave.Register();
+
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, LegacySlot, "notes" }), "the profile is listed once");
         }
 
         [Test]
@@ -602,6 +616,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(backend.Calls, Does.Contain("read notes.json"), "the registered startup slot is checked");
             Assert.That(local.Has("notes"), Is.False);
             Assert.That(backend.Calls, Does.Not.Contain("read campaign-Mission01.json"), "slots nobody registered are not synced");
+            Assert.That(backend.Calls, Does.Not.Contain("read " + ProfileFile), "the profile is not synced while it is not registered");
             Assert.That(local.Has("campaign-Mission01"), Is.False);
 
             sync.Write("notes", "mine");

@@ -13,22 +13,13 @@ namespace Shooter.Runtime
 
         private static CosmeticLocker _cosmetics;
 
+        private static Func<string, bool> _gate;
+
         public static ProgressionRecorder Recorder => _recorder;
 
         public static AchievementRecorder Achievements => _achievements;
 
         public static CosmeticLocker Cosmetics => _cosmetics;
-
-        // 値を覚えずに呼ぶたびに今のプロフィールを引くのは、試合中にレベルが上がればその場で使えるようにするため。
-        public static bool IsUnlocked(string id)
-        {
-            if (string.IsNullOrEmpty(id))
-            {
-                throw new ArgumentException("id must not be empty", nameof(id));
-            }
-
-            return _recorder == null || _recorder.IsUnlocked(id);
-        }
 
         public static ProgressionRecorder Install(ISaveStorage storage)
         {
@@ -76,6 +67,11 @@ namespace Shooter.Runtime
             var cosmetics = new CosmeticLocker(recorder);
             cosmetics.Install();
             _cosmetics = cosmetics;
+
+            // 答えを覚えずに記録係の判定をそのまま門にするのは、試合中にレベルが上がればその場で使えるようにするため。
+            Func<string, bool> gate = recorder.IsUnlocked;
+            Unlocks.Install(gate);
+            _gate = gate;
             return achievements;
         }
 
@@ -84,9 +80,12 @@ namespace Shooter.Runtime
             var recorder = _recorder;
             var achievements = _achievements;
             var cosmetics = _cosmetics;
+            var gate = _gate;
             _recorder = null;
             _achievements = null;
             _cosmetics = null;
+            _gate = null;
+            Unlocks.Uninstall(gate);
             cosmetics?.Uninstall();
             achievements?.Uninstall();
             recorder?.Uninstall();

@@ -95,7 +95,7 @@ namespace Shooter.Core
             return CartSpeed * PusherSpeedMultipliers[index];
         }
 
-        private static IReadOnlyList<float> CopyMultipliers(IReadOnlyList<float> multipliers, string name)
+        private static System.Collections.ObjectModel.ReadOnlyCollection<float> CopyMultipliers(IReadOnlyList<float> multipliers, string name)
         {
             if (multipliers == null)
             {

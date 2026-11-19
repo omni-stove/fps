@@ -62,6 +62,9 @@ namespace Shooter.Runtime
         public static IReadOnlyList<GameRulesMutator> Mutators =>
             Load(c => c.MutatorsTuning, MutatorsResourcePath, MutatorJson.Parse, MutatorJson.Empty);
 
+        public static IReadOnlyList<Playlist> Playlists =>
+            Load(c => c.PlaylistsTuning, PlaylistsResourcePath, PlaylistJson.Parse, PlaylistJson.Empty);
+
         public static void Reload()
         {
             _loaded.Clear();

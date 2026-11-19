@@ -44,7 +44,8 @@ namespace Shooter.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            ProgressionBootstrap.Uninstall();
+            // 本体のテストは進行のアセンブリを引かないので、Play から残った門 (進行の記録係が入れたものなど) は門ごと外す。
+            Unlocks.Uninstall(Unlocks.Gate);
         }
 
         [TearDown]
@@ -171,33 +172,6 @@ namespace Shooter.Tests.EditMode
             finally
             {
                 Unlocks.Uninstall(gate);
-            }
-        }
-
-        [Test]
-        public void WithoutAPredicateTheProfileLevelDecidesWhatCanBeAttached()
-        {
-            var storage = new MemorySaveStorage();
-            var spec = new ProgressionSpec(100, 0, 0, 0, 0, new[] { 0, 500 }, new[] { new ProgressionUnlock(_magazineId, 2) });
-            ProgressionBootstrap.Install(new ProgressionRecorder(storage, spec, new OfflineParticipants()));
-            try
-            {
-                var (inventory, weapons) = NewArmedPlayer();
-
-                inventory.Attach(Handle(inventory, _magazineId));
-                Assert.That(inventory.Inventory.CountOf(_magazineId), Is.EqualTo(1), "level 1 cannot use a level 2 unlock");
-                Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.Empty);
-
-                ProgressionBootstrap.Uninstall();
-                new ProfileStore(storage).Save(new PlayerProfile(500, 5, 0, 0, 0));
-                ProgressionBootstrap.Install(new ProgressionRecorder(storage, spec, new OfflineParticipants()));
-
-                inventory.Attach(Handle(inventory, _magazineId));
-                Assert.That(weapons.AttachmentsOf(TestWeapons.RifleId), Is.EqualTo(new[] { _magazineId }), "level 2 unlocks the magazine");
-            }
-            finally
-            {
-                ProgressionBootstrap.Uninstall();
             }
         }
 

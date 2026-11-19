@@ -28,7 +28,12 @@ namespace Shooter.Runtime
         }
 
         // 相手の見た目を引くときは、自分の解けているかに関わらずカタログだけを見る。記録係が無い画面 (専用サーバーの確認など) でも引けるよう、無ければ JSON から読む。
-        public static CosmeticCatalog Catalog => GameSignals.Cosmetics.Value?.Catalog ?? CosmeticLocker.LoadCatalog();
+        public static CosmeticCatalog Catalog => GameSignals.Cosmetics.Value?.Catalog ?? LoadCatalog();
+
+        public static CosmeticCatalog LoadCatalog()
+        {
+            return KitTuning.Load(c => c.CosmeticsTuning, CosmeticJson.ResourcePath, CosmeticJson.Parse, CosmeticCatalog.Default);
+        }
 
         public static string WornId(CosmeticKind kind)
         {

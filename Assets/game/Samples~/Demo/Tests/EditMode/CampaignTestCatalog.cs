@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Shooter.Core;
 using Shooter.Runtime;
 using UnityEngine;
@@ -67,33 +66,6 @@ namespace Shooter.Tests.EditMode
             definition.SetObjectives(new[] { new ObjectiveDefinition("reach", "") });
             _created.Add(definition);
             return definition;
-        }
-    }
-
-    internal sealed class MemorySaveStorage : ISaveStorage
-    {
-        public readonly Dictionary<string, string> Slots = new Dictionary<string, string>(StringComparer.Ordinal);
-
-        public bool FailDeletes { get; set; }
-
-        public bool TryRead(string slot, out string text)
-        {
-            return Slots.TryGetValue(slot, out text);
-        }
-
-        public void Write(string slot, string text)
-        {
-            Slots[slot] = text;
-        }
-
-        public void Delete(string slot)
-        {
-            if (FailDeletes)
-            {
-                throw new IOException("the save folder is read-only");
-            }
-
-            Slots.Remove(slot);
         }
     }
 }

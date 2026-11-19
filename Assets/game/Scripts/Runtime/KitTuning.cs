@@ -43,8 +43,7 @@ namespace Shooter.Runtime
 
         public const string SkillResourcePath = "Tuning/skill";
 
-        // 読み方 (AchievementJson) が Shooter.Core にあり、Core からこちらは引けないので、パスの元はあちらに置いたまま指す。
-        public const string AchievementsResourcePath = AchievementJson.ResourcePath;
+        public const string AchievementsResourcePath = "Tuning/achievements";
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<string, object> _loaded = new Dictionary<string, object>(StringComparer.Ordinal);

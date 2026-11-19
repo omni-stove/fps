@@ -123,6 +123,25 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WithoutAPublishedLockerTheCatalogIsReadFromTheKitTuning()
+        {
+            GameSignals.Cosmetics.Clear();
+            KitTuning.Reload();
+            try
+            {
+                var loaded = CosmeticLooks.LoadCatalog();
+
+                Assert.That(loaded, Is.Not.Null);
+                Assert.That(loaded.Items, Is.Not.Empty, "the bundled file or the default catalog");
+                Assert.That(CosmeticLooks.Catalog, Is.SameAs(loaded), "the kit reads the file once and keeps it");
+            }
+            finally
+            {
+                KitTuning.Reload();
+            }
+        }
+
+        [Test]
         public void CamoPaintRestoresTheOriginalsAndSkipsEffects()
         {
             var model = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));

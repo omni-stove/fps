@@ -5,7 +5,7 @@ using Shooter.Runtime;
 namespace Shooter.Tests.EditMode
 {
     // 2 台の端末から同じアカウントのクラウドを見る場面を作れるよう、ファイルの表は外から渡して共有できるようにする。
-    internal sealed class FakeCloudSaveBackend : ICloudSaveBackend
+    public sealed class FakeCloudSaveBackend : ICloudSaveBackend
     {
         public const string OfflineError = "offline";
 

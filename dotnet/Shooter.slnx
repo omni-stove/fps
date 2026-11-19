@@ -9,6 +9,8 @@
   <Project Path="Shooter.EosSdk.Tests/Shooter.EosSdk.Tests.csproj" />
   <Project Path="Shooter.NetV2.Client/Shooter.NetV2.Client.csproj" />
   <Project Path="Shooter.NetV2.Client.Tests/Shooter.NetV2.Client.Tests.csproj" />
+  <Project Path="Shooter.Progression.Core/Shooter.Progression.Core.csproj" />
+  <Project Path="Shooter.Progression.Core.Tests/Shooter.Progression.Core.Tests.csproj" />
   <Project Path="Shooter.Protocol/Shooter.Protocol.csproj" />
   <Project Path="Shooter.Protocol.Tests/Shooter.Protocol.Tests.csproj" />
   <Project Path="Shooter.Server.Eos/Shooter.Server.Eos.csproj" />

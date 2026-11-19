@@ -12,6 +12,10 @@ namespace Shooter.Tests.EditMode
     public sealed class CloudSaveSyncTests
     {
         private const string Account = "account-1";
+
+        // 本体はプロフィールの型を知らないので、進行と同じ名前のスロットと、その中身を読めるかの判定をテストで登録して使う。
+        private const string ProfileSlot = "profile";
+        private const string RejectedProfileSlot = "profile-rejected";
         private const string ProfileFile = "profile.json";
         private const string OldProfile = "{\"xp\":100}";
         private const string NewProfile = "{\"xp\":900}";
@@ -29,17 +33,17 @@ namespace Shooter.Tests.EditMode
             _clock = 1000;
             _time = 0d;
             CloudSaveBootstrap.ClearRegisteredSlots();
-            ProgressionCloudSave.Register();
+            RegisterProfile();
             CloudSaveBootstrap.RegisterSlots(OwnsCampaignSlot, new[] { LegacySlot }, text => true);
         }
 
+        // 進行の登録 (ProgressionCloudSave) は次の Play の開始時に入れ直されるので、ここでは本体が知る分だけ空にする。
         [TearDown]
         public void TearDown()
         {
-            // 動いている同期へ遅れて登録したと知らせないよう、同期を手放してから Play の開始時と同じ登録に戻す。
+            // 動いている同期へ遅れて登録したと知らせないよう、同期を手放してから登録を空にする。
             CloudSaveBootstrap.EndPlay();
             CloudSaveBootstrap.ClearRegisteredSlots();
-            ProgressionCloudSave.Register();
         }
 
         [Test]
@@ -69,13 +73,13 @@ namespace Shooter.Tests.EditMode
             var local = new MemorySaveStorage();
             var sync = Create(local, null);
 
-            sync.Write(ProfileStore.Slot, OldProfile);
+            sync.Write(ProfileSlot, OldProfile);
             sync.Tick(_time);
 
-            Assert.That(local.Text(ProfileStore.Slot), Is.EqualTo(OldProfile));
-            Assert.That(sync.TryRead(ProfileStore.Slot, out var text), Is.True);
+            Assert.That(local.Text(ProfileSlot), Is.EqualTo(OldProfile));
+            Assert.That(sync.TryRead(ProfileSlot, out var text), Is.True);
             Assert.That(text, Is.EqualTo(OldProfile));
-            Assert.That(sync.TryGetStamp(ProfileStore.Slot, out var stamp), Is.True);
+            Assert.That(sync.TryGetStamp(ProfileSlot, out var stamp), Is.True);
             Assert.That(stamp, Is.EqualTo(new CloudSaveStamp(1000, false)));
             Assert.That(local.Text(CloudSaveSync.StampsSlot), Is.EqualTo("{\"version\":1,\"slots\":{\"profile\":{\"savedAt\":1000,\"deleted\":false}}}"));
             Assert.That(sync.PendingCount, Is.Zero, "nothing is queued for a cloud that is not in this build");
@@ -88,14 +92,14 @@ namespace Shooter.Tests.EditMode
             var backend = new FakeCloudSaveBackend();
             var sync = Create(local, backend);
 
-            sync.Write(ProfileStore.Slot, OldProfile);
+            sync.Write(ProfileSlot, OldProfile);
             sync.Tick(_time);
             sync.Tick(_time + 100d);
 
             Assert.That(backend.Calls, Is.Empty);
             Assert.That(backend.Ticks, Is.EqualTo(2), "the backend is still ticked so it can sign in");
             Assert.That(sync.IsSignedIn, Is.False);
-            Assert.That(local.Text(ProfileStore.Slot), Is.EqualTo(OldProfile));
+            Assert.That(local.Text(ProfileSlot), Is.EqualTo(OldProfile));
             Assert.That(sync.PendingCount, Is.EqualTo(1), "the save waits for the sign-in");
         }
 
@@ -108,12 +112,12 @@ namespace Shooter.Tests.EditMode
             Drain(sync);
             backend.Calls.Clear();
 
-            sync.Write(ProfileStore.RejectedSlot, "broken");
-            sync.Delete(ProfileStore.RejectedSlot);
+            sync.Write(RejectedProfileSlot, "broken");
+            sync.Delete(RejectedProfileSlot);
             Drain(sync);
 
-            Assert.That(sync.TryGetStamp(ProfileStore.RejectedSlot, out _), Is.False);
-            Assert.That(local.Has(ProfileStore.RejectedSlot), Is.False);
+            Assert.That(sync.TryGetStamp(RejectedProfileSlot, out _), Is.False);
+            Assert.That(local.Has(RejectedProfileSlot), Is.False);
             Assert.That(backend.Calls, Is.Empty);
         }
 
@@ -123,7 +127,7 @@ namespace Shooter.Tests.EditMode
             var local = new MemorySaveStorage();
             var backend = new FakeCloudSaveBackend();
             var sync = Create(local, backend);
-            sync.Write(ProfileStore.Slot, OldProfile);
+            sync.Write(ProfileSlot, OldProfile);
 
             backend.SignedInAccount = Account;
             LogAssert.Expect(LogType.Log, CloudSaveLog.SignedIn(2));
@@ -133,7 +137,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(
                 backend.Calls,
                 Is.EqualTo(new[] { "list", "read profile.json", "write profile.json", "read campaign.json" }));
-            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileStore.Slot, 1000, OldProfile).ToJson()));
+            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileSlot, 1000, OldProfile).ToJson()));
             Assert.That(backend.Files.ContainsKey("campaign.json"), Is.False, "a slot missing on both sides is not written");
         }
 
@@ -141,15 +145,15 @@ namespace Shooter.Tests.EditMode
         public void AProfileSavedBeforeTheSyncIsUploadedWithTheTimeItIsFirstSeen()
         {
             var local = new MemorySaveStorage();
-            local.Write(ProfileStore.Slot, OldProfile);
+            local.Write(ProfileSlot, OldProfile);
             var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
             var sync = Create(local, backend);
             _clock = 4242;
 
             Drain(sync);
 
-            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileStore.Slot, 4242, OldProfile).ToJson()));
-            Assert.That(sync.TryGetStamp(ProfileStore.Slot, out var stamp), Is.True);
+            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileSlot, 4242, OldProfile).ToJson()));
+            Assert.That(sync.TryGetStamp(ProfileSlot, out var stamp), Is.True);
             Assert.That(stamp, Is.EqualTo(new CloudSaveStamp(4242, false)));
         }
 
@@ -158,19 +162,19 @@ namespace Shooter.Tests.EditMode
         {
             var local = new MemorySaveStorage();
             var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
-            backend.Files[ProfileFile] = CloudSaveEnvelope.Saved(ProfileStore.Slot, 2000, NewProfile).ToJson();
+            backend.Files[ProfileFile] = CloudSaveEnvelope.Saved(ProfileSlot, 2000, NewProfile).ToJson();
             var sync = Create(local, backend);
-            sync.Write(ProfileStore.Slot, OldProfile);
+            sync.Write(ProfileSlot, OldProfile);
             var pulled = new List<string>();
             sync.SlotPulled += pulled.Add;
 
             Drain(sync);
 
-            Assert.That(local.Text(ProfileStore.Slot), Is.EqualTo(NewProfile));
-            Assert.That(local.Text(CloudSaveSync.ReplacedPrefix + ProfileStore.Slot), Is.EqualTo(OldProfile));
-            Assert.That(sync.TryGetStamp(ProfileStore.Slot, out var stamp), Is.True);
+            Assert.That(local.Text(ProfileSlot), Is.EqualTo(NewProfile));
+            Assert.That(local.Text(CloudSaveSync.ReplacedPrefix + ProfileSlot), Is.EqualTo(OldProfile));
+            Assert.That(sync.TryGetStamp(ProfileSlot, out var stamp), Is.True);
             Assert.That(stamp, Is.EqualTo(new CloudSaveStamp(2000, false)), "the cloud's time is kept so the next sync sees no change");
-            Assert.That(pulled, Is.EqualTo(new[] { ProfileStore.Slot }));
+            Assert.That(pulled, Is.EqualTo(new[] { ProfileSlot }));
             Assert.That(backend.Calls, Does.Not.Contain("write profile.json"));
         }
 
@@ -179,17 +183,17 @@ namespace Shooter.Tests.EditMode
         {
             var local = new MemorySaveStorage();
             var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
-            backend.Files[ProfileFile] = CloudSaveEnvelope.Saved(ProfileStore.Slot, 500, OldProfile).ToJson();
+            backend.Files[ProfileFile] = CloudSaveEnvelope.Saved(ProfileSlot, 500, OldProfile).ToJson();
             var sync = Create(local, backend);
-            sync.Write(ProfileStore.Slot, NewProfile);
+            sync.Write(ProfileSlot, NewProfile);
             var pulled = 0;
             sync.SlotPulled += _ => pulled++;
 
             Drain(sync);
 
-            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileStore.Slot, 1000, NewProfile).ToJson()));
-            Assert.That(local.Text(ProfileStore.Slot), Is.EqualTo(NewProfile));
-            Assert.That(local.Has(CloudSaveSync.ReplacedPrefix + ProfileStore.Slot), Is.False);
+            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileSlot, 1000, NewProfile).ToJson()));
+            Assert.That(local.Text(ProfileSlot), Is.EqualTo(NewProfile));
+            Assert.That(local.Has(CloudSaveSync.ReplacedPrefix + ProfileSlot), Is.False);
             Assert.That(pulled, Is.Zero);
         }
 
@@ -199,7 +203,7 @@ namespace Shooter.Tests.EditMode
             var local = new MemorySaveStorage();
             var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
             var sync = Create(local, backend);
-            sync.Write(ProfileStore.Slot, OldProfile);
+            sync.Write(ProfileSlot, OldProfile);
             Drain(sync);
             backend.Calls.Clear();
 
@@ -238,12 +242,12 @@ namespace Shooter.Tests.EditMode
             backend.Calls.Clear();
             _clock = 5000;
 
-            sync.Write(ProfileStore.Slot, NewProfile);
+            sync.Write(ProfileSlot, NewProfile);
 
             Assert.That(backend.Calls, Is.Empty, "the save itself only writes locally");
             Drain(sync);
             Assert.That(backend.Calls, Is.EqualTo(new[] { "read profile.json", "write profile.json" }));
-            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileStore.Slot, 5000, NewProfile).ToJson()));
+            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileSlot, 5000, NewProfile).ToJson()));
         }
 
         [Test]
@@ -298,20 +302,22 @@ namespace Shooter.Tests.EditMode
             var desktop = new MemorySaveStorage();
 
             var laptopSync = Create(laptop, new FakeCloudSaveBackend(files) { SignedInAccount = Account });
-            new ProfileStore(laptopSync).Save(new PlayerProfile(300, 2, 1, 1, 1));
+            laptopSync.Write(ProfileSlot, OldProfile);
             Drain(laptopSync);
 
             var desktopSync = Create(desktop, new FakeCloudSaveBackend(files) { SignedInAccount = Account });
             Drain(desktopSync);
-            Assert.That(new ProfileStore(desktopSync).Load(), Is.EqualTo(new PlayerProfile(300, 2, 1, 1, 1)));
+            Assert.That(desktopSync.TryRead(ProfileSlot, out var onDesktop), Is.True);
+            Assert.That(onDesktop, Is.EqualTo(OldProfile));
 
             _clock = 9000;
-            new ProfileStore(desktopSync).Save(new PlayerProfile(800, 6, 2, 3, 2));
+            desktopSync.Write(ProfileSlot, NewProfile);
             Drain(desktopSync);
 
             var laptopRestarted = Create(laptop, new FakeCloudSaveBackend(files) { SignedInAccount = Account });
             Drain(laptopRestarted);
-            Assert.That(new ProfileStore(laptopRestarted).Load(), Is.EqualTo(new PlayerProfile(800, 6, 2, 3, 2)));
+            Assert.That(laptopRestarted.TryRead(ProfileSlot, out var onLaptop), Is.True);
+            Assert.That(onLaptop, Is.EqualTo(NewProfile));
         }
 
         [Test]
@@ -323,15 +329,15 @@ namespace Shooter.Tests.EditMode
             Drain(sync);
             backend.Calls.Clear();
             backend.Offline = true;
-            sync.Write(ProfileStore.Slot, OldProfile);
+            sync.Write(ProfileSlot, OldProfile);
 
-            LogAssert.Expect(LogType.Warning, CloudSaveLog.Failed(ProfileStore.Slot, FakeCloudSaveBackend.OfflineError, 15d));
+            LogAssert.Expect(LogType.Warning, CloudSaveLog.Failed(ProfileSlot, FakeCloudSaveBackend.OfflineError, 15d));
             sync.Tick(_time);
             sync.Tick(_time + 14d);
             Assert.That(backend.Calls, Is.EqualTo(new[] { "read profile.json" }));
             Assert.That(sync.PendingCount, Is.EqualTo(1));
 
-            LogAssert.Expect(LogType.Warning, CloudSaveLog.Failed(ProfileStore.Slot, FakeCloudSaveBackend.OfflineError, 30d));
+            LogAssert.Expect(LogType.Warning, CloudSaveLog.Failed(ProfileSlot, FakeCloudSaveBackend.OfflineError, 30d));
             sync.Tick(_time + 15d);
             Assert.That(backend.Calls.Count, Is.EqualTo(2));
 
@@ -341,7 +347,7 @@ namespace Shooter.Tests.EditMode
             _time += 45d;
             Drain(sync);
 
-            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileStore.Slot, 1000, OldProfile).ToJson()));
+            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileSlot, 1000, OldProfile).ToJson()));
         }
 
         [Test]
@@ -386,7 +392,7 @@ namespace Shooter.Tests.EditMode
         {
             var local = new MemorySaveStorage();
             var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
-            backend.Files[ProfileFile] = CloudSaveEnvelope.Saved(ProfileStore.Slot, 2000, OldProfile).ToJson();
+            backend.Files[ProfileFile] = CloudSaveEnvelope.Saved(ProfileSlot, 2000, OldProfile).ToJson();
             var sync = Create(local, backend);
             sync.Tick(_time);
             backend.Hold = true;
@@ -394,14 +400,14 @@ namespace Shooter.Tests.EditMode
             Assert.That(backend.Calls, Is.EqualTo(new[] { "list", "read profile.json" }));
 
             _clock = 3000;
-            sync.Write(ProfileStore.Slot, NewProfile);
+            sync.Write(ProfileSlot, NewProfile);
             backend.ReleaseHeld();
             backend.ReleaseHeld();
             backend.Hold = false;
             Drain(sync);
 
-            Assert.That(local.Text(ProfileStore.Slot), Is.EqualTo(NewProfile));
-            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileStore.Slot, 3000, NewProfile).ToJson()));
+            Assert.That(local.Text(ProfileSlot), Is.EqualTo(NewProfile));
+            Assert.That(backend.Files[ProfileFile], Is.EqualTo(CloudSaveEnvelope.Saved(ProfileSlot, 3000, NewProfile).ToJson()));
         }
 
         [Test]
@@ -409,12 +415,12 @@ namespace Shooter.Tests.EditMode
         {
             var sync = Create(new MemorySaveStorage(), null);
             _clock = 5000;
-            sync.Write(ProfileStore.Slot, OldProfile);
+            sync.Write(ProfileSlot, OldProfile);
 
             _clock = 100;
-            sync.Write(ProfileStore.Slot, NewProfile);
+            sync.Write(ProfileSlot, NewProfile);
 
-            Assert.That(sync.TryGetStamp(ProfileStore.Slot, out var stamp), Is.True);
+            Assert.That(sync.TryGetStamp(ProfileSlot, out var stamp), Is.True);
             Assert.That(stamp, Is.EqualTo(new CloudSaveStamp(5001, false)));
         }
 
@@ -426,13 +432,13 @@ namespace Shooter.Tests.EditMode
             const string newer = "{\"version\":2,\"slot\":\"profile\",\"savedAt\":1,\"deleted\":false,\"text\":\"x\"}";
             backend.Files[ProfileFile] = newer;
             var sync = Create(local, backend);
-            sync.Write(ProfileStore.Slot, OldProfile);
+            sync.Write(ProfileSlot, OldProfile);
 
-            LogAssert.Expect(LogType.Warning, CloudSaveLog.CloudRejected(ProfileStore.Slot, "unsupported cloud save version (expected 1)"));
+            LogAssert.Expect(LogType.Warning, CloudSaveLog.CloudRejected(ProfileSlot, "unsupported cloud save version (expected 1)"));
             Drain(sync);
 
             Assert.That(backend.Files[ProfileFile], Is.EqualTo(newer));
-            Assert.That(local.Text(ProfileStore.Slot), Is.EqualTo(OldProfile));
+            Assert.That(local.Text(ProfileSlot), Is.EqualTo(OldProfile));
         }
 
         [Test]
@@ -440,15 +446,15 @@ namespace Shooter.Tests.EditMode
         {
             var local = new MemorySaveStorage();
             var backend = new FakeCloudSaveBackend { SignedInAccount = Account };
-            var unreadable = CloudSaveEnvelope.Saved(ProfileStore.Slot, 5000, "{\"version\":999}").ToJson();
+            var unreadable = CloudSaveEnvelope.Saved(ProfileSlot, 5000, "{\"version\":999}").ToJson();
             backend.Files[ProfileFile] = unreadable;
             var sync = Create(local, backend);
             sync.CanRead = CloudSaveBootstrap.CanRead;
 
-            LogAssert.Expect(LogType.Warning, CloudSaveLog.CloudRejected(ProfileStore.Slot, "the saved content cannot be read by this version"));
+            LogAssert.Expect(LogType.Warning, CloudSaveLog.CloudRejected(ProfileSlot, "the saved content cannot be read by this version"));
             Drain(sync);
 
-            Assert.That(local.Has(ProfileStore.Slot), Is.False);
+            Assert.That(local.Has(ProfileSlot), Is.False);
             Assert.That(backend.Files[ProfileFile], Is.EqualTo(unreadable));
         }
 
@@ -461,10 +467,10 @@ namespace Shooter.Tests.EditMode
             backend.Files[ProfileFile] = other;
             var sync = Create(local, backend);
 
-            LogAssert.Expect(LogType.Warning, CloudSaveLog.CloudRejected(ProfileStore.Slot, "the file holds slot 'campaign'"));
+            LogAssert.Expect(LogType.Warning, CloudSaveLog.CloudRejected(ProfileSlot, "the file holds slot 'campaign'"));
             Drain(sync);
 
-            Assert.That(local.Has(ProfileStore.Slot), Is.False);
+            Assert.That(local.Has(ProfileSlot), Is.False);
             Assert.That(backend.Files[ProfileFile], Is.EqualTo(other));
         }
 
@@ -511,11 +517,11 @@ namespace Shooter.Tests.EditMode
         public void TheStampsOutliveTheSync()
         {
             var local = new MemorySaveStorage();
-            Create(local, null).Write(ProfileStore.Slot, OldProfile);
+            Create(local, null).Write(ProfileSlot, OldProfile);
 
             var restarted = Create(local, null);
 
-            Assert.That(restarted.TryGetStamp(ProfileStore.Slot, out var stamp), Is.True);
+            Assert.That(restarted.TryGetStamp(ProfileSlot, out var stamp), Is.True);
             Assert.That(stamp, Is.EqualTo(new CloudSaveStamp(1000, false)));
         }
 
@@ -528,7 +534,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Warning, new Regex(@"^\[CloudSave\] the save times could not be read; "));
             var sync = Create(local, null);
 
-            Assert.That(sync.TryGetStamp(ProfileStore.Slot, out _), Is.False);
+            Assert.That(sync.TryGetStamp(ProfileSlot, out _), Is.False);
         }
 
         [Test]
@@ -537,8 +543,8 @@ namespace Shooter.Tests.EditMode
             var local = new MemorySaveStorage { FailWrites = true };
             var sync = Create(local, new FakeCloudSaveBackend { SignedInAccount = Account });
 
-            Assert.Throws<System.IO.IOException>(() => sync.Write(ProfileStore.Slot, OldProfile));
-            Assert.That(sync.TryGetStamp(ProfileStore.Slot, out _), Is.False);
+            Assert.Throws<System.IO.IOException>(() => sync.Write(ProfileSlot, OldProfile));
+            Assert.That(sync.TryGetStamp(ProfileSlot, out _), Is.False);
         }
 
         [Test]
@@ -546,28 +552,28 @@ namespace Shooter.Tests.EditMode
         {
             CloudSaveBootstrap.ClearRegisteredSlots();
 
-            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.False, "the kit itself knows no save, not even the profile");
+            Assert.That(CloudSaveBootstrap.Syncs(ProfileSlot), Is.False, "the kit itself knows no save, not even the profile");
             Assert.That(CloudSaveBootstrap.Syncs(LegacySlot), Is.False);
             Assert.That(CloudSaveBootstrap.StartupSlots, Is.Empty);
-            Assert.That(CloudSaveBootstrap.CanRead(ProfileStore.Slot, new PlayerProfile(300, 2, 1, 1, 1).ToJson()), Is.False);
+            Assert.That(CloudSaveBootstrap.CanRead(ProfileSlot, OldProfile), Is.False);
 
-            ProgressionCloudSave.Register();
+            RegisterProfile();
 
-            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.True);
+            Assert.That(CloudSaveBootstrap.Syncs(ProfileSlot), Is.True);
             Assert.That(CloudSaveBootstrap.Syncs(LegacySlot), Is.False, "nothing but the profile is synced before the campaign registers");
             Assert.That(CloudSaveBootstrap.Syncs("campaign-Campaign01"), Is.False);
-            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot }));
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileSlot }));
 
             CloudSaveBootstrap.RegisterSlots(OwnsCampaignSlot, new[] { LegacySlot }, text => true);
 
-            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.True);
+            Assert.That(CloudSaveBootstrap.Syncs(ProfileSlot), Is.True);
             Assert.That(CloudSaveBootstrap.Syncs(LegacySlot), Is.True);
             Assert.That(CloudSaveBootstrap.Syncs("campaign-Campaign01"), Is.True);
-            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.RejectedSlot), Is.False);
+            Assert.That(CloudSaveBootstrap.Syncs(RejectedProfileSlot), Is.False);
             Assert.That(CloudSaveBootstrap.Syncs(CloudSaveSync.StampsSlot), Is.False);
-            Assert.That(CloudSaveBootstrap.Syncs(CloudSaveSync.ReplacedPrefix + ProfileStore.Slot), Is.False);
+            Assert.That(CloudSaveBootstrap.Syncs(CloudSaveSync.ReplacedPrefix + ProfileSlot), Is.False);
             Assert.That(CloudSaveBootstrap.Syncs(null), Is.False);
-            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, LegacySlot }));
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileSlot, LegacySlot }));
         }
 
         [Test]
@@ -576,13 +582,13 @@ namespace Shooter.Tests.EditMode
             CloudSaveBootstrap.RegisterSlots(OwnsCampaignSlot, new[] { LegacySlot }, text => false);
             CloudSaveBootstrap.RegisterSlots(OwnsNotes, new[] { "notes" }, text => true);
 
-            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, LegacySlot, "notes" }));
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileSlot, LegacySlot, "notes" }));
             Assert.That(CloudSaveBootstrap.CanRead(LegacySlot, "{}"), Is.False, "the later judgement replaced the earlier one");
             Assert.That(CloudSaveBootstrap.CanRead("notes", "{}"), Is.True);
 
-            ProgressionCloudSave.Register();
+            RegisterProfile();
 
-            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, LegacySlot, "notes" }), "the profile is listed once");
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileSlot, LegacySlot, "notes" }), "the profile is listed once");
         }
 
         [Test]
@@ -595,8 +601,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(CloudSaveBootstrap.CanRead("notes", "bad"), Is.False);
             Assert.That(CloudSaveBootstrap.CanRead("strict", "{}"), Is.False, "a FormatException means the content cannot be read");
             Assert.That(CloudSaveBootstrap.CanRead("nobody-owns-this", "{}"), Is.False, "a slot nobody registered is never taken");
-            Assert.That(CloudSaveBootstrap.CanRead(ProfileStore.Slot, new PlayerProfile(300, 2, 1, 1, 1).ToJson()), Is.True);
-            Assert.That(CloudSaveBootstrap.CanRead(ProfileStore.Slot, "{\"version\":999}"), Is.False);
+            Assert.That(CloudSaveBootstrap.CanRead(ProfileSlot, OldProfile), Is.True);
+            Assert.That(CloudSaveBootstrap.CanRead(ProfileSlot, "{\"version\":999}"), Is.False);
         }
 
         [Test]
@@ -643,8 +649,8 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void FileNamesMapBackToSlots()
         {
-            Assert.That(CloudSaveSync.FileNameOf(ProfileStore.Slot), Is.EqualTo(ProfileFile));
-            Assert.That(CloudSaveSync.SlotOf(ProfileFile), Is.EqualTo(ProfileStore.Slot));
+            Assert.That(CloudSaveSync.FileNameOf(ProfileSlot), Is.EqualTo(ProfileFile));
+            Assert.That(CloudSaveSync.SlotOf(ProfileFile), Is.EqualTo(ProfileSlot));
             Assert.That(CloudSaveSync.SlotOf(".json"), Is.Null);
             Assert.That(CloudSaveSync.SlotOf("profile.bin"), Is.Null);
             Assert.That(CloudSaveSync.SlotOf(null), Is.Null);
@@ -659,6 +665,23 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => new CloudSaveSync(local, null, null, new string[0], clock));
             Assert.Throws<ArgumentNullException>(() => new CloudSaveSync(local, null, CloudSaveBootstrap.Syncs, null, clock));
             Assert.Throws<ArgumentNullException>(() => new CloudSaveSync(local, null, CloudSaveBootstrap.Syncs, new string[0], null));
+        }
+
+        // 同じ判定のデリゲートで登録し直すと前の登録を置き換えるので、メソッドを渡して 1 つの登録に保つ。
+        private static void RegisterProfile()
+        {
+            CloudSaveBootstrap.RegisterSlots(OwnsProfile, new[] { ProfileSlot }, CanReadProfile);
+        }
+
+        private static bool OwnsProfile(string slot)
+        {
+            return slot == ProfileSlot;
+        }
+
+        // テストのプロフィール ({"xp":…}) だけを読めるものとし、新しい版で書いた中身 ({"version":999}) は読めないものとする。
+        private static bool CanReadProfile(string text)
+        {
+            return text != null && text.StartsWith("{\"xp\":", StringComparison.Ordinal);
         }
 
         private static bool OwnsCampaignSlot(string slot)

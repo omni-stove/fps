@@ -11,7 +11,8 @@ namespace Shooter.Tests.EditMode
         [SetUp]
         public void SetUp()
         {
-            ProgressionBootstrap.Uninstall();
+            // 本体のテストは進行のアセンブリを引かないので、Play から残った門 (進行の記録係が入れたものなど) は門ごと外す。
+            Unlocks.Uninstall(Unlocks.Gate);
             _installed = null;
         }
 

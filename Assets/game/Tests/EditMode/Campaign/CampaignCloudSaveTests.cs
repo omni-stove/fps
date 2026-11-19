@@ -6,18 +6,20 @@ namespace Shooter.Tests.EditMode
 {
     public sealed class CampaignCloudSaveTests
     {
+        // キャンペーンのテストは進行のアセンブリを引かないので、先に登録する別のセーブとして進行と同じ名前のスロットをテストで登録する。
+        private const string ProfileSlot = "profile";
+
         [SetUp]
         public void SetUp()
         {
             CloudSaveBootstrap.ClearRegisteredSlots();
         }
 
-        // 次のテストや Edit Mode の保存が、Play の開始時と同じ登録で動くよう戻す。
+        // 次のテストや Edit Mode の保存が、Play の開始時と同じキャンペーンの登録で動くよう戻す。進行の登録は次の Play の開始時に入れ直される。
         [TearDown]
         public void TearDown()
         {
             CloudSaveBootstrap.ClearRegisteredSlots();
-            ProgressionCloudSave.Register();
             CampaignCloudSave.Register();
         }
 
@@ -32,7 +34,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(CloudSaveBootstrap.Syncs(CampaignSaveSlots.For("Campaign01")), Is.True);
             Assert.That(CloudSaveBootstrap.Syncs(CampaignSaveSlots.For("Campaign02")), Is.True);
             Assert.That(CloudSaveBootstrap.Syncs(CampaignSaveSlots.Prefix), Is.False, "a prefix without a mission id is not a campaign slot");
-            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.False, "only the registered slots are synced");
+            Assert.That(CloudSaveBootstrap.Syncs(ProfileSlot), Is.False, "only the registered slots are synced");
             Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { CampaignSaveSlots.Legacy }));
         }
 
@@ -46,13 +48,13 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheCampaignSlotsAreListedAfterTheProfileWhenBothRegister()
+        public void TheCampaignSlotsAreListedAfterAnEarlierRegistration()
         {
-            ProgressionCloudSave.Register();
+            CloudSaveBootstrap.RegisterSlots(slot => slot == ProfileSlot, new[] { ProfileSlot }, text => true);
             CampaignCloudSave.Register();
 
-            Assert.That(CloudSaveBootstrap.Syncs(ProfileStore.Slot), Is.True);
-            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileStore.Slot, CampaignSaveSlots.Legacy }));
+            Assert.That(CloudSaveBootstrap.Syncs(ProfileSlot), Is.True);
+            Assert.That(CloudSaveBootstrap.StartupSlots, Is.EqualTo(new[] { ProfileSlot, CampaignSaveSlots.Legacy }));
         }
 
         [Test]

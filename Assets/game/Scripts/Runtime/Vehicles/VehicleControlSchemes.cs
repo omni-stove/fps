@@ -12,9 +12,14 @@ namespace Shooter.Runtime
                 return CarControlScheme.Instance;
             }
 
-            if (vehicle.TryGetComponent<VehicleMotorLink>(out var link) && link.ControlScheme != null)
+            if (vehicle.TryGetComponent<VehicleMotorLink>(out var link))
             {
-                return link.ControlScheme;
+                var linked = link.ControlScheme;
+                // interface への null 判定は破棄済みの MonoBehaviour を見逃すので、Unity の null で見る。
+                if (linked is Object unityScheme ? unityScheme != null : linked != null)
+                {
+                    return linked;
+                }
             }
 
             return vehicle.TryGetComponent<IVehicleControlScheme>(out var scheme) ? scheme : CarControlScheme.Instance;

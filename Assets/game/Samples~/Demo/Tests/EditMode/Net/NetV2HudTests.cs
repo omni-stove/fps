@@ -317,6 +317,45 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void TheModeKeyChangesWithTheOwnRespawnCountdown()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll);
+            snapshot.HasOwner = true;
+            snapshot.Owner.RespawnSeconds = null;
+            var alive = NetV2Hud.PerSnapshotKey(snapshot);
+
+            snapshot.Owner.RespawnSeconds = 0;
+            var zero = NetV2Hud.PerSnapshotKey(snapshot);
+            snapshot.Owner.RespawnSeconds = 3;
+            var three = NetV2Hud.PerSnapshotKey(snapshot);
+
+            Assert.That(zero, Is.Not.EqualTo(alive), "a countdown at 0 is not the same as no countdown");
+            Assert.That(three, Is.Not.EqualTo(zero));
+        }
+
+        [Test]
+        public void FreeForAllPublishesTheOwnRespawnCountdown()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll);
+            snapshot.Match.AlphaPoints = 1;
+            snapshot.HasOwner = true;
+            snapshot.Owner.RespawnSeconds = 5;
+
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value.RespawnSeconds, Is.EqualTo(5f));
+
+            snapshot.Tick++;
+            snapshot.Owner.RespawnSeconds = 4;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value.RespawnSeconds, Is.EqualTo(4f), "the countdown is published again when it ticks");
+
+            snapshot.Tick++;
+            snapshot.Owner.RespawnSeconds = null;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value.RespawnSeconds, Is.Null, "the countdown goes away after respawning");
+        }
+
+        [Test]
         public void DominationPublishesThePointsInOrderUntilOneIsMissing()
         {
             var snapshot = Snapshot(MatchObjective.Domination);

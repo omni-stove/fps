@@ -468,7 +468,7 @@ namespace Shooter.NetV2
             }
         }
 
-        // FFA と Gun Game の状態はスナップショットから毎回作り直すので、出す値 (残り秒・状態・勝者・各人のキル数と段) が変わったときだけ差し替える
+        // FFA と Gun Game の状態はスナップショットから毎回作り直すので、出す値 (残り秒・状態・勝者・各人のキル数と段・自分の出直しの残り) が変わったときだけ差し替える
         private bool ApplyPerSnapshot(SnapshotMessage snapshot)
         {
             var match = snapshot.Match;
@@ -544,6 +544,8 @@ namespace Shooter.NetV2
                 key = (key * 31) + match.RemainingSeconds;
                 key = (key * 31) + (match.HasWinner ? 1 + (int)match.Winner : 0);
                 key = (key * 31) + match.AlphaPoints;
+                var respawn = snapshot.HasOwner ? snapshot.Owner.RespawnSeconds : null;
+                key = (key * 31) + (respawn.HasValue ? 1L + respawn.Value : 0L);
                 var players = snapshot.Players;
                 for (var i = 0; i < players.Count; i++)
                 {

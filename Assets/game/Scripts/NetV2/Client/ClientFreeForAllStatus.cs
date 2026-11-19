@@ -6,7 +6,6 @@ namespace Shooter.NetV2
 {
     // 専用サーバーの FFA の状態を、オフラインの FreeForAllRunner が GameSignals.ModeStatus に出すのと同じ形の ModeStatus にする。
     // 陣営はプレイヤー Id と同じ番号で、点はプレイヤーの行のキル数に 1 キルの点 (MatchSnapshot.AlphaPoints) を掛けたもの。
-    // 出直しまでの秒はスナップショットに無いので RespawnSeconds は出さない
     public static class ClientFreeForAllStatus
     {
         // FFA の試合でなければ null
@@ -63,7 +62,7 @@ namespace Shooter.NetV2
                 match.RemainingSeconds,
                 scores,
                 ownSide,
-                null,
+                ownScore.HasValue ? RespawnSeconds(snapshot) : null,
                 ended,
                 ended ? SoleLeader(scores) : null,
                 ownScore.HasValue ? Standing(scores, localPlayerId, ownScore.Value) : (object)null);
@@ -73,6 +72,16 @@ namespace Shooter.NetV2
         public static int PointsPerKill(in MatchSnapshot match)
         {
             return match.AlphaPoints >= 1 ? match.AlphaPoints : FreeForAllMode.DefaultPointsPerKill;
+        }
+
+        private static float? RespawnSeconds(SnapshotMessage snapshot)
+        {
+            if (!snapshot.HasOwner || !snapshot.Owner.RespawnSeconds.HasValue)
+            {
+                return null;
+            }
+
+            return Math.Max(0, snapshot.Owner.RespawnSeconds.Value);
         }
 
         public static int ScoreOf(int kills, int pointsPerKill)

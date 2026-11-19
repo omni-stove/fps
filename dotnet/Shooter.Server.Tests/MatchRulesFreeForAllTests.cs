@@ -269,6 +269,55 @@ namespace Shooter.Server.Tests
             Assert.That(snapshot.Match.RemainingSeconds, Is.EqualTo(300));
         }
 
+        [Test]
+        public void TheFallenSeeTheirOwnRespawnCountdownInWholeSeconds()
+        {
+            Start(new FreeForAllSpec(scoreLimit: 10, timeLimitSeconds: 300f, respawnSeconds: 3f));
+            Join(1);
+            Join(2);
+            Step();
+            Assert.That(OwnerFor(2).RespawnSeconds, Is.Null, "a living player has no countdown");
+
+            _module.ApplyDamage(1, 2, 100);
+            Step();
+            Assert.That(OwnerFor(2).RespawnSeconds, Is.EqualTo(3), "the free-for-all respawn time rounded up");
+            Assert.That(OwnerFor(1).RespawnSeconds, Is.Null, "the killer is still alive");
+
+            Advance(1.1f);
+            Assert.That(OwnerFor(2).RespawnSeconds, Is.EqualTo(2));
+
+            Advance(2f);
+            Assert.That(_module.Session.IsAlive(2), Is.True);
+            Assert.That(OwnerFor(2).RespawnSeconds, Is.Null, "the countdown goes away after respawning");
+        }
+
+        [Test]
+        public void ASnapshotWithoutAReceiverHasNoRespawnCountdown()
+        {
+            Start(new FreeForAllSpec(respawnSeconds: 3f));
+            Join(1);
+            Join(2);
+            Step();
+            _module.ApplyDamage(1, 2, 100);
+            Step();
+            var snapshot = new SnapshotMessage();
+            snapshot.Owner.RespawnSeconds = 9;
+
+            _module.Contribute(snapshot, null);
+
+            Assert.That(snapshot.Owner.RespawnSeconds, Is.Null);
+        }
+
+        private OwnerSnapshot OwnerFor(int id)
+        {
+            Assert.That(_match.TryGetPlayer(id, out var player), Is.True);
+            var snapshot = new SnapshotMessage { HasOwner = true };
+            ref var row = ref snapshot.Players.Add();
+            row.PlayerId = id;
+            _module.Contribute(snapshot, player);
+            return snapshot.Owner;
+        }
+
         private static NetMatchSettings Settings(FreeForAllSpec freeForAll, float restartDelaySeconds = 10f)
         {
             return new NetMatchSettings(restartDelaySeconds: restartDelaySeconds, freeForAll: freeForAll);

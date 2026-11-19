@@ -270,11 +270,23 @@ namespace Shooter.Server
                 FillPlayer(row.PlayerId, ref row);
             }
 
+            snapshot.Owner.RespawnSeconds = RespawnSecondsOf(receiver);
             FillControlPoints(snapshot.ControlPoints);
             FillObjectiveItems(snapshot.ObjectiveItems);
 
             // 目的が人ごとの欄 (Gun Game の段など) を書くなら、Session の行を書いた後に任せる
             (_objective as ISnapshotContributor)?.Contribute(snapshot, receiver);
+        }
+
+        private int? RespawnSecondsOf(ServerPlayer receiver)
+        {
+            if (receiver == null || !_session.HasPlayer(receiver.PlayerId))
+            {
+                return null;
+            }
+
+            var remaining = _session.GetRespawnRemaining(receiver.PlayerId);
+            return remaining.HasValue ? HudFormat.DisplayedSeconds(remaining.Value) : (int?)null;
         }
 
         public bool CanFire(int playerId)

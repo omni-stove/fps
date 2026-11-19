@@ -81,6 +81,7 @@ namespace Shooter.Protocol
             _owner.LastProcessedInputTick = -1;
             _owner.Weapon = default;
             _owner.Knockback = default;
+            _owner.RespawnSeconds = null;
             _owner.Grenades.Clear();
             _owner.EquippedWeaponIds.Clear();
             _owner.Present = OwnerFields.All;

@@ -612,6 +612,7 @@ namespace Shooter.Runtime
 
         void IVehicleRider.OnLeft(VehicleSeat seat, VehicleLeaveReason reason, Vector3 feetPosition, Quaternion rotation)
         {
+            var dead = _diedInSeat || IsDead;
             _seat = null;
             _transition.Clear();
             _diedInSeat = false;
@@ -646,7 +647,8 @@ namespace Shooter.Runtime
 
             _claimedWeaponHandoff = false;
             PlaceBody(feetPosition, rotation.eulerAngles.y);
-            if (reason == VehicleLeaveReason.BailOut)
+            // 死んだ乗り手は機体が壊れて空中で降ろされても脱出させない。速さとパラシュートを渡すと死体が降下していくため。
+            if (reason == VehicleLeaveReason.BailOut && !dead)
             {
                 BailOutOf(seat != null ? seat.Vehicle : null);
             }

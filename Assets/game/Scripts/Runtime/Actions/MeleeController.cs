@@ -459,7 +459,7 @@ namespace Shooter.Runtime
                 gameObject,
                 held,
                 melee.Throw,
-                aim.position,
+                EyeOrigin(),
                 direction,
                 aim.right,
                 settings != null ? settings.ThrownPrefab : null,
@@ -581,13 +581,20 @@ namespace Shooter.Runtime
         private void StrikeSurface(MeleeSpec spec)
         {
             var aim = _weapon != null ? _weapon.Aim : null;
-            if (aim == null || !MeleeStrike.TryFindSurface(transform, aim.position, aim.forward, spec.Reach, _hitMask, out var surface))
+            if (aim == null || !MeleeStrike.TryFindSurface(transform, EyeOrigin(), aim.forward, spec.Reach, _hitMask, out var surface))
             {
                 return;
             }
 
             Debug.Log(MeleeLog.WorldHit(AttackerId, SurfaceMaterial.IdOf(surface.collider)), this);
             CombatEvents.RaiseImpact(surface.point, surface.normal, surface.collider);
+        }
+
+        // 三人称ではカメラが体の後ろにあるので、線や投げの起点はカメラでなく目 (ViewRig が無ければ体) にする。GrenadeThrower と同じ。
+        private Vector3 EyeOrigin()
+        {
+            var rig = GetComponent<ViewRig>();
+            return rig != null && rig.IsInitialized ? rig.Eye.position : transform.position;
         }
 
         // 三人称ではカメラと体の向きがずれ得るので、狙っている向き (照準) を水平にして使う。真上・真下を向いていれば体の正面。

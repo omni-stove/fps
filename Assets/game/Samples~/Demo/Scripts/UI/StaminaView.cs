@@ -11,10 +11,13 @@ namespace Shooter.Runtime
 
         public const string FillName = "stamina-fill";
 
+        public const string ReadingName = "stamina-reading";
+
         public const string DepletedClass = "stamina--depleted";
 
         private StaminaStatus? _status;
         private VisualElement _fill;
+        private Label _readingLabel;
         private string _reading = string.Empty;
         private bool _subscribed;
 
@@ -53,6 +56,18 @@ namespace Shooter.Runtime
                 element.Add(_fill);
             }
 
+            _readingLabel = element.Q<Label>(ReadingName);
+            if (_readingLabel == null)
+            {
+                _readingLabel = new Label { name = ReadingName, pickingMode = PickingMode.Ignore };
+                _readingLabel.style.position = Position.Absolute;
+                _readingLabel.style.width = 1;
+                _readingLabel.style.height = 1;
+                _readingLabel.style.overflow = Overflow.Hidden;
+                _readingLabel.style.opacity = 0f;
+                element.Add(_readingLabel);
+            }
+
             Subscribe();
             Show(GameSignals.Stamina.Value);
         }
@@ -68,6 +83,8 @@ namespace Shooter.Runtime
             element.RemoveFromClassList(DepletedClass);
             element.tooltip = string.Empty;
             element.style.display = DisplayStyle.None;
+            _readingLabel?.RemoveFromHierarchy();
+            _readingLabel = null;
             _fill = null;
         }
 
@@ -108,10 +125,15 @@ namespace Shooter.Runtime
             }
 
             element.EnableInClassList(DepletedClass, IsShown && IsDepleted);
-            // UI Toolkit の要素が読み上げ用に持てる文字は tooltip だけなので、ゲージの量を文にしてそこに置く。
+            // tooltip はポインタを無視する要素とランタイムのパネルでは出ないので、文は見えない Label にも書く。
             if (element.tooltip != _reading)
             {
                 element.tooltip = _reading;
+            }
+
+            if (_readingLabel != null && _readingLabel.text != _reading)
+            {
+                _readingLabel.text = _reading;
             }
 
             element.style.display = IsShown ? DisplayStyle.Flex : DisplayStyle.None;

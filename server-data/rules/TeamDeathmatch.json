@@ -48,6 +48,7 @@
     "objective": "None",
     "minPlayers": 0,
     "idleKickSeconds": 0,
+    "idleWarningSeconds": 15,
     "maxWeapons": 2,
     "reloadMode": "Auto",
     "viewMode": "FirstPerson",

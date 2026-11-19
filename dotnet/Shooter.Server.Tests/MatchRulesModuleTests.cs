@@ -531,6 +531,89 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void ASpectatorIsWarnedAtTheRulesSecondsAndKicked()
+        {
+            Start(Plain()
+                .WithRespawnMode(RespawnMode.None)
+                .WithDeathCamera(DeathCamera.Ally)
+                .WithIdleKickSeconds(40f)
+                .WithIdleWarningSeconds(30f));
+            Join(1);
+            Join(2);
+            Join(3);
+            Assert.That(TeamOf(3), Is.EqualTo(TeamOf(1)));
+            Assert.That(TeamOf(2), Is.Not.EqualTo(TeamOf(1)));
+            Assert.That(_log.ToString(), Does.Contain("[Match] idle kick seconds=40 warning=30"));
+
+            Assert.That(_module.ApplyDamage(2, 1, 100), Is.EqualTo(DamageOutcome.Killed));
+            AdvanceKeeping(60f, 2, 3);
+            Assert.That(_transport.Read<IdleWarningMessage>(1, Copy), Is.Empty, "a dead player who does not spectate is not counted");
+            Assert.That(_control.Kicks, Is.Empty);
+
+            _module.OnMessage(new ConnectionId(1), new SpectateRequestMessage { Step = SpectateStep.Next });
+            Assert.That(_module.TryGetSpectateTarget(1, out var target), Is.True);
+            Assert.That(target, Is.EqualTo(3));
+
+            AdvanceKeeping(9.5f, 2, 3);
+            Assert.That(_transport.Read<IdleWarningMessage>(1, Copy), Is.Empty, "not yet 30 seconds before the kick");
+
+            AdvanceKeeping(1f, 2, 3);
+            var warning = _transport.Read<IdleWarningMessage>(1, Copy).Single();
+            Assert.That(warning.Active, Is.True);
+            Assert.That(warning.RemainingSeconds, Is.EqualTo(30f).Within(0.1f));
+            Assert.That(_log.ToString(), Does.Contain("[Match] idle warning player=1 seconds="));
+            Assert.That(_control.Kicks, Is.Empty);
+
+            AdvanceKeeping(30f, 2, 3);
+
+            Assert.That(_control.Kicks.Select(k => k.Connection.Value), Is.EqualTo(new ulong[] { 1 }));
+            Assert.That(_control.Kicks[0].Reason, Is.EqualTo(DisconnectNotice.IdleKickedReason));
+            Assert.That(_log.ToString(), Does.Contain("[Match] idle kick player=1 client=1 after=40s"));
+        }
+
+        [Test]
+        public void SwitchingTheSpectatedAllyPutsTheIdleClockBack()
+        {
+            Start(Plain()
+                .WithRespawnMode(RespawnMode.None)
+                .WithDeathCamera(DeathCamera.Ally)
+                .WithIdleKickSeconds(40f)
+                .WithIdleWarningSeconds(30f));
+            Join(1);
+            Join(2);
+            Join(3);
+            _module.ApplyDamage(2, 1, 100);
+            _module.OnMessage(new ConnectionId(1), new SpectateRequestMessage { Step = SpectateStep.Next });
+
+            AdvanceKeeping(20f, 2, 3);
+            Assert.That(_transport.Read<IdleWarningMessage>(1, Copy).Last().Active, Is.True);
+
+            _module.OnMessage(new ConnectionId(1), new SpectateRequestMessage { Step = SpectateStep.Next });
+
+            Assert.That(_transport.Read<IdleWarningMessage>(1, Copy).Last().Active, Is.False);
+            Assert.That(_module.IdleTracker.GetRemaining(1), Is.EqualTo(40f));
+        }
+
+        [Test]
+        public void ADeadPlayerWaitingToRespawnIsNotCountedWithoutSpectating()
+        {
+            Start(
+                Plain().WithDeathCamera(DeathCamera.Ally).WithIdleKickSeconds(40f).WithIdleWarningSeconds(30f),
+                new NetMatchSettings(respawnSeconds: 60f));
+            Join(1);
+            Join(2);
+            Join(3);
+            _module.ApplyDamage(2, 1, 100);
+
+            AdvanceKeeping(50f, 2, 3);
+
+            Assert.That(_module.IdleTracker.IsCounting(1), Is.False);
+            Assert.That(_module.IdleTracker.GetRemaining(1), Is.EqualTo(40f));
+            Assert.That(_transport.Read<IdleWarningMessage>(1, Copy), Is.Empty);
+            Assert.That(_control.Kicks, Is.Empty);
+        }
+
+        [Test]
         public void SameInputIsNotActivity()
         {
             var still = new InputFrame(1, Vector2.Zero, 0.5f, InputButtons.Crouch);
@@ -799,6 +882,28 @@ namespace Shooter.Server.Tests
         {
             for (var elapsed = 0f; elapsed < seconds; elapsed += _tickSeconds)
             {
+                Step();
+                foreach (var kick in _control.Kicks)
+                {
+                    _match.Leave(kick.Connection);
+                }
+            }
+        }
+
+        // 確かめたい人以外が放置で切られて試合が終わらないよう、activeIds の人には毎刻向きを変える入力を送る
+        private void AdvanceKeeping(float seconds, params int[] activeIds)
+        {
+            var step = 0;
+            for (var elapsed = 0f; elapsed < seconds; elapsed += _tickSeconds)
+            {
+                step++;
+                foreach (var id in activeIds)
+                {
+                    var input = new InputMessage();
+                    input.Add(new InputFrame((int)_tick + 1, Vector2.Zero, (step % 2) * 0.5f, InputButtons.None));
+                    _module.OnMessage(new ConnectionId((ulong)id), input);
+                }
+
                 Step();
                 foreach (var kick in _control.Kicks)
                 {

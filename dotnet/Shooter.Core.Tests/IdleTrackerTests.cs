@@ -16,10 +16,25 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void TheDefaultWarningIsFifteenSeconds()
+        public void TheWarningSecondsComeFromTheRules()
         {
-            Assert.That(IdleTracker.DefaultWarningSeconds, Is.EqualTo(15f));
-            Assert.That(new IdleTracker(120f).WarningSeconds, Is.EqualTo(15f));
+            var rules = GameRules.Default.WithIdleKickSeconds(120f).WithIdleWarningSeconds(30f);
+
+            var tracker = new IdleTracker(rules.IdleKickSeconds, rules.IdleWarningSeconds);
+            tracker.Add(1);
+
+            Assert.That(tracker.WarningSeconds, Is.EqualTo(30f));
+            Assert.That(tracker.Advance(1, 89f), Is.EqualTo(IdleChange.None));
+            Assert.That(tracker.Advance(1, 1f), Is.EqualTo(IdleChange.Warned));
+            Assert.That(tracker.GetRemaining(1), Is.EqualTo(30f));
+        }
+
+        [Test]
+        public void TheDefaultRulesWarnFifteenSecondsBefore()
+        {
+            var rules = GameRules.Default.WithIdleKickSeconds(120f);
+
+            Assert.That(new IdleTracker(rules.IdleKickSeconds, rules.IdleWarningSeconds).WarningSeconds, Is.EqualTo(15f));
         }
 
         [TestCase(0f)]
@@ -28,7 +43,7 @@ namespace Shooter.Core.Tests
         [TestCase(float.PositiveInfinity)]
         public void RejectsInvalidSeconds(float seconds)
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => new IdleTracker(seconds));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new IdleTracker(seconds, 15f));
             Assert.Throws<ArgumentOutOfRangeException>(() => new IdleTracker(30f, seconds));
         }
 

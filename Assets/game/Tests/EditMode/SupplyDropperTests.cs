@@ -94,6 +94,33 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AStageWithNoWaitStillStartsItsDrops()
+        {
+            Floor(Vector3.zero, 0f);
+            var zone = Zone(
+                Vector3.zero,
+                30f,
+                new ShrinkingZone.PhaseSettings(1f, 1f, 20f, 1f),
+                new ShrinkingZone.PhaseSettings(0f, 1f, 10f, 1f));
+            _dropper.Spec = new SupplyDropSpec(
+                new[] { new SupplyDropStage(1, 100f, 1f), new SupplyDropStage(3, 100f, 1f) },
+                dropHeight: 5f,
+                fallSpeed: 10f);
+
+            LogAssert.Expect(LogType.Log, "[SupplyDrop] stage phase=1 crates=1");
+            _dropper.Begin(zone);
+            Assert.That(_dropper.Schedule.StageIndex, Is.EqualTo(0));
+
+            LogAssert.Expect(LogType.Log, "[SupplyDrop] stage phase=2 crates=3");
+            for (var i = 0; i < 5; i++)
+            {
+                zone.Tick(0.5f);
+            }
+
+            Assert.That(_dropper.Schedule.StageIndex, Is.EqualTo(1), "a stage that skips Waiting still begins");
+        }
+
+        [Test]
         public void ALandedCrateOpensOnceAndSetsItsContentsOnTheGround()
         {
             Floor(Vector3.zero, 0f);

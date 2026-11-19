@@ -393,7 +393,8 @@ namespace Shooter.Runtime
                 return;
             }
 
-            if (state.Stage != ZoneStage.Waiting || state.PhaseIndex == _schedule.StageIndex)
+            // waitSeconds が 0 の段階は Waiting を通らず Shrinking から始まるため、Stage ではなく段階の番号で新しさを見る。
+            if (state.PhaseIndex == _schedule.StageIndex)
             {
                 return;
             }

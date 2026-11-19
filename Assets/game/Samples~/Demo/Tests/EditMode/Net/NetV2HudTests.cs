@@ -6,6 +6,7 @@ using Shooter.Protocol;
 using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.TestTools;
 using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
@@ -303,6 +304,86 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void PayloadPublishesTheCartWithTheScenesCheckpointsUntilTheModeEnds()
+        {
+            AddCart(2);
+            var snapshot = PayloadSnapshot(Team.Alpha, 0.4f, 1, 2);
+            snapshot.Match.RemainingSeconds = 240;
+
+            _hud.Apply(snapshot);
+
+            var status = GameSignals.ModeStatus.Value;
+            Assert.That(status, Is.Not.Null);
+            Assert.That(status.Detail, Is.InstanceOf<PayloadStatus>(), "the same detail type as offline, so the Payload formatter reads it");
+            var payload = (PayloadStatus)status.Detail;
+            Assert.That(payload.Attackers, Is.EqualTo(Side.Alpha));
+            Assert.That(payload.Progress, Is.EqualTo(0.4f));
+            Assert.That(payload.CheckpointsReached, Is.EqualTo(1));
+            Assert.That(payload.CheckpointCount, Is.EqualTo(2), "the count comes from the scene's cart");
+            Assert.That(payload.Pushers, Is.EqualTo(2));
+            Assert.That(status.OwnSide, Is.EqualTo((Side?)Side.Bravo));
+            Assert.That(status.RemainingSeconds, Is.EqualTo(240f));
+            Assert.That(GameSignals.Domination.Value, Is.Null);
+
+            snapshot.Tick++;
+            _hud.Apply(snapshot);
+            var held = GameSignals.ModeStatus.Value;
+            Assert.That(held, Is.Not.SameAs(status), "pushers that do not move the cart change the status");
+            Assert.That(((PayloadStatus)held.Detail).IsContested, Is.True);
+
+            snapshot.Tick++;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value, Is.SameAs(held), "an unchanged cart is not published again");
+
+            snapshot.Tick++;
+            snapshot.Match.State = GameModeState.Ended;
+            snapshot.Match.HasWinner = true;
+            snapshot.Match.Winner = Team.Bravo;
+            _hud.Apply(snapshot);
+            var ended = GameSignals.ModeStatus.Value;
+            Assert.That(ended.IsEnded, Is.True);
+            Assert.That(ended.Winner, Is.EqualTo((Side?)Side.Bravo), "the server's winner is shown");
+
+            snapshot.Match.Objective = MatchObjective.None;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null, "a match without a mode takes the status back");
+        }
+
+        [Test]
+        public void PayloadWithoutACartInTheSceneShowsNoStatus()
+        {
+            LogAssert.Expect(LogType.Warning, ClientPayloadLog.CartMissing());
+
+            _hud.Apply(PayloadSnapshot(Team.Alpha, 0.4f, 1, 1));
+
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null, "the checkpoint count is not known without the cart");
+
+            var snapshot = PayloadSnapshot(Team.Alpha, 0.5f, 1, 1);
+            snapshot.Tick = 1;
+            _hud.Apply(snapshot);
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ClearSignalsTakesBackThePayloadStatus()
+        {
+            AddCart(1);
+            var snapshot = PayloadSnapshot(Team.Bravo, 0.2f, 0, 1);
+            _hud.Apply(snapshot);
+            var shown = GameSignals.ModeStatus.Value;
+            Assert.That(shown, Is.Not.Null);
+
+            _hud.ClearSignals();
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null);
+
+            _hud.Apply(snapshot);
+            var again = GameSignals.ModeStatus.Value;
+            Assert.That(again, Is.Not.Null, "the next snapshot after clearing publishes the cart again");
+            Assert.That(again, Is.Not.SameAs(shown));
+            Assert.That(((PayloadStatus)again.Detail).Attackers, Is.EqualTo(Side.Bravo));
+        }
+
+        [Test]
         public void TheModeKeyChangesWithTheShownValuesOnly()
         {
             var snapshot = Snapshot(MatchObjective.FreeForAll);
@@ -503,6 +584,44 @@ namespace Shooter.Net.Tests
             other.Team = Team.Alpha;
             other.Health = 100;
             return snapshot;
+        }
+
+        private static SnapshotMessage PayloadSnapshot(Team attackers, float progress, int passed, int pushers)
+        {
+            var snapshot = Snapshot(MatchObjective.Payload);
+            snapshot.Match.PayloadProgress = progress;
+            snapshot.Match.PayloadCheckpointsPassed = passed;
+            snapshot.Match.PayloadPushers = pushers;
+            ref var cart = ref snapshot.ObjectiveItems.Add();
+            cart.ItemId = 0;
+            cart.Present = ObjectiveItemFields.All;
+            cart.Kind = ObjectiveItemKind.Cart;
+            cart.Team = attackers;
+            cart.State = ObjectiveItemState.Home;
+            return snapshot;
+        }
+
+        // 中継点は始点と終点を除いた点にしか置けないので、中継点の数 + 2 個の点を並べる
+        private void AddCart(int checkpoints)
+        {
+            var points = new Transform[checkpoints + 2];
+            var checkpointPoints = new int[checkpoints];
+            for (var i = 0; i < points.Length; i++)
+            {
+                var point = new GameObject("PayloadPoint" + i);
+                point.transform.position = new Vector3(0f, 0f, i * 10f);
+                _created.Add(point);
+                points[i] = point.transform;
+            }
+
+            for (var i = 0; i < checkpoints; i++)
+            {
+                checkpointPoints[i] = i + 1;
+            }
+
+            var cart = new GameObject("PayloadCart").AddComponent<PayloadCart>();
+            _created.Add(cart.gameObject);
+            cart.SetRoute(points, checkpointPoints);
         }
 
         private static void AddPoint(SnapshotMessage snapshot, int index, Team? owner, int percent, bool contested)

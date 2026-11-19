@@ -44,15 +44,15 @@ namespace Shooter.Tests.EditMode
         {
             Assert.That(_motor.Spec.Mass, Is.EqualTo(AircraftSpec.DefaultMass));
             Assert.That(_motor.Spec.MaxThrust, Is.EqualTo(AircraftSpec.DefaultMaxThrust));
-            Assert.That(_motor.Spec.MaxSpeed, Is.EqualTo(AircraftSpec.DefaultMaxSpeed));
-            Assert.That(_motor.Spec.RollRate, Is.EqualTo(AircraftSpec.DefaultRollRate));
+            Assert.That(_motor.Spec.Aero.MaxSpeed, Is.EqualTo(AircraftAeroSpec.DefaultMaxSpeed));
+            Assert.That(_motor.Spec.Aero.RollRate, Is.EqualTo(AircraftAeroSpec.DefaultRollRate));
             Assert.That(_motor.Input, Is.EqualTo(VehicleMotorInput.Idle));
         }
 
         [Test]
         public void ConfigureKeepsTheSpecAndSetsTheMass()
         {
-            var spec = new AircraftSpec(mass: 2500f, maxSpeed: 120f);
+            var spec = new AircraftSpec(mass: 2500f, aero: new AircraftAeroSpec(maxSpeed: 120f));
 
             _motor.Configure(spec);
 
@@ -64,15 +64,15 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheTopSpeedIsTheDiveSpeed()
         {
-            Assert.That(_motor.TopSpeed, Is.EqualTo(AircraftFlight.TopSpeed(_motor.Spec, Physics.gravity.magnitude)).Within(Epsilon));
-            Assert.That(_motor.TopSpeed, Is.GreaterThan(_motor.Spec.MaxSpeed));
+            Assert.That(_motor.TopSpeed, Is.EqualTo(AircraftAero.TopSpeed(_motor.Spec, Physics.gravity.magnitude)).Within(Epsilon));
+            Assert.That(_motor.TopSpeed, Is.GreaterThan(_motor.Spec.Aero.MaxSpeed));
             Assert.That(_motor, Is.InstanceOf<IVehicleTopSpeed>());
         }
 
         [Test]
         public void StepUsesTheInputAndTheVelocitySeenFromTheAircraft()
         {
-            _motor.Configure(new AircraftSpec(maxThrust: 10f, maxSpeed: 100f, liftSpeed: 40f, controlSpeed: 20f, alignment: 0f));
+            _motor.Configure(new AircraftSpec(maxThrust: 10f, aero: new AircraftAeroSpec(maxSpeed: 100f, liftSpeed: 40f, controlSpeed: 20f, alignment: 0f)));
             _motor.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
             _motor.Body.rotation = _motor.transform.rotation;
             _motor.Body.linearVelocity = new Vector3(100f, 0f, 0f);
@@ -98,6 +98,78 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_motor.LastCommand.LocalAcceleration.Z, Is.EqualTo(AircraftSpec.DefaultMaxThrust).Within(Epsilon));
             Assert.That(_motor.Body.linearVelocity, Is.EqualTo(Vector3.zero));
+        }
+
+        [Test]
+        public void TheSpecIsReadFromTheDefinitionWhenOneIsSet()
+        {
+            var definition = ScriptableObject.CreateInstance<AircraftDefinition>();
+            _created.Add(definition);
+            definition.CopyFrom(new AircraftSpec(mass: 3000f, maxThrust: 12f, aero: new AircraftAeroSpec(maxSpeed: 60f)));
+
+            _motor.Definition = definition;
+
+            Assert.That(_motor.Spec.Mass, Is.EqualTo(3000f));
+            Assert.That(_motor.Spec.MaxThrust, Is.EqualTo(12f));
+            Assert.That(_motor.Spec.Aero.MaxSpeed, Is.EqualTo(60f));
+            Assert.That(_motor.Body.mass, Is.EqualTo(3000f));
+            Assert.That(_motor.TopSpeed, Is.LessThan(AircraftAero.TopSpeed(AircraftSpec.Default, Physics.gravity.magnitude)));
+        }
+
+        [Test]
+        public void SettingTheDefinitionReplacesAConfiguredSpec()
+        {
+            var definition = ScriptableObject.CreateInstance<AircraftDefinition>();
+            _created.Add(definition);
+            definition.MaxThrust = 7f;
+            _motor.Configure(new AircraftSpec(maxThrust: 20f));
+
+            _motor.Definition = definition;
+
+            Assert.That(_motor.Spec.MaxThrust, Is.EqualTo(7f));
+            _motor.Configure(new AircraftSpec(maxThrust: 20f));
+            Assert.That(_motor.Spec.MaxThrust, Is.EqualTo(20f), "Configure still wins over the asset");
+        }
+
+        [Test]
+        public void StepPublishesTheFlightState()
+        {
+            _motor.Body.linearVelocity = new Vector3(0f, 0f, 50f);
+
+            _motor.Step();
+
+            Assert.That(_motor.State.Airspeed, Is.EqualTo(50f).Within(Epsilon));
+            Assert.That(_motor.State.AngleOfAttackRadians, Is.EqualTo(0f).Within(Epsilon));
+            Assert.That(_motor.State.LoadFactor, Is.EqualTo(1f).Within(Epsilon), "50 m/s is past the default lift speed");
+            Assert.That(_motor.State.Grounded, Is.False);
+            Assert.That(_motor.State, Is.EqualTo(_motor.LastCommand.State));
+        }
+
+        [Test]
+        public void StepAddsTheGroundAndAppliesTheConditionFromTheSameObject()
+        {
+            _motor.Body.isKinematic = true;
+            _motor.SetInput(new VehicleMotorInput(1f));
+            var ground = _motor.gameObject.AddComponent<FakeAircraftGroundSource>();
+            var condition = _motor.gameObject.AddComponent<FakeAircraftConditionSource>();
+            ground.Contact = new AircraftGroundContact(true, new System.Numerics.Vector3(0f, 0f, -2f), System.Numerics.Vector3.Zero);
+            condition.Condition = new AircraftCondition(thrust: 0.5f);
+
+            _motor.Step();
+
+            Assert.That(
+                _motor.LastCommand.LocalAcceleration.Z,
+                Is.EqualTo((AircraftSpec.DefaultMaxThrust * 0.5f) - 2f).Within(Epsilon));
+            Assert.That(_motor.State.Grounded, Is.True);
+            Assert.That(ground.Calls, Is.EqualTo(1));
+            Assert.That(ground.LastInput, Is.EqualTo(new VehicleMotorInput(1f)));
+
+            Object.DestroyImmediate(ground);
+            Object.DestroyImmediate(condition);
+            _motor.Step();
+
+            Assert.That(_motor.LastCommand.LocalAcceleration.Z, Is.EqualTo(AircraftSpec.DefaultMaxThrust).Within(Epsilon));
+            Assert.That(_motor.State.Grounded, Is.False);
         }
     }
 }

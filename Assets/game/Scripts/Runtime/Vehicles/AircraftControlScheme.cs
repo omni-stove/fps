@@ -7,25 +7,25 @@ namespace Shooter.Runtime
     [DisallowMultipleComponent]
     public sealed class AircraftControlScheme : MonoBehaviour, IVehicleControlScheme, IVehicleControlSchemeReset
     {
-        [SerializeField, Min(0f), Tooltip("視線が上下にずれたときに、ピッチを倒す強さ")]
-        private float _pitchGain = AircraftAimSpec.DefaultPitchGain;
+        [SerializeField, Tooltip("当て方の強さを読む機体のアセット (Aim の欄)。空なら既定値")]
+        private AircraftDefinition _definition;
 
-        [SerializeField, Min(0f), Tooltip("視線が左右にずれたときに、ヨーを倒す強さ")]
-        private float _yawGain = AircraftAimSpec.DefaultYawGain;
-
-        [SerializeField, Min(0f), Tooltip("視線が左右にずれたときに、ロールを倒す強さ")]
-        private float _rollGain = AircraftAimSpec.DefaultRollGain;
-
-        [SerializeField, Min(0f), Tooltip("傾いた機体を水平へ戻す強さ")]
-        private float _levelGain = AircraftAimSpec.DefaultLevelGain;
-
-        [SerializeField, Min(0f), Tooltip("移動の前後を押し切ったときに、スロットルの開き具合が変わる速さ (1/秒)")]
-        private float _throttleRate = AircraftAimSpec.DefaultThrottleRate;
-
-        private AircraftAimSpec _spec;
+        private AircraftAimSpec _configuredSpec;
+        private AircraftAimSpec _definitionSpec;
         private float _throttle;
 
-        public AircraftAimSpec Spec => _spec ??= new AircraftAimSpec(_pitchGain, _yawGain, _rollGain, _levelGain, _throttleRate);
+        public AircraftDefinition Definition
+        {
+            get => _definition;
+            set
+            {
+                _definition = value;
+                _configuredSpec = null;
+                _definitionSpec = null;
+            }
+        }
+
+        public AircraftAimSpec Spec => _configuredSpec ?? (_definitionSpec ??= BuildSpec());
 
         public float Throttle
         {
@@ -48,17 +48,12 @@ namespace Shooter.Runtime
 
         private void OnValidate()
         {
-            _spec = null;
+            _definitionSpec = null;
         }
 
         public void Configure(AircraftAimSpec spec)
         {
-            _spec = spec ?? throw new ArgumentNullException(nameof(spec));
-            _pitchGain = spec.PitchGain;
-            _yawGain = spec.YawGain;
-            _rollGain = spec.RollGain;
-            _levelGain = spec.LevelGain;
-            _throttleRate = spec.ThrottleRate;
+            _configuredSpec = spec ?? throw new ArgumentNullException(nameof(spec));
         }
 
         public VehicleMotorInput ToMotorInput(VehicleSeat seat, VehicleSeatInput input, float deltaSeconds)
@@ -69,6 +64,11 @@ namespace Shooter.Runtime
             var localAim = Quaternion.Inverse(rotation) * input.AimDirection;
             var rightWingUp = Mathf.Clamp((rotation * Vector3.right).y, -1f, 1f);
             return AircraftAim.Compute(Spec, localAim.ToNumerics(), rightWingUp, input.Move.x, AircraftAim.ThrottleAxis(_throttle, push));
+        }
+
+        private AircraftAimSpec BuildSpec()
+        {
+            return _definition != null ? _definition.ToAimSpec() : AircraftAimSpec.Default;
         }
     }
 }

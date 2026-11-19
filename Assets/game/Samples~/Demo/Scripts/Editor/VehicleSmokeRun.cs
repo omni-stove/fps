@@ -509,7 +509,7 @@ namespace Shooter.Editor
                         return $"'{aircraft.name}' has no SimpleAircraftMotor";
                     }
 
-                    if (motor.ForwardSpeed < motor.Spec.LiftSpeed * RotateSpeedFraction)
+                    if (motor.ForwardSpeed < motor.Spec.Aero.LiftSpeed * RotateSpeedFraction)
                     {
                         return null;
                     }

@@ -1,0 +1,171 @@
+using System;
+using System.Collections.Generic;
+using Shooter.Core;
+using Shooter.Runtime;
+using NUnit.Framework;
+using UnityEngine;
+using Object = UnityEngine.Object;
+
+namespace Shooter.Tests.EditMode
+{
+    public sealed class AircraftDefinitionTests
+    {
+        private readonly List<Object> _created = new List<Object>();
+
+        [TearDown]
+        public void TearDown()
+        {
+            for (var i = _created.Count - 1; i >= 0; i--)
+            {
+                if (_created[i] != null)
+                {
+                    Object.DestroyImmediate(_created[i]);
+                }
+            }
+
+            _created.Clear();
+        }
+
+        [Test]
+        public void ANewDefinitionStartsFromTheSpecDefaults()
+        {
+            var definition = NewDefinition("Fresh");
+
+            var spec = definition.ToSpec();
+            var aim = definition.ToAimSpec();
+
+            Assert.That(spec.Mass, Is.EqualTo(AircraftSpec.DefaultMass));
+            Assert.That(spec.MaxThrust, Is.EqualTo(AircraftSpec.DefaultMaxThrust));
+            Assert.That(spec.Aero.MaxSpeed, Is.EqualTo(AircraftAeroSpec.DefaultMaxSpeed));
+            Assert.That(spec.Aero.LiftSpeed, Is.EqualTo(AircraftAeroSpec.DefaultLiftSpeed));
+            Assert.That(spec.Aero.ControlSpeed, Is.EqualTo(AircraftAeroSpec.DefaultControlSpeed));
+            Assert.That(spec.Aero.MinControl, Is.EqualTo(AircraftAeroSpec.DefaultMinControl));
+            Assert.That(spec.Aero.PitchRate, Is.EqualTo(AircraftAeroSpec.DefaultPitchRate));
+            Assert.That(spec.Aero.RollRate, Is.EqualTo(AircraftAeroSpec.DefaultRollRate));
+            Assert.That(spec.Aero.YawRate, Is.EqualTo(AircraftAeroSpec.DefaultYawRate));
+            Assert.That(spec.Aero.Responsiveness, Is.EqualTo(AircraftAeroSpec.DefaultResponsiveness));
+            Assert.That(spec.Aero.Alignment, Is.EqualTo(AircraftAeroSpec.DefaultAlignment));
+            Assert.That(spec.Aero.AirBrakeDrag, Is.EqualTo(AircraftAeroSpec.DefaultAirBrakeDrag));
+            Assert.That(aim.PitchGain, Is.EqualTo(AircraftAimSpec.DefaultPitchGain));
+            Assert.That(aim.YawGain, Is.EqualTo(AircraftAimSpec.DefaultYawGain));
+            Assert.That(aim.RollGain, Is.EqualTo(AircraftAimSpec.DefaultRollGain));
+            Assert.That(aim.LevelGain, Is.EqualTo(AircraftAimSpec.DefaultLevelGain));
+            Assert.That(aim.ThrottleRate, Is.EqualTo(AircraftAimSpec.DefaultThrottleRate));
+        }
+
+        [Test]
+        public void TheFlightSpecSurvivesARoundTrip()
+        {
+            var original = new AircraftSpec(
+                mass: 1200f,
+                maxThrust: 9f,
+                aero: new AircraftAeroSpec(
+                    maxSpeed: 70f,
+                    liftSpeed: 30f,
+                    controlSpeed: 18f,
+                    minControl: 0.2f,
+                    pitchRate: 45f,
+                    rollRate: 90f,
+                    yawRate: 15f,
+                    responsiveness: 3f,
+                    alignment: 1.5f,
+                    airBrakeDrag: 4f));
+            var definition = NewDefinition("Trainer");
+
+            definition.CopyFrom(original);
+            var spec = definition.ToSpec();
+
+            Assert.That(definition.Mass, Is.EqualTo(1200f));
+            Assert.That(definition.MaxThrust, Is.EqualTo(9f));
+            Assert.That(spec.Mass, Is.EqualTo(1200f));
+            Assert.That(spec.MaxThrust, Is.EqualTo(9f));
+            Assert.That(spec.Aero.MaxSpeed, Is.EqualTo(70f));
+            Assert.That(spec.Aero.LiftSpeed, Is.EqualTo(30f));
+            Assert.That(spec.Aero.ControlSpeed, Is.EqualTo(18f));
+            Assert.That(spec.Aero.MinControl, Is.EqualTo(0.2f));
+            Assert.That(spec.Aero.PitchRate, Is.EqualTo(45f));
+            Assert.That(spec.Aero.RollRate, Is.EqualTo(90f));
+            Assert.That(spec.Aero.YawRate, Is.EqualTo(15f));
+            Assert.That(spec.Aero.Responsiveness, Is.EqualTo(3f));
+            Assert.That(spec.Aero.Alignment, Is.EqualTo(1.5f));
+            Assert.That(spec.Aero.AirBrakeDrag, Is.EqualTo(4f));
+        }
+
+        [Test]
+        public void TheAimBlockSurvivesARoundTrip()
+        {
+            var definition = NewDefinition("Trainer");
+
+            definition.Aim.CopyFrom(new AircraftAimSpec(pitchGain: 2f, yawGain: 0.5f, rollGain: 4f, levelGain: 1f, throttleRate: 0.25f));
+            var aim = definition.ToAimSpec();
+
+            Assert.That(aim.PitchGain, Is.EqualTo(2f));
+            Assert.That(aim.YawGain, Is.EqualTo(0.5f));
+            Assert.That(aim.RollGain, Is.EqualTo(4f));
+            Assert.That(aim.LevelGain, Is.EqualTo(1f));
+            Assert.That(aim.ThrottleRate, Is.EqualTo(0.25f));
+        }
+
+        [Test]
+        public void TheEmptyBlocksStillGiveASpec()
+        {
+            var definition = NewDefinition("Trainer");
+
+            definition.Stick.CopyFrom(AircraftStickSpec.Default);
+            definition.Ground.CopyFrom(AircraftGroundSpec.Default);
+            definition.Damage.CopyFrom(AircraftDamageSpec.Default);
+
+            Assert.That(definition.Stick.ToSpec(), Is.Not.Null);
+            Assert.That(definition.Ground.ToSpec(), Is.Not.Null);
+            Assert.That(definition.Damage.ToSpec(), Is.Not.Null);
+        }
+
+        [Test]
+        public void CopyFromRejectsAMissingSpec()
+        {
+            var definition = NewDefinition("Trainer");
+
+            Assert.Throws<ArgumentNullException>(() => definition.CopyFrom(null));
+            Assert.Throws<ArgumentNullException>(() => definition.Aero.CopyFrom(null));
+            Assert.Throws<ArgumentNullException>(() => definition.Aim.CopyFrom(null));
+            Assert.Throws<ArgumentNullException>(() => definition.Stick.CopyFrom(null));
+            Assert.Throws<ArgumentNullException>(() => definition.Ground.CopyFrom(null));
+            Assert.Throws<ArgumentNullException>(() => definition.Damage.CopyFrom(null));
+        }
+
+        [Test]
+        public void ToSpecNamesTheAssetWhenAValueIsInvalid()
+        {
+            var definition = NewDefinition("BrokenPlane");
+            definition.MaxThrust = 0f;
+
+            var error = Assert.Throws<ArgumentException>(() => definition.ToSpec());
+
+            Assert.That(error.Message, Does.Contain("BrokenPlane"));
+            Assert.That(error.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
+        }
+
+        [Test]
+        public void TheControlSchemeReadsTheAimBlock()
+        {
+            var definition = NewDefinition("Trainer");
+            definition.Aim.CopyFrom(new AircraftAimSpec(pitchGain: 5f));
+            var aircraft = new GameObject("Aircraft");
+            _created.Add(aircraft);
+            var scheme = aircraft.AddComponent<AircraftControlScheme>();
+
+            Assert.That(scheme.Spec.PitchGain, Is.EqualTo(AircraftAimSpec.DefaultPitchGain), "no asset uses the defaults");
+            scheme.Definition = definition;
+
+            Assert.That(scheme.Spec.PitchGain, Is.EqualTo(5f));
+        }
+
+        private AircraftDefinition NewDefinition(string assetName)
+        {
+            var definition = ScriptableObject.CreateInstance<AircraftDefinition>();
+            definition.name = assetName;
+            _created.Add(definition);
+            return definition;
+        }
+    }
+}

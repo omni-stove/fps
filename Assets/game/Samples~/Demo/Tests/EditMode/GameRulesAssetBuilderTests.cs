@@ -590,6 +590,16 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheRepositoryBattleRoyaleAssetOpensTheParachute()
+        {
+            var rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.BattleRoyalePath).ToRules();
+            Assert.That(
+                rules.Actions.Parachute,
+                Is.EqualTo(Parachute.On),
+                GameRulesAssetBuilder.BattleRoyalePath + $" (rerun {nameof(GameRulesAssetBuilder)}.Build)");
+        }
+
+        [Test]
         public void TheRepositoryRuleAssetsLoadWithTheNewValuesAtTheirDefaults()
         {
             var paths = new[]

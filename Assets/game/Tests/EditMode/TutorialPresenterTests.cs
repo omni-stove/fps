@@ -60,8 +60,8 @@ namespace Shooter.Tests.EditMode
         {
             get
             {
-                Assert.That(GameSignals.Tutorial.Value.HasValue, Is.True, "the tutorial publishes its status");
-                return GameSignals.Tutorial.Value.Value;
+                Assert.That(CampaignSignals.Tutorial.Value.HasValue, Is.True, "the tutorial publishes its status");
+                return CampaignSignals.Tutorial.Value.Value;
             }
         }
 
@@ -115,7 +115,7 @@ namespace Shooter.Tests.EditMode
         {
             Begin();
             var heard = 0;
-            GameSignals.Tutorial.Changed += _ => heard++;
+            CampaignSignals.Tutorial.Changed += _ => heard++;
 
             Tick(Vector3.zero);
             Tick(Vector3.zero);
@@ -203,7 +203,7 @@ namespace Shooter.Tests.EditMode
             _presenter.Tick(TutorialPresenter.CompletedDisplaySeconds, State(PlayerActionConditions.None), Vector3.zero, InputDeviceKind.KeyboardMouse);
 
             Assert.That(_presenter.IsRunning, Is.False);
-            Assert.That(GameSignals.Tutorial.HasValue, Is.False, "the completion is cleared after a while");
+            Assert.That(CampaignSignals.Tutorial.HasValue, Is.False, "the completion is cleared after a while");
             Assert.That(_presenter.Status, Is.Null);
         }
 
@@ -244,7 +244,7 @@ namespace Shooter.Tests.EditMode
             _presenter.Stop();
 
             Assert.That(_presenter.IsRunning, Is.False);
-            Assert.That(GameSignals.Tutorial.HasValue, Is.False);
+            Assert.That(CampaignSignals.Tutorial.HasValue, Is.False);
             Assert.That(_store.IsCompleted, Is.False);
             Assert.That(_presenter.Status, Is.Null);
         }
@@ -254,11 +254,11 @@ namespace Shooter.Tests.EditMode
         {
             Begin();
             var other = new TutorialStatus(new TutorialSteps(), InputActionPaths.Move, InputDeviceKind.Gamepad);
-            GameSignals.Tutorial.Publish(other);
+            CampaignSignals.Tutorial.Publish(other);
 
             _presenter.Stop();
 
-            Assert.That(GameSignals.Tutorial.Value, Is.EqualTo(other));
+            Assert.That(CampaignSignals.Tutorial.Value, Is.EqualTo(other));
         }
 
 

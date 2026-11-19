@@ -331,7 +331,7 @@ namespace Shooter.Runtime
             }
 
             _status = status;
-            GameSignals.Tutorial.Publish(status);
+            CampaignSignals.Tutorial.Publish(status);
         }
 
         private void ClearStatus()
@@ -339,7 +339,7 @@ namespace Shooter.Runtime
             if (_status.HasValue)
             {
                 // 後から別の側が出した段階まで消さない
-                GameSignals.Tutorial.ClearIfCurrent(_status);
+                CampaignSignals.Tutorial.ClearIfCurrent(_status);
                 _status = null;
             }
         }

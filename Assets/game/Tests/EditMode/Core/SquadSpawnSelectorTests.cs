@@ -7,7 +7,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class SquadSpawnSelectorTests
     {
-        private const float Tolerance = 1e-4f;
+        private const float _tolerance =1e-4f;
 
         private static readonly Side _mine = new Side(0);
         private static readonly Side _theirs = new Side(1);
@@ -23,9 +23,9 @@ namespace Shooter.Core.Tests
         private static void AssertAt(Vector3? actual, float x, float y, float z)
         {
             Assert.That(actual.HasValue, Is.True);
-            Assert.That(actual.Value.X, Is.EqualTo(x).Within(Tolerance));
-            Assert.That(actual.Value.Y, Is.EqualTo(y).Within(Tolerance));
-            Assert.That(actual.Value.Z, Is.EqualTo(z).Within(Tolerance));
+            Assert.That(actual.Value.X, Is.EqualTo(x).Within(_tolerance));
+            Assert.That(actual.Value.Y, Is.EqualTo(y).Within(_tolerance));
+            Assert.That(actual.Value.Z, Is.EqualTo(z).Within(_tolerance));
         }
 
         [Test]

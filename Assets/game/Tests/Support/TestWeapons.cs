@@ -143,7 +143,8 @@ namespace Shooter.Tests.EditMode
                         new RoundSpec(RoundDelivery.Beam, 60f, penetration: new PenetrationSpec(1, 0.5f, 0.2f), beam: new BeamSpec(0.05f, "fx.beam")),
                         new ImpactSpec(30, statusEffect: burning)),
                 },
-                shotNoiseRadius: 12f);
+                shotNoiseRadius: 12f,
+                drawSeconds: 0.3f);
         }
 
         public static LoadoutSlotDefinition[] LoadoutSlots(WeaponDefinition rifle, WeaponDefinition handgun)

@@ -11,6 +11,7 @@ namespace Shooter.Runtime
             IReadOnlyList<WeaponDefinition> weaponDefinitions,
             IReadOnlyList<AbilityDefinition> abilityDefinitions,
             GameRules rules,
+            float switchSeconds,
             PlayerTuning tuning,
             out CharacterController controller,
             out ViewRig rig,
@@ -30,7 +31,7 @@ namespace Shooter.Runtime
             try
             {
                 ConfigurePlayer(
-                    player, weaponDefinitions, rules, tuning, out controller, out rig, out camera, out look, out mover, out weapon, out ads);
+                    player, weaponDefinitions, rules, switchSeconds, tuning, out controller, out rig, out camera, out look, out mover, out weapon, out ads);
 
                 // 撃たれる側の受け皿。CharacterController のカプセルをそのまま胴の当たり判定にする。
                 damageable = player.AddComponent<Damageable>();
@@ -89,6 +90,7 @@ namespace Shooter.Runtime
             GameObject player,
             IReadOnlyList<WeaponDefinition> weaponDefinitions,
             GameRules rules,
+            float switchSeconds,
             PlayerTuning tuning,
             out CharacterController controller,
             out ViewRig rig,
@@ -179,6 +181,7 @@ namespace Shooter.Runtime
                 weapon = cameraObject.AddComponent<WeaponController>();
                 weapon.Definitions = weaponDefinitions;
                 weapon.Rules = rules;
+                weapon.SwitchSeconds = switchSeconds;
             }
             finally
             {

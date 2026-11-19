@@ -53,7 +53,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            var loadout = WeaponLoadout.Restore(_specs, _loadout.SnapshotAmmo(), Weapon.Spec.Id, _loadedRules, out _);
+            var loadout = WeaponLoadout.Restore(_specs, _loadout.SnapshotAmmo(), Weapon.Spec.Id, _loadedRules, _switchSeconds, out _);
             KeepAmmoTypes(loadout, -1);
             SetLoadout(loadout, _specs, _loadedDefinitions, _loadedRules);
             Debug.Log($"{AttachmentsLogPrefix} cleared weapon={Weapon.Spec.Id}", this);
@@ -112,7 +112,7 @@ namespace Shooter.Runtime
             carried[index] = new WeaponAmmo(weaponId, magazine, reserve);
             var specs = (WeaponSpec[])_specs.Clone();
             specs[index] = spec;
-            var loadout = WeaponLoadout.Restore(specs, carried, Weapon.Spec.Id, _loadedRules, out _);
+            var loadout = WeaponLoadout.Restore(specs, carried, Weapon.Spec.Id, _loadedRules, _switchSeconds, out _);
             KeepAmmoTypes(loadout, -1);
             RememberAttachments(weaponId, kept);
             SetLoadout(loadout, specs, _loadedDefinitions, _loadedRules);

@@ -248,7 +248,6 @@ namespace Shooter.Editor
         }
 
         // ネット対戦と同じアセットから引くので、並びを変えるときは DefaultLoadoutSlots だけを直せばよい。
-        // 持ち替え秒数 (LoadoutDefinition.SwitchSeconds) はオフラインでは使わない。
         public static WeaponDefinition[] LoadPlayerLoadout()
         {
             var loadout = LoadDefaultLoadout();

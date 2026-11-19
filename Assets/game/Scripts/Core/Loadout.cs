@@ -8,11 +8,18 @@ namespace Shooter.Core
         where T : class
     {
         private readonly Action<T> _onHolster;
+        private readonly Func<T, float?> _drawSeconds;
         private float _switchRemaining;
 
         public event Action<int> Switched;
 
         public Loadout(IReadOnlyList<T> items, float switchSeconds, Action<T> onHolster)
+            : this(items, switchSeconds, onHolster, null)
+        {
+        }
+
+        // drawSeconds は持ち替え先の武器を構える秒数を返す。null を返した武器は switchSeconds を使う。
+        public Loadout(IReadOnlyList<T> items, float switchSeconds, Action<T> onHolster, Func<T, float?> drawSeconds)
         {
             if (items == null)
             {
@@ -44,6 +51,7 @@ namespace Shooter.Core
             Items = list.AsReadOnly();
             SwitchSeconds = switchSeconds;
             _onHolster = onHolster;
+            _drawSeconds = drawSeconds;
         }
 
         public IReadOnlyList<T> Items { get; }
@@ -58,6 +66,27 @@ namespace Shooter.Core
 
         public bool IsSwitching => _switchRemaining > 0f;
 
+        public float SwitchSecondsTo(int index)
+        {
+            if (index < 0 || index >= Items.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), index, "index is outside the loadout");
+            }
+
+            var draw = _drawSeconds?.Invoke(Items[index]);
+            if (!draw.HasValue)
+            {
+                return SwitchSeconds;
+            }
+
+            if (!(draw.Value >= 0f) || float.IsInfinity(draw.Value))
+            {
+                throw new InvalidOperationException("draw seconds of item " + index + " must be a non-negative finite number (got " + draw.Value + ")");
+            }
+
+            return draw.Value;
+        }
+
         public bool TrySelect(int index)
         {
             if (index < 0 || index >= Items.Count || index == CurrentIndex)
@@ -65,9 +94,10 @@ namespace Shooter.Core
                 return false;
             }
 
+            var seconds = SwitchSecondsTo(index);
             _onHolster?.Invoke(Current);
             CurrentIndex = index;
-            _switchRemaining = SwitchSeconds;
+            _switchRemaining = seconds;
             Switched?.Invoke(index);
             return true;
         }

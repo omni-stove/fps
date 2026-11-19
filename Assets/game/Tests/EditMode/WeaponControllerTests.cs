@@ -194,6 +194,58 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void SwitchingTakesNoTimeByDefaultAndRejectsBadSeconds()
+        {
+            Assert.That(_controller.SwitchSeconds, Is.Zero);
+            Assert.That(_controller.IsSwitching, Is.False, "nothing is held before initializing");
+            Assert.Throws<ArgumentOutOfRangeException>(() => _controller.SwitchSeconds = -0.1f);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _controller.SwitchSeconds = float.NaN);
+            Assert.Throws<ArgumentOutOfRangeException>(() => _controller.SwitchSeconds = float.PositiveInfinity);
+            Assert.That(_controller.SwitchSeconds, Is.Zero);
+        }
+
+        [Test]
+        public void WhileSwitchingTheDrawnWeaponNeitherFiresNorReloads()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                _controller.SwitchSeconds = 0.5f;
+                InitializeWithRifleAndHandgun(handgun);
+                Assert.That(_controller.IsSwitching, Is.False, "the first weapon is ready from the start");
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={_rifle.MagazineSize - 1}");
+                Assert.That(_controller.PullTrigger(true, true), Is.True);
+
+                Assert.That(_controller.SelectNext(), Is.True);
+                Assert.That(_controller.IsSwitching, Is.True);
+                Assert.That(_controller.IsFireBlocked, Is.True);
+                Assert.That(_controller.PullTrigger(true, true), Is.False);
+                Assert.That(_controller.Fire(), Is.False);
+                Assert.That(_controller.Weapon.AmmoInMagazine, Is.EqualTo(handgun.MagazineSize));
+
+                _controller.Tick(0.25f);
+                Assert.That(_controller.IsSwitching, Is.True, "half of the switch time has passed");
+                _controller.Tick(0.25f);
+                Assert.That(_controller.IsSwitching, Is.False);
+                LogAssert.Expect(LogType.Log, $"[Combat] fire ammo={handgun.MagazineSize - 1}");
+                Assert.That(_controller.PullTrigger(true, true), Is.True);
+
+                Assert.That(_controller.SelectPrevious(), Is.True);
+                Assert.That(_controller.StartReload(), Is.False, "the rifle cannot reload while it is being drawn");
+                Assert.That(_controller.PressReload(), Is.False);
+                Assert.That(_controller.SwitchAmmoType(), Is.False);
+                Assert.That(_controller.Weapon.IsReloading, Is.False);
+
+                _controller.Tick(0.5f);
+                Assert.That(_controller.StartReload(), Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
         public void SwitchingCancelsTheReloadAndBothWeaponsFire()
         {
             var handgun = CreateHandgun();

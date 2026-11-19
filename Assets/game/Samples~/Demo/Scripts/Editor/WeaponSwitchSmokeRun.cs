@@ -222,6 +222,8 @@ namespace Shooter.Editor
             Expect(problems, !rifle.IsReloading, "switching away cancels the rifle's reload");
             Expect(problems, weapon.Weapon.Spec.Id == WeaponAssetBuilder.HandgunId, "the handgun is held after Next");
             ExpectHudName(problems, hud, weapon);
+            Expect(problems, !weapon.PullTrigger(true, true), "the handgun does not fire while it is being drawn");
+            weapon.Tick(weapon.SwitchSeconds);
 
             var handgun = weapon.Weapon;
             var handgunAmmo = handgun.AmmoInMagazine;

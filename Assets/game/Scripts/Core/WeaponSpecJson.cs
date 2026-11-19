@@ -16,6 +16,8 @@ namespace Shooter.Core
         public const string ShotNoiseRadiusItem = "shotNoiseRadius";
         public const string WeightItem = "weight";
         public const string MoveSpeedMultiplierItem = "moveSpeedMultiplier";
+
+        public const string DrawSecondsItem = "drawSeconds";
         public const string TriggerItem = "trigger";
         public const string AmmoItem = "ammo";
         public const string RoundItem = "round";
@@ -156,7 +158,7 @@ namespace Shooter.Core
         public static IReadOnlyList<string> ItemNames { get; } = Concat(
             new[]
             {
-                IdItem, NameKeyItem, DescriptionItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem,
+                IdItem, NameKeyItem, DescriptionItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, DrawSecondsItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem,
             },
             _triggerFlatItems,
             _ammoFlatItems,
@@ -261,6 +263,11 @@ namespace Shooter.Core
                 ? string.Empty
                 : fields.ToText(fields.ItemPath(NameKeyItem), nameKeyNode);
 
+            var drawNode = fields.FindRaw(DrawSecondsItem);
+            float? drawSeconds = drawNode == null || drawNode.Kind == GameRulesJson.NodeKind.Null
+                ? (float?)null
+                : fields.ToFloat(fields.ItemPath(DrawSecondsItem), drawNode);
+
             try
             {
                 return new WeaponSpec(
@@ -276,7 +283,8 @@ namespace Shooter.Core
                     fields.ReadFloat(ShotNoiseRadiusItem, WeaponSpec.DefaultShotNoiseRadius),
                     fields.ReadFloat(WeightItem, WeaponSpec.DefaultWeight),
                     fields.ReadFloat(MoveSpeedMultiplierItem, WeaponSpec.DefaultMoveSpeedMultiplier),
-                    fields.ReadString(DescriptionItem, string.Empty));
+                    fields.ReadString(DescriptionItem, string.Empty),
+                    drawSeconds);
             }
             catch (ArgumentException e)
             {
@@ -298,6 +306,12 @@ namespace Shooter.Core
             writer.Float(ShotNoiseRadiusItem, spec.ShotNoiseRadius);
             writer.Float(WeightItem, spec.Weight);
             writer.Float(MoveSpeedMultiplierItem, spec.MoveSpeedMultiplier);
+
+            // 構える秒数を持たない武器の JSON を、この項目を足す前と同じ文字列のまま書き戻す。
+            if (spec.DrawSeconds.HasValue)
+            {
+                writer.Float(DrawSecondsItem, spec.DrawSeconds.Value);
+            }
 
             writer.BeginObject(TriggerItem);
             WriteTrigger(writer, spec.Trigger);

@@ -108,6 +108,13 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("持っている間に移動の速さへ掛ける倍率。どの武器の倍率を掛けるかは移動の設定が決める")]
         private float _moveSpeedMultiplier = WeaponSpec.DefaultMoveSpeedMultiplier;
 
+        [Header("持ち替え")]
+        [SerializeField, Tooltip("この武器を構える秒数を武器ごとに決めるか。切るとロードアウトの持ち替え秒数を使う")]
+        private bool _hasDrawSeconds;
+
+        [SerializeField, Min(0f), Tooltip("この武器へ持ち替えて構えるまでの秒数")]
+        private float _drawSeconds;
+
         [Header("撃ち方")]
         [SerializeField]
         private BurstSettings _burst = new BurstSettings();
@@ -357,6 +364,16 @@ namespace Shooter.Runtime
             set => _moveSpeedMultiplier = value;
         }
 
+        public float? DrawSeconds
+        {
+            get => _hasDrawSeconds ? _drawSeconds : (float?)null;
+            set
+            {
+                _hasDrawSeconds = value.HasValue;
+                _drawSeconds = value ?? 0f;
+            }
+        }
+
         public float HipSpreadDegrees
         {
             get => _hipSpreadDegrees;
@@ -535,7 +552,7 @@ namespace Shooter.Runtime
                     _swayDegrees,
                     Sight.ToSpec());
                 return new WeaponSpec(
-                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description);
+                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description, DrawSeconds);
             }
             catch (ArgumentException e)
             {

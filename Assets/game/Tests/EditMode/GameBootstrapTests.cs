@@ -404,6 +404,41 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheLoadoutSwitchSecondsReachThePlayersWeapon()
+        {
+            var host = new GameObject("Bootstrap-Loadout");
+            var loadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
+            loadout.SwitchSeconds = 0.25f;
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.Loadout = loadout;
+                Assert.That(bootstrap.EffectiveSwitchSeconds, Is.EqualTo(0.25f));
+
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Weapon.SwitchSeconds, Is.EqualTo(0.25f));
+                Assert.That(world.Weapon.IsSwitching, Is.False, "the player starts with the first weapon ready");
+                Assert.That(world.Weapon.SelectNext(), Is.True);
+                Assert.That(world.Weapon.IsSwitching, Is.True);
+                Assert.That(world.Weapon.Fire(), Is.False, "the handgun does not fire while it is being drawn");
+                world.Weapon.Tick(0.25f);
+                Assert.That(world.Weapon.IsSwitching, Is.False);
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(loadout);
+            }
+        }
+
+        [Test]
         public void TheSceneMotorSettingsAndTraversalReachThePlayer()
         {
             var host = new GameObject("Bootstrap-Tuning");

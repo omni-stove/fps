@@ -12,7 +12,12 @@ namespace Shooter.Core
 
         public static Loadout<Weapon> Create(IReadOnlyList<WeaponSpec> specs, GameRules rules)
         {
-            return Restore(specs, Array.Empty<WeaponAmmo>(), null, rules, out _);
+            return Create(specs, rules, 0f);
+        }
+
+        public static Loadout<Weapon> Create(IReadOnlyList<WeaponSpec> specs, GameRules rules, float switchSeconds)
+        {
+            return Restore(specs, Array.Empty<WeaponAmmo>(), null, rules, switchSeconds, out _);
         }
 
         public static Loadout<Weapon> Restore(
@@ -24,12 +29,23 @@ namespace Shooter.Core
             return Restore(specs, ammo, equippedWeaponId, GameRules.Default, out unknownWeaponIds);
         }
 
+        public static Loadout<Weapon> Restore(
+            IReadOnlyList<WeaponSpec> specs,
+            IEnumerable<WeaponAmmo> ammo,
+            string equippedWeaponId,
+            GameRules rules,
+            out IReadOnlyList<string> unknownWeaponIds)
+        {
+            return Restore(specs, ammo, equippedWeaponId, rules, 0f, out unknownWeaponIds);
+        }
+
         // ammo にある武器の予備弾はセーブの値をそのまま使い、GameRules.ReserveAmmoMultiplier を掛け直さない (作ったときに掛けた値がセーブされているため)。
         public static Loadout<Weapon> Restore(
             IReadOnlyList<WeaponSpec> specs,
             IEnumerable<WeaponAmmo> ammo,
             string equippedWeaponId,
             GameRules rules,
+            float switchSeconds,
             out IReadOnlyList<string> unknownWeaponIds)
         {
             if (specs == null)
@@ -92,13 +108,16 @@ namespace Shooter.Core
                     : new Weapon(spec, rules);
             }
 
-            var loadout = new Loadout<Weapon>(weapons, 0f, Holster);
+            var loadout = new Loadout<Weapon>(weapons, switchSeconds, Holster, w => w.Spec.DrawSeconds);
 
             // まだ誰も Switched を購読していないうちに選ぶので、呼ぶ側には持ち替えとして見えない
             var equipped = IndexOf(loadout, equippedWeaponId);
             if (equipped > 0)
             {
                 loadout.TrySelect(equipped);
+
+                // 作り直した時点で持っている武器を、持ち替え中にしないため
+                loadout.Tick(loadout.SwitchSecondsTo(equipped));
             }
 
             unknownWeaponIds = unknown.AsReadOnly();

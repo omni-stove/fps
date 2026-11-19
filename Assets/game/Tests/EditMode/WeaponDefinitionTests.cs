@@ -228,6 +228,23 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void DrawSecondsAreUnsetUntilGivenAndZeroIsKept()
+        {
+            var definition = NewDefinition("Draw");
+            Assert.That(definition.DrawSeconds, Is.Null);
+            Assert.That(definition.ToSpec().DrawSeconds, Is.Null, "a weapon without its own draw time uses the loadout's");
+
+            definition.DrawSeconds = 0f;
+            Assert.That(definition.ToSpec().DrawSeconds, Is.EqualTo(0f), "zero draws instantly and is not the same as unset");
+
+            definition.DrawSeconds = 0.3f;
+            Assert.That(definition.ToSpec().DrawSeconds, Is.EqualTo(0.3f));
+
+            definition.DrawSeconds = null;
+            Assert.That(definition.ToSpec().DrawSeconds, Is.Null);
+        }
+
+        [Test]
         public void ConfiguringFromASpecWithEveryPartReadsBackTheSame()
         {
             var expected = TestWeapons.EveryPartSpec();
@@ -369,6 +386,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("ShotNoiseRadius", "")]
         [TestCase("Weight", "")]
         [TestCase("MoveSpeedMultiplier", "")]
+        [TestCase("DrawSeconds", "")]
         public void ToSpecRejectsInvalidValuesWithTheAssetName(string field, string id)
         {
             var definition = NewDefinition("BrokenWeapon");
@@ -461,6 +479,9 @@ namespace Shooter.Tests.EditMode
                     break;
                 case "MoveSpeedMultiplier":
                     definition.MoveSpeedMultiplier = float.NaN;
+                    break;
+                case "DrawSeconds":
+                    definition.DrawSeconds = -0.1f;
                     break;
                 default:
                     Assert.Fail("unknown field " + field);

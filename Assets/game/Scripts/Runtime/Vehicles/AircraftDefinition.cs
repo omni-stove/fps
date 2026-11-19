@@ -19,7 +19,7 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("視線の方へ機首を向ける当て方 (AircraftControlScheme) の値")]
         private AircraftAimSettings _aim = new AircraftAimSettings();
 
-        [SerializeField, Tooltip("操縦桿の値")]
+        [SerializeField, Tooltip("操縦桿で直接操る当て方 (AircraftStickControlScheme) の値")]
         private AircraftStickSettings _stick = new AircraftStickSettings();
 
         [SerializeField, Tooltip("地上を走るときの値")]
@@ -72,6 +72,18 @@ namespace Shooter.Runtime
             try
             {
                 return Aim.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw Invalid(e);
+            }
+        }
+
+        public AircraftStickSpec ToStickSpec()
+        {
+            try
+            {
+                return Stick.ToSpec();
             }
             catch (ArgumentException e)
             {

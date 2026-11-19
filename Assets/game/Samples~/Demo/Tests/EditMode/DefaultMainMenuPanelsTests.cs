@@ -10,7 +10,7 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Tests.EditMode
 {
-    // サンプルが登録する 5 つの画面を、本物のメニューのレイアウトでボタンから開いて戻る
+    // サンプルが登録する 6 つの画面を、本物のメニューのレイアウトでボタンから開いて戻る
     public sealed class DefaultMainMenuPanelsTests
     {
         private GameObject _owner;
@@ -40,6 +40,11 @@ namespace Shooter.Tests.EditMode
             CombatEvents.ClearSubscribers();
             UnityEngine.Object.DestroyImmediate(_owner);
             GameSignals.ResetAll();
+            var runner = UnityEngine.Object.FindAnyObjectByType<PlaylistRunner>();
+            if (runner != null)
+            {
+                UnityEngine.Object.DestroyImmediate(runner.gameObject);
+            }
 
             // Edit Mode の残りのテストとエディターのメニューでも、サンプルの登録があるままにする
             MainMenuPanels.Clear();
@@ -75,6 +80,29 @@ namespace Shooter.Tests.EditMode
             Assert.That(_screen.IsPanelOpen, Is.False);
             Assert.That(_screen.PanelSlot.childCount, Is.Zero);
             Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.PanelButtonName(kind)));
+        }
+
+        [Test]
+        public void ThePlaylistsOpenWithTheTunedListAndBackReturnsToTheirButton()
+        {
+            _screen.Bind(_root);
+
+            _screen.OpenPanel(MainMenuPanelKind.Playlists);
+
+            Assert.That(_screen.OpenPanelKind, Is.EqualTo(MainMenuPanelKind.Playlists));
+            var playlists = (PlaylistPanel)_screen.Panel;
+            Assert.That(playlists.Container, Is.SameAs(_screen.PanelSlot));
+            Assert.That(playlists.Playlists, Is.SameAs(KitTuning.Playlists));
+            Assert.That(playlists.Count, Is.EqualTo(KitTuning.Playlists.Count));
+            Assert.That(playlists.Runner, Is.Not.Null);
+            Assert.That(playlists.Runner, Is.SameAs(PlaylistPanel.MenuRunner()), "the runner is reused rather than added again");
+            Assert.That(playlists.Runner.IsRunning, Is.False, "opening the list does not start a playlist");
+
+            playlists.Cancel();
+
+            Assert.That(_screen.IsPanelOpen, Is.False);
+            Assert.That(_screen.PanelSlot.childCount, Is.Zero);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.PlaylistsButtonName));
         }
 
         [Test]

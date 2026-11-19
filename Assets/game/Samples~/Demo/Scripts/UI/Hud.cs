@@ -160,6 +160,11 @@ namespace Shooter.Runtime
             AddIfMissing<VoiceIndicatorView>(hudObject);
             AddIfMissing<SpectateView>(hudObject);
             AddIfMissing<MapVoteView>(hudObject);
+            AddIfMissing<VoteKickView>(hudObject);
+            AddIfMissing<WalletView>(hudObject);
+            AddIfMissing<BuyMenuView>(hudObject);
+            AddIfMissing<VisionOverlayView>(hudObject);
+            AddIfMissing<DroneHudView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
             // PauseMenu の後に付けると、木を作り直したときも PauseMenu が「設定」のボタンを持ってから開く処理を渡せる。
             AddIfMissing<PauseSettingsView>(hudObject);
@@ -219,6 +224,16 @@ namespace Shooter.Runtime
         public SpectateView Spectate => GetComponent<SpectateView>();
 
         public MapVoteView MapVote => GetComponent<MapVoteView>();
+
+        public VoteKickView VoteKick => GetComponent<VoteKickView>();
+
+        public WalletView Wallet => GetComponent<WalletView>();
+
+        public BuyMenuView BuyMenu => GetComponent<BuyMenuView>();
+
+        public VisionOverlayView VisionOverlay => GetComponent<VisionOverlayView>();
+
+        public DroneHudView DroneHud => GetComponent<DroneHudView>();
 
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();
 

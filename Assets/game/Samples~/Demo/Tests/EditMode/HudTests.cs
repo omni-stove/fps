@@ -120,6 +120,109 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheDefaultHudCarriesTheVoteKickWalletBuyMenuVisionAndDroneViews()
+        {
+            Assert.That(_hud.VoteKick, Is.Not.Null, "vote kick");
+            Assert.That(_hud.Wallet, Is.Not.Null, "wallet");
+            Assert.That(_hud.BuyMenu, Is.Not.Null, "buy menu");
+            Assert.That(_hud.VisionOverlay, Is.Not.Null, "vision overlay");
+            Assert.That(_hud.DroneHud, Is.Not.Null, "drone");
+        }
+
+        [Test]
+        public void TheVoteKickWalletBuyMenuVisionAndDroneViewsAreBoundToTheirSlots()
+        {
+            Assert.That(_hud.VoteKick.Element, Is.Not.Null);
+            Assert.That(_hud.VoteKick.Element.name, Is.EqualTo(VoteKickView.UxmlName));
+            Assert.That(_hud.Wallet.Element, Is.Not.Null);
+            Assert.That(_hud.Wallet.Element.name, Is.EqualTo(WalletView.UxmlName));
+            Assert.That(_hud.VisionOverlay.Element, Is.Not.Null);
+            Assert.That(_hud.VisionOverlay.Element.name, Is.EqualTo(VisionOverlayView.UxmlName));
+            Assert.That(_hud.DroneHud.Element, Is.Not.Null);
+            Assert.That(_hud.DroneHud.Element.name, Is.EqualTo(DroneHudView.UxmlName));
+            Assert.That(_hud.BuyMenu.Element, Is.Not.Null);
+            Assert.That(_hud.BuyMenu.Element.name, Is.EqualTo(BuyMenuView.UxmlName));
+            Assert.That(_hud.BuyMenu.Host, Is.Not.Null);
+            Assert.That(_hud.BuyMenu.Host.parent, Is.SameAs(_hud.BuyMenu.Element));
+
+            var pause = _hud.BuyMenu.Element.Q<VisualElement>("pause-menu");
+            Assert.That(pause, Is.Not.Null);
+            Assert.That(
+                _hud.BuyMenu.Element.IndexOf(_hud.BuyMenu.Host),
+                Is.LessThan(_hud.BuyMenu.Element.IndexOf(pause)),
+                "the buy menu sits under the pause menu");
+        }
+
+        [Test]
+        public void TheVoteKickWalletBuyMenuVisionAndDroneViewsStayHiddenUntilTheirValuesArePublished()
+        {
+            Assert.That(_hud.VoteKick.IsShown, Is.False);
+            Assert.That(_hud.VoteKick.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_hud.Wallet.IsShown, Is.False);
+            Assert.That(_hud.Wallet.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_hud.BuyMenu.IsOpen, Is.False);
+            Assert.That(_hud.BuyMenu.Host.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_hud.VisionOverlay.IsShown, Is.False);
+            Assert.That(_hud.VisionOverlay.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(_hud.DroneHud.IsShown, Is.False);
+            Assert.That(_hud.DroneHud.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheAttachedViewsShowThePublishedValues()
+        {
+            GameSignals.VoteKick.Publish(new VoteKickStatus(4, 2, 1, 3, 25f));
+            GameSignals.Wallet.Publish(new WalletStatus(800, 16000, false));
+            GameSignals.Vision.Publish(new VisionStatus(VisionMode.Night, VisionSource.Goggles));
+            GameSignals.Drone.Publish(new DroneStatus(0.5f, 0.9f, 0, true));
+
+            Assert.That(_hud.VoteKick.IsShown, Is.True);
+            Assert.That(_hud.VoteKick.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(_hud.Wallet.IsShown, Is.True);
+            Assert.That(_hud.Wallet.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(_hud.VisionOverlay.IsShown, Is.True);
+            Assert.That(_hud.VisionOverlay.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(_hud.DroneHud.IsShown, Is.True);
+            Assert.That(_hud.DroneHud.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+        }
+
+        [Test]
+        public void TheAttachedBuyMenuOpensOnlyDuringTheBuyTime()
+        {
+            GameSignals.Wallet.Publish(new WalletStatus(800, 16000, false));
+
+            Assert.That(_hud.BuyMenu.Open(), Is.False, "the round is under way");
+
+            GameSignals.Wallet.Publish(new WalletStatus(800, 16000, true));
+
+            Assert.That(_hud.BuyMenu.Open(), Is.True);
+            Assert.That(_hud.BuyMenu.Host.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+
+            GameSignals.Wallet.Publish(new WalletStatus(800, 16000, false));
+
+            Assert.That(_hud.BuyMenu.IsOpen, Is.False, "the buy time is over");
+        }
+
+        [Test]
+        public void TheBuyMenuIsOpenedWithTheInventoryKey()
+        {
+            Assert.That(BuyMenuView.ToggleActionPath, Is.EqualTo(InputActionPaths.Inventory));
+            Assert.That(BuyMenuView.TakesToggleKey, Is.False, "no wallet means no buy time");
+        }
+
+        [Test]
+        public void AddingTheViewsAgainDoesNotDuplicateTheVoteKickWalletBuyMenuVisionAndDroneViews()
+        {
+            Hud.AddViews(_hud.gameObject);
+
+            Assert.That(_hud.GetComponents<VoteKickView>(), Has.Length.EqualTo(1));
+            Assert.That(_hud.GetComponents<WalletView>(), Has.Length.EqualTo(1));
+            Assert.That(_hud.GetComponents<BuyMenuView>(), Has.Length.EqualTo(1));
+            Assert.That(_hud.GetComponents<VisionOverlayView>(), Has.Length.EqualTo(1));
+            Assert.That(_hud.GetComponents<DroneHudView>(), Has.Length.EqualTo(1));
+        }
+
+        [Test]
         public void TheMinimalDensityHidesTheMinimapAndTheCompass()
         {
             Assert.That(_hud.Minimap.IsAllowed, Is.True);

@@ -16,6 +16,8 @@ namespace Shooter.Runtime
         private static IMenuNavigator _defaultMenu;
         private static IInventoryScreen _inventoryScreen;
         private static IInventoryScreen _defaultInventoryScreen;
+        private static IBuyMenuScreen _buyMenuScreen;
+        private static IBuyMenuScreen _defaultBuyMenuScreen;
 
         public static IPauseState Pause
         {
@@ -83,6 +85,26 @@ namespace Shooter.Runtime
             _defaultInventoryScreen = screen ?? throw new ArgumentNullException(nameof(screen));
         }
 
+        public static IBuyMenuScreen BuyMenuScreen
+        {
+            get => _buyMenuScreen ?? _defaultBuyMenuScreen;
+            set => _buyMenuScreen = value;
+        }
+
+        public static bool IsBuyMenuOpen
+        {
+            get
+            {
+                var screen = BuyMenuScreen;
+                return screen != null && screen.IsAnyOpen;
+            }
+        }
+
+        public static void UseDefaultBuyMenuScreen(IBuyMenuScreen screen)
+        {
+            _defaultBuyMenuScreen = screen ?? throw new ArgumentNullException(nameof(screen));
+        }
+
         // 通信の手順 (Shooter.NetV2) は UI のアセンブリを参照しないので、メニューが読むこの置き場に入れさせる。
         public static IOnlineMatchStarter OnlineStarter { get; set; }
 
@@ -105,6 +127,7 @@ namespace Shooter.Runtime
             _defaultLoadoutSelect = null;
             _defaultMenu = null;
             _defaultInventoryScreen = null;
+            _defaultBuyMenuScreen = null;
         }
 
         // インターフェースの型のまま != null で比べると破棄済みでも true になるので、Unity のオブジェクトなら破棄されていないかも見る。

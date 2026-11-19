@@ -15,6 +15,7 @@ namespace Shooter.Tests.EditMode
             GameUi.Pause = null;
             GameUi.LoadoutSelect = null;
             GameUi.Menu = null;
+            GameUi.BuyMenuScreen = null;
         }
 
         [Test]
@@ -58,8 +59,26 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void BuyMenuScreen_Replacement_IsUsedUntilCleared()
+        {
+            GameUi.BuyMenuScreen = new FakeBuyMenuScreen { IsAnyOpen = true };
+            Assert.That(GameUi.IsBuyMenuOpen, Is.True);
+
+            GameUi.BuyMenuScreen = new FakeBuyMenuScreen { IsAnyOpen = false };
+            Assert.That(GameUi.IsBuyMenuOpen, Is.False);
+
+            GameUi.BuyMenuScreen = null;
+        }
+
+        private sealed class FakeBuyMenuScreen : IBuyMenuScreen
+        {
+            public bool IsAnyOpen { get; set; }
+        }
+
+        [Test]
         public void UseDefaults_RejectNull()
         {
+            Assert.Throws<ArgumentNullException>(() => GameUi.UseDefaultBuyMenuScreen(null));
             Assert.Throws<ArgumentNullException>(() => GameUi.UseDefaultPause(null));
             Assert.Throws<ArgumentNullException>(() => GameUi.UseDefaultLoadoutSelect(null));
             Assert.Throws<ArgumentNullException>(() => GameUi.UseDefaultMenu(null));

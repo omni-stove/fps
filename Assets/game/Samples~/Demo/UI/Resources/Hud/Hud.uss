@@ -1273,6 +1273,29 @@
 
 .lock-warning--locked {
     background-color: rgba(200, 30, 30, 0.85);
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+    font-size: 30px;
+}
+
+/* 捕捉中の点滅の消えている側。LockOnWarningView が一定の間隔で付け外しする。 */
+.lock-warning--dim {
+    opacity: 0.3;
+}
+
+/* 来る向きの矢印。上向きに描き、LockOnWarningView が向きの角度だけ回す。画像が無ければ文字の色で三角を描く。 */
+.lock-warning__arrow {
+    width: 28px;
+    height: 28px;
+    margin: 0 0 2px 0;
+    color: rgb(255, 255, 255);
+    background-size: 100% 100%;
+}
+
+.lock-warning__text {
+    padding: 0;
+    margin: 0;
+    -unity-text-align: middle-center;
 }
 
 /* ボイスチャットの欄。左の中ほどに、自分の印を先頭にして話している人を積む。VoiceIndicatorView が行を入れる。 */

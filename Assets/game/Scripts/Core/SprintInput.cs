@@ -31,6 +31,8 @@ namespace Shooter.Core
 
         public const string ReasonSwim = "swim";
 
+        public const string ReasonStamina = "stamina";
+
         private readonly HoldToggleState _state = new HoldToggleState(HoldMode.Hold);
         private bool _hasMode;
         private bool _wasMoving;

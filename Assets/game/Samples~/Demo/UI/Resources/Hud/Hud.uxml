@@ -98,11 +98,11 @@
         <ui:VisualElement name="compass" class="compass" picking-mode="Ignore" style="display: none;" />
         <!-- 自分が運転している飛行機の速さ・高度・スロットル・迎え角・G と失速の警告。AircraftHudView が、GameSignals.Aircraft に値がある間だけ行 (aircraft__row) と警告 (aircraft__warning) を入れて出す。 -->
         <ui:VisualElement name="aircraft" class="aircraft" picking-mode="Ignore" style="display: none;" />
-        <!-- 画面下の中央のスタミナの残り。GameSignals.Stamina に値がある間だけビューが出し、塗り (stamina-fill) の幅を % で入れ、尽きている間は stamina--depleted を付ける。 -->
+        <!-- 画面下の中央のスタミナの残り。GameSignals.Stamina に値があり満タンでない (または尽きている) 間だけ StaminaView が出し、塗り (stamina-fill) の幅を % で入れ、尽きている間は stamina--depleted を付け、量の文を tooltip に置く。 -->
         <ui:VisualElement name="stamina" class="stamina" picking-mode="Ignore" style="display: none;">
             <ui:VisualElement name="stamina-fill" class="stamina__fill" picking-mode="Ignore" />
         </ui:VisualElement>
-        <!-- 自分の乗り物が狙われている警告。GameSignals.LockOnWarning が無し以外の間だけビューが出し、段階の文字と向きの印を入れ、ロック済みなら lock-warning--locked を付ける。 -->
+        <!-- 自分の乗り物が狙われている警告。GameSignals.LockOnWarning が無し以外の間だけ LockOnWarningView が出し、向きの矢印 (lock-warning__arrow) と段階の文字 (lock-warning__text) を入れ、捕捉中は lock-warning--tracking を付けて lock-warning--dim で点滅させ、ロック済みなら lock-warning--locked を付ける。 -->
         <ui:VisualElement name="lock-warning" class="lock-warning" picking-mode="Ignore" style="display: none;" />
         <!-- 画面右上のミニマップの下のキルログ。KillFeedView が行 (kill-feed__row) を入れ、行があるときだけ出す。 -->
         <ui:VisualElement name="kill-feed" class="kill-feed" picking-mode="Ignore" style="display: none;" />

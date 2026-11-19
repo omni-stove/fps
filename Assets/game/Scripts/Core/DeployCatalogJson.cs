@@ -20,6 +20,7 @@ namespace Shooter.Core
         public const string DepthItem = "depth";
         public const string TurretItem = "turret";
         public const string DecoyItem = "decoy";
+        public const string BeaconItem = "beacon";
 
         public const string WeaponIdItem = "weaponId";
         public const string RoundsItem = "rounds";
@@ -30,6 +31,9 @@ namespace Shooter.Core
 
         public const string CallIntervalSecondsItem = "callIntervalSeconds";
         public const string CallRadiusItem = "callRadius";
+
+        public const string UsesItem = "uses";
+        public const string SpawnDistanceItem = "spawnDistance";
 
         private const string _kind = "deployable JSON";
 
@@ -51,6 +55,7 @@ namespace Shooter.Core
             DepthItem,
             TurretItem,
             DecoyItem,
+            BeaconItem,
         };
 
         public static IReadOnlyList<string> TurretItemNames { get; } = new[]
@@ -64,6 +69,8 @@ namespace Shooter.Core
         };
 
         public static IReadOnlyList<string> DecoyItemNames { get; } = new[] { LifetimeSecondsItem, CallIntervalSecondsItem, CallRadiusItem };
+
+        public static IReadOnlyList<string> BeaconItemNames { get; } = new[] { UsesItem, SpawnDistanceItem };
 
         public static DeployCatalog Parse(string text, string sourceName)
         {
@@ -104,6 +111,7 @@ namespace Shooter.Core
 
             var turretFields = entry.Object(TurretItem, TurretItemNames);
             var decoyFields = entry.Object(DecoyItem, DecoyItemNames);
+            var beaconFields = entry.Object(BeaconItem, BeaconItemNames);
             if (role == DeployRole.Turret && turretFields == null)
             {
                 throw entry.Rejected(entry.ItemPath(TurretItem), "a Turret needs a turret object with weaponId");
@@ -128,9 +136,20 @@ namespace Shooter.Core
                 decoy = DecoySpec.Default;
             }
 
+            BeaconSpec beacon = null;
+            if (beaconFields != null)
+            {
+                beacon = ReadBeacon(beaconFields);
+            }
+            else if (role == DeployRole.Beacon)
+            {
+                // 囮と同じく、ビーコンの値はどれも既定があるので、beacon を書かなければ既定のビーコンにする。
+                beacon = BeaconSpec.Default;
+            }
+
             try
             {
-                return new DeployType(id, role, deploy, turret, weaponId, decoy);
+                return new DeployType(id, role, deploy, turret, weaponId, decoy, beacon);
             }
             catch (ArgumentException e)
             {
@@ -188,6 +207,20 @@ namespace Shooter.Core
             catch (ArgumentException e)
             {
                 throw Rejected(fields, DecoyItemNames, e);
+            }
+        }
+
+        private static BeaconSpec ReadBeacon(ServerDataJson.Fields fields)
+        {
+            var uses = fields.ReadInt(UsesItem, BeaconSpec.DefaultUses);
+            var spawnDistance = fields.ReadFloat(SpawnDistanceItem, BeaconSpec.DefaultSpawnDistance);
+            try
+            {
+                return new BeaconSpec(uses, spawnDistance);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(fields, BeaconItemNames, e);
             }
         }
 

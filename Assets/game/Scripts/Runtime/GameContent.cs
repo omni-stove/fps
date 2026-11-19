@@ -113,6 +113,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("脱出の調整値の JSON。空なら Resources/Tuning/extraction")]
         private TextAsset _extractionTuning;
 
+        [SerializeField, Tooltip("リプレイの再生の調整値の JSON。空なら Resources/Tuning/replay")]
+        private TextAsset _replayTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -416,6 +419,12 @@ namespace Shooter.Runtime
         {
             get => _extractionTuning;
             set => _extractionTuning = value;
+        }
+
+        public TextAsset ReplayTuning
+        {
+            get => _replayTuning;
+            set => _replayTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog

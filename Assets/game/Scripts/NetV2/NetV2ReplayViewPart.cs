@@ -18,7 +18,7 @@ namespace Shooter.NetV2
         private DeathCamView _view;
         private bool _disposed;
 
-        // freeSpeed は呼ぶ側が設定 (PlayerDeathCamera.FreeSpeed など) から読ませる。プレイヤーが後から現れるので値でなく関数で受ける。
+        // freeSpeed は呼ぶ側が設定 (KitTuning.Replay.FreeSpeed など) から読ませる。調整値を読み直したときにも再生の途中から効くよう、値でなく関数で受ける。
         public NetV2ReplayViewPart(MatchClient client, Func<float> freeSpeed, Func<Component> cameraOwner = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));

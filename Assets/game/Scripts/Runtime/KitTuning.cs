@@ -43,6 +43,8 @@ namespace Shooter.Runtime
         public static LeaderboardSpec Leaderboards =>
             Load(c => c.LeaderboardsTuning, LeaderboardJson.ResourcePath, LeaderboardJson.Parse, LeaderboardSpec.Default);
 
+        public static ReplaySpec Replay => Load(c => c.ReplayTuning, ReplayJson.ResourcePath, ReplayJson.Parse, ReplaySpec.Default);
+
         public static InfectedSpec Infected => Load(c => c.InfectedTuning, InfectedJson.ResourcePath, InfectedJson.Parse, InfectedSpec.Default);
 
         public static void Reload()

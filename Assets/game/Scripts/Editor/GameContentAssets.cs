@@ -90,6 +90,7 @@ namespace Shooter.Editor
             new TuningSlot("LootTuning", LootJson.ResourcePath, c => c.LootTuning, (c, v) => c.LootTuning = v),
             new TuningSlot("StashTuning", StashJson.ResourcePath, c => c.StashTuning, (c, v) => c.StashTuning = v),
             new TuningSlot("ExtractionTuning", ExtractionJson.ResourcePath, c => c.ExtractionTuning, (c, v) => c.ExtractionTuning = v),
+            new TuningSlot("ReplayTuning", ReplayJson.ResourcePath, c => c.ReplayTuning, (c, v) => c.ReplayTuning = v),
         };
 
         public static string DefaultPath => ShooterKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);

@@ -98,10 +98,12 @@ namespace Shooter.Tests.EditMode
                 var bootstrap = BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle, handgun }, range);
 
                 var roots = scene.GetRootGameObjects();
-                Assert.That(roots, Has.Length.EqualTo(2));
+                Assert.That(roots, Has.Length.EqualTo(3));
                 Assert.That(roots[0], Is.SameAs(bootstrap));
                 Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
                 AssertCovers(roots[1]);
+                Assert.That(roots[2].name, Is.EqualTo(SceneBuildHelpers.PerimeterName));
+                SceneBuildHelpersTests.AssertPerimeterEncloses(scene, -25f, 25f, -25f, 25f, 0f);
                 Assert.That(bootstrap.name, Is.EqualTo(BootstrapSceneBuilder.BootstrapObjectName));
                 Assert.That(bootstrap.GetComponent<GameBootstrap>(), Is.Not.Null);
                 Assert.That(
@@ -160,15 +162,20 @@ namespace Shooter.Tests.EditMode
             try
             {
                 var roots = scene.GetRootGameObjects();
-                Assert.That(roots, Has.Length.EqualTo(4), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers, the weapon table and the platforms");
+                Assert.That(
+                    roots,
+                    Has.Length.EqualTo(5),
+                    $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers, the weapon table, the perimeter and the platforms");
                 Assert.That(roots[0].GetComponent<GameBootstrap>(), Is.Not.Null);
                 Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
                 AssertCovers(roots[1]);
                 Assert.That(roots[2].name, Is.EqualTo(BootstrapSceneBuilder.WeaponTableName));
-                Assert.That(roots[3].name, Is.EqualTo(BootstrapSceneBuilder.PlatformsName), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the platforms");
+                Assert.That(roots[3].name, Is.EqualTo(SceneBuildHelpers.PerimeterName), $"rerun {nameof(BootstrapSceneBuilder)}.Build to wall the floor in");
+                SceneBuildHelpersTests.AssertPerimeterEncloses(scene, -25f, 25f, -25f, 25f, 0f);
+                Assert.That(roots[4].name, Is.EqualTo(BootstrapSceneBuilder.PlatformsName), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the platforms");
                 var elevatorSettings = AssetDatabase.LoadAssetAtPath<MovingPlatformSettings>(BootstrapSceneBuilder.ElevatorSettingsPath);
                 Assert.That(elevatorSettings, Is.Not.Null, $"rerun {nameof(BootstrapSceneBuilder)}.Build");
-                AssertPlatforms(roots[3], elevatorSettings);
+                AssertPlatforms(roots[4], elevatorSettings);
                 Assert.That(
                     roots[2].GetComponentsInChildren<PickupSpawnPoint>().Select(p => p.Contents.Weapon.Id),
                     Is.EqualTo(BootstrapSceneBuilder.FeaturedWeaponIds),
@@ -211,11 +218,12 @@ namespace Shooter.Tests.EditMode
                 var bootstrap = BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle }, range, Array.Empty<WeaponDefinition>(), elevator);
 
                 var roots = scene.GetRootGameObjects();
-                Assert.That(roots, Has.Length.EqualTo(3));
+                Assert.That(roots, Has.Length.EqualTo(4));
                 Assert.That(roots[0], Is.SameAs(bootstrap));
                 Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
-                Assert.That(roots[2].name, Is.EqualTo(BootstrapSceneBuilder.PlatformsName));
-                AssertPlatforms(roots[2], elevator);
+                Assert.That(roots[2].name, Is.EqualTo(SceneBuildHelpers.PerimeterName));
+                Assert.That(roots[3].name, Is.EqualTo(BootstrapSceneBuilder.PlatformsName));
+                AssertPlatforms(roots[3], elevator);
             }
             finally
             {
@@ -501,6 +509,29 @@ namespace Shooter.Tests.EditMode
         public void CreateCoversRejectsAnUnloadedScene()
         {
             Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreateCovers(default));
+        }
+
+        [Test]
+        public void ThePerimeterWallsInTheFloorGameBootstrapCreatesAtRuntime()
+        {
+            Assert.That(BootstrapSceneBuilder.PerimeterHalfExtents, Is.EqualTo(new Vector2(25f, 25f)));
+            Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreatePerimeter(default));
+
+            var scene = TestScenes.NewAdditive();
+            try
+            {
+                var root = BootstrapSceneBuilder.CreatePerimeter(scene);
+
+                Assert.That(root.transform.Find("Perimeter_North").position, Is.EqualTo(new Vector3(0f, 4f, 25.5f)));
+                Assert.That(root.transform.Find("Perimeter_North").localScale, Is.EqualTo(new Vector3(52f, 8f, 1f)));
+                Assert.That(root.transform.Find("Perimeter_West").position, Is.EqualTo(new Vector3(-25.5f, 4f, 0f)));
+                Assert.That(root.transform.Find("Perimeter_West").localScale, Is.EqualTo(new Vector3(1f, 8f, 50f)));
+                SceneBuildHelpersTests.AssertPerimeterEncloses(scene, -25f, 25f, -25f, 25f, 0f);
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+            }
         }
 
         private static void AssertCovers(GameObject root)

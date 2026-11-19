@@ -21,7 +21,7 @@ namespace Shooter.Editor
         // Unity の慣習どおり、焼いた NavMesh はシーン名のフォルダに置く。
         public static string NavMeshDataPath => ShooterKitRoot.OutputPath("Scenes/" + MapName + "/NavMesh-Arena.asset");
 
-        public const string MenuPath = "Shooter/Net/Build NetArena01 Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
         public const string LogTag = "[Net] ArenaSceneBuilder:";
 
         public const string LevelName = "Level";
@@ -136,7 +136,6 @@ namespace Shooter.Editor
             (Side.Bravo, MirrorZ(new Vector3(0f, GroundY, -27f))),
         };
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())

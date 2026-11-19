@@ -40,7 +40,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(builder.NavMeshDataPath, Is.EqualTo(DemoSample.Root + "/Scenes/CaptureTheFlag/NavMesh-Floor.asset"));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.CaptureTheFlagScene));
             Assert.That(CaptureTheFlagSceneBuilder.DefinitionPath, Is.EqualTo(DemoSample.Root + "/Modes/CaptureTheFlag.asset"));
-            Assert.That(CaptureTheFlagSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build Capture The Flag Scene"));
+            Assert.That(CaptureTheFlagSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build All Scenes"));
         }
 
         [Test]

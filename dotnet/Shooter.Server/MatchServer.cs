@@ -410,6 +410,13 @@ namespace Shooter.Server
                 rejoinKey = productUserId;
             }
 
+            // 投票で外された人には外されたときと同じ理由で断り、クライアントが「投票で外された」と出せるようにする
+            if (Match.IsBarred(rejoinKey))
+            {
+                Reject(connection, DisconnectNotice.VoteKickedReason, VoteKickLog.RefusedRejoin(Match.MatchId));
+                return;
+            }
+
             var previous = PreviousConnection(rejoinKey, connection);
             var maxPlayers = MaxPlayers;
             if (Match.HumanCount - (previous.IsValid ? 1 : 0) >= maxPlayers)

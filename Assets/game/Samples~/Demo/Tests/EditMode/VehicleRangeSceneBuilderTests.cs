@@ -103,7 +103,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(BuildSceneList.VehicleRangeScene, Is.EqualTo(DemoSample.Root + "/Scenes/VehicleRange.unity"));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.VehicleRangeScene));
             Assert.That(VehicleRangeSceneBuilder.NavMeshDataPath, Is.EqualTo(ModeSceneBuilder.NavMeshDataPathFor(BuildSceneList.VehicleRangeScene)));
-            Assert.That(VehicleRangeSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build Vehicle Range Scene"));
+            Assert.That(VehicleRangeSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build All Scenes"));
         }
 
         [Test]
@@ -373,6 +373,22 @@ namespace Shooter.Tests.EditMode
             // 飛行機は滑走路の先の北へ 1km 近く飛んでから脱出するので、その下にも地面がある。
             Assert.That(Physics.Raycast(new Vector3(VehicleRangeSceneBuilder.AircraftOrigin.x, 50f, 1500f), Vector3.down, out var outside, 100f), Is.True);
             Assert.That(outside.collider.name, Is.EqualTo(VehicleRangeSceneBuilder.OuterGroundName));
+        }
+
+        [Test]
+        public void TheOuterGroundIsWalledInAlongItsEdgesAndTheFloorIsNot()
+        {
+            VehicleRangeSceneBuilder.CreateLevel(_scene);
+            VehicleRangeSceneBuilder.CreateSurroundings(_scene);
+            Physics.SyncTransforms();
+
+            Assert.That(Find(SceneBuildHelpers.PerimeterName), Is.Not.Null);
+            SceneBuildHelpersTests.AssertPerimeterEncloses(_scene, -2000f, 2000f, -2000f, 2000f, -0.02f);
+
+            Assert.That(
+                Physics.Raycast(new Vector3(0f, 1f, 60f), Vector3.forward, 40f, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore),
+                Is.False,
+                "nothing stands across the north edge of the floor");
         }
 
         [Test]

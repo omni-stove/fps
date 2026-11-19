@@ -66,7 +66,6 @@ namespace Shooter.Editor
             (Side.Bravo, new Vector3(0f, GroundY, 26f)),
         };
 
-        [MenuItem("Shooter/Net/Build NetTest Scene")]
         public static void Build()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -232,6 +231,7 @@ namespace Shooter.Editor
             ground.name = "Ground";
             ground.transform.position = new Vector3(0f, GroundY, 0f);
             ground.transform.localScale = GroundScale;
+            SceneBuildHelpers.CreatePerimeterWalls(scene, null, ground.transform.position, SceneBuildHelpers.PlaneHalfExtents(GroundScale));
 
             var coverRoot = new GameObject("CoverWalls");
             foreach (var (wallName, center, size) in CoverWalls)

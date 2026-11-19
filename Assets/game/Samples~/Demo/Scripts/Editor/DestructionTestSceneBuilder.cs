@@ -20,7 +20,7 @@ namespace Shooter.Editor
         // Unity の慣習どおり、焼いた NavMesh はシーン名のフォルダに置く。
         public static string NavMeshDataPath => ModeSceneBuilder.NavMeshDataPathFor(ScenePath);
 
-        public const string MenuPath = "Shooter/Build Destruction Test Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
         public const string LogTag = "[DestructionTestSceneBuilder]";
 
         public const string FloorName = "Floor";
@@ -63,7 +63,6 @@ namespace Shooter.Editor
 
         public const float AroundHutDistance = 2f;
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -138,6 +137,7 @@ namespace Shooter.Editor
 
             var floor = SceneBuildHelpers.CreateStaticPlane(scene, null, FloorName, Vector3.zero, FloorScale);
             var surface = SceneBuildHelpers.AddNavMeshSurface(floor, CollectObjects.All);
+            SceneBuildHelpers.CreatePerimeterWalls(scene, null, Vector3.zero, SceneBuildHelpers.PlaneHalfExtents(FloorScale));
 
             EditorSceneManager.MarkSceneDirty(scene);
             return surface;

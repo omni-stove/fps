@@ -52,7 +52,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(DominationSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.DominationScene));
             Assert.That(BuildSceneList.Scenes, Has.Member(BuildSceneList.DominationScene));
             Assert.That(DominationSceneBuilder.NavMeshDataPath, Is.EqualTo(DemoSample.Root + "/Scenes/Domination/NavMesh-Floor.asset"));
-            Assert.That(DominationSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build Domination Scene"));
+            Assert.That(DominationSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build All Scenes"));
         }
 
         [Test]

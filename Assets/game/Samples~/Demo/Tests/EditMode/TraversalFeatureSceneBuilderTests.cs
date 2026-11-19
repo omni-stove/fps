@@ -16,9 +16,6 @@ namespace Shooter.Tests.EditMode
     {
         private const float Epsilon = 1e-4f;
 
-        // 出現位置の周り (プレイヤーの直径の倍ほど) には何も置かない (FeatureSceneBuilderTests と同じ)。
-        private const float SpawnClearance = 1.5f;
-
         // 立ち 2 m のプレイヤーの胸は足元から 1.3 m (SwimStep.ChestY: 中心 1 m と目 1.6 m の間)。
         private const float ChestAboveFeet = 1.3f;
 
@@ -51,19 +48,29 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ThereIsOneSceneForEachNewMove()
+        public void TheFourMovesAreLinedUpInThePlayground()
         {
             Assert.That(
                 TraversalFeatureSceneBuilder.Features,
                 Is.EqualTo(new[] { TraversalFeature.Lean, TraversalFeature.Swim, TraversalFeature.WallRun, TraversalFeature.DoubleJump }));
-            Assert.That(TraversalFeatureSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build Traversal Feature Scenes"));
+
+            var names = FeatureSceneBuilder.PlaygroundStations().Select(s => s.Fixture.Name).ToArray();
+            foreach (var feature in TraversalFeatureSceneBuilder.Features)
+            {
+                Assert.That(names, Has.Member(TraversalFeatureSceneBuilder.Fixture(feature).Name), feature.ToString());
+            }
         }
 
         [Test]
-        public void OnlyTheWallRunAndTheDoubleJumpScenesCarryTheirOwnTuning()
+        public void TheTuningIsNamedAfterThePlayground()
         {
-            Assert.That(TraversalFeatureSceneBuilder.Features.Where(TraversalFeatureSceneBuilder.UsesTraversalTuning), Is.EqualTo(new[] { TraversalFeature.WallRun }));
-            Assert.That(TraversalFeatureSceneBuilder.Features.Where(TraversalFeatureSceneBuilder.UsesMotorSettings), Is.EqualTo(new[] { TraversalFeature.DoubleJump }));
+            Assert.That(TraversalFeatureSceneBuilder.MotorSettingsPath, Is.EqualTo(DemoSample.Root + "/Movement/Playground.asset"));
+            Assert.That(TraversalFeatureSceneBuilder.TraversalTuningPath, Is.EqualTo(DemoSample.Root + "/Tuning/Playground.json"));
+            Assert.That(TraversalFeatureSceneBuilder.LegacyAssetPaths, Is.EqualTo(new[]
+            {
+                DemoSample.Root + "/Movement/Feature_DoubleJump.asset",
+                DemoSample.Root + "/Tuning/Feature_WallRun.json",
+            }));
         }
 
         [Test]
@@ -76,76 +83,16 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void OnlyTheSwimSceneTurnsTheMantleOnToClimbOutOfThePool()
+        public void PlaygroundRulesLetThePlayerJumpAndClimbOutOfThePool()
         {
-            foreach (var feature in TraversalFeatureSceneBuilder.Features)
-            {
-                var rules = TraversalFeatureSceneBuilder.Rules(feature);
-                var expected = feature == TraversalFeature.Swim ? Mantle.On : Mantle.Off;
-                Assert.That(rules.Actions.Mantle, Is.EqualTo(expected), feature.ToString());
-                Assert.That(rules.Actions.Jump, Is.EqualTo(Jump.On), feature.ToString());
-                Assert.That(rules.Actions.Vault, Is.EqualTo(Vault.Off), feature + " climbs only with its own move");
-            }
+            var rules = GameRulesAssetBuilder.PlaygroundRules();
+
+            Assert.That(rules.Actions.Jump, Is.EqualTo(Jump.On));
+            Assert.That(rules.Actions.Mantle, Is.EqualTo(Mantle.On), "climbing out of water is a mantle");
         }
 
         [Test]
-        public void RulesPathsDoNotCollideWithTheOnOffRuleScenes()
-        {
-            var rulePaths = GameRulesDebugDraft.Fields.Select(GameRulesAssetBuilder.FeatureRulesPath).ToArray();
-
-            foreach (var feature in TraversalFeatureSceneBuilder.Features)
-            {
-                Assert.That(rulePaths, Has.No.Member(TraversalFeatureSceneBuilder.RulesPath(feature)), feature.ToString());
-            }
-        }
-
-        [Test]
-        public void EachSceneHasOneStationBesideTheSpawn()
-        {
-            var names = new HashSet<string>();
-            foreach (var feature in TraversalFeatureSceneBuilder.Features)
-            {
-                var station = TraversalFeatureSceneBuilder.Stations(feature).Single();
-                Assert.That(station.Placement, Is.EqualTo(FeaturePlacement.BesideSpawn), feature.ToString());
-                Assert.That(station.Footprint.min.x, Is.EqualTo(FeatureSceneBuilder.BesideSpawnMinX).Within(Epsilon), feature.ToString());
-                Assert.That(station.Footprint.min.z, Is.EqualTo(FeatureSceneBuilder.BesideSpawnMinZ).Within(Epsilon), feature.ToString());
-                Assert.That(station.Footprint.min.y, Is.EqualTo(0f).Within(Epsilon), feature + " stands on the floor");
-                Assert.That(names.Add(station.Fixture.Name), Is.True, feature + " has its own name");
-            }
-        }
-
-        [Test]
-        public void StationsKeepClearOfTheSpawnAndTheTargetDummies()
-        {
-            var spawn = new Bounds(Vector3.zero, new Vector3(SpawnClearance * 2f, 1f, SpawnClearance * 2f));
-            var dummies = GameBootstrap.TargetDummyPositions(Vector3.zero, Quaternion.identity);
-
-            foreach (var feature in TraversalFeatureSceneBuilder.Features)
-            {
-                var footprint = Flat(TraversalFeatureSceneBuilder.Stations(feature).Single().Footprint);
-                Assert.That(footprint.Intersects(spawn), Is.False, feature + " is on the spawn");
-                foreach (var dummy in dummies)
-                {
-                    Assert.That(footprint.Intersects(new Bounds(dummy, Vector3.one)), Is.False, $"{feature} is on the dummy at {dummy}");
-                }
-            }
-        }
-
-        [Test]
-        public void TheFloorCoversEachStationWithAMargin()
-        {
-            foreach (var feature in TraversalFeatureSceneBuilder.Features)
-            {
-                var stations = TraversalFeatureSceneBuilder.Stations(feature);
-                var half = FeatureSceneBuilder.FloorHalfExtent(stations);
-                var footprint = stations.Single().Footprint;
-                Assert.That(Mathf.Max(Mathf.Abs(footprint.min.x), Mathf.Abs(footprint.max.x)) + FeatureSceneBuilder.FloorMargin, Is.LessThanOrEqualTo(half), feature.ToString());
-                Assert.That(Mathf.Max(Mathf.Abs(footprint.min.z), Mathf.Abs(footprint.max.z)) + FeatureSceneBuilder.FloorMargin, Is.LessThanOrEqualTo(half), feature.ToString());
-            }
-        }
-
-        [Test]
-        public void TheFixtureIsNotPickedUpByTheTpsRange()
+        public void TheFixturesAreNotPickedUpByTheTpsRange()
         {
             var names = TpsRangeSceneBuilder.Fixtures().Select(f => f.GetType().Name).ToArray();
 
@@ -155,7 +102,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void LeanSceneHasACornerToPeekAroundAndALowWallToCrouchBehind()
         {
-            var bootstrap = Populate(TraversalFeature.Lean);
+            Populate();
 
             var corner = Find(TraversalFeatureSceneBuilder.LeanCornerName).transform;
             Assert.That(corner.Find(TraversalFeatureSceneBuilder.CornerFrontWallName), Is.Not.Null);
@@ -165,15 +112,13 @@ namespace Shooter.Tests.EditMode
             Assert.That(TraversalFeatureSceneBuilder.CornerWallHeight, Is.GreaterThan(GameBootstrap.PlayerHeight), "the corner hides a standing player");
             Assert.That(TraversalFeatureSceneBuilder.LowWallHeight, Is.LessThan(MotorSpec.DefaultCoverLowWallHeight));
             Assert.That(TraversalFeatureSceneBuilder.LowWallHeight, Is.GreaterThan(PlayerController.DefaultCrouchHeight / 2f), "hides the crouched body");
-            Assert.That(bootstrap.MotorSettings, Is.Null);
-            Assert.That(bootstrap.TraversalTuningJson, Is.Null);
         }
 
         [Test]
         public void SwimSceneHasShallowAndDeepWaterAndAPoolWithAHighRim()
         {
-            var station = TraversalFeatureSceneBuilder.Stations(TraversalFeature.Swim).Single();
-            Populate(TraversalFeature.Swim);
+            var station = StationOf(TraversalFeatureSceneBuilder.SwimPoolsName);
+            Populate();
 
             var pools = Find(TraversalFeatureSceneBuilder.SwimPoolsName);
             var waters = pools.GetComponentsInChildren<WaterComponent>().ToDictionary(w => w.name);
@@ -209,14 +154,12 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void WallRunSceneWiresATraversalJsonThatTurnsOnlyTheWallRunOn()
+        public void PlaygroundTraversalJsonTurnsOnlyTheWallRunOnBesideACorridor()
         {
             var traversal = NewText(TraversalFeatureSceneBuilder.TraversalTuningJson());
 
-            var bootstrap = Populate(TraversalFeature.WallRun, traversal: traversal);
+            Populate();
 
-            Assert.That(bootstrap.TraversalTuningJson, Is.SameAs(traversal));
-            Assert.That(bootstrap.MotorSettings, Is.Null);
             var spec = TraversalJson.Parse(traversal.text, "test");
             Assert.That(spec.WallRun.Enabled, Is.True);
             Assert.That(spec.WallRun.MaxSeconds, Is.EqualTo(WallRunTuning.DefaultMaxSeconds));
@@ -234,15 +177,13 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void DoubleJumpSceneWiresMotorSettingsWithOneAirJumpAndStepsTooHighForOneJump()
+        public void PlaygroundMotorSettingsHaveOneAirJumpAndStepsTooHighForOneJump()
         {
             var settings = NewMotorSettings();
             TraversalFeatureSceneBuilder.ConfigureDoubleJump(settings, null);
 
-            var bootstrap = Populate(TraversalFeature.DoubleJump, settings);
+            Populate();
 
-            Assert.That(bootstrap.MotorSettings, Is.SameAs(settings));
-            Assert.That(bootstrap.TraversalTuningJson, Is.Null);
             Assert.That(settings.CreateSpec().AirJumps, Is.EqualTo(TraversalFeatureSceneBuilder.DoubleJumpAirJumps));
 
             var steps = Find(TraversalFeatureSceneBuilder.DoubleJumpStepsName).transform;
@@ -287,42 +228,23 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheScenesThatNeedTuningRejectMissingTuningAndLeaveTheSceneEmpty()
-        {
-            Assert.Throws<ArgumentNullException>(() => TraversalFeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(TraversalFeature.DoubleJump), TraversalFeature.DoubleJump, null, null));
-            Assert.Throws<ArgumentNullException>(() => TraversalFeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(TraversalFeature.WallRun), TraversalFeature.WallRun, null, null));
-            Assert.That(_scene.rootCount, Is.EqualTo(0));
-        }
-
-        [Test]
         public void UndefinedFeaturesAreRejected()
         {
-            Assert.Throws<ArgumentOutOfRangeException>(() => TraversalFeatureSceneBuilder.Stations((TraversalFeature)99));
-            Assert.Throws<ArgumentOutOfRangeException>(() => TraversalFeatureSceneBuilder.Rules((TraversalFeature)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => TraversalFeatureSceneBuilder.Fixture((TraversalFeature)99));
             Assert.Throws<ArgumentOutOfRangeException>(() => TraversalFeatureSceneBuilder.Boxes((TraversalFeature)99));
+            Assert.Throws<ArgumentOutOfRangeException>(() => TraversalFeatureSceneBuilder.Waters((TraversalFeature)99));
         }
 
-        private GameBootstrap Populate(TraversalFeature feature, MotorSettings motorSettings = null, TextAsset traversal = null)
+        private static FeatureStation StationOf(string name)
         {
-            var bootstrap = TraversalFeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(feature), feature, motorSettings, traversal);
+            return FeatureSceneBuilder.PlaygroundStations().Single(s => s.Fixture.Name == name);
+        }
 
-            var names = _scene.GetRootGameObjects().Select(o => o.name).ToArray();
-            Assert.That(names, Is.EquivalentTo(new[]
-            {
-                FeatureSceneBuilder.BootstrapObjectName,
-                FeatureSceneBuilder.FloorName,
-                TraversalFeatureSceneBuilder.Stations(feature).Single().Fixture.Name,
-            }));
+        private void Populate()
+        {
+            var feature = FeatureSceneBuilder.Playground();
+            var bootstrap = FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(), feature);
             Assert.That(bootstrap.CreatesFloor, Is.False);
-            return bootstrap;
-        }
-
-        private static Bounds Flat(Bounds bounds)
-        {
-            return new Bounds(new Vector3(bounds.center.x, 0f, bounds.center.z), new Vector3(bounds.size.x, 1f, bounds.size.z));
         }
 
         private WeaponDefinition[] NewWeapons()
@@ -334,12 +256,12 @@ namespace Shooter.Tests.EditMode
             return new[] { weapon };
         }
 
-        private GameRulesDefinition NewRules(TraversalFeature feature)
+        private GameRulesDefinition NewRules()
         {
             var definition = ScriptableObject.CreateInstance<GameRulesDefinition>();
             definition.name = "Rules";
             _assets.Add(definition);
-            GameRulesAssetBuilder.Configure(definition, TraversalFeatureSceneBuilder.Rules(feature));
+            GameRulesAssetBuilder.Configure(definition, GameRulesAssetBuilder.PlaygroundRules());
             return definition;
         }
 

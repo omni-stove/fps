@@ -14,7 +14,7 @@ namespace Shooter.Editor
         public static string ScenePathValue => BuildSceneList.HordeScene;
         public static string RulesPathValue => GameRulesAssetBuilder.HordePath;
         public static string DefinitionPath => ShooterKitRoot.OutputPath("Modes/Horde.asset");
-        public const string MenuPath = "Shooter/Build Horde Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const string BaseRootName = "Base";
         public const string BaseMarkerName = "Base-Marker";
@@ -144,7 +144,6 @@ namespace Shooter.Editor
 
         protected override IReadOnlyList<ModeSideLayout> Sides => Layout();
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new HordeSceneBuilder().BuildSceneFromMenu();

@@ -46,6 +46,36 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void TheGroundIsWalledInAlongItsEdges()
+        {
+            var perimeter = _scene.GetRootGameObjects().SingleOrDefault(go => go.name == SceneBuildHelpers.PerimeterName);
+            Assert.That(perimeter, Is.Not.Null, "the ground has no perimeter walls; " + _rerun);
+
+            var expected = new[]
+            {
+                ("Perimeter_North", new Vector3(0f, 3f, 30.5f), new Vector3(62f, 8f, 1f)),
+                ("Perimeter_South", new Vector3(0f, 3f, -30.5f), new Vector3(62f, 8f, 1f)),
+                ("Perimeter_East", new Vector3(30.5f, 3f, 0f), new Vector3(1f, 8f, 60f)),
+                ("Perimeter_West", new Vector3(-30.5f, 3f, 0f), new Vector3(1f, 8f, 60f)),
+            };
+            Assert.That(perimeter.transform.childCount, Is.EqualTo(expected.Length));
+            foreach (var (wallName, position, size) in expected)
+            {
+                var wall = perimeter.transform.Find(wallName);
+                Assert.That(wall, Is.Not.Null, wallName);
+                Assert.That(Vector3.Distance(wall.position, position), Is.LessThan(1e-3f), wallName);
+                Assert.That(Vector3.Distance(wall.lossyScale, size), Is.LessThan(1e-3f), wallName);
+                Assert.That(wall.GetComponent<BoxCollider>(), Is.Not.Null, wallName);
+            }
+
+            foreach (var (_, position, _) in NetSceneBuilder.SpawnPoints)
+            {
+                Assert.That(Mathf.Abs(position.x), Is.LessThan(30f), "spawn points stay inside the walls");
+                Assert.That(Mathf.Abs(position.z), Is.LessThan(30f), "spawn points stay inside the walls");
+            }
+        }
+
+        [Test]
         public void SpawnPointsCanStartTeamDeathmatch()
         {
             var points = _scene.GetRootGameObjects()

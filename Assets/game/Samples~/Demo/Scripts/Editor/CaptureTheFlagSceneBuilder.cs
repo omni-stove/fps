@@ -16,7 +16,7 @@ namespace Shooter.Editor
 
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.CaptureTheFlagName);
 
-        public const string MenuPath = "Shooter/Build Capture The Flag Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const string BasesRootName = "FlagBases";
         public const string FlagsRootName = "Flags";
@@ -35,7 +35,6 @@ namespace Shooter.Editor
         {
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new CaptureTheFlagSceneBuilder().BuildSceneFromMenu();

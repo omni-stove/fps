@@ -12,7 +12,7 @@ namespace Shooter.Editor
     public static class MenuSceneBuilder
     {
         public static string ScenePath => BuildSceneList.MainMenuScene;
-        public const string MenuPath = "Shooter/Build Main Menu Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
         public const string LogTag = "[MenuSceneBuilder]";
 
         public const string CameraName = "MenuCamera";
@@ -21,7 +21,6 @@ namespace Shooter.Editor
         // UI の背景は半透明なので、メニューの後ろはこの色が透けて見える。
         public static readonly Color BackgroundColor = new Color(0.04f, 0.05f, 0.07f, 1f);
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             // メニューから呼ばれたとき、開いているシーンの未保存の変更を黙って捨てない。
@@ -109,7 +108,7 @@ namespace Shooter.Editor
             {
                 // ミッションのシーンは NavMesh を焼くので重く、メニューを作るたびに巻き込まない。後で作ってメニューを作り直せばつながる
                 Debug.LogWarning(
-                    $"{LogTag} the campaign menu has no missions: {e.Message}. Run {CampaignSceneBuilder.MenuPath}, then {MenuPath}");
+                    $"{LogTag} the campaign menu has no missions: {e.Message}. Run {SceneBuildSteps.MenuPath}");
                 return null;
             }
 

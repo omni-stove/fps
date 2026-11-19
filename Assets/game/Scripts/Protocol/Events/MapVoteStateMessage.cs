@@ -4,7 +4,7 @@ namespace Shooter.Protocol
 {
     public sealed class MapVoteStateMessage : IMessage
     {
-        public const byte CurrentVersion = 1;
+        public const byte CurrentVersion = 2;
 
         public const int MaxCandidates = 16;
 
@@ -21,6 +21,9 @@ namespace Shooter.Protocol
         public int CandidateCount { get; private set; }
 
         public float RemainingSeconds { get; set; }
+
+        // 表示の文字を送らず名前のキーを送るのは、言語ごとの文字はクライアントが自分の表で引くため。プレイリストが無ければ空。
+        public string NextPlaylistEntryName { get; set; } = "";
 
         public int ChosenIndex
         {
@@ -91,6 +94,7 @@ namespace Shooter.Protocol
 
             writer.WriteSingle(RemainingSeconds);
             writer.WriteByte((byte)(ChosenIndex + 1));
+            writer.WriteString(NextPlaylistEntryName, MatchProtocol.MaxContentIdBytes);
         }
 
         public void Read(MessageReader reader)
@@ -106,6 +110,7 @@ namespace Shooter.Protocol
             CandidateCount = count;
             RemainingSeconds = reader.ReadFiniteSingleBetween(0f, float.MaxValue, "map vote remaining seconds");
             _chosenIndex = reader.ReadByteBelow(count + 1, "chosen map index") - 1;
+            NextPlaylistEntryName = reader.ReadString(MatchProtocol.MaxContentIdBytes, NextPlaylistEntryName);
         }
 
         private void CheckIndex(int index)

@@ -23,6 +23,9 @@ namespace Shooter.Protocol
         // 人ごとの行 (PlayerSnapshot) に載せないのは、部分のビットに空きが無く、ほかの人の出直しの残りは要らないため。
         public int? RespawnSeconds { get; set; }
 
+        // ほかの人の所持金は見せないので、人ごとの行 (PlayerSnapshot) に載せず持ち主にだけ送る。
+        public int Money { get; set; }
+
         public GrenadePouchSync Grenades => _grenades;
 
         public ContentIdList EquippedWeaponIds => _equippedWeaponIds;
@@ -41,6 +44,7 @@ namespace Shooter.Protocol
             CarrySpeedMultiplier = other.CarrySpeedMultiplier;
             Knockback = other.Knockback;
             RespawnSeconds = other.RespawnSeconds;
+            Money = other.Money;
             _grenades.CopyFrom(other._grenades);
             _equippedWeaponIds.CopyFrom(other._equippedWeaponIds);
             Present = other.Present;
@@ -77,6 +81,11 @@ namespace Shooter.Protocol
             if (RespawnSeconds != baseline.RespawnSeconds)
             {
                 fields |= OwnerFields.Respawn;
+            }
+
+            if (Money != baseline.Money)
+            {
+                fields |= OwnerFields.Money;
             }
 
             return fields;
@@ -130,6 +139,16 @@ namespace Shooter.Protocol
                     writer.WriteInt32(respawn.Value);
                 }
             }
+
+            if ((fields & OwnerFields.Money) != 0)
+            {
+                if (Money < 0)
+                {
+                    throw new InvalidOperationException("money must not be negative");
+                }
+
+                writer.WriteInt32(Money);
+            }
         }
 
         internal void Read(MessageReader reader, OwnerFields fields)
@@ -169,6 +188,11 @@ namespace Shooter.Protocol
             {
                 RespawnSeconds = reader.ReadBool() ? reader.ReadInt32AtLeast(0, "respawn seconds") : (int?)null;
             }
+
+            if ((fields & OwnerFields.Money) != 0)
+            {
+                Money = reader.ReadInt32AtLeast(0, "money");
+            }
         }
 
         internal void FillFrom(OwnerSnapshot baseline)
@@ -202,6 +226,11 @@ namespace Shooter.Protocol
             if ((missing & OwnerFields.Respawn) != 0)
             {
                 RespawnSeconds = baseline.RespawnSeconds;
+            }
+
+            if ((missing & OwnerFields.Money) != 0)
+            {
+                Money = baseline.Money;
             }
 
             Present = OwnerFields.All;

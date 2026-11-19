@@ -12,6 +12,7 @@ namespace Shooter.Protocol
         CarrySpeed = 1 << 3,
         Knockback = 1 << 4,
         Respawn = 1 << 5,
-        All = Weapon | Loadout | Grenades | CarrySpeed | Knockback | Respawn,
+        Money = 1 << 6,
+        All = Weapon | Loadout | Grenades | CarrySpeed | Knockback | Respawn | Money,
     }
 }

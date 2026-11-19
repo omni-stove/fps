@@ -70,7 +70,7 @@ namespace Shooter.Core.Tests
             new[] { "Contested", "Neutral" },
         };
 
-        private const float MinimumDifference = 0.15f;
+        private const float _minimumDifference = 0.15f;
 
         // 1 型・2 型色覚では赤と緑の差が見えないので、明るさか青と黄の軸で離れていないと区別できない
         [TestCase(ColorPalette.Standard)]
@@ -88,7 +88,7 @@ namespace Shooter.Core.Tests
                 var blueYellow = Math.Abs(BlueYellowAxis(a) - BlueYellowAxis(b));
 
                 Assert.That(
-                    lightness >= MinimumDifference || blueYellow >= MinimumDifference,
+                    lightness >= _minimumDifference || blueYellow >= _minimumDifference,
                     Is.True,
                     kind + ": " + pair[0] + " and " + pair[1] + " differ only in red and green (lightness " + lightness + ", blue-yellow " + blueYellow + ")");
             }
@@ -108,7 +108,7 @@ namespace Shooter.Core.Tests
                 var redGreen = Math.Abs(RedGreenAxis(a) - RedGreenAxis(b));
 
                 Assert.That(
-                    lightness >= MinimumDifference || redGreen >= MinimumDifference,
+                    lightness >= _minimumDifference || redGreen >= _minimumDifference,
                     Is.True,
                     pair[0] + " and " + pair[1] + " differ only in blue and yellow (lightness " + lightness + ", red-green " + redGreen + ")");
             }

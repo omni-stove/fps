@@ -110,7 +110,7 @@ namespace Shooter.Runtime
                 return PurchaseVerdict.CannotCarry;
             }
 
-            var verdict = _economy.Buy(playerId, itemId, item => CanCarry(member, item), out var bought);
+            var verdict = _economy.Buy(playerId, itemId, item => CanCarry(playerId, member, item), out var bought);
             if (verdict != PurchaseVerdict.Bought)
             {
                 Debug.Log(EconomyLog.Refused(playerId, itemId, verdict, _economy.MoneyOf(playerId)), _context);
@@ -177,12 +177,12 @@ namespace Shooter.Runtime
             _publishedWallet = null;
         }
 
-        private bool CanCarry(SideMember member, BuyItem item)
+        private bool CanCarry(int playerId, SideMember member, BuyItem item)
         {
             switch (item.Kind)
             {
                 case BuyItemKind.Weapon:
-                    return member.GetComponentInChildren<WeaponController>(true) != null && FindWeapon(item.Id) != null;
+                    return member.GetComponentInChildren<WeaponController>(true) != null && !HoldsStartWeapon(playerId, item) && FindWeapon(item.Id) != null;
                 case BuyItemKind.Throwable:
                     var grenades = member.GetComponent<GrenadeThrower>();
                     if (grenades == null || !grenades.UsesGrenades)
@@ -198,6 +198,18 @@ namespace Shooter.Runtime
                 default:
                     return false;
             }
+        }
+
+        // 買った武器のある枠は Economy.Buy が同じ品かを見るので、ここでは買っていない枠に残る始めの武器だけを見る。
+        private bool HoldsStartWeapon(int playerId, BuyItem item)
+        {
+            if (_economy.WeaponIn(playerId, item.Slot) != null)
+            {
+                return false;
+            }
+
+            var start = _startWeapons[playerId];
+            return start != null && item.Slot >= 0 && item.Slot < start.Count && start[item.Slot] != null && start[item.Slot].Id == item.Id;
         }
 
         private void Apply(int playerId, SideMember member, BuyItem item)

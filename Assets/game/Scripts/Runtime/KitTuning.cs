@@ -23,7 +23,7 @@ namespace Shooter.Runtime
 
         public const string AssistResourcePath = "Tuning/assist";
 
-        public const string PayloadResourcePath = "Tuning/payload";
+        public const string PayloadResourcePath = PayloadJson.ResourcePath;
 
         public const string EconomyResourcePath = EconomyJson.ResourcePath;
 
@@ -62,6 +62,8 @@ namespace Shooter.Runtime
         public static InfectedSpec Infected => Load(c => c.InfectedTuning, InfectedJson.ResourcePath, InfectedJson.Parse, InfectedSpec.Default);
 
         public static EconomyRules Economy => Load(c => c.EconomyTuning, EconomyResourcePath, EconomyJson.Parse, EconomyRules.Default);
+
+        public static PayloadSpec Payload => Load(c => c.PayloadTuning, PayloadResourcePath, PayloadJson.Parse, PayloadSpec.Default);
 
         public static IReadOnlyList<GameRulesMutator> Mutators =>
             Load(c => c.MutatorsTuning, MutatorsResourcePath, MutatorJson.Parse, MutatorJson.Empty);

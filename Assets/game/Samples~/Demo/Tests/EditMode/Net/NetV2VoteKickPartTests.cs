@@ -4,6 +4,8 @@ using Shooter.Core;
 using Shooter.NetV2;
 using Shooter.Protocol;
 using Shooter.Runtime;
+// サーバーの書式の Shooter.Core.VoteKickLog と同じ名前なので、クライアントの書式を名前で選ぶ
+using VoteKickLog = Shooter.NetV2.VoteKickLog;
 
 namespace Shooter.Net.Tests
 {

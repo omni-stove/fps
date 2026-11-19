@@ -68,6 +68,23 @@ make server-dotnet ARGS="-rules FreeForAll"
   置く要求を断る (`[Deploy] ... refused reason=RuleOff`)。既定は `textChat` と `spectating` が `On`、`abilities` が `Off` で、
   置ける物を使うには `deployables.json` に加えて `abilities` を `On` にする。この 3 つの規則もスナップショットでクライアントに届く。
 
+### プレイリストで回す
+
+`-playlist <id>` で、`server-data/playlists/*.json` (Unity の `Resources/Tuning/playlists.json` と同じ書き方) のプレイリストに沿って試合ごとにモードとマップを替える。
+項目の `scene` は `server-data/maps/` のマップ名、`rules` はルール名 (省くと `TeamDeathmatch`)、`mutators` は `server-data/tuning/mutators.json` の Id にする。
+`server-data/playlists/rotation.json` に TDM → Domination → Kill Confirmed の例を置いてある。
+
+```sh
+make server-dotnet ARGS="-playlist rotation"
+```
+
+- 項目がルールとマップを決めるので、`-rules`・`-map` とは一緒に渡せない (終了コード 2)。
+- 最初の項目で始め、試合が終わるたびに次の項目へ進む (最後の後は最初に戻る)。`order` が `Shuffle` なら起動ごとに並びを混ぜる。
+- 試合の設定 (`match.*` の点数・時間・待ち時間・`mapVoteSeconds` など) と武器は最初の項目のルールの JSON のものを使い続け、2 項目目からは `rules.*` (モードと規則) だけを替える。
+- どの項目のモードも、プレイリストに出てくるすべてのマップ (と最初のルールの `mapPool`) で遊べなければならない。足りないと待ち受ける前に `[Server] failed to start: playlist <id> entry <n>/<数> cannot use rules ...` で終了コード 1 になる。
+  知らないミューテーターの Id・無いルール・読めないプレイリストは終了コード 3 になる。
+- `mapVoteSeconds` が 0 より大きく、マップが 2 つ以上あると、マップは投票で決め、モードとミューテーターは次の項目のものにする。投票の知らせには次の項目のルール名が載る。
+
 ### 止める
 
 SIGTERM を受けると新しい人を断り、今の試合が終わるか誰もいなくなるか `-drain-timeout` (既定 600 秒) が過ぎてから止まる。

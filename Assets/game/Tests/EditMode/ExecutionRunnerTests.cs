@@ -198,6 +198,59 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void MembersListedToStartDownedGoDownWhenEachRoundGoesLive()
+        {
+            var player = Member("Player", 0, AlphaSpawn);
+            var ally = Member("Bot-0-1", 0, AlphaSpawnTwo);
+            var enemy = Member("Bot-1-1", 1, BravoSpawn);
+            var standing = Member("Bot-1-2", 1, BravoSpawnTwo);
+            _runner.DownedAtRoundStart = new List<SideMember> { ally, enemy, null };
+            Begin(new[] { player, ally, enemy, standing }, player);
+
+            Assert.That(ally.Damageable.IsDowned, Is.False, "nobody goes down while lining up");
+            _runner.Tick(PreparationSeconds);
+
+            var execution = _runner.Execution;
+            Assert.That(ally.Damageable.IsDowned, Is.True);
+            Assert.That(enemy.Damageable.IsDowned, Is.True);
+            Assert.That(execution.IsDowned(_runner.IdOf(ally)), Is.True);
+            Assert.That(execution.IsDowned(_runner.IdOf(enemy)), Is.True);
+            Assert.That(player.Damageable.IsDowned, Is.False);
+            Assert.That(standing.Damageable.IsDowned, Is.False);
+            Assert.That(execution.Round.RoundNumber, Is.EqualTo(1), "a side with someone standing keeps the round going");
+
+            MoveNextTo(player, ally);
+            Assert.That(_runner.HoldInteract(player, 2f), Is.EqualTo(ExecutionStep.Reviving));
+            _runner.Tick(0.1f);
+            Assert.That(_runner.HoldInteract(player, 1f), Is.EqualTo(ExecutionStep.Revived));
+            Assert.That(ally.Damageable.IsDowned, Is.False);
+
+            MoveNextTo(player, enemy);
+            Assert.That(_runner.HoldInteract(player, ExecuteSeconds), Is.EqualTo(ExecutionStep.Executed));
+
+            KillBy(player, standing);
+            MoveNextTo(player, standing);
+            Assert.That(_runner.HoldInteract(player, ExecuteSeconds), Is.EqualTo(ExecutionStep.Executed));
+            _runner.Tick(0f);
+            Assert.That(execution.Round.RoundNumber, Is.EqualTo(2));
+            Assert.That(enemy.IsAlive, Is.True, "the next round brings the executed enemy back");
+
+            _runner.Tick(PreparationSeconds);
+            Assert.That(ally.Damageable.IsDowned, Is.True, "every round starts with the same downs");
+            Assert.That(enemy.Damageable.IsDowned, Is.True);
+        }
+
+        [Test]
+        public void TheStartDownedListIsNeverNull()
+        {
+            Assert.That(_runner.DownedAtRoundStart, Is.Empty);
+
+            _runner.DownedAtRoundStart = null;
+
+            Assert.That(_runner.DownedAtRoundStart, Is.Not.Null.And.Empty);
+        }
+
+        [Test]
         public void BeginNeedsAnExecutionSession()
         {
             var player = Member("Player", 0, AlphaSpawn);

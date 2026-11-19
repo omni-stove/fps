@@ -54,6 +54,11 @@ namespace Shooter.NetV2
         private ClientSearchAndDestroyStatus _searchAndDestroy;
         private ClientHardpointStatus _hardpoint;
         private ClientKillConfirmedStatus _killConfirmed;
+        private ClientPayloadStatus _payload;
+        private int? _payloadCheckpoints;
+        private bool _payloadCartLooked;
+        private bool _payloadCartMissingLogged;
+        private bool _payloadMismatchLogged;
         private ClientGunGameStatus _gunGame;
         private bool _gunGameMissingLogged;
         private bool _gunGameMismatchLogged;
@@ -114,6 +119,7 @@ namespace Shooter.NetV2
             netHud._searchAndDestroy = new ClientSearchAndDestroyStatus(localPlayerId);
             netHud._hardpoint = new ClientHardpointStatus(localPlayerId);
             netHud._killConfirmed = new ClientKillConfirmedStatus(localPlayerId);
+            netHud._payload = new ClientPayloadStatus(localPlayerId);
             netHud._gunGame = ConfiguredGunGame();
             GameSignals.HudModel.Publish(netHud._model);
             GameSignals.Participants.Publish(netHud._roster);
@@ -444,6 +450,7 @@ namespace Shooter.NetV2
                 | (_searchAndDestroy != null && _searchAndDestroy.Apply(snapshot))
                 | (_hardpoint != null && _hardpoint.Apply(snapshot))
                 | (_killConfirmed != null && _killConfirmed.Apply(snapshot))
+                | ApplyPayload(snapshot)
                 | ApplyPerSnapshot(snapshot);
             if (changed)
             {
@@ -452,8 +459,62 @@ namespace Shooter.NetV2
                     ?? _searchAndDestroy?.Status
                     ?? _hardpoint?.Status
                     ?? _killConfirmed?.Status
+                    ?? _payload?.Status
                     ?? _perSnapshotStatus);
             }
+        }
+
+        private bool ApplyPayload(SnapshotMessage snapshot)
+        {
+            if (_payload == null)
+            {
+                return false;
+            }
+
+            if (snapshot.Match.Objective != MatchObjective.Payload)
+            {
+                // 次の Payload の試合は別のマップかもしれないので、台車の中継点の数は Payload の試合に入るたびに数え直す
+                _payloadCheckpoints = null;
+                _payloadCartLooked = false;
+                return _payload.Clear();
+            }
+
+            if (!_payloadCartLooked)
+            {
+                _payloadCartLooked = true;
+                _payloadCheckpoints = SceneCheckpointCount();
+                if (!_payloadCheckpoints.HasValue && !_payloadCartMissingLogged)
+                {
+                    _payloadCartMissingLogged = true;
+                    Debug.LogWarning(ClientPayloadLog.CartMissing());
+                }
+            }
+
+            if (!_payloadCheckpoints.HasValue)
+            {
+                return _payload.Clear();
+            }
+
+            var changed = _payload.Apply(snapshot, _payloadCheckpoints.Value);
+            if (_payload.CheckpointMismatch && !_payloadMismatchLogged)
+            {
+                _payloadMismatchLogged = true;
+                Debug.LogWarning(ClientPayloadLog.CheckpointMismatch(_payloadCheckpoints.Value));
+            }
+
+            return changed;
+        }
+
+        // 中継点の数はスナップショットに無い。サーバーの道筋は同じシーンの台車から書き出すので、手元のシーンの台車の数を使う
+        private static int? SceneCheckpointCount()
+        {
+            var cart = FindAnyObjectByType<PayloadCart>();
+            if (cart == null)
+            {
+                return null;
+            }
+
+            return cart.Route != null ? cart.Route.CheckpointCount : cart.Checkpoints.Count;
         }
 
         // FFA と Gun Game の状態はスナップショットから毎回作り直すので、出す値 (残り秒・状態・勝者・各人のキル数と段・自分の出直しの残り) が変わったときだけ差し替える
@@ -654,6 +715,9 @@ namespace Shooter.NetV2
             _searchAndDestroy?.Reset();
             _hardpoint?.Clear();
             _killConfirmed?.Reset();
+            _payload?.Clear();
+            _payloadCheckpoints = null;
+            _payloadCartLooked = false;
             _perSnapshotStatus = null;
             _perSnapshotKey = 0;
 

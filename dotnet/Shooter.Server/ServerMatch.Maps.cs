@@ -93,9 +93,74 @@ namespace Shooter.Server
             }
         }
 
+        // 試合の合間に次の項目を選ぶ。null なら選ばず、マップは投票か RequestNextMap、ルールは RequestNextRules で決まる
+        public ServerPlaylist Playlist { get; private set; }
+
+        // 始めのマップは最初の項目のマップでなければならないので、UseMaps の後に呼ぶ
+        public void UsePlaylist(ServerPlaylist playlist)
+        {
+            ArgumentNullException.ThrowIfNull(playlist);
+            if (Playlist != null)
+            {
+                throw new InvalidOperationException("the playlist of the match is already set");
+            }
+
+            if (Map == null)
+            {
+                throw new InvalidOperationException("use the maps of the match before the playlist");
+            }
+
+            foreach (var entry in playlist.Entries)
+            {
+                if (FindMap(entry.Map) == null)
+                {
+                    throw new ArgumentException(ServerPlaylistLog.MapOutsideTheMatch(playlist.Playlist, entry.Position, entry.Map), nameof(playlist));
+                }
+            }
+
+            if (!string.Equals(Map.Name, playlist.Current.Map, StringComparison.Ordinal))
+            {
+                throw new ArgumentException(ServerPlaylistLog.StartsOnAnotherMap(playlist.Playlist, playlist.Current.Map, Map.Name), nameof(playlist));
+            }
+
+            Playlist = playlist;
+        }
+
+        // CheckNextRules はルールのモジュールが始まってから差し込まれるので、モジュールを始めた後に呼ぶ。
+        // 試合の合間に使えないと分かると、項目を飛ばしたルールで遊ばせ続けることになるため、起動のうちにすべての項目を確かめる
+        public string CheckPlaylist()
+        {
+            if (Playlist == null || CheckNextRules == null)
+            {
+                return null;
+            }
+
+            var checkedRules = new HashSet<GameRules>(ReferenceEqualityComparer.Instance);
+            foreach (var entry in Playlist.Entries)
+            {
+                if (!checkedRules.Add(entry.Rules))
+                {
+                    continue;
+                }
+
+                var problem = CheckNextRules(entry.Rules);
+                if (problem != null)
+                {
+                    return ServerPlaylistLog.CannotUseRules(Playlist.Playlist, entry.Position, entry.RulesName, problem);
+                }
+            }
+
+            return null;
+        }
+
         partial void ChangeMapForNextMatch()
         {
             NextMapChoosing?.Invoke();
+            if (Playlist != null)
+            {
+                ChooseNextPlaylistEntry();
+            }
+
             var next = NextMap;
             NextMap = null;
             if (next == null || Map == null || string.Equals(next, Map.Name, StringComparison.Ordinal))
@@ -112,6 +177,27 @@ namespace Shooter.Server
             }
 
             MapChanged?.Invoke(Map);
+        }
+
+        // 投票で決まったマップ (NextMapChoosing の中で RequestNextMap される) は項目のマップより優先する。投票は票が無くても今のマップ以外の候補に
+        // 決めるので、項目のマップを優先すると、投票を開いた運用で票が一度も効かなくなるため。投票しない運用では項目のマップで回る
+        private void ChooseNextPlaylistEntry()
+        {
+            var entry = Playlist.Advance();
+            if (NextMap != null && !string.Equals(NextMap, entry.Map, StringComparison.Ordinal))
+            {
+                _log.WriteLine(ServerPlaylistLog.MapVotedOver(Playlist, entry, NextMap));
+            }
+            else
+            {
+                NextMap = entry.Map;
+            }
+
+            _log.WriteLine(ServerPlaylistLog.Entry(Playlist, entry, Playlist.Round));
+            if (!RequestNextRules(entry.Rules, out var problem))
+            {
+                _log.WriteLine(ServerPlaylistLog.RulesRefused(Playlist, entry, problem));
+            }
         }
     }
 }

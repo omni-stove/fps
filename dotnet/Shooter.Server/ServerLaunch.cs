@@ -21,6 +21,9 @@ namespace Shooter.Server
         // Unity の NetMatch.prefab がこのルールに配線されているため。
         public const string DefaultRules = "TeamDeathmatch";
 
+        // server-data/playlists の中のプレイリストの id で選ぶ。項目がルールとマップを決めるので -rules・-map とは一緒に受けない
+        public const string PlaylistFlag = "-playlist";
+
         // 引数のほかのフラグは - が 1 つだが、Issue #1004 で決めた名前に合わせる。
         public const string PrivateFlag = "--private";
 
@@ -48,8 +51,10 @@ namespace Shooter.Server
             string joinCode,
             string banFile,
             string region,
-            ServerRecordsLaunch records)
+            ServerRecordsLaunch records,
+            string playlist)
         {
+            Playlist = playlist;
             BanFile = banFile;
             Region = region;
             Records = records ?? ServerRecordsLaunch.Off;
@@ -81,6 +86,9 @@ namespace Shooter.Server
 
         public string Rules { get; }
 
+        // null ならプレイリストを使わず、-rules のルールと -map (またはルールの mapPool) のマップで回す
+        public string Playlist { get; }
+
         public AntiCheatSettings AntiCheat { get; }
 
         public bool PrivateMatch { get; }
@@ -98,7 +106,7 @@ namespace Shooter.Server
         public ServerLaunch WithOptions(NetLaunchOptions options)
         {
             ArgumentNullException.ThrowIfNull(options);
-            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode, BanFile, Region, Records);
+            return new ServerLaunch(options, Version, DrainTimeoutSeconds, Rules, AntiCheat, PrivateMatch, JoinCode, BanFile, Region, Records, Playlist);
         }
 
         // 起動のオプションをルールの JSON より優先する。ルールの値を消さずに重ねるのは、JSON だけで非公開にする運用も残すため。
@@ -203,6 +211,11 @@ namespace Shooter.Server
                 return false;
             }
 
+            if (!TryParsePlaylist(args, options, rules, out var playlist, out error))
+            {
+                return false;
+            }
+
             if (!TryParsePrivacy(args, out var privateMatch, out var joinCode, out error))
             {
                 return false;
@@ -238,7 +251,70 @@ namespace Shooter.Server
                 joinCode,
                 banFile,
                 region,
-                records);
+                records,
+                playlist);
+            return true;
+        }
+
+        // id はファイル名にしないので、ルールの名前より広く受ける (PlaylistJson の id は '.' を含みうる)。空白と制御文字だけは、
+        // ログの 1 行を割らないように断る
+        private static bool TryParsePlaylist(
+            IReadOnlyList<string> args, NetLaunchOptions options, string rules, out string playlist, out string error)
+        {
+            playlist = null;
+            for (var i = 0; i < args.Count; i++)
+            {
+                if (!string.Equals(args[i], PlaylistFlag, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                if (i + 1 >= args.Count || string.IsNullOrWhiteSpace(args[i + 1]) || args[i + 1][0] == '-')
+                {
+                    error = PlaylistFlag + " requires a value";
+                    return false;
+                }
+
+                if (playlist != null)
+                {
+                    error = PlaylistFlag + " is given more than once";
+                    return false;
+                }
+
+                playlist = args[++i];
+                if (!IsPlaylistId(playlist))
+                {
+                    error = PlaylistFlag + " must be a playlist id without spaces or control characters (got '" + playlist + "')";
+                    return false;
+                }
+            }
+
+            if (playlist != null && rules != null)
+            {
+                error = PlaylistFlag + " and " + RulesFlag + " cannot be given together; the playlist names the rules of each match";
+                return false;
+            }
+
+            if (playlist != null && options.Map != null)
+            {
+                error = PlaylistFlag + " and " + NetLaunchOptions.MapFlag + " cannot be given together; the playlist names the map of each match";
+                return false;
+            }
+
+            error = null;
+            return true;
+        }
+
+        private static bool IsPlaylistId(string text)
+        {
+            foreach (var c in text)
+            {
+                if (char.IsWhiteSpace(c) || char.IsControl(c))
+                {
+                    return false;
+                }
+            }
+
             return true;
         }
 

@@ -11,7 +11,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    // 投票キックと購入はまだ受け口だけなので、ServerModules の一式に UDP で送っても試合が前と同じまま進むことを確かめる
+    // 投票キックを有効にしていない既定のルールと、まだ受け口だけの購入では、ServerModules の一式に UDP で送っても試合が前と同じまま進むことを確かめる
     [NonParallelizable]
     public sealed class MatchRulesVoteKickBuyTests
     {
@@ -80,7 +80,7 @@ namespace Shooter.Server.Tests
             Assert.That(_first.ServerDisconnectingReason, Is.Null);
             Assert.That(_second.ServerDisconnectingReason, Is.Null);
             Assert.That(_log.ToString(), Does.Not.Contain("[Net] dropped client"));
-            Assert.That(_first.Received, Does.Not.Contain(MessageIds.VoteKickState), "no vote is started yet");
+            Assert.That(_first.Received, Does.Not.Contain(MessageIds.VoteKickState), "vote kicks are off by default");
             Assert.That(_second.Received, Does.Not.Contain(MessageIds.VoteKickState));
             Assert.That(Row(_first, targetId).HasValue, Is.True, "the target is still in the match");
             Assert.That(Row(_second, callerId).HasValue, Is.True);

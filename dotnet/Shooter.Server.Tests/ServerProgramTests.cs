@@ -253,6 +253,53 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void APlaylistStartsOnItsFirstEntryAndLoadsEveryMapOfIt()
+        {
+            TestMaps.Write(_data.Path, "NetArena01");
+            TestRules.Write(_data.Path, "Domination", TestRules.File(GameRules.Default.WithObjective(MatchObjective.Domination), name: "Domination"));
+            var path = WritePlaylist(@"{ ""playlists"": [ { ""id"": ""rotation"", ""entries"": [
+                { ""scene"": ""NetArena01"", ""rules"": ""Domination"" }, { ""scene"": ""NetTest"" } ] } ] }");
+
+            var code = Run("-playlist", "rotation");
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitOk), _error.ToString());
+            var log = _output.ToString();
+            Assert.That(log, Does.Contain("[Server] playlist rotation order=Sequential entries=2 maps=NetArena01, NetTest from=" + path + " mutators=none"));
+            Assert.That(log, Does.Contain("[Server] rules Domination objective=Domination"));
+            Assert.That(log, Does.Contain("[Server] map NetArena01 colliders=1"));
+            Assert.That(log, Does.Contain("[Server] map pool loaded 2 maps: NetArena01, NetTest"));
+            Assert.That(log, Does.Contain("[Server] playlist rotation entry 1/2 round=1: map=NetArena01 rules=Domination objective=Domination mutators=none"));
+            Assert.That(log, Does.Contain("[Net] server listening on"));
+        }
+
+        [Test]
+        public void AnUnknownPlaylistExitsMisconfigured()
+        {
+            var code = Run("-playlist", "missing");
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitMisconfigured));
+            Assert.That(_error.ToString(), Does.StartWith("[Server] playlist missing not found in "));
+            Assert.That(_output.ToString(), Does.Not.Contain("listening"));
+        }
+
+        [Test]
+        public void APlaylistEntryTheMapsCannotPlayStopsTheStartBeforeListening()
+        {
+            TestMaps.Write(_data.Path, "NetTest", points: TestRules.Points());
+            TestRules.Write(_data.Path, "Domination", TestRules.File(GameRules.Default.WithObjective(MatchObjective.Domination), name: "Domination"));
+            WritePlaylist(@"{ ""playlists"": [ { ""id"": ""rotation"", ""entries"": [
+                { ""scene"": ""NetTest"" }, { ""scene"": ""NetTest"", ""rules"": ""Domination"" } ] } ] }");
+
+            var code = ServerProgram.Run(Args("-playlist", "rotation"), new IServerModule[] { new MatchRulesModule() }, Runtime());
+
+            Assert.That(code, Is.EqualTo(ServerProgram.ExitFailure));
+            Assert.That(_error.ToString(), Does.StartWith(
+                "[Server] failed to start: playlist rotation entry 2/2 cannot use rules Domination: cannot use the rules with objective Domination for the next match: "
+                + "cannot change to map NetTest for the Domination match: it has no control points"));
+            Assert.That(_output.ToString(), Does.Not.Contain("listening"));
+        }
+
+        [Test]
         public void TheRulesModuleNeedsTheMapsPoints()
         {
             var code = ServerProgram.Run(System.Array.Empty<string>(), new IServerModule[] { new MatchRulesModule() }, Runtime());
@@ -490,6 +537,15 @@ namespace Shooter.Server.Tests
         private void WritePool(params string[] mapPool)
         {
             TestRules.Write(_data.Path, ServerLaunch.DefaultRules, TestRules.File(settings: new NetMatchSettings(mapPool: mapPool)));
+        }
+
+        private string WritePlaylist(string json)
+        {
+            var directory = Path.GetFullPath(Path.Combine(_data.Path, ServerMapData.DataDirectoryName, ServerRulesData.PlaylistsDirectoryName));
+            Directory.CreateDirectory(directory);
+            var path = Path.Combine(directory, "playlists.json");
+            File.WriteAllText(path, json);
+            return path;
         }
 
         private int Run(params string[] args)

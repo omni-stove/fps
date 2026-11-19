@@ -57,7 +57,16 @@ namespace Shooter.Tests.EditMode
             Assert.That(floor.GetComponent<MeshCollider>(), Is.Not.Null, "the surface bakes from physics colliders");
             Assert.That(surface.collectObjects, Is.EqualTo(CollectObjects.All));
             Assert.That(surface.useGeometry, Is.EqualTo(NavMeshCollectGeometry.PhysicsColliders));
-            Assert.That(_scene.rootCount, Is.EqualTo(1), "the hut is placed after baking so that it does not cut the NavMesh");
+            Assert.That(_scene.rootCount, Is.EqualTo(2), "only the floor and the perimeter; the hut is placed after baking so that it does not cut the NavMesh");
+        }
+
+        [Test]
+        public void LevelIsWalledInAlongTheFloorEdges()
+        {
+            DestructionTestSceneBuilder.CreateLevel(_scene);
+
+            Assert.That(Find(SceneBuildHelpers.PerimeterName), Is.Not.Null);
+            SceneBuildHelpersTests.AssertPerimeterEncloses(_scene, -30f, 30f, -30f, 30f, 0f);
         }
 
         [Test]

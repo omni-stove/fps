@@ -16,7 +16,7 @@ namespace Shooter.Editor
         public static string DefaultScenePath => BuildSceneList.BootstrapScene;
         public const string ScenePathArgument = "-bootstrapScenePath";
         public const string BootstrapObjectName = "GameBootstrap";
-        public const string MenuPath = "Shooter/Build Bootstrap Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const string CoversName = "Covers";
 
@@ -165,7 +165,6 @@ namespace Shooter.Editor
             }
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             // メニューから呼ばれたとき、開いているシーンの未保存の変更を黙って捨てない。
@@ -257,6 +256,7 @@ namespace Shooter.Editor
                 CreateWeaponTable(scene, featured);
             }
 
+            CreatePerimeter(scene);
             EditorSceneManager.MarkSceneDirty(scene);
             return bootstrap;
         }
@@ -362,6 +362,15 @@ namespace Shooter.Editor
             zone.Size = box.Size;
             zone.EnsureTrigger();
             return zone;
+        }
+
+        // 床は GameBootstrap が実行時に作るので、床の物でなく、実行時の床 (原点に置く GameBootstrap.FloorScale の Plane) の縁から囲む範囲を決める。
+        public static Vector2 PerimeterHalfExtents => SceneBuildHelpers.PlaneHalfExtents(GameBootstrap.FloorScale);
+
+        public static GameObject CreatePerimeter(Scene scene)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+            return SceneBuildHelpers.CreatePerimeterWalls(scene, null, Vector3.zero, PerimeterHalfExtents);
         }
 
         // 床は GameBootstrap が実行時に作るので、遮蔽物は床の上 (y = 0 から) に立つ大きさと位置にしてある。

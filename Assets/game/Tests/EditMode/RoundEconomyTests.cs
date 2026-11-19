@@ -177,9 +177,25 @@ namespace Shooter.Tests.EditMode
             Assert.That(_economy.Buy(0, FragId), Is.EqualTo(PurchaseVerdict.CannotCarry), "there is no GrenadeThrower");
             Assert.That(_economy.Buy(1, _launcher.Id), Is.EqualTo(PurchaseVerdict.CannotCarry), "there is no WeaponController");
             Assert.That(_economy.Buy(0, "unknown"), Is.EqualTo(PurchaseVerdict.UnknownItem));
-            Assert.That(_economy.Buy(0, _rifle.Id), Is.EqualTo(PurchaseVerdict.NotEnoughMoney));
+            Assert.That(_economy.Buy(0, _rifle.Id), Is.EqualTo(PurchaseVerdict.CannotCarry), "the rifle is already the first weapon in slot 0");
             Assert.That(_economy.Economy.MoneyOf(0), Is.EqualTo(800));
             Assert.That(_economy.Economy.MoneyOf(1), Is.EqualTo(800));
+        }
+
+        [Test]
+        public void TheFirstWeaponInTheSameSlotIsRefusedUntilAnotherIsBoughtThere()
+        {
+            Start(swapEveryRounds: 0);
+
+            Assert.That(_economy.Buy(2, _rifle.Id), Is.EqualTo(PurchaseVerdict.CannotCarry), "the rifle is already the first weapon in slot 0");
+            Assert.That(_economy.Economy.MoneyOf(2), Is.EqualTo(800));
+            Assert.That(_economy.Economy.WeaponIn(2, 0), Is.Null);
+            Assert.That(Controller(_bravoOne).Definitions, Is.EqualTo(new[] { _rifle }));
+
+            Assert.That(_economy.Buy(2, _launcher.Id), Is.EqualTo(PurchaseVerdict.Bought));
+            Assert.That(_economy.Buy(2, _rifle.Id), Is.EqualTo(PurchaseVerdict.NotEnoughMoney), "the launcher now holds slot 0");
+            Assert.That(_economy.Economy.MoneyOf(2), Is.EqualTo(800 - LauncherPrice));
+            Assert.That(Controller(_bravoOne).Definitions, Is.EqualTo(new[] { _launcher }));
         }
 
         [Test]

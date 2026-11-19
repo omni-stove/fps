@@ -1,0 +1,9 @@
+{
+  "cartSpeed": 1.5,
+  "minPushers": 1,
+  "pusherSpeedMultipliers": [1, 1.5, 2],
+  "rollbackDelaySeconds": 10,
+  "rollbackSpeed": 0.5,
+  "checkpointBonusSeconds": 60,
+  "timeLimitSeconds": 300
+}

@@ -121,6 +121,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ThePayloadFileHoldsTheDefaults()
+        {
+            var spec = PayloadJson.Parse(Bundled(PayloadJson.ResourcePath), PayloadJson.ResourcePath);
+
+            Assert.That(spec.CartSpeed, Is.EqualTo(PayloadSpec.DefaultCartSpeed));
+            Assert.That(spec.MinPushers, Is.EqualTo(PayloadSpec.DefaultMinPushers));
+            Assert.That(spec.PusherSpeedMultipliers, Is.EqualTo(PayloadSpec.Default.PusherSpeedMultipliers));
+            Assert.That(spec.RollbackDelaySeconds, Is.EqualTo(PayloadSpec.DefaultRollbackDelaySeconds));
+            Assert.That(spec.RollbackSpeed, Is.EqualTo(PayloadSpec.DefaultRollbackSpeed));
+            Assert.That(spec.CheckpointBonusSeconds, Is.EqualTo(PayloadSpec.DefaultCheckpointBonusSeconds));
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(PayloadSpec.DefaultTimeLimitSeconds));
+            Assert.That(KitTuning.PayloadResourcePath, Is.EqualTo(PayloadJson.ResourcePath));
+        }
+
+        [Test]
         public void TheLootStashAndExtractionFilesHoldTheDefaults()
         {
             var loot = LootJson.Parse(Bundled(LootJson.ResourcePath), LootJson.ResourcePath);

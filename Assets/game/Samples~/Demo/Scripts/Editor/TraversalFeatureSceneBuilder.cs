@@ -4,7 +4,6 @@ using System.IO;
 using Shooter.Core;
 using Shooter.Runtime;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using WaterComponent = Shooter.Runtime.Traversal.Water;
@@ -22,11 +21,10 @@ namespace Shooter.Editor
         DoubleJump,
     }
 
-    // FeatureSceneBuilder と同じ床・GameBootstrap・置き方 (出現位置の横) で組み、違うのはルールの入り切りでなく移動の調整値で試すことだけにする。
-    // 壁走りと二段ジャンプはキットの既定で切ってあるので、ゲーム全体の値 (Resources・入口) は変えず、このシーンの GameBootstrap にだけ調整値を渡す。
+    // 傾き・泳ぎ・壁走り・二段ジャンプの置く物と、それを試すための移動の調整値を Playground (FeatureSceneBuilder) に渡す。
+    // 壁走りと二段ジャンプはキットの既定で切ってあるので、ゲーム全体の値 (Resources・入口) は変えず、Playground の GameBootstrap にだけ調整値を渡す。
     public static class TraversalFeatureSceneBuilder
     {
-        public const string MenuPath = "Shooter/Build Traversal Feature Scenes";
         public const string LogTag = "[TraversalFeatureSceneBuilder]";
 
         public const int DoubleJumpAirJumps = 1;
@@ -102,34 +100,32 @@ namespace Shooter.Editor
             TraversalFeature.DoubleJump,
         };
 
-        public static string RulesPath(TraversalFeature feature) => GameRulesAssetBuilder.FeatureFolder + "/" + feature + ".asset";
+        public static string MotorSettingsPath => ShooterKitRoot.OutputPath("Movement/" + FeatureSceneBuilder.PlaygroundName + ".asset");
 
-        public static string MotorSettingsPath => ShooterKitRoot.OutputPath("Movement/" + BuildSceneList.FeatureScenePrefix + TraversalFeature.DoubleJump + ".asset");
+        public static string TraversalTuningPath => ShooterKitRoot.OutputPath("Tuning/" + FeatureSceneBuilder.PlaygroundName + ".json");
 
-        public static string TraversalTuningPath => ShooterKitRoot.OutputPath("Tuning/" + BuildSceneList.FeatureScenePrefix + TraversalFeature.WallRun + ".json");
-
-        public static bool UsesMotorSettings(TraversalFeature feature) => feature == TraversalFeature.DoubleJump;
-
-        public static bool UsesTraversalTuning(TraversalFeature feature) => feature == TraversalFeature.WallRun;
-
-        // 水から縁へ上がるのはオフラインでは崖のぼり (PlayerController.TryClimbOutOfWater) なので、泳ぎのシーンだけ Mantle を入れる。
-        // 二段ジャンプのシーンで入れないのは、崖のぼりで段を上がれて二段目を試さずに済んでしまうため。
-        public static GameRules Rules(TraversalFeature feature)
+        // 前に移動の機能ごとにシーンを分けていたときの調整値。組み直すときに残っていれば消す。
+        public static IReadOnlyList<string> LegacyAssetPaths => new[]
         {
-            RequireDefined(feature);
-            var draft = new GameRulesDebugDraft(GameRulesAssetBuilder.FeatureBaseRules());
-            if (feature == TraversalFeature.Swim)
+            ShooterKitRoot.OutputPath("Movement/" + FeatureSceneBuilder.LegacyScenePrefix + TraversalFeature.DoubleJump + ".asset"),
+            ShooterKitRoot.OutputPath("Tuning/" + FeatureSceneBuilder.LegacyScenePrefix + TraversalFeature.WallRun + ".json"),
+        };
+
+        public static ITpsRangeFixture Fixture(TraversalFeature feature)
+        {
+            switch (feature)
             {
-                draft.Set(GameRulesDebugField.Mantle, (int)Mantle.On);
+                case TraversalFeature.Lean:
+                    return new TraversalFeatureFixture(LeanCornerName, TraversalFeature.Lean);
+                case TraversalFeature.Swim:
+                    return new TraversalFeatureFixture(SwimPoolsName, TraversalFeature.Swim);
+                case TraversalFeature.WallRun:
+                    return new TraversalFeatureFixture(WallRunCorridorName, TraversalFeature.WallRun);
+                case TraversalFeature.DoubleJump:
+                    return new TraversalFeatureFixture(DoubleJumpStepsName, TraversalFeature.DoubleJump);
+                default:
+                    throw Undefined(feature);
             }
-
-            return draft.Build();
-        }
-
-        public static IReadOnlyList<FeatureStation> Stations(TraversalFeature feature)
-        {
-            RequireDefined(feature);
-            return new[] { new FeatureStation(Fixture(feature), FeaturePlacement.BesideSpawn) };
         }
 
         public static IReadOnlyList<LevelBox> Boxes(TraversalFeature feature)
@@ -197,89 +193,6 @@ namespace Shooter.Editor
             settings.CreateSpec();
         }
 
-        [MenuItem(MenuPath)]
-        public static void Build()
-        {
-            // メニューから呼ばれたとき、開いているシーンの未保存の変更を黙って捨てない。
-            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
-            {
-                Debug.Log(LogTag + " cancelled");
-                return;
-            }
-
-            foreach (var feature in Features)
-            {
-                BuildAt(feature, BuildSceneList.TraversalFeatureScene(feature));
-            }
-        }
-
-        public static void BuildAt(TraversalFeature feature, string scenePath)
-        {
-            RequireDefined(feature);
-            scenePath = BootstrapSceneBuilder.ValidateScenePath(scenePath);
-
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-            // NewScene(Single) は参照されていないアセットをアンロードするので、シーンを作ってから読む (FeatureSceneBuilder.BuildAt と同じ)。
-            var weapons = TpsRangeSceneBuilder.LoadPlayerWeapons();
-            var rules = LoadOrBuildRules(feature, RulesPath(feature));
-            var motorSettings = UsesMotorSettings(feature) ? LoadOrBuildMotorSettings(MotorSettingsPath) : null;
-            var traversal = UsesTraversalTuning(feature) ? LoadOrBuildTraversalTuning(TraversalTuningPath) : null;
-
-            SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
-            PopulateScene(scene, weapons, rules, feature, motorSettings, traversal);
-
-            if (!EditorSceneManager.SaveScene(scene, scenePath))
-            {
-                throw new IOException($"Failed to save the {feature} feature scene to '{scenePath}'");
-            }
-
-            BuildSceneList.Register(scenePath);
-            AssetDatabase.SaveAssets();
-            Debug.Log($"{LogTag} saved '{scenePath}' for {feature} and registered it in Build Settings");
-        }
-
-        public static GameBootstrap PopulateScene(
-            Scene scene,
-            IReadOnlyList<WeaponDefinition> weapons,
-            GameRulesDefinition rules,
-            TraversalFeature feature,
-            MotorSettings motorSettings,
-            TextAsset traversal)
-        {
-            RequireDefined(feature);
-            if (UsesMotorSettings(feature) && motorSettings == null)
-            {
-                throw new ArgumentNullException(nameof(motorSettings), $"the {feature} scene needs its MotorSettings");
-            }
-
-            if (UsesTraversalTuning(feature) && traversal == null)
-            {
-                throw new ArgumentNullException(nameof(traversal), $"the {feature} scene needs its traversal JSON");
-            }
-
-            var bootstrap = FeatureSceneBuilder.PopulateScene(scene, weapons, rules, Stations(feature));
-            bootstrap.MotorSettings = UsesMotorSettings(feature) ? motorSettings : null;
-            bootstrap.TraversalTuningJson = UsesTraversalTuning(feature) ? traversal : null;
-            EditorSceneManager.MarkSceneDirty(scene);
-            return bootstrap;
-        }
-
-        // ゲーム側で調整した値を残すよう、既にあれば値は変えない (GameRulesAssetBuilder.LoadOrBuildFeatureRules と同じ)。
-        public static GameRulesDefinition LoadOrBuildRules(TraversalFeature feature, string path)
-        {
-            path = SceneBuildHelpers.ValidateAssetPath(path);
-            if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path) != null)
-            {
-                return GameRulesAssetBuilder.LoadRules(path);
-            }
-
-            var rules = Rules(feature);
-            var built = SceneBuildHelpers.CreateOrUpdateAsset<GameRulesDefinition>(path, d => GameRulesAssetBuilder.Configure(d, rules));
-            Debug.Log($"{LogTag} saved '{path}'");
-            return built;
-        }
-
         public static MotorSettings LoadOrBuildMotorSettings(string path)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
@@ -326,23 +239,6 @@ namespace Shooter.Editor
         {
             var project = Path.GetDirectoryName(Application.dataPath);
             return Path.Combine(project ?? string.Empty, assetPath);
-        }
-
-        private static ITpsRangeFixture Fixture(TraversalFeature feature)
-        {
-            switch (feature)
-            {
-                case TraversalFeature.Lean:
-                    return new TraversalFeatureFixture(LeanCornerName, TraversalFeature.Lean);
-                case TraversalFeature.Swim:
-                    return new TraversalFeatureFixture(SwimPoolsName, TraversalFeature.Swim);
-                case TraversalFeature.WallRun:
-                    return new TraversalFeatureFixture(WallRunCorridorName, TraversalFeature.WallRun);
-                case TraversalFeature.DoubleJump:
-                    return new TraversalFeatureFixture(DoubleJumpStepsName, TraversalFeature.DoubleJump);
-                default:
-                    throw Undefined(feature);
-            }
         }
 
         // 手前 (-Z) から近づき、正面の壁の右端 (+X) の角から覗く。低い壁は横に離して、しゃがんで隠れてから傾ける。

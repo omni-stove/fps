@@ -38,6 +38,9 @@ namespace Shooter.Runtime
         [SerializeField, FormerlySerializedAs("_interactRange"), Min(0.1f), Tooltip("ダウン中の敵にとどめを刺せる距離 (m)。足元どうしで測る。味方を起こせる距離はルールの reviveRange")]
         private float _executeRange = DefaultExecuteRange;
 
+        [SerializeField, Tooltip("各ラウンドが始まった直後にダウンさせる参加者。ダウン・蘇生・とどめをすぐ試せるシーンに使う。空なら誰もダウンさせない")]
+        private List<SideMember> _downedAtRoundStart = new List<SideMember>();
+
         private ExecutionSession _execution;
         private bool _subscribed;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
@@ -95,6 +98,12 @@ namespace Shooter.Runtime
         {
             get => _executeRange;
             set => _executeRange = value;
+        }
+
+        public List<SideMember> DownedAtRoundStart
+        {
+            get => _downedAtRoundStart ??= new List<SideMember>();
+            set => _downedAtRoundStart = value ?? new List<SideMember>();
         }
 
         // このモードはダウンが前提なので、actions のダウンが Off でも Revive にして使う。
@@ -402,6 +411,22 @@ namespace Shooter.Runtime
                 {
                     member.SetActing(true);
                 }
+            }
+
+            DownOpeningMembers();
+        }
+
+        // 倒れたときと同じ道 (Died → InterceptDeath) を通し、体を止めることもダウンの記録も一か所にまとめる。
+        private void DownOpeningMembers()
+        {
+            foreach (var member in DownedAtRoundStart)
+            {
+                if (member == null || member.Damageable == null || IdOf(member) < 0)
+                {
+                    continue;
+                }
+
+                member.Damageable.Kill();
             }
         }
 

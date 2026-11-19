@@ -4,12 +4,17 @@ run = "scripts/install.sh"
 quiet = true
 
 [setup]
-description = "Install dependencies and skill-kit, then sync (run by make setup)"
+description = "Install dependencies and skill-kit, sync, then build every demo scene with build-scenes (run by make setup; close the Editor first)"
 depends = ["install"]
 run = [
   "curl -fsSL https://raw.githubusercontent.com/omni-stove/skill-kit/main/install.sh | sh",
   "skill-kit game sync",
+  "mise run build-scenes",
 ]
+
+[build-scenes]
+description = "Rebuild every demo scene (and write the net maps' server data, as export-server-data does) with the Unity editor in batch mode via Shooter.Editor.SceneBuildSteps.BuildAll, the Shooter/Build All Scenes menu (close the Editor first). Commit the result"
+run = "unity --non-interactive run . -- -executeMethod Shooter.Editor.SceneBuildSteps.BuildAll"
 
 [update]
 description = "Pull skill-kit and re-sync this repo"
@@ -39,7 +44,7 @@ flag "--version <version>" help="build version such as v0.2.0 (default: git desc
 run = 'unity -batchmode -quit -projectPath . -executeMethod Shooter.Editor.ClientBuilder.Build -clientPlatform "${usage_platform:-macos}" ${usage_version:+-buildVersion "$usage_version"}'
 
 [server-dotnet]
-description = "Build the Unity-independent .NET server (dotnet/Shooter.Server) and run it with -mode server on 0.0.0.0:7777 (SHOOTER_SERVER_ADDRESS / SHOOTER_SERVER_PORT change it). It needs server-data/maps/<map>.fpsmap and .fpsnav (make export-server-data), and server-data/rules/<rules>.json and server-data/maps/<map>.points.json (make export-server-rules); -rules <name> picks the rules (default TeamDeathmatch). Ctrl+C or SIGTERM drains; a second one stops at once. Type players, kick, ban, unban or help on stdin; --ban-file <path> keeps the bans (docs/dedicated-server.md). The version is git describe --tags --always --dirty"
+description = "Build the Unity-independent .NET server (dotnet/Shooter.Server) and run it with -mode server on 0.0.0.0:7777 (SHOOTER_SERVER_ADDRESS / SHOOTER_SERVER_PORT change it). It needs server-data/maps/<map>.fpsmap and .fpsnav (make export-server-data), and server-data/rules/<rules>.json and server-data/maps/<map>.points.json (make export-server-rules); -rules <name> picks the rules (default TeamDeathmatch), or -playlist <id> rotates the mode and map each match by server-data/playlists/*.json. Ctrl+C or SIGTERM drains; a second one stops at once. Type players, kick, ban, unban or help on stdin; --ban-file <path> keeps the bans (docs/dedicated-server.md). The version is git describe --tags --always --dirty"
 # 管理のコマンドを端末から打てるよう、mise を挟まずにサーバーへ標準入力をつなぐ
 raw = true
 run = [

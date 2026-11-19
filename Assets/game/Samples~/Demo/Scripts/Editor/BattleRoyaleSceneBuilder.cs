@@ -14,7 +14,7 @@ namespace Shooter.Editor
     {
         public static string ScenePathValue => BuildSceneList.BattleRoyaleScene;
         public static string RulesPathValue => GameRulesAssetBuilder.BattleRoyalePath;
-        public const string MenuPath = "Shooter/Build Battle Royale Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const int SquadCount = 6;
         public const int SquadSize = 3;
@@ -91,7 +91,6 @@ namespace Shooter.Editor
 
         protected override IReadOnlyList<ModeObstacle> Obstacles => MapObstacles;
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new BattleRoyaleSceneBuilder().BuildSceneFromMenu();

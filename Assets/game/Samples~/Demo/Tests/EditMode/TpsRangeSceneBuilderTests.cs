@@ -48,7 +48,7 @@ namespace Shooter.Tests.EditMode
         public void SavesToTheTpsRangeSceneOfTheBuildList()
         {
             Assert.That(TpsRangeSceneBuilder.ScenePath, Is.EqualTo(BuildSceneList.TpsRangeScene));
-            Assert.That(TpsRangeSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build TPS Range Scene"));
+            Assert.That(TpsRangeSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build All Scenes"));
         }
 
         [Test]
@@ -73,6 +73,17 @@ namespace Shooter.Tests.EditMode
             Assert.That(bootstrap.WeaponDefinitions, Is.EqualTo(new[] { rifle, launcher }));
             Assert.That(bootstrap.RulesDefinition, Is.SameAs(rules));
             Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null);
+        }
+
+        [Test]
+        public void TheFloorIsWalledInAlongItsEdges()
+        {
+            var rules = NewRules(GameRulesAssetBuilder.TpsRangeRules());
+            TpsRangeSceneBuilder.PopulateScene(_scene, new[] { NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec()) }, rules);
+
+            Assert.That(Find(SceneBuildHelpers.PerimeterName), Is.Not.Null);
+            SceneBuildHelpersTests.AssertPerimeterEncloses(_scene, -40f, 40f, -40f, 40f, 0f);
+            Assert.That(TpsRangeSceneBuilder.BuiltInNames, Does.Contain(SceneBuildHelpers.PerimeterName), "a fixture cannot take the perimeter's name");
         }
 
         [Test]
@@ -304,6 +315,9 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentException>(
                 () => TpsRangeSceneBuilder.PopulateScene(
                     _scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture(TpsRangeSceneBuilder.VaultWallName) }));
+            Assert.Throws<ArgumentException>(
+                () => TpsRangeSceneBuilder.PopulateScene(
+                    _scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture(SceneBuildHelpers.PerimeterName) }));
             Assert.Throws<ArgumentException>(
                 () => TpsRangeSceneBuilder.PopulateScene(
                     _scene, new[] { rifle }, rules, new ITpsRangeFixture[] { new FakeFixture("Same"), new FakeFixture("Same") }));

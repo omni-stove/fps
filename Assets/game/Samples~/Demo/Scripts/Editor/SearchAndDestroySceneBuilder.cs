@@ -19,7 +19,7 @@ namespace Shooter.Editor
 
         public static string EconomyPath => ModeDefinitionAssets.PathOf(EconomyName);
 
-        public const string MenuPath = "Shooter/Build Search And Destroy Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const string SitesRootName = "BombSites";
         public const string BombObjectName = "Bomb";
@@ -40,7 +40,6 @@ namespace Shooter.Editor
         {
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new SearchAndDestroySceneBuilder().BuildSceneFromMenu();

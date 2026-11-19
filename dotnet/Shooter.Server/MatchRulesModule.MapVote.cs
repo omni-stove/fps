@@ -206,6 +206,10 @@ namespace Shooter.Server
 
             _mapVoteState.RemainingSeconds = _mapVote.RemainingSeconds;
             _mapVoteState.ChosenIndex = chosen;
+
+            // 投票はマップだけを決め、モードは次の項目で決まるので、どのモードのマップを選ぶのかを候補と一緒に知らせる。
+            // 投票は試合の枠が次の項目へ進む前 (NextMapChoosing) に締め切るので、締め切った後に送る分もまだ次の項目を指す
+            _mapVoteState.NextPlaylistEntryName = _match.Playlist?.Upcoming.Name ?? string.Empty;
         }
 
         // string.GetHashCode はプロセスごとに変わるので使わない。試合の Id から同じ種を作り、ログの Id で引き分けの決め方を追えるようにする

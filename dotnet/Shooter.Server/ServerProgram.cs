@@ -68,8 +68,22 @@ namespace Shooter.Server
             output.WriteLine(launch.AntiCheat.Describe());
             output.WriteLine(EosSdkBuild.LogLine(AppContext.BaseDirectory));
 
-            // 最初のマップとほかに読むマップはルールの候補で決まるので、ルールを先に読む
-            if (!ServerRulesData.TryLoad(launch.Rules, runtime.MapSearchRoots, out var rules, out problem))
+            // 最初のマップとほかに読むマップはルールの候補 (プレイリストがあればその項目) で決まるので、ルールを先に読む
+            ServerPlaylist playlist = null;
+            ServerRulesData rules;
+            if (launch.Playlist != null)
+            {
+                // 混ぜる並びをサーバーごとに変えるため、起動ごとに種を取る
+                if (!ServerPlaylist.TryLoad(launch.Playlist, runtime.MapSearchRoots, RandomNumberGenerator.GetInt32(int.MaxValue), out playlist, out problem))
+                {
+                    error.WriteLine(LogTag + " " + problem);
+                    return ExitMisconfigured;
+                }
+
+                output.WriteLine(ServerPlaylistLog.Loaded(playlist));
+                rules = playlist.Current.Data;
+            }
+            else if (!ServerRulesData.TryLoad(launch.Rules, runtime.MapSearchRoots, out rules, out problem))
             {
                 error.WriteLine(LogTag + " " + problem);
                 return ExitMisconfigured;
@@ -81,8 +95,9 @@ namespace Shooter.Server
             rules = rules.WithSettings(launch.ApplyPrivacy(rules.Settings, RandomNumberGenerator.GetInt32, out var generatedJoinCode));
             output.WriteLine(ServerLaunch.PrivacyLogLine(rules.Settings, generatedJoinCode));
 
-            var mapPool = rules.Settings.MapPool;
-            if (!ServerMapData.TryLoad(launch.StartMap(mapPool), runtime.MapSearchRoots, out var map, out problem))
+            var mapPool = PlaylistMapPool(playlist, rules.Settings.MapPool);
+            var startMap = playlist != null ? playlist.Current.Map : launch.StartMap(mapPool);
+            if (!ServerMapData.TryLoad(startMap, runtime.MapSearchRoots, out var map, out problem))
             {
                 error.WriteLine(LogTag + " " + problem);
                 return ExitMisconfigured;
@@ -157,7 +172,13 @@ namespace Shooter.Server
                     rules.Settings.RestartDelaySeconds,
                     rules,
                     maps,
-                    bans);
+                    bans,
+                    playlist);
+                if (playlist != null)
+                {
+                    output.WriteLine(ServerPlaylistLog.Entry(playlist, playlist.Current, playlist.Round));
+                }
+
                 var code = Start(server, error);
                 if (code != ExitOk)
                 {
@@ -173,6 +194,27 @@ namespace Shooter.Server
                 var stopped = Shutdown(server, error);
                 return stopped == ExitOk ? server.ExitCode : stopped;
             }
+        }
+
+        // 項目のマップを先に並べ、最初の項目のルールの mapPool を後ろに足す。投票はこの全部から候補を選ぶので、mapPool のマップへも投票で替えられる
+        internal static IReadOnlyList<string> PlaylistMapPool(ServerPlaylist playlist, IReadOnlyList<string> mapPool)
+        {
+            ArgumentNullException.ThrowIfNull(mapPool);
+            if (playlist == null)
+            {
+                return mapPool;
+            }
+
+            var names = new List<string>(playlist.MapNames);
+            foreach (var name in mapPool)
+            {
+                if (!names.Contains(name))
+                {
+                    names.Add(name);
+                }
+            }
+
+            return names;
         }
 
         // Unity のサーバー (NetBootstrap) と同じく、EOS を求められても認証情報が揃わなければ UDP で待ち受ける。

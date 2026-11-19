@@ -53,6 +53,16 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void LevelIsWalledInAlongTheFloorEdges()
+        {
+            EnemyTestSceneBuilder.CreateLevel(_scene);
+
+            Assert.That(_scene.rootCount, Is.EqualTo(4), "the floor, the wall, the low cover and the perimeter");
+            Assert.That(Find(SceneBuildHelpers.PerimeterName), Is.Not.Null);
+            SceneBuildHelpersTests.AssertPerimeterEncloses(_scene, -20f, 20f, -20f, 20f, 0f);
+        }
+
+        [Test]
         public void LevelRefusesANonEmptyScene()
         {
             var stray = new GameObject("Stray");

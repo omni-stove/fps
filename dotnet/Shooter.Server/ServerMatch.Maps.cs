@@ -208,7 +208,7 @@ namespace Shooter.Server
 
         // 投票しないなら次の試合のマップは項目のマップに決まる (RequestNextMap は投票しか呼ばない) ので、そのマップだけで確かめる。
         // すべてのマップで確かめると、台車の道筋のように一部のマップにしか無いものを要るモードを、別のマップの項目と同じプレイリストに入れられないため
-        private IReadOnlyList<ServerMapData> MapsOf(ServerPlaylistEntry entry)
+        private ServerMapData[] MapsOf(ServerPlaylistEntry entry)
         {
             return HoldsMapVote ? null : new[] { FindMap(entry.Map) };
         }

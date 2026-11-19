@@ -175,6 +175,32 @@ namespace Shooter.NetV2
             return presentation;
         }
 
+        // 一人称の武器モデル (ViewmodelPresenter) は ViewRig の ViewmodelRoot の下にしか出せないので、オフラインの体 (GameBootstrap) と同じく ViewRig を付ける。
+        // 目は Show が動かすので、ViewRig は一人称のまま置き、三人称には切り替えない。
+        public ViewmodelPresenter AttachViewmodel()
+        {
+            var rig = GetComponent<ViewRig>();
+            if (rig == null)
+            {
+                rig = gameObject.AddComponent<ViewRig>();
+            }
+
+            if (!rig.IsInitialized)
+            {
+                rig.Initialize(_eye, _camera);
+            }
+
+            rig.Mode = ViewMode.FirstPerson;
+            rig.ApplyBodyVisibility(true);
+            var presenter = GetComponent<ViewmodelPresenter>();
+            if (presenter == null)
+            {
+                presenter = gameObject.AddComponent<ViewmodelPresenter>();
+            }
+
+            return presenter;
+        }
+
         // 撃つ位置は目なので、サーバーが当たりの頭をずらすのと同じ量 (LeanStep.EyeOffset) だけ目を横へずらす。
         // 本体は yaw で回っているので、ずらす向きは本体の右 (ローカルの x) になる。
         public void Show(CharacterMotorState state)

@@ -142,6 +142,25 @@ namespace Shooter.NetV2
             return true;
         }
 
+        // オフラインの PlayerVehicleRider と同じく、自分の武器を撃てる席 (VehicleSeatFiring.OwnWeapon) でだけ一人称の武器を残す。
+        // シーンに無い乗り物の席は撃てる席か分からないので、武器を構えた手が乗り物と重ならないよう隠す側に倒す。
+        public bool HidesOwnWeapon()
+        {
+            var seat = _vehicles != null ? _vehicles.LocalSeat : VehicleSeatSync.None;
+            if (!seat.IsRiding)
+            {
+                return false;
+            }
+
+            var vehicle = seat.Vehicle < _scene.Count ? _scene[seat.Vehicle].Vehicle : null;
+            if (vehicle == null || seat.Seat < 0 || seat.Seat >= vehicle.Seats.Count)
+            {
+                return true;
+            }
+
+            return vehicle.FiringOf(vehicle.Seats[seat.Seat]) != VehicleSeatFiring.OwnWeapon;
+        }
+
         public void SendRequests(NetV2LocalPlayer local, MatchClient client, Vector3 feet)
         {
             if (_vehicles == null || local == null || client == null)

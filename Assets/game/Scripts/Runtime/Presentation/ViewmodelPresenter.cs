@@ -23,6 +23,8 @@ namespace Shooter.Runtime
         public const string ReasonNoViewmodel = "no-viewmodel";
         public const string ReasonDisabled = "disabled";
         public const string ReasonHolstered = "holstered";
+        public const string ReasonDowned = "downed";
+        public const string ReasonSeated = "seated";
 
         private static readonly HashSet<string> _warnedWeaponIds = new HashSet<string>(StringComparer.Ordinal);
         private static bool _warnedMissingCatalog;
@@ -72,6 +74,9 @@ namespace Shooter.Runtime
         public Func<string> WeaponIdSource { get; set; }
 
         public Func<string, IReadOnlyList<string>> AttachmentsSource { get; set; }
+
+        // 死んだ・しまったを Damageable と WeaponController から読めない本体 (NetV2 の自分の体) は、隠す理由 (Reason*) をここから渡す。
+        public Func<string> HiddenReasonSource { get; set; }
 
         public AttachmentModelCatalog AttachmentModels
         {
@@ -277,7 +282,7 @@ namespace Shooter.Runtime
                 return ReasonHolstered;
             }
 
-            return null;
+            return HiddenReasonSource != null ? HiddenReasonSource() : null;
         }
 
         private string WantedWeaponId()

@@ -76,17 +76,17 @@ namespace Shooter.Core
 
         public static string Lost(AccountKind kind)
         {
-            return LogTag + " the " + Describe(kind) + " sign-in ended; signing in again";
+            return LogTag + " " + Describe(kind) + " sign-in ended; signing in again";
         }
 
         public static string Refreshed(AccountKind kind)
         {
-            return LogTag + " refreshed the " + Describe(kind) + " sign-in";
+            return LogTag + " refreshed " + Describe(kind) + " sign-in";
         }
 
         public static string RefreshFailed(AccountKind kind, string error)
         {
-            return LogTag + " refreshing the " + Describe(kind) + " sign-in failed: " + Require(error, nameof(error))
+            return LogTag + " refreshing " + Describe(kind) + " sign-in failed: " + Require(error, nameof(error))
                 + "; signing in again when it expires";
         }
 

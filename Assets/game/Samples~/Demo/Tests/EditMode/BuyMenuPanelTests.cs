@@ -123,6 +123,22 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AFreeItemIsBoughtWhenTheWalletIsPublishedAgainWithTheSameMoney()
+        {
+            var free = new BuyCatalog(new[] { new BuyItem(FragId, BuyItemKind.Throwable, 0, nameKey: "grenade.frag") });
+            Open(800, free);
+            _sender = PublishSender(free, answersAtOnce: true);
+
+            Assert.That(_panel.Buy(0), Is.True);
+
+            Assert.That(_panel.PendingItemId, Is.Null);
+            Assert.That(_panel.IsStatusError, Is.False);
+            Assert.That(_panel.MoneyText, Is.EqualTo("所持金 $800"));
+            _panel.Tick(10f);
+            Assert.That(_panel.IsStatusError, Is.False, "the answer timeout does not turn a bought item into a failure");
+        }
+
+        [Test]
         public void WhileWaitingForAnAnswerItShowsBuyingAndDoesNotSendAgain()
         {
             Open(800, Catalog());

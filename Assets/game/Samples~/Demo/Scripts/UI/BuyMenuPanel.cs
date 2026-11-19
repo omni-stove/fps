@@ -570,7 +570,8 @@ namespace Shooter.Runtime
             }
 
             _wallet = wallet;
-            if (_pending != null && wallet.Value.Money < _moneyAtSend)
+            // 値段 0 の品は額が減らないので、送った後の財布の出し直しそのものを「買った」とみなす
+            if (_pending != null && (wallet.Value.Money < _moneyAtSend || _pending.Price <= 0))
             {
                 var item = _pending;
                 _pending = null;

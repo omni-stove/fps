@@ -45,7 +45,7 @@ namespace Shooter.Runtime
 
         public static AchievementSpec LoadSpec()
         {
-            return KitTuning.Load(c => c.AchievementsTuning, AchievementJson.ResourcePath, AchievementJson.Parse, AchievementSpec.Default);
+            return KitTuning.Load(c => c.AchievementsTuning, KitTuning.AchievementsResourcePath, AchievementJson.Parse, AchievementSpec.Default);
         }
 
         public void Install()
@@ -89,7 +89,7 @@ namespace Shooter.Runtime
             _progression.ProfileChanged -= OnProfileChanged;
             _progression.MatchRecording -= OnMatchRecording;
             SceneManager.sceneLoaded -= OnSceneLoaded;
-            GameSignals.Achievements.ClearIfCurrent(_published);
+            ProgressionSignals.Achievements.ClearIfCurrent(_published);
             _published = null;
             IsInstalled = false;
         }
@@ -213,7 +213,7 @@ namespace Shooter.Runtime
             }
 
             _published = progress;
-            GameSignals.Achievements.Publish(progress);
+            ProgressionSignals.Achievements.Publish(progress);
         }
 
         private bool IsLocal(int id)

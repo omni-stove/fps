@@ -28,7 +28,7 @@ namespace Shooter.Runtime
         {
             get
             {
-                var slots = new List<string> { ProfileStore.Slot };
+                var slots = new List<string>();
                 foreach (var registration in _registrations)
                 {
                     foreach (var slot in registration.StartupSlots)
@@ -46,7 +46,7 @@ namespace Shooter.Runtime
 
         public static ISaveStorage Storage => Acquire();
 
-        // 本体はプロフィールのスロットしか知らないので、他のセーブを同期する側 (キャンペーンなど) が、
+        // 本体はどのセーブの形も知らないので、セーブを同期する側 (プロフィール・キャンペーンなど) が、
         // どのスロットが自分のものか・起動時に見に行くスロット・クラウドの中身を読めるかを渡す。
         public static void RegisterSlots(Func<string, bool> owns, IEnumerable<string> startupSlots, Func<string, bool> canRead)
         {
@@ -101,7 +101,7 @@ namespace Shooter.Runtime
 
         public static bool Syncs(string slot)
         {
-            return string.Equals(slot, ProfileStore.Slot, StringComparison.Ordinal) || OwnerOf(slot) != null;
+            return OwnerOf(slot) != null;
         }
 
         public static long UnixMillisecondsNow()
@@ -118,12 +118,6 @@ namespace Shooter.Runtime
         {
             try
             {
-                if (string.Equals(slot, ProfileStore.Slot, StringComparison.Ordinal))
-                {
-                    PlayerProfile.FromJson(text);
-                    return true;
-                }
-
                 // 持ち主のいないスロットは中身の形を誰も知らないので、手元を書き換えないよう読めないものとして扱う。
                 var owner = OwnerOf(slot);
                 return owner != null && owner.CanRead(text);

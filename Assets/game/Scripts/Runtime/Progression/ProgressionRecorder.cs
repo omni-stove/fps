@@ -7,9 +7,9 @@ namespace Shooter.Runtime
 {
     public sealed class ProgressionRecorder
     {
-        public const string ResourcePath = "Tuning/progression";
+        public const string ResourcePath = KitTuning.ProgressionResourcePath;
 
-        public const string SkillResourcePath = "Tuning/skill";
+        public const string SkillResourcePath = KitTuning.SkillResourcePath;
 
         private readonly ProfileStore _store;
         private readonly IParticipants _participants;

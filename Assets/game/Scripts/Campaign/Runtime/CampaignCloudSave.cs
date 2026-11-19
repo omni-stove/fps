@@ -17,7 +17,7 @@ namespace Shooter.Runtime
             return true;
         }
 
-        // ProgressionBootstrap が BeforeSceneLoad で同期を作り、そのとき起動時のスロットを受け取るので、それより前に入れる。
+        // 同期は CloudSaveBootstrap.Storage を最初に引いたとき (BeforeSceneLoad 以降) に作られ、そのとき起動時のスロットを受け取るので、それより前に入れる。
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void RegisterOnPlay()
         {

@@ -9,6 +9,8 @@ namespace Shooter.Core.Tests
         [TestCase("melee.json")]
         [TestCase("streaks.json")]
         [TestCase("loot.json")]
+        [TestCase("extraction.json")]
+        [TestCase("stash.json")]
         public void TheServerReadsTheSameTuningAsUnity(string fileName)
         {
             var root = RepositoryRoot();

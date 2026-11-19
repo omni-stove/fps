@@ -256,13 +256,13 @@ namespace Shooter.Core.Tests
 
             Assert.That(
                 GameRulesLog.Read(_source, rules),
-                Is.EqualTo("[GameRules] read 'Rules/Test.json' emote=On stamina=Off respawnAnchor=Squad,Base reloadInterruptedBy=Melee,Grenade idleWarningSeconds=15"));
+                Is.EqualTo("[GameRules] read 'Rules/Test.json' emote=On stamina=Off respawnAnchor=Squad,Base reloadInterruptedBy=Melee,Grenade aimWhileReloading=On idleWarningSeconds=15"));
             Assert.That(
                 GameRulesLog.Read(null, GameRules.Default),
-                Is.EqualTo("[GameRules] read '-' emote=Off stamina=Off respawnAnchor=Base reloadInterruptedBy=Melee,Grenade idleWarningSeconds=15"));
+                Is.EqualTo("[GameRules] read '-' emote=Off stamina=Off respawnAnchor=Base reloadInterruptedBy=Melee,Grenade aimWhileReloading=On idleWarningSeconds=15"));
             Assert.That(
                 GameRulesLog.Read(_source, GameRules.Default.WithIdleWarningSeconds(22.5f)),
-                Is.EqualTo("[GameRules] read 'Rules/Test.json' emote=Off stamina=Off respawnAnchor=Base reloadInterruptedBy=Melee,Grenade idleWarningSeconds=22.5"));
+                Is.EqualTo("[GameRules] read 'Rules/Test.json' emote=Off stamina=Off respawnAnchor=Base reloadInterruptedBy=Melee,Grenade aimWhileReloading=On idleWarningSeconds=22.5"));
             Assert.Throws<ArgumentNullException>(() => GameRulesLog.Read(_source, null));
         }
 
@@ -354,7 +354,7 @@ namespace Shooter.Core.Tests
         public void ItemNamesMatchTheRulesConstructors()
         {
             Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(27));
-            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(30));
+            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(31));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
 
@@ -406,7 +406,67 @@ namespace Shooter.Core.Tests
 
             Assert.That(
                 GameRulesLog.Read(null, rules),
-                Is.EqualTo("[GameRules] read '-' emote=Off stamina=Off respawnAnchor=Base reloadInterruptedBy=- idleWarningSeconds=15"));
+                Is.EqualTo("[GameRules] read '-' emote=Off stamina=Off respawnAnchor=Base reloadInterruptedBy=- aimWhileReloading=On idleWarningSeconds=15"));
+        }
+
+        [Test]
+        public void OmittedAimWhileReloadingLetsYouAimAndAWrittenValueIsRead()
+        {
+            var omitted = GameRulesJson.Parse("{}", _source).Actions;
+            Assert.That(omitted.AimWhileReloading, Is.EqualTo(AimWhileReloading.On));
+            Assert.That(omitted.BlocksAimWhileReloading(), Is.False);
+            Assert.That(omitted.InterruptsReload(ReloadInterrupt.Aim), Is.False);
+
+            var off = GameRulesJson.Parse("{\"actions\": {\"aimWhileReloading\": \"Off\"}}", _source).Actions;
+            Assert.That(off.AimWhileReloading, Is.EqualTo(AimWhileReloading.Off));
+            Assert.That(off.BlocksAimWhileReloading(), Is.True);
+
+            var aimInterrupts = GameRulesJson.Parse("{\"actions\": {\"reloadInterruptedBy\": [\"Melee\", \"Aim\"]}}", _source).Actions;
+            Assert.That(aimInterrupts.InterruptsReload(ReloadInterrupt.Aim), Is.True);
+            Assert.That(aimInterrupts.InterruptsReload(ReloadInterrupt.Grenade), Is.False);
+        }
+
+        [Test]
+        public void AimInReloadInterruptedByWinsOverAimWhileReloadingOff()
+        {
+            var actions = ActionRules.Default
+                .WithAimWhileReloading(AimWhileReloading.Off)
+                .WithReloadInterruptedBy(new[] { ReloadInterrupt.Aim });
+
+            Assert.That(actions.BlocksAimWhileReloading(), Is.False, "aiming cancels the reload instead of waiting for it");
+            Assert.That(actions.InterruptsReload(ReloadInterrupt.Aim), Is.True);
+        }
+
+        [Test]
+        public void WriteThenParseKeepsAimWhileReloadingAndTheAimInterrupt()
+        {
+            var rules = GameRules.Default.WithActions(GameRules.Default.Actions
+                .WithAimWhileReloading(AimWhileReloading.Off)
+                .WithReloadInterruptedBy(new[] { ReloadInterrupt.Grenade, ReloadInterrupt.Aim }));
+
+            var parsed = GameRulesJson.Parse(GameRulesJson.Write(rules), _source).Actions;
+
+            Assert.That(parsed.AimWhileReloading, Is.EqualTo(AimWhileReloading.Off));
+            Assert.That(parsed.ReloadInterruptedBy, Is.EqualTo(new[] { ReloadInterrupt.Grenade, ReloadInterrupt.Aim }));
+            Assert.That(
+                GameRulesLog.Read(null, rules),
+                Is.EqualTo("[GameRules] read '-' emote=Off stamina=Off respawnAnchor=Base reloadInterruptedBy=Grenade,Aim aimWhileReloading=Off idleWarningSeconds=15"));
+        }
+
+        [TestCase("{\"actions\": {\"aimWhileReloading\": \"Never\"}}")]
+        [TestCase("{\"actions\": {\"aimWhileReloading\": \"off\"}}")]
+        [TestCase("{\"actions\": {\"aimWhileReloading\": false}}")]
+        public void BadAimWhileReloadingIsRejectedWithItsName(string json)
+        {
+            var e = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse(json, _source));
+
+            AssertNames(e, "actions.aimWhileReloading");
+        }
+
+        [Test]
+        public void ActionRulesRejectsAnUndefinedAimWhileReloading()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => ActionRules.Default.WithAimWhileReloading((AimWhileReloading)7));
         }
 
         [Test]
@@ -765,6 +825,7 @@ namespace Shooter.Core.Tests
             Assert.That(a.Emote, Is.EqualTo(b.Emote), "actions.emote");
             Assert.That(a.Stamina, Is.EqualTo(b.Stamina), "actions.stamina");
             Assert.That(a.ReloadInterruptedBy, Is.EqualTo(b.ReloadInterruptedBy), "actions.reloadInterruptedBy");
+            Assert.That(a.AimWhileReloading, Is.EqualTo(b.AimWhileReloading), "actions.aimWhileReloading");
         }
     }
 }

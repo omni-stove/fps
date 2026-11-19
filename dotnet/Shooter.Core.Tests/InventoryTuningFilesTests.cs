@@ -11,7 +11,7 @@ namespace Shooter.Core.Tests
         {
             "item.bandage", "item.medkit", "item.armorPlate", "item.keycard", "item.toolbox", "item.ammo9mm", "item.ammo556", "item.ammo12ga",
             "weapon.rifle", "weapon.burstRifle", "weapon.handgun", "weapon.ricochetPistol", "weapon.shotgun",
-            "item.redDot", "item.scope4x", "item.suppressor", "item.compensator", "item.foregrip", "item.extendedMagazine",
+            "item.redDot", "item.scope4x", "item.holoSight", "item.suppressor", "item.compensator", "item.foregrip", "item.extendedMagazine",
         };
         private static readonly string[] _usableNameKeys = { "item.bandage", "item.medkit", "item.armorPlate" };
 

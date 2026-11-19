@@ -336,6 +336,20 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void TheSyncedRulesBlockAimingWhileReloadingOnlyWhenAimDoesNotCancelTheReload()
+        {
+            var off = ActionRules.Default.WithAimWhileReloading(AimWhileReloading.Off);
+
+            Assert.That(default(MatchRulesSync).BlocksAimWhileReloading, Is.False, "aiming is allowed before any rules arrive");
+            Assert.That(MatchRulesSync.From(GameRules.Default).BlocksAimWhileReloading, Is.False);
+            Assert.That(MatchRulesSync.From(GameRules.Default.WithActions(off)).BlocksAimWhileReloading, Is.True);
+            Assert.That(
+                MatchRulesSync.From(GameRules.Default.WithActions(off.WithReloadInterruptedBy(new[] { ReloadInterrupt.Aim }))).BlocksAimWhileReloading,
+                Is.False);
+            Assert.That(MatchRulesSync.From(GameRules.Default.WithActions(off)).SameAs(MatchRulesSync.From(GameRules.Default)), Is.False);
+        }
+
+        [Test]
         public void TheSyncedRulesCarryTheReloadMode()
         {
             var rules = MatchRulesSync.From(GameRules.Default.WithReloadMode(ReloadMode.Manual));

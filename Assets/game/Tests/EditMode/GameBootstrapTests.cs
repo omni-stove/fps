@@ -1250,6 +1250,136 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WithAimWhileReloadingOffAimingWaitsForTheReloadToEnd()
+        {
+            var ads = _world.Ads;
+            var aim = new InputAction("Aim", InputActionType.Button);
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
+            try
+            {
+                ads.Initialize(_world.Camera, _world.Look, aim);
+                _world.Weapon.Initialize(_world.Camera.transform, attack, reload);
+                _world.Weapon.Rules = GameRules.Default.WithActions(ActionRules.Default.WithAimWhileReloading(AimWhileReloading.Off));
+                Assert.That(_world.Weapon.Fire(), Is.True);
+                Assert.That(_world.Weapon.StartReload(), Is.True);
+
+                ads.Tick(true, true, 0.01f);
+
+                Assert.That(ads.AdsBlocker(), Is.True);
+                Assert.That(ads.IsAiming, Is.False, "no aiming while the reload runs");
+                Assert.That(_world.Weapon.Weapon.IsReloading, Is.True, "pressing Aim does not cancel the reload");
+
+                _world.Weapon.Tick(_world.Weapon.Weapon.Spec.ReloadSeconds + 0.1f);
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(true));
+                ads.Tick(true, false, 0.01f);
+
+                Assert.That(_world.Weapon.Weapon.IsReloading, Is.False);
+                Assert.That(ads.IsAiming, Is.True, "holding Aim through the reload aims once it ends");
+            }
+            finally
+            {
+                aim.Dispose();
+                attack.Dispose();
+                reload.Dispose();
+            }
+        }
+
+        [Test]
+        public void ByDefaultAimingDuringAReloadKeepsTheReload()
+        {
+            var ads = _world.Ads;
+            var aim = new InputAction("Aim", InputActionType.Button);
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
+            try
+            {
+                ads.Initialize(_world.Camera, _world.Look, aim);
+                _world.Weapon.Initialize(_world.Camera.transform, attack, reload);
+                Assert.That(_world.Weapon.Fire(), Is.True);
+                Assert.That(_world.Weapon.StartReload(), Is.True);
+
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(true));
+                ads.Tick(true, true, 0.01f);
+
+                Assert.That(ads.IsAiming, Is.True);
+                Assert.That(_world.Weapon.Weapon.IsReloading, Is.True);
+            }
+            finally
+            {
+                aim.Dispose();
+                attack.Dispose();
+                reload.Dispose();
+            }
+        }
+
+        [Test]
+        public void WithAimInReloadInterruptedByStartingToAimCancelsTheReload()
+        {
+            var ads = _world.Ads;
+            var aim = new InputAction("Aim", InputActionType.Button);
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
+            try
+            {
+                ads.Initialize(_world.Camera, _world.Look, aim);
+                _world.Weapon.Initialize(_world.Camera.transform, attack, reload);
+
+                // Off も一緒に入れて、Aim で取り消す方が優先されることも確かめる。
+                _world.Weapon.Rules = GameRules.Default.WithActions(ActionRules.Default
+                    .WithAimWhileReloading(AimWhileReloading.Off)
+                    .WithReloadInterruptedBy(new[] { ReloadInterrupt.Aim }));
+                Assert.That(_world.Weapon.Fire(), Is.True);
+                Assert.That(_world.Weapon.StartReload(), Is.True);
+
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(true));
+                LogAssert.Expect(LogType.Log, WeaponController.FormatReloadCancelledLog(ReloadInterrupt.Aim));
+                ads.Tick(true, true, 0.01f);
+
+                Assert.That(ads.IsAiming, Is.True);
+                Assert.That(_world.Weapon.Weapon.IsReloading, Is.False);
+
+                LogAssert.Expect(LogType.Log, AimDownSights.FormatAdsLog(false));
+                Assert.That(_world.Weapon.StartReload(), Is.True, "reloading from aim is still allowed");
+                Assert.That(ads.IsAiming, Is.False, "the reload lowers the sights");
+                ads.Tick(true, false, 0.01f);
+                Assert.That(_world.Weapon.Weapon.IsReloading, Is.True, "holding Aim after the reload began does not cancel it");
+            }
+            finally
+            {
+                aim.Dispose();
+                attack.Dispose();
+                reload.Dispose();
+            }
+        }
+
+        [Test]
+        public void InterruptReloadCancelsOnlyForAnActionTheRulesList()
+        {
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
+            try
+            {
+                _world.Weapon.Initialize(_world.Camera.transform, attack, reload);
+                Assert.That(_world.Weapon.InterruptReload(ReloadInterrupt.Aim), Is.False, "nothing to cancel without a reload");
+                Assert.That(_world.Weapon.Fire(), Is.True);
+                Assert.That(_world.Weapon.StartReload(), Is.True);
+
+                Assert.That(_world.Weapon.InterruptReload(ReloadInterrupt.Aim), Is.False, "Aim is not in the default list");
+                Assert.That(_world.Weapon.Weapon.IsReloading, Is.True);
+
+                LogAssert.Expect(LogType.Log, "[Combat] reload-cancelled by=Melee");
+                Assert.That(_world.Weapon.InterruptReload(ReloadInterrupt.Melee), Is.True);
+                Assert.That(_world.Weapon.Weapon.IsReloading, Is.False);
+            }
+            finally
+            {
+                attack.Dispose();
+                reload.Dispose();
+            }
+        }
+
+        [Test]
         public void AdsZoomsToTheHeldWeaponAndStopsTheSprint()
         {
             var ads = _world.Ads;

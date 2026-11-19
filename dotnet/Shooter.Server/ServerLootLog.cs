@@ -61,6 +61,11 @@ namespace Shooter.Server
                 + (weaponsGiven < weapons || itemsGiven < items ? " left=lost" : string.Empty);
         }
 
+        public static string Stowed(int playerId, int weapons, int items)
+        {
+            return LogTag + " stow owner=" + Text(playerId) + " weapons=" + Text(weapons) + " items=" + Text(items);
+        }
+
         public static string Refused(int itemId, int playerId, InteractRefusal refusal)
         {
             return LogTag + " open item=" + Text(itemId) + " by=" + Text(playerId) + " refused=" + refusal;

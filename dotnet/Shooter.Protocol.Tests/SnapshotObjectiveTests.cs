@@ -19,7 +19,7 @@ namespace Shooter.Protocol.Tests
         [Test]
         public void TheVersionIs22()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(22));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(23));
         }
 
         [Test]

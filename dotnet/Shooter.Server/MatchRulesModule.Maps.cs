@@ -57,6 +57,13 @@ namespace Shooter.Server
             var points = PointsOf(map);
             _session.ReplaceSpawnPoints(points.SpawnPoints);
             _log.WriteLine(MatchLog.Tag + " spawnPoints=" + Text(points.SpawnPoints.Count) + " map=" + map.Name);
+            // ルールが替わるなら今の目的は捨てるので渡さない。渡すと、前のモードに要るものが無いマップへ移るとき (Domination → Payload) に落ちる。
+            // 新しい目的には UseNextRules が渡す
+            if (_match.NextRules != null && !ReferenceEquals(_match.NextRules, _data.Rules))
+            {
+                return;
+            }
+
             _objective.UseMap(map, points);
             foreach (var player in _match.Players)
             {

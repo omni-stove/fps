@@ -22,7 +22,7 @@ namespace Shooter.Runtime
 
         public static AwarenessIndicatorCatalog Load()
         {
-            var fromContent = GameContent.Pick(c => c.AwarenessIndicator);
+            var fromContent = GameContent.Pick(c => c.AwarenessIndicator as AwarenessIndicatorCatalog);
             return fromContent != null ? fromContent : Resources.Load<AwarenessIndicatorCatalog>(ResourcePath);
         }
     }

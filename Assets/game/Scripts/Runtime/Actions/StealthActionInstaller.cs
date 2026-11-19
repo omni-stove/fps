@@ -8,7 +8,9 @@ namespace Shooter.Runtime
         // ほかのアクションのコンポーネントを読まないので、どこに並んでもよい。組み込みの最後 (グレネード) より前に置く。
         public const int InstallOrder = 350;
 
-        public const string TuningResourcePath = "Tuning/stealth";
+        public const string TuningResourcePath = KitTuning.StealthResourcePath;
+
+        public const string AwarenessIndicatorSlotName = "AwarenessIndicator";
 
         public static StealthNoiseSpec Noise =>
             KitTuning.Load(c => c.StealthTuning, TuningResourcePath, StealthNoiseJson.Parse, StealthNoiseSpec.Default);
@@ -23,10 +25,20 @@ namespace Shooter.Runtime
             target.ApplyNoise(Noise);
         }
 
+        public static void RegisterContentSlots()
+        {
+            GameContentSlots.Register(
+                AwarenessIndicatorSlotName,
+                typeof(AwarenessIndicatorCatalog),
+                c => c.AwarenessIndicator as AwarenessIndicatorCatalog,
+                (c, v) => c.AwarenessIndicator = (AwarenessIndicatorCatalog)v);
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void RegisterOnPlay()
         {
             PlayerActions.Register(new StealthActionInstaller());
+            RegisterContentSlots();
         }
 
 #if UNITY_EDITOR
@@ -34,6 +46,7 @@ namespace Shooter.Runtime
         private static void RegisterInEditor()
         {
             PlayerActions.Register(new StealthActionInstaller());
+            RegisterContentSlots();
         }
 #endif
     }

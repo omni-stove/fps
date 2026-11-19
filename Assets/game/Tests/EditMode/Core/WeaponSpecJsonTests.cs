@@ -321,6 +321,7 @@ namespace Shooter.Core.Tests
         [TestCase("{\"aim\": {\"sight\": {\"overlay\": true}}}", "aim.sight.overlay")]
         [TestCase("{\"weight\": -1}", "weight")]
         [TestCase("{\"moveSpeedMultiplier\": -0.5}", "moveSpeedMultiplier")]
+        [TestCase("{\"drawSeconds\": -0.5}", "drawSeconds")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"x\"}]}", "ammoTypes[0].id")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\", \"round\": {\"range\": 0}}]}", "ammoTypes[0].round.range")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\"}, {\"id\": \"" + _standardId + "\"}]}", "ammoTypes")]
@@ -393,6 +394,26 @@ namespace Shooter.Core.Tests
             Assert.That(bare.MoveSpeedMultiplier, Is.EqualTo(WeaponSpec.DefaultMoveSpeedMultiplier));
             Assert.That(again.Weight, Is.EqualTo(3.5f));
             Assert.That(again.MoveSpeedMultiplier, Is.EqualTo(0.9f));
+        }
+
+        [Test]
+        public void DrawSecondsReadBackAndAreLeftOutWhenUnset()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", \"drawSeconds\": 0.3}", "x.json");
+            var zero = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", \"drawSeconds\": 0}", "x.json");
+            var bare = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\"}", "x.json");
+            var nulled = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", \"drawSeconds\": null}", "x.json");
+
+            Assert.That(read.DrawSeconds, Is.EqualTo(0.3f));
+            Assert.That(zero.DrawSeconds, Is.EqualTo(0f));
+            Assert.That(bare.DrawSeconds, Is.Null);
+            Assert.That(nulled.DrawSeconds, Is.Null);
+            Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(read), "again.json").DrawSeconds, Is.EqualTo(0.3f));
+            Assert.That(WeaponSpecJson.Write(bare), Does.Not.Contain(WeaponSpecJson.DrawSecondsItem), "a weapon without a draw time writes the same JSON as before");
+            Assert.That(read.WithFireInterval(read.FireInterval * 2f).DrawSeconds, Is.EqualTo(0.3f));
         }
 
         [Test]

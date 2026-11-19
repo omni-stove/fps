@@ -168,6 +168,59 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void EachItemsDrawSecondsDecideTheSwitchTime()
+        {
+            var draw = new Dictionary<Item, float?> { [_rifle] = 0.75f, [_pistol] = 0.25f, [_knife] = null };
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol, _knife }, 0.5f, null, item => draw[item]);
+
+            Assert.That(loadout.SwitchSecondsTo(0), Is.EqualTo(0.75f));
+            Assert.That(loadout.SwitchSecondsTo(1), Is.EqualTo(0.25f));
+            Assert.That(loadout.SwitchSecondsTo(2), Is.EqualTo(0.5f), "an item without its own draw time uses the loadout's");
+
+            Assert.That(loadout.TrySelect(1), Is.True);
+            loadout.Tick(0.125f);
+            Assert.That(loadout.IsSwitching, Is.True);
+            loadout.Tick(0.125f);
+            Assert.That(loadout.IsSwitching, Is.False, "the pistol is drawn in 0.25 s");
+
+            Assert.That(loadout.TrySelect(0), Is.True);
+            loadout.Tick(0.5f);
+            Assert.That(loadout.IsSwitching, Is.True, "the rifle takes 0.75 s");
+            loadout.Tick(0.25f);
+            Assert.That(loadout.IsSwitching, Is.False);
+
+            Assert.That(loadout.TrySelect(2), Is.True);
+            loadout.Tick(0.375f);
+            Assert.That(loadout.IsSwitching, Is.True, "the knife falls back to 0.5 s");
+            loadout.Tick(0.125f);
+            Assert.That(loadout.IsSwitching, Is.False);
+        }
+
+        [Test]
+        public void ZeroDrawSecondsSwitchEvenWhenTheLoadoutTakesTime()
+        {
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol }, 0.4f, null, item => item == _pistol ? 0f : (float?)null);
+
+            Assert.That(loadout.TrySelect(1), Is.True);
+            Assert.That(loadout.IsSwitching, Is.False);
+            Assert.That(loadout.TrySelect(0), Is.True);
+            Assert.That(loadout.IsSwitching, Is.True);
+        }
+
+        [TestCase(-0.1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        public void AnInvalidDrawTimeIsRefusedWithoutSwitching(float drawSeconds)
+        {
+            var loadout = new Loadout<Item>(new[] { _rifle, _pistol }, 0.4f, null, item => item == _pistol ? drawSeconds : (float?)null);
+
+            Assert.Throws<InvalidOperationException>(() => loadout.TrySelect(1));
+            Assert.That(loadout.CurrentIndex, Is.Zero);
+            Assert.That(loadout.IsSwitching, Is.False);
+            Assert.Throws<ArgumentOutOfRangeException>(() => loadout.SwitchSecondsTo(2));
+        }
+
+        [Test]
         public void SelectNextWrapsToTheFirst()
         {
             var loadout = Create();

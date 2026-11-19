@@ -131,6 +131,53 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void CreateTakesTheSwitchSecondsAndStartsReady()
+        {
+            var loadout = WeaponLoadout.Create(new[] { _rifle, _handgun }, GameRules.Default, 0.4f);
+
+            Assert.That(loadout.SwitchSeconds, Is.EqualTo(0.4f));
+            Assert.That(loadout.IsSwitching, Is.False);
+            Assert.That(loadout.SelectNext(), Is.True);
+            Assert.That(loadout.IsSwitching, Is.True);
+            loadout.Tick(0.4f);
+            Assert.That(loadout.IsSwitching, Is.False);
+        }
+
+        [Test]
+        public void RestoreHoldsTheEquippedWeaponReadyWithTheSwitchSeconds()
+        {
+            var loadout = WeaponLoadout.Restore(
+                new[] { _rifle, _handgun }, Array.Empty<WeaponAmmo>(), _handgunId, GameRules.Default, 0.4f, out _);
+
+            Assert.That(loadout.CurrentIndex, Is.EqualTo(1));
+            Assert.That(loadout.SwitchSeconds, Is.EqualTo(0.4f));
+            Assert.That(loadout.IsSwitching, Is.False, "the restored weapon is already in hand");
+            Assert.That(loadout.SelectPrevious(), Is.True);
+            Assert.That(loadout.IsSwitching, Is.True);
+        }
+
+        [Test]
+        public void EachWeaponsDrawSecondsOverrideTheLoadoutsSwitchSeconds()
+        {
+            var quickHandgun = new WeaponSpec(_handgunId, "weapon.handgun", WeaponCategory.Handgun, drawSeconds: 0.2f);
+            var loadout = WeaponLoadout.Create(new[] { _rifle, quickHandgun }, GameRules.Default, 0.4f);
+
+            Assert.That(loadout.SwitchSecondsTo(0), Is.EqualTo(0.4f), "the rifle has no draw time of its own");
+            Assert.That(loadout.SwitchSecondsTo(1), Is.EqualTo(0.2f));
+        }
+
+        [Test]
+        public void RestoreHoldsAWeaponWithItsOwnDrawTimeReady()
+        {
+            var slowHandgun = new WeaponSpec(_handgunId, "weapon.handgun", WeaponCategory.Handgun, drawSeconds: 1f);
+            var loadout = WeaponLoadout.Restore(
+                new[] { _rifle, slowHandgun }, Array.Empty<WeaponAmmo>(), _handgunId, GameRules.Default, 0.4f, out _);
+
+            Assert.That(loadout.CurrentIndex, Is.EqualTo(1));
+            Assert.That(loadout.IsSwitching, Is.False);
+        }
+
+        [Test]
         public void RestoreFillsMissingWeaponsAndClampsTheMagazine()
         {
             var saved = new[] { new WeaponAmmo(_rifleId, 99, 5) };
@@ -227,6 +274,8 @@ namespace Shooter.Core.Tests
 
             Assert.Throws<ArgumentNullException>(() => WeaponLoadout.Restore(new[] { _rifle }, null, null, out _));
             Assert.Throws<ArgumentException>(() => WeaponLoadout.Restore(new[] { _rifle }, new WeaponAmmo[] { null }, null, out _));
+            Assert.Throws<ArgumentOutOfRangeException>(() => WeaponLoadout.Create(new[] { _rifle }, GameRules.Default, -1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => WeaponLoadout.Create(new[] { _rifle }, GameRules.Default, float.NaN));
             Assert.Throws<ArgumentNullException>(() => WeaponLoadout.IndexOf(null, _rifleId));
             Assert.Throws<ArgumentNullException>(() => WeaponLoadout.SnapshotAmmo(null));
         }

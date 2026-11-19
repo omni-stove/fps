@@ -114,6 +114,7 @@ namespace Shooter.Editor
             definition.ShotNoiseRadius = spec.ShotNoiseRadius;
             definition.Weight = spec.Weight;
             definition.MoveSpeedMultiplier = spec.MoveSpeedMultiplier;
+            definition.DrawSeconds = spec.DrawSeconds;
             definition.Description = spec.Description;
 
             var trigger = spec.Trigger;

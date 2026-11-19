@@ -105,7 +105,8 @@ namespace Shooter.Core
                 spec.ShotNoiseRadius * noise,
                 weight,
                 spec.MoveSpeedMultiplier * speed,
-                spec.Description);
+                spec.Description,
+                spec.DrawSeconds);
         }
 
         public static IReadOnlyList<string> Keep(ItemCatalog catalog, string weaponId, IEnumerable<string> attachmentItemIds)

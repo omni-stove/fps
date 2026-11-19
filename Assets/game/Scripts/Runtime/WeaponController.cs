@@ -37,6 +37,7 @@ namespace Shooter.Runtime
         private WeaponDefinition[] _loadedDefinitions;
         private GameRules _rules = GameRules.Default;
         private GameRules _loadedRules;
+        private float _switchSeconds;
         private readonly RecoilState _recoil = new RecoilState();
         private readonly PelletHits<Damageable> _pelletHits = new PelletHits<Damageable>();
         private int _shotCount;
@@ -61,6 +62,23 @@ namespace Shooter.Runtime
             get => _definitions ?? Array.Empty<WeaponDefinition>();
             set => _definitions = value != null ? ToArray(value) : Array.Empty<WeaponDefinition>();
         }
+
+        // 既定の 0 は持ち替えを待たせない。シーンの GameBootstrap がロードアウトの秒数を入れる。
+        public float SwitchSeconds
+        {
+            get => _switchSeconds;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "switch seconds must be a non-negative finite number");
+                }
+
+                _switchSeconds = value;
+            }
+        }
+
+        public bool IsSwitching => _loadout != null && !_unarmed && _loadout.IsSwitching;
 
         public GameRules Rules
         {
@@ -117,7 +135,7 @@ namespace Shooter.Runtime
 
         public Func<bool> FireBlocker { get; set; }
 
-        public bool IsFireBlocked => IsHolstered || (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
+        public bool IsFireBlocked => IsHolstered || IsSwitching || (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
 
         public ControlHandoff Holster { get; } = new ControlHandoff();
 
@@ -373,7 +391,7 @@ namespace Shooter.Runtime
             var loaded = ToArray(definitions ?? throw new ArgumentNullException(nameof(definitions)));
             var specs = ToSpecs(loaded);
             var rules = _rules;
-            var loadout = WeaponLoadout.Create(specs, rules);
+            var loadout = WeaponLoadout.Create(specs, rules, _switchSeconds);
 
             ReplaceAction(ref _attackAction, ref _enabledAttackAction, attackAction);
             ReplaceAction(ref _reloadAction, ref _enabledReloadAction, reloadAction);
@@ -511,7 +529,7 @@ namespace Shooter.Runtime
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (weapon == null || IsReloadBlockedByModifier || !weapon.TryStartReload())
+            if (weapon == null || IsSwitching || IsReloadBlockedByModifier || !weapon.TryStartReload())
             {
                 return false;
             }
@@ -531,7 +549,7 @@ namespace Shooter.Runtime
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (weapon == null || !weapon.TryActiveReload(out var result))
+            if (weapon == null || IsSwitching || !weapon.TryActiveReload(out var result))
             {
                 return false;
             }
@@ -552,6 +570,7 @@ namespace Shooter.Runtime
             CancelReloadBlockedByModifier();
             var weapon = Weapon;
             weapon?.Tick(deltaSeconds);
+            _loadout?.Tick(deltaSeconds);
 
             // 持ち替えた直後の時間をしまった武器の撃ち方に数えないよう、進める前に今の武器の撃ち方へ付け替える。
             _trigger.Bind(weapon?.Trigger);

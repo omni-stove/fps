@@ -35,7 +35,7 @@ namespace Shooter.Runtime
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (weapon == null || !weapon.TrySwitchAmmoType())
+            if (weapon == null || IsSwitching || !weapon.TrySwitchAmmoType())
             {
                 return false;
             }

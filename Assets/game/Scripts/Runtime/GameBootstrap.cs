@@ -56,8 +56,11 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("床を生成するか。NavMesh を焼いた床を持つシーンでは切る")]
         private bool _createFloor = true;
 
-        [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義の並び (既定のロードアウト)。空なら入口 (GameContent) のロードアウトのスロットの武器")]
+        [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義の並び (既定のロードアウト)。空ならロードアウトのスロットの武器")]
         private WeaponDefinition[] _weaponDefinitions = Array.Empty<WeaponDefinition>();
+
+        [SerializeField, Tooltip("プレイヤーのロードアウト。持ち替え秒数と、武器の並びが空のときの武器を引く。空なら入口 (GameContent) のロードアウト")]
+        private LoadoutDefinition _loadout;
 
         [SerializeField, Tooltip("プレイヤーの自動回復と予備弾のルール。空なら入口 (GameContent) のルール、それも無ければ GameRules.Default を使い警告を出す")]
         private GameRulesDefinition _rules;
@@ -142,6 +145,23 @@ namespace Shooter.Runtime
             }
         }
 
+        public LoadoutDefinition Loadout
+        {
+            get => _loadout;
+            set => _loadout = value;
+        }
+
+        public LoadoutDefinition EffectiveLoadout => GameContent.Pick(_loadout, c => c.Loadout);
+
+        public float EffectiveSwitchSeconds
+        {
+            get
+            {
+                var loadout = EffectiveLoadout;
+                return loadout != null ? loadout.SwitchSeconds : LoadoutDefinition.DefaultSwitchSeconds;
+            }
+        }
+
         public IReadOnlyList<WeaponDefinition> EffectiveWeaponDefinitions
         {
             get
@@ -152,7 +172,7 @@ namespace Shooter.Runtime
                     return wired;
                 }
 
-                var loadout = GameContent.Pick(c => c.Loadout);
+                var loadout = EffectiveLoadout;
                 if (loadout == null)
                 {
                     return wired;
@@ -292,7 +312,7 @@ namespace Shooter.Runtime
             {
                 floor = _createFloor ? CreateFloor(_floorPrefab) : null;
                 player = CreatePlayer(
-                    EffectiveWeaponDefinitions, AbilityDefinitions, rules, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
+                    EffectiveWeaponDefinitions, AbilityDefinitions, rules, EffectiveSwitchSeconds, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
                     out var weapon, out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera,
                     out var abilities);
                 ApplyPlayerVisuals(player, grenades, MockBodyPrefabs, _grenadePrefab);

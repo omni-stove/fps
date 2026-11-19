@@ -79,7 +79,7 @@ namespace Shooter.Server
             _burstRoundsLeft = 0;
             _baseSpecs = new List<WeaponSpec>(specs).AsReadOnly();
             _attachments.Clear();
-            SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon));
+            SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon, DrawSeconds));
         }
 
         public IReadOnlyList<string> AttachmentsOf(string weaponId)
@@ -170,7 +170,7 @@ namespace Shooter.Server
             // TrySelect(0) では持ち替えの待ちが始まるので、同じ武器で並びを作り直して待たずに 0 番を構える
             if (_loadout.CurrentIndex != 0 || _loadout.IsSwitching)
             {
-                SetLoadout(new Loadout<ServerWeapon>(_loadout.Items, _loadout.SwitchSeconds, HolsterWeapon));
+                SetLoadout(new Loadout<ServerWeapon>(_loadout.Items, _loadout.SwitchSeconds, HolsterWeapon, DrawSeconds));
             }
         }
 
@@ -360,6 +360,8 @@ namespace Shooter.Server
                 weapon.Reloaded += HandleReloaded;
             }
         }
+
+        private static float? DrawSeconds(ServerWeapon weapon) => weapon.Spec.DrawSeconds;
 
         private static void HolsterWeapon(ServerWeapon weapon)
         {

@@ -97,6 +97,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(first.Weapon.Fire(), Is.True);
 
             Assert.That(first.Weapon.SelectNext(), Is.True);
+            first.Weapon.Tick(first.Weapon.SwitchSeconds);
             LogAssert.Expect(LogType.Log, "[Combat] fire ammo=29");
             Assert.That(first.Weapon.Fire(), Is.True);
 

@@ -93,6 +93,9 @@ namespace Shooter.Core
 
         public string Description { get; }
 
+        // null ならロードアウトの持ち替え秒数を使う。
+        public float? DrawSeconds { get; }
+
         public WeaponSpec(
             string id,
             string nameKey,
@@ -171,7 +174,8 @@ namespace Shooter.Core
             float shotNoiseRadius = DefaultShotNoiseRadius,
             float weight = DefaultWeight,
             float moveSpeedMultiplier = DefaultMoveSpeedMultiplier,
-            string description = null)
+            string description = null,
+            float? drawSeconds = null)
         {
             var normalizedId = SpecGuard.LowercaseUuid(id, nameof(id));
 
@@ -183,6 +187,10 @@ namespace Shooter.Core
             SpecGuard.NonNegativeFinite(shotNoiseRadius, nameof(shotNoiseRadius));
             SpecGuard.NonNegativeFinite(weight, nameof(weight));
             SpecGuard.NonNegativeFinite(moveSpeedMultiplier, nameof(moveSpeedMultiplier));
+            if (drawSeconds.HasValue)
+            {
+                SpecGuard.NonNegativeFinite(drawSeconds.Value, nameof(drawSeconds));
+            }
 
             var resolvedRound = round ?? RoundSpec.Default;
             var resolvedImpact = impact ?? ImpactSpec.Default;
@@ -202,6 +210,7 @@ namespace Shooter.Core
             Weight = weight;
             MoveSpeedMultiplier = moveSpeedMultiplier;
             Description = description ?? string.Empty;
+            DrawSeconds = drawSeconds;
         }
 
         public WeaponSpec WithFireInterval(float fireInterval)
@@ -209,7 +218,7 @@ namespace Shooter.Core
             var trigger = Trigger.WithFireInterval(fireInterval);
             return ReferenceEquals(trigger, Trigger)
                 ? this
-                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier, Description);
+                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier, Description, DrawSeconds);
         }
 
         // 起爆を止まったとき・寿命が尽きたときにすると、ヒットスキャンなどの止まりも尽きもしない弾では爆発しないまま設定だけが残る。

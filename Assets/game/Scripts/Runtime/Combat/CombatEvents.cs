@@ -39,6 +39,8 @@ namespace Shooter.Runtime
 
         public static event Action<MatchResult> MatchFinished;
 
+        public static event Action<AircraftPartBrokenInfo> AircraftPartBroken;
+
         public static ShotAttribution? CurrentAttribution => _attribution;
 
         // ルートを辿らないのは、敵や標的が 1 つの親の下にまとめて置かれ、ルートでは全員が同じ Id になるため。
@@ -135,6 +137,11 @@ namespace Shooter.Runtime
             Invoke(MatchFinished, result);
         }
 
+        public static void RaiseAircraftPartBroken(AircraftPartBrokenInfo info)
+        {
+            Invoke(AircraftPartBroken, info);
+        }
+
         public static void ClearSubscribers()
         {
             ShotFired = null;
@@ -147,6 +154,7 @@ namespace Shooter.Runtime
             Landed = null;
             BossPhaseChanged = null;
             MatchFinished = null;
+            AircraftPartBroken = null;
             _attribution = null;
         }
 
@@ -340,6 +348,31 @@ namespace Shooter.Runtime
 
         // 復活などで最初の段階へ戻ったとき。演出が「段階が進んだ」と取り違えないよう見分けられるようにする。
         public bool IsReset => Index < PreviousIndex;
+    }
+
+    public readonly struct AircraftPartBrokenInfo
+    {
+        private readonly string _partId;
+
+        public AircraftPartBrokenInfo(GameObject aircraft, string partId, AircraftDamageEffect effect, Vector3 position, AircraftCondition condition)
+        {
+            Aircraft = aircraft;
+            _partId = partId ?? string.Empty;
+            Effect = effect;
+            Position = position;
+            Condition = condition;
+        }
+
+        public GameObject Aircraft { get; }
+
+        public string PartId => _partId ?? string.Empty;
+
+        public AircraftDamageEffect Effect { get; }
+
+        // 演出 (煙・火花) を壊れた部位から出せるよう、命中した部位の位置を渡す。
+        public Vector3 Position { get; }
+
+        public AircraftCondition Condition { get; }
     }
 
     public readonly struct DamageTakenInfo

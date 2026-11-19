@@ -174,6 +174,55 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheDamageBlockStartsFromTheDefaultPartsAndSurvivesARoundTrip()
+        {
+            var definition = NewDefinition("Trainer");
+
+            var fresh = definition.ToDamageSpec();
+            Assert.That(fresh.Parts.Count, Is.EqualTo(4));
+            Assert.That(fresh.FindPart(AircraftDamageSpec.DefaultLeftWingId).Effect, Is.EqualTo(AircraftDamageEffect.LeftLift));
+            Assert.That(fresh.FindPart(AircraftDamageSpec.DefaultEngineId).Durability, Is.EqualTo(AircraftDamageSpec.DefaultEngineDurability));
+            Assert.That(fresh.MinLift, Is.EqualTo(AircraftDamageSpec.DefaultMinLift));
+            Assert.That(fresh.MinControl, Is.EqualTo(AircraftDamageSpec.DefaultMinControl));
+            Assert.That(fresh.MinThrust, Is.EqualTo(AircraftDamageSpec.DefaultMinThrust));
+
+            definition.Damage.CopyFrom(new AircraftDamageSpec(
+                new[]
+                {
+                    new AircraftDamagePartSpec("engine_left", AircraftDamageEffect.Thrust, 120),
+                    new AircraftDamagePartSpec("engine_right", AircraftDamageEffect.Thrust, 130),
+                },
+                minLift: 0.1f,
+                minControl: 0.5f,
+                minThrust: 0.05f));
+            var spec = definition.ToDamageSpec();
+
+            Assert.That(spec.Parts.Count, Is.EqualTo(2));
+            Assert.That(spec.Parts[1].Id, Is.EqualTo("engine_right"));
+            Assert.That(spec.Parts[1].Effect, Is.EqualTo(AircraftDamageEffect.Thrust));
+            Assert.That(spec.Parts[1].Durability, Is.EqualTo(130));
+            Assert.That(spec.MinLift, Is.EqualTo(0.1f));
+            Assert.That(spec.MinControl, Is.EqualTo(0.5f));
+            Assert.That(spec.MinThrust, Is.EqualTo(0.05f));
+        }
+
+        [Test]
+        public void ToDamageSpecNamesTheAssetWhenAPartIsInvalid()
+        {
+            var definition = NewDefinition("BrokenPlane");
+            definition.Damage.Parts = new[]
+            {
+                new AircraftDamageSettings.Part("tail", AircraftDamageEffect.Control, 10),
+                new AircraftDamageSettings.Part("tail", AircraftDamageEffect.Control, 10),
+            };
+
+            var error = Assert.Throws<ArgumentException>(() => definition.ToDamageSpec());
+
+            Assert.That(error.Message, Does.Contain("BrokenPlane"));
+            Assert.That(error.Message, Does.Contain("tail"));
+        }
+
+        [Test]
         public void TheEffectsBlockStartsFromTheDefaultsAndSurvivesARoundTrip()
         {
             var definition = NewDefinition("Trainer");

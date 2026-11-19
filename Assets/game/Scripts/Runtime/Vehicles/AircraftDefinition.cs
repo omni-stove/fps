@@ -96,6 +96,18 @@ namespace Shooter.Runtime
             }
         }
 
+        public AircraftDamageSpec ToDamageSpec()
+        {
+            try
+            {
+                return Damage.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw Invalid(e);
+            }
+        }
+
         public AircraftEffectsSpec ToEffectsSpec()
         {
             try

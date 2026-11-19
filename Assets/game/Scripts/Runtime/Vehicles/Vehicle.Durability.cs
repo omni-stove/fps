@@ -10,6 +10,7 @@ namespace Shooter.Runtime
         public const string ExplosionWeaponId = VehicleSpec.ExplosionWeaponId;
 
         private readonly List<Collider> _blastColliders = new List<Collider>();
+        private readonly Dictionary<Hitbox, VehiclePart> _partHitboxes = new Dictionary<Hitbox, VehiclePart>();
         private VehicleDurability _durability;
         private ShotAttribution? _lastAttribution;
         private bool _exploded;
@@ -18,6 +19,9 @@ namespace Shooter.Runtime
         public event Action<Vehicle, VehicleDamageStage> DamageStageChanged;
 
         public event Action<Vehicle, GrenadeExplosion> Exploded;
+
+        // DamageStageChanged に部位を足さず別にするのは、爆発や燃焼のように部位を通らないダメージでは段階だけが動くため。
+        public event Action<Vehicle, VehiclePart, int> PartDamaged;
 
         public Damageable Damageable
         {
@@ -102,6 +106,7 @@ namespace Shooter.Runtime
 
         private void UnbindDamageable()
         {
+            UnbindParts();
             if (_damageable == null)
             {
                 return;
@@ -128,6 +133,8 @@ namespace Shooter.Runtime
 
         private void ApplyParts(VehicleSpec spec)
         {
+            // 設定し直すたびに部位を集め直すので、前に付けた購読を外してから付け直し、1 発で 2 度知らせないようにする。
+            UnbindParts();
             foreach (var part in GetComponentsInChildren<VehiclePart>(true))
             {
                 // 入れ子の乗り物 (荷台に載せた別の乗り物など) の部位は、その乗り物の値で決まる。
@@ -137,6 +144,12 @@ namespace Shooter.Runtime
                 }
 
                 var hitbox = part.EnsureHitbox(_damageable);
+                if (!string.IsNullOrEmpty(part.PartId))
+                {
+                    hitbox.Hit += OnPartHit;
+                    _partHitboxes[hitbox] = part;
+                }
+
                 var partSpec = string.IsNullOrEmpty(part.PartId) ? null : spec.FindPart(part.PartId);
                 if (partSpec == null)
                 {
@@ -147,6 +160,29 @@ namespace Shooter.Runtime
 
                 hitbox.DamageMultiplier = partSpec.DamageMultiplier;
             }
+        }
+
+        private void UnbindParts()
+        {
+            foreach (var hitbox in _partHitboxes.Keys)
+            {
+                if (hitbox != null)
+                {
+                    hitbox.Hit -= OnPartHit;
+                }
+            }
+
+            _partHitboxes.Clear();
+        }
+
+        private void OnPartHit(Hitbox hitbox, int damage)
+        {
+            if (_exploded || !_partHitboxes.TryGetValue(hitbox, out var part) || part == null)
+            {
+                return;
+            }
+
+            PartDamaged?.Invoke(this, part, damage);
         }
 
         private void OnDamaged(Damageable damageable, DamageReport report)

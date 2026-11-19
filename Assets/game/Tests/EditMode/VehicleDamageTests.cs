@@ -132,6 +132,26 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ABulletOnAPartReportsThePartOnceEvenAfterReconfiguring()
+        {
+            var parts = new List<string>();
+            var amounts = new List<int>();
+            _vehicle.PartDamaged += (vehicle, part, damage) =>
+            {
+                parts.Add(part.PartId);
+                amounts.Add(damage);
+            };
+            _vehicle.Configure(_vehicle.Spec);
+
+            Hitscan.Fire(new Vector3(0f, 0.4f, 6f), Vector3.back, 50f, 40, DamageFalloff.None, null);
+            Hitscan.Fire(new Vector3(-5f, 0.4f, 0f), Vector3.right, 50f, 40, DamageFalloff.None, null);
+            _vehicle.Damageable.TakeDamage(100);
+
+            Assert.That(parts, Is.EqualTo(new[] { "engine" }), "the hull and damage that skips the parts are not reported");
+            Assert.That(amounts, Is.EqualTo(new[] { 60 }), "after the part multiplier");
+        }
+
+        [Test]
         public void AClosedHullShieldsTheRiderFromABlastOutside()
         {
             var root = Track(new GameObject("Tank"));

@@ -38,7 +38,7 @@ namespace Shooter.Server.Tests
         private static readonly Vector3 _southAt = new Vector3(0f, 0f, -25f);
         private static readonly int[] _pointIds = { 0, 1 };
         private static readonly string[] _device2Files = { "device2.json" };
-        private static readonly Vector3 _standing =new Vector3(0f, 1.6f, 0f);
+        private static readonly Vector3 _standing = new Vector3(0f, 1.6f, 0f);
         private static readonly WeaponCategory[] _firstSlot = { WeaponCategory.AssaultRifle, WeaponCategory.Handgun, WeaponCategory.Shotgun };
         private static readonly WeaponCategory[] _secondSlot = { WeaponCategory.Handgun, WeaponCategory.AssaultRifle, WeaponCategory.Shotgun };
 
@@ -363,6 +363,20 @@ namespace Shooter.Server.Tests
             Assert.That(_log.ToString(), Does.Contain("[Extraction] ended outcome=Died"));
             Assert.That(_loot.TryGetContents(ServerLoot.FirstItemId + 2, out var weapons, out _), Is.True, _log.ToString());
             Assert.That(weapons.Select(w => w.Id), Is.EqualTo(new[] { TestRules.RifleId }));
+        }
+
+        [Test]
+        public void DyingWithKeepCarriedOnDeathPutsWhatWasCarriedInTheStashAndLeavesNoDeathBox()
+        {
+            Start(new ExtractionSpec(raidSeconds: 120f, extractHoldSeconds: _holdSeconds, openPoints: 1, openAfterSeconds: 0f, keepCarriedOnDeath: true));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            _rules.ApplyDamage(2, 1, 1000);
+
+            Assert.That(_extraction.StashOf(1).CountOf(_rifleItemId), Is.EqualTo(1), _log.ToString());
+            Assert.That(_loot.TryGetContents(ServerLoot.FirstItemId + 2, out _, out _), Is.False, "the carried items are not left in a death box as well");
         }
 
         [Test]

@@ -22,10 +22,10 @@ namespace Shooter.Runtime
 
         public const string PilotingClass = "drone-hud--piloting";
 
-        [SerializeField, Range(0f, 1f), Tooltip("届く距離の残りがこの割合以下になったら、範囲外の警告を出す")]
+        [SerializeField, Range(0f, 1f), Tooltip("Show the out-of-range warning when the remaining reach is at or below this fraction")]
         private float _rangeWarningFraction = DroneHudText.DefaultRangeWarningFraction;
 
-        [SerializeField, Tooltip("戻す操作の案内に出すアクション名 (Input Actions の Player の下)。ドローンを置く能力の枠のボタンにする")]
+        [SerializeField, Tooltip("Action name shown in the recall hint (under Player in Input Actions). Use the button of the ability slot that places the drone")]
         private string _recallActionName = DroneHudText.DefaultRecallActionName;
 
         private DroneStatus? _status;

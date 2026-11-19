@@ -204,7 +204,7 @@ namespace Shooter.Runtime
             Publish();
         }
 
-        // 降りるのに使った Interact の押下で、同じフレームに拾う・乗るなどをしないよう、返すのは押したフレームが終わってからにする。
+        // 降りるのに使った押下で、同じフレームに撃たないよう、返すのは押したフレームが終わってからにする。
         private void LateUpdate()
         {
             if (_restoreAfterFrame >= 0 && Time.frameCount > _restoreAfterFrame)
@@ -360,7 +360,8 @@ namespace Shooter.Runtime
             _moveAction = Acquire(actions, InputActionPaths.Move);
             _jumpAction = Acquire(actions, InputActionPaths.Jump);
             _crouchAction = Acquire(actions, InputActionPaths.Crouch);
-            _interactAction = Acquire(actions, InputActionPaths.Interact);
+            // Interact は拾う・補給・乗り物が手放しを見ずに受けるので、降りる操作には手放しで止まる Attack を使う。
+            _interactAction = Acquire(actions, InputActionPaths.Attack);
         }
 
         // プロジェクト全体のアクションは他の部品と共有なので、自分が有効にしたものだけ後で無効に戻す。

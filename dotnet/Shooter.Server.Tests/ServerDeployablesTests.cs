@@ -468,6 +468,7 @@ namespace Shooter.Server.Tests
 
             Start(catalog);
             Join(1);
+            Join(2);
             Step(0.2f);
 
             Assert.That(_log.ToString(), Does.Contain("[Deploy] net kind=deploy-drone unusable: " + ServerDeployables.DroneUnsupported));

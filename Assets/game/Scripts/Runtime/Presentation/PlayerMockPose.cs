@@ -95,6 +95,13 @@ namespace Shooter.Runtime
         public static readonly Vector3 ViewReloadPosition = new Vector3(0.22f, -0.36f, 0.4f);
         public static readonly Vector3 ViewReloadEuler = new Vector3(30f, 0f, -20f);
 
+        // 持ち替えでしまい切ったときの位置。一人称では画面の下へ外れる。
+        public static readonly Vector3 BodyLoweredGunPosition = new Vector3(0.25f, 0.85f, 0.15f);
+        public static readonly Vector3 BodyLoweredGunEuler = new Vector3(60f, 0f, 0f);
+
+        public static readonly Vector3 ViewLoweredPosition = new Vector3(0.22f, -0.7f, 0.3f);
+        public static readonly Vector3 ViewLoweredEuler = new Vector3(50f, 0f, 0f);
+
         public static float StanceScale(PlayerActionState state)
         {
             return StanceScale(state, null);
@@ -238,7 +245,8 @@ namespace Shooter.Runtime
             }
 
             var position = state.IsAiming ? BodyAimGunPosition : BodyHipGunPosition;
-            return new MockPartPose(ScaleHeight(position, scale), aimPitch);
+            var held = new MockPartPose(ScaleHeight(position, scale), aimPitch);
+            return Lowered(held, new MockPartPose(ScaleHeight(BodyLoweredGunPosition, scale), Quaternion.Euler(BodyLoweredGunEuler)), state.SwitchLowering);
         }
 
         public static MockPartPose ViewModel(PlayerActionState state)
@@ -248,7 +256,24 @@ namespace Shooter.Runtime
                 return new MockPartPose(ViewReloadPosition, Quaternion.Euler(ViewReloadEuler));
             }
 
-            return new MockPartPose(state.IsAiming ? ViewAimPosition : ViewHipPosition, Quaternion.identity);
+            var held = new MockPartPose(state.IsAiming ? ViewAimPosition : ViewHipPosition, Quaternion.identity);
+            return Lowered(held, new MockPartPose(ViewLoweredPosition, Quaternion.Euler(ViewLoweredEuler)), state.SwitchLowering);
+        }
+
+        private static MockPartPose Lowered(MockPartPose held, MockPartPose lowered, float lowering)
+        {
+            if (lowering <= 0f)
+            {
+                return held;
+            }
+
+            // Lerp と Slerp は 1 でも丸めで終わりの値にぴったり揃わないので、しまい切ったときは下げた姿勢をそのまま返す。
+            if (lowering >= 1f)
+            {
+                return lowered;
+            }
+
+            return new MockPartPose(Vector3.Lerp(held.Position, lowered.Position, lowering), Quaternion.Slerp(held.Rotation, lowered.Rotation, lowering));
         }
 
         public static MockPartPose WithKick(MockPartPose pose, float kick, float distance, float degrees)

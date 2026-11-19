@@ -22,6 +22,9 @@ namespace Shooter.Core
 
         public const float DefaultMoveSpeedMultiplier = 1f;
 
+        // 0 なら持ち替えの時間は持ち替え先を構える秒数だけになる。
+        public const float DefaultHolsterSeconds = 0f;
+
         public string Id { get; }
 
         public string NameKey { get; }
@@ -95,6 +98,9 @@ namespace Shooter.Core
 
         // null ならロードアウトの持ち替え秒数を使う。
         public float? DrawSeconds { get; }
+
+        // この武器から別の武器へ持ち替えるとき、構える前に待つ秒数。
+        public float HolsterSeconds { get; }
 
         public WeaponSpec(
             string id,
@@ -175,7 +181,8 @@ namespace Shooter.Core
             float weight = DefaultWeight,
             float moveSpeedMultiplier = DefaultMoveSpeedMultiplier,
             string description = null,
-            float? drawSeconds = null)
+            float? drawSeconds = null,
+            float holsterSeconds = DefaultHolsterSeconds)
         {
             var normalizedId = SpecGuard.LowercaseUuid(id, nameof(id));
 
@@ -191,6 +198,8 @@ namespace Shooter.Core
             {
                 SpecGuard.NonNegativeFinite(drawSeconds.Value, nameof(drawSeconds));
             }
+
+            SpecGuard.NonNegativeFinite(holsterSeconds, nameof(holsterSeconds));
 
             var resolvedRound = round ?? RoundSpec.Default;
             var resolvedImpact = impact ?? ImpactSpec.Default;
@@ -211,6 +220,7 @@ namespace Shooter.Core
             MoveSpeedMultiplier = moveSpeedMultiplier;
             Description = description ?? string.Empty;
             DrawSeconds = drawSeconds;
+            HolsterSeconds = holsterSeconds;
         }
 
         public WeaponSpec WithFireInterval(float fireInterval)
@@ -218,7 +228,7 @@ namespace Shooter.Core
             var trigger = Trigger.WithFireInterval(fireInterval);
             return ReferenceEquals(trigger, Trigger)
                 ? this
-                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier, Description, DrawSeconds);
+                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier, Description, DrawSeconds, HolsterSeconds);
         }
 
         // 起爆を止まったとき・寿命が尽きたときにすると、ヒットスキャンなどの止まりも尽きもしない弾では爆発しないまま設定だけが残る。

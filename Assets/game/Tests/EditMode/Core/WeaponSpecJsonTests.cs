@@ -322,6 +322,7 @@ namespace Shooter.Core.Tests
         [TestCase("{\"weight\": -1}", "weight")]
         [TestCase("{\"moveSpeedMultiplier\": -0.5}", "moveSpeedMultiplier")]
         [TestCase("{\"drawSeconds\": -0.5}", "drawSeconds")]
+        [TestCase("{\"holsterSeconds\": -0.5}", "holsterSeconds")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"x\"}]}", "ammoTypes[0].id")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\", \"round\": {\"range\": 0}}]}", "ammoTypes[0].round.range")]
         [TestCase("{\"ammoTypes\": [{\"id\": \"" + _standardId + "\"}, {\"id\": \"" + _standardId + "\"}]}", "ammoTypes")]
@@ -414,6 +415,21 @@ namespace Shooter.Core.Tests
             Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(read), "again.json").DrawSeconds, Is.EqualTo(0.3f));
             Assert.That(WeaponSpecJson.Write(bare), Does.Not.Contain(WeaponSpecJson.DrawSecondsItem), "a weapon without a draw time writes the same JSON as before");
             Assert.That(read.WithFireInterval(read.FireInterval * 2f).DrawSeconds, Is.EqualTo(0.3f));
+        }
+
+        [Test]
+        public void HolsterSecondsReadBackAndAreLeftOutWhenZero()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\", \"holsterSeconds\": 0.4}", "x.json");
+            var bare = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"category\": \"AssaultRifle\"}", "x.json");
+
+            Assert.That(read.HolsterSeconds, Is.EqualTo(0.4f));
+            Assert.That(bare.HolsterSeconds, Is.EqualTo(WeaponSpec.DefaultHolsterSeconds));
+            Assert.That(WeaponSpec.DefaultHolsterSeconds, Is.Zero);
+            Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(read), "again.json").HolsterSeconds, Is.EqualTo(0.4f));
+            Assert.That(WeaponSpecJson.Write(bare), Does.Not.Contain(WeaponSpecJson.HolsterSecondsItem), "a weapon without a holster time writes the same JSON as before");
+            Assert.That(read.WithFireInterval(read.FireInterval * 2f).HolsterSeconds, Is.EqualTo(0.4f));
         }
 
         [Test]

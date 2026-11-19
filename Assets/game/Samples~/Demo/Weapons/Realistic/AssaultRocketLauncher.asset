@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: bc443423-7f93-439b-a628-d79f839b2afc
   _nameKey: weapon.real.assaultRocketLauncher
-  _description: "Battlefield 4 \u306E SMAW (\u5B9F\u9283\u306F Mk 153 SMAW) \u3092\u53C2\u8003\u3002\u6B69\u5175\u306B\u306F\u7206\u767A 112\u30FB\u534A\u5F84 4 m\u3002BF4 \u3067\u306F 40 m/s \u304B\u3089 110 m/s \u307E\u3067\u52A0\u901F\u3059\u308B\u304C\u3001\u30AD\u30C3\u30C8\u306F\u4E00\u5B9A\u306E\u901F\u3055\u306A\u306E\u3067 80 m/s \u306B\u3057\u305F\u3002"
+  _description: "Battlefield 4 \u306E SMAW (\u5B9F\u9283\u306F Mk 153 SMAW) \u3092\u53C2\u8003\u3002\u6B69\u5175\u306B\u306F\u7206\u767A 112\u30FB\u534A\u5F84 4 m\u3002BF4 \u3067\u306F 40 m/s \u304B\u3089 110 m/s \u307E\u3067\u52A0\u901F\u3059\u308B\u304C\u3001\u30AD\u30C3\u30C8\u306F\u4E00\u5B9A\u306E\u901F\u3055\u306A\u306E\u3067 80 m/s \u306B\u3057\u305F\u3002BF \u306E\u69CB\u3048\u308B\u79D2\u6570\u306F\u516C\u958B\u30C7\u30FC\u30BF\u304C\u7121\u3044\u306E\u3067\u3001\u7A2E\u985E\u3054\u3068\u306B\u63A8\u6E2C\u3057\u305F\u3002"
   _category: 7
   _fireMode: 1
   _magazineSize: 1
@@ -42,6 +42,8 @@ MonoBehaviour:
   _shotNoiseRadius: 50
   _weight: 7.5
   _moveSpeedMultiplier: 1
+  _hasDrawSeconds: 1
+  _drawSeconds: 1.5
   _burst:
     _enabled: 0
     _roundsPerBurst: 3

@@ -205,6 +205,29 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheDrawnWeaponRisesFromPutAwayWhileSwitching()
+        {
+            var handgun = CreateHandgun();
+            try
+            {
+                _controller.SwitchSeconds = 0.5f;
+                InitializeWithRifleAndHandgun(handgun);
+                Assert.That(_controller.SwitchLowering, Is.Zero);
+
+                Assert.That(_controller.SelectNext(), Is.True);
+                Assert.That(_controller.SwitchLowering, Is.EqualTo(1f), "without a holster time the handgun starts put away");
+                _controller.Tick(0.25f);
+                Assert.That(_controller.SwitchLowering, Is.EqualTo(0.5f));
+                _controller.Tick(0.25f);
+                Assert.That(_controller.SwitchLowering, Is.Zero);
+            }
+            finally
+            {
+                Object.DestroyImmediate(handgun);
+            }
+        }
+
+        [Test]
         public void WhileSwitchingTheDrawnWeaponNeitherFiresNorReloads()
         {
             var handgun = CreateHandgun();

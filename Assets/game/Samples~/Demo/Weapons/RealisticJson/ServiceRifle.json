@@ -1,11 +1,12 @@
 {
   "id": "43c9c224-dfea-463d-a411-fd0f6c37824d",
   "nameKey": "weapon.real.serviceRifle",
-  "description": "Battlefield 6 の M16A4 (実銃は M16A4) を参考。25@0m→20@21m→16.7@75m・771 RPM・31 発 (薬室の 1 発込み)・弾速 680 m/s。段階で減るダメージを 21〜75 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。実銃は 3 点バーストだが BF6 に合わせてフルオートにした。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。",
+  "description": "Battlefield 6 の M16A4 (実銃は M16A4) を参考。25@0m→20@21m→16.7@75m・771 RPM・31 発 (薬室の 1 発込み)・弾速 680 m/s。段階で減るダメージを 21〜75 m の直線に置き換えた。頭は BF の 1.34 倍ではなくキットの 2 倍。実銃は 3 点バーストだが BF6 に合わせてフルオートにした。遠くを走る敵には先を狙う必要が出るよう、BF と同じく Hitscan ではなく弾速と重力のある Projectile にした (空気抵抗は無い)。BF の構える秒数は公開データが無いので、種類ごとに推測した。",
   "category": "AssaultRifle",
   "shotNoiseRadius": 50,
   "weight": 3.3,
   "moveSpeedMultiplier": 1,
+  "drawSeconds": 0.8,
   "trigger": {
     "fireMode": "Auto",
     "fireInterval": 0.0778

@@ -42,6 +42,8 @@ MonoBehaviour:
   _shotNoiseRadius: 60
   _weight: 3.8
   _moveSpeedMultiplier: 0.86
+  _hasDrawSeconds: 1
+  _drawSeconds: 1
   _burst:
     _enabled: 0
     _roundsPerBurst: 3

@@ -155,7 +155,7 @@ namespace Shooter.Core.Tests
                 killConfirmed: new KillConfirmedSpec(40, 360f, 2.5f, 25f, 2, 1.25f),
                 gunGame: new GunGameSpec(720f, 0.5f, new[] { _handgunId, _knifeId }, new[] { _knifeId }, false),
                 voteKick: new VoteKickSpec(true, 0.75f, 20f, 300f),
-                payload: new PayloadSpec(2.25f, 2, _oneAndOneQuarter,5f, 0f, 45f, 480f),
+                payload: new PayloadSpec(2.25f, 2, _oneAndOneQuarter, 5f, 0f, 45f, 480f),
                 economy: new EconomySpec(1000, 9000, 250, 2500, 1200, 400, 2800));
 
             var read = NetMatchFile.Parse(NetMatchFile.Write(File(original, MatchObjective.GunGame)), "GunGame.json").Settings;

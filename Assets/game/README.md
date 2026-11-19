@@ -269,6 +269,7 @@ public sealed class HealthOnlyHud : MonoBehaviour
    - 座席の武器は、乗り物の子に `VehicleWeaponMount` を置き、操作する座席の番号をその欄に入れる。
    - 助手席から自分の武器で撃たせるなら、その座席の撃てる向きの範囲 (`OwnWeaponArcDegrees`) を 0 より大きくする。
 3. 座席ごとに乗る位置 (`SetEnterPoints`) と降りる位置 (`SetExitPoints`、並びの順に試す) を置く。どの座席からでも使う降りる位置は `Vehicle.SetExitPoints`。
+4. 空中での降り方は `VehicleDefinition` (定義が無ければ `Vehicle`) の脱出 (`BailOutSettings` / `BailOutSpec`) で決める。乗り物の当たり判定の底から地面 (`Vehicle.GroundMask`) までが最低の高さ以上のときにプレイヤーが降りるか、空中で乗り物が壊れると、降りる位置は使わず乗り物の上 (塞がっていれば横) へ `VehicleLeaveReason.BailOut` で出し、乗り物の速さの一部を引き継いでパラシュート (`ParachuteMovement.DeployForBailOut`) を開く。脱出のパラシュートはモードのパラシュートのルール (`ActionRules.Parachute`) が Off でも開く。地上の乗り物でも、何かに載っている間は高さが 0 なので今までどおり降りる。脱出させない乗り物は `Enabled` を切る。
 
 ### 動き方を差し込む (`IVehicleMotor`)
 

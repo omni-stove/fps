@@ -11,6 +11,7 @@ namespace Shooter.Runtime
     {
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<string, HashSet<object>> _claims = new Dictionary<string, HashSet<object>>(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, int> _releasedFrame = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
         private static KeySharingSpec _spec;
 
         // 譲った押下は離すまで譲り続ける。押している間に箱が開くなどして prefer の側が名乗りをやめても、そこから振り始めないようにするため。
@@ -58,9 +59,11 @@ namespace Shooter.Runtime
                 throw new ArgumentNullException(nameof(source));
             }
 
-            if (_claims.TryGetValue(ActionNameOf(action), out var sources))
+            var name = ActionNameOf(action);
+            if (_claims.TryGetValue(name, out var sources) && sources.Remove(source))
             {
-                sources.Remove(source);
+                // Interact の押下は Input System の更新の中で使われ、Pickup などがその場で Claim を外す。その後に読む近接やリロードがまだ譲れるよう、外したフレームの間は名乗りを残す。
+                _releasedFrame[name] = Time.frameCount;
             }
         }
 
@@ -78,7 +81,14 @@ namespace Shooter.Runtime
 
         public static bool IsClaimed(string action)
         {
-            return _claims.TryGetValue(ActionNameOf(action), out var sources) && sources.Count > 0;
+            var name = ActionNameOf(action);
+            if (_claims.TryGetValue(name, out var sources) && sources.Count > 0)
+            {
+                return true;
+            }
+
+            // EditMode のテストは frameCount が進まないので、再生中だけ猶予を使う。
+            return Application.isPlaying && _releasedFrame.TryGetValue(name, out var frame) && frame == Time.frameCount;
         }
 
         public static bool Yields(InputAction action)
@@ -180,6 +190,7 @@ namespace Shooter.Runtime
         public static void Reset()
         {
             _claims.Clear();
+            _releasedFrame.Clear();
             _yieldedUntilRelease.Clear();
             _spec = null;
         }

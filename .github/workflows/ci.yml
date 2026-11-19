@@ -117,21 +117,34 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
+      # PR の checkout は base の先に PR を重ねたマージコミットなので、HEAD^1 との差分が PR の変えたものになる。
+      # main への push では走らせず、出力が空になって下の手順は全部を見る
+      - id: affected
+        if: github.event_name == 'pull_request'
+        run: scripts/affected.sh HEAD^1 >> "$GITHUB_OUTPUT"
+
+      # 要らないときもジョブは飛ばさずに成功させる。CI Gate が skipped をどう数えるかに頼らないため
       - uses: actions/setup-dotnet@v6
+        if: steps.affected.outputs.format != 'false'
         with:
           dotnet-version: "11.0.x"
 
       - uses: actions/cache@v6
+        if: steps.affected.outputs.format != 'false'
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('dotnet/**/*.csproj', 'dotnet/Directory.Build.props') }}
 
+      # lint.sh --since は dotnet のビルドに入るものが変わったときだけ restore の要る dotnet/Shooter.slnx を読む
       - name: Restore
+        if: steps.affected.outputs.test != 'false'
         run: scripts/install.sh
 
       - name: Lint
-        run: scripts/lint.sh
+        run: scripts/lint.sh ${{ github.event_name == 'pull_request' && '--since HEAD^1' || '' }}
 
   test:
     needs: precheck
@@ -142,21 +155,34 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 2
 
+      # PR の checkout は base の先に PR を重ねたマージコミットなので、HEAD^1 との差分が PR の変えたものになる。
+      # main への push では走らせず、出力が空になって下の手順は全部を見る
+      - id: affected
+        if: github.event_name == 'pull_request'
+        run: scripts/affected.sh HEAD^1 >> "$GITHUB_OUTPUT"
+
+      # 要らないときもジョブは飛ばさずに成功させる。CI Gate が skipped をどう数えるかに頼らないため
       - uses: actions/setup-dotnet@v6
+        if: steps.affected.outputs.test != 'false'
         with:
           dotnet-version: "11.0.x"
 
       - uses: actions/cache@v6
+        if: steps.affected.outputs.test != 'false'
         with:
           path: ~/.nuget/packages
           key: nuget-${{ runner.os }}-${{ hashFiles('dotnet/**/*.csproj', 'dotnet/Directory.Build.props') }}
 
       - name: Restore
+        if: steps.affected.outputs.test != 'false'
         run: scripts/install.sh
 
       - name: Test
-        run: scripts/test.sh
+        if: steps.affected.outputs.test != 'false'
+        run: scripts/test.sh ${{ github.event_name == 'pull_request' && '--since HEAD^1' || '' }}
 
   ci:
     needs: [precheck, meta, checks, lint, test]

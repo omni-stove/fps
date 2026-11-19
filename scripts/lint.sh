@@ -7,11 +7,16 @@
 # (.meta の抜けは、.cs・.asmdef・.asmref・テキストアセットとフォルダなら Unity と同じ形で作る。本体の無い .meta は消さない。詳しくは fix_metas)。
 # --fix-meta は .meta の抜けだけを直して終わる。CI の meta ジョブが dotnet 無しで作り直すため。
 # --comments は comment_problems だけを検査して終わる。scripts/lint-test.sh が dotnet 無しで確かめるため。
+# --since <base> は C# の書式とアナライザを <base> から変わった .cs だけで見る (CI の PR で時間を縮めるため)。
+# .cs が変わっていなければ dotnet を呼ばず、dotnet のビルドに入るものが変わっていなければ dotnet/Shooter.slnx を読まない。ビルド設定や書式の規則が変わったら全部を見る (scripts/affected.sh の full)。
+# 他の検査はどれも速いので、いつも全部を見る。
 # shellcheck source=scripts/_lib.sh
 . "$(dirname "$0")/_lib.sh"
 
 verify=(--verify-no-changes)
 [ "${1:-}" = "--fix" ] && verify=()
+since=""
+[ "${1:-}" = "--since" ] && since="${2:?--since には比べる先のコミットを渡す}"
 
 # Assets/ 以下で .meta が追跡されていないファイル・フォルダと、本体の無い .meta を 1 行ずつ出す。
 # --others を付けると、未追跡 (ignore されていない) のファイルも追跡済みとみなして調べる。
@@ -183,6 +188,24 @@ comment_problems() {
 	' "${cs[@]}"
 }
 
+# --since の書式検査。--folder の --include はそのフォルダからの相対パスで、slnx の --include は今いる所からの相対パスで渡す。
+format_changed() {
+	local cs=() assets=() path status=0
+	while IFS= read -r path; do
+		cs+=("$path")
+		case "$path" in Assets/game/*) assets+=("${path#Assets/game/}") ;; esac
+	done < <(bash scripts/affected.sh --cs "$since")
+	[ "${#cs[@]}" -gt 0 ] || return 0
+	# slnx は読み込みに restore が要って重いので、dotnet のビルドに入るファイルが変わったときだけ見る。
+	if [ "$(bash scripts/affected.sh "$since" | sed -n 's/^test=//p')" = true ]; then
+		dotnet format dotnet/Shooter.slnx ${verify[@]+"${verify[@]}"} -v q --include "${cs[@]}" || status=1
+	fi
+	if [ "${#assets[@]}" -gt 0 ]; then
+		dotnet format whitespace Assets/game --folder ${verify[@]+"${verify[@]}"} -v q --include "${assets[@]}" || status=1
+	fi
+	return "$status"
+}
+
 if [ "${1:-}" = "--comments" ]; then
 	out="$(comment_problems)"
 	[ -z "$out" ] || { printf '%s\n' "$out" | problems >&2; exit 1; }
@@ -197,8 +220,12 @@ fi
 
 status=0
 out="$( {
-	dotnet format dotnet/Shooter.slnx ${verify[@]+"${verify[@]}"} -v q || status=1
-	dotnet format whitespace Assets/game --folder ${verify[@]+"${verify[@]}"} -v q || status=1
+	if [ -n "$since" ] && [ "$(bash scripts/affected.sh "$since" | sed -n 's/^full=//p')" != true ]; then
+		format_changed || status=1
+	else
+		dotnet format dotnet/Shooter.slnx ${verify[@]+"${verify[@]}"} -v q || status=1
+		dotnet format whitespace Assets/game --folder ${verify[@]+"${verify[@]}"} -v q || status=1
+	fi
 	metas="$(meta_problems)"
 	[ -z "$metas" ] || { printf '%s\n' "$metas"; status=1; }
 	texts="$(ui_text_problems)" || status=1

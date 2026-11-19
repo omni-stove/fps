@@ -125,9 +125,52 @@ namespace Shooter.Server.Tests
             Assert.That(rearmed, Is.Zero);
         }
 
-        private void Start(string firstTier, string secondTier, MatchObjective objective = MatchObjective.GunGame)
+        [Test]
+        public void AtTimeUpTheMatchEndsWithTheHighestTierPlayersTeamAsTheWinner()
         {
-            var settings = new NetMatchSettings(gunGame: new GunGameSpec(600f, 0.5f, new[] { firstTier, secondTier }, Array.Empty<string>(), true));
+            Start(TestRules.RifleId, TestRules.HandgunId, timeLimitSeconds: 2f);
+            Join(1);
+            Join(2);
+            Step();
+            Assert.That(_module.Session.State, Is.EqualTo(GameModeState.Playing));
+            _module.ApplyDamage(2, 1, NetMatchSettings.DefaultMaxHealth, new KillShot(2, 1, TestRules.RifleId, HitZone.Body));
+            Assert.That(_module.GunGame.GetTier(2), Is.EqualTo(1));
+            var leaderTeam = _module.Session.GetTeam(2);
+
+            StepFor(2.1f);
+
+            Assert.That(_module.Session.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Ended));
+            var snapshot = new SnapshotMessage();
+            _module.Contribute(snapshot, null);
+            Assert.That(snapshot.Match.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(snapshot.Match.HasWinner, Is.True);
+            Assert.That(snapshot.Match.Winner, Is.EqualTo(leaderTeam));
+            Assert.That(_log.ToString(), Does.Contain("[Mode] gungame ended by=time winner=2 team=" + leaderTeam));
+        }
+
+        [Test]
+        public void AtTimeUpWithEveryoneOnTheSameTierTheMatchIsADraw()
+        {
+            Start(TestRules.RifleId, TestRules.HandgunId, timeLimitSeconds: 2f);
+            Join(1);
+            Join(2);
+            Step();
+
+            StepFor(2.1f);
+
+            Assert.That(_module.Session.State, Is.EqualTo(GameModeState.Ended));
+            var snapshot = new SnapshotMessage();
+            _module.Contribute(snapshot, null);
+            Assert.That(snapshot.Match.State, Is.EqualTo(GameModeState.Ended));
+            Assert.That(snapshot.Match.HasWinner, Is.False);
+            Assert.That(_log.ToString(), Does.Contain("[Mode] gungame ended by=time winner=draw team=-"));
+        }
+
+        private void Start(
+            string firstTier, string secondTier, MatchObjective objective = MatchObjective.GunGame, float timeLimitSeconds = 600f)
+        {
+            var settings = new NetMatchSettings(gunGame: new GunGameSpec(timeLimitSeconds, 0.5f, new[] { firstTier, secondTier }, Array.Empty<string>(), true));
             var rules = GameRules.Default
                 .WithActions(ActionRules.Default.WithDowned(Downed.Off))
                 .WithSpawnProtectionSeconds(0f)
@@ -158,6 +201,15 @@ namespace Shooter.Server.Tests
             _tick++;
             _match.Tick(_tickSeconds);
             _module.Tick(_tick, _tickSeconds);
+        }
+
+        private void StepFor(float seconds)
+        {
+            var steps = (int)Math.Ceiling(seconds / _tickSeconds);
+            for (var i = 0; i < steps; i++)
+            {
+                Step();
+            }
         }
     }
 }

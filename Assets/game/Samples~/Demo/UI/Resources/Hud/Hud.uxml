@@ -98,7 +98,7 @@
         <ui:VisualElement name="compass" class="compass" picking-mode="Ignore" style="display: none;" />
         <!-- 自分が運転している飛行機の速さ・高度・スロットル・迎え角・G と失速の警告。AircraftHudView が、GameSignals.Aircraft に値がある間だけ行 (aircraft__row) と警告 (aircraft__warning) を入れて出す。 -->
         <ui:VisualElement name="aircraft" class="aircraft" picking-mode="Ignore" style="display: none;" />
-        <!-- 画面下の中央のスタミナの残り。GameSignals.Stamina に値がある間だけビューが出し、塗り (stamina-fill) の幅を % で入れ、尽きている間は stamina--depleted を付ける。 -->
+        <!-- 画面下の中央のスタミナの残り。GameSignals.Stamina に値があり満タンでない (または尽きている) 間だけ StaminaView が出し、塗り (stamina-fill) の幅を % で入れ、尽きている間は stamina--depleted を付け、量の文を tooltip に置く。 -->
         <ui:VisualElement name="stamina" class="stamina" picking-mode="Ignore" style="display: none;">
             <ui:VisualElement name="stamina-fill" class="stamina__fill" picking-mode="Ignore" />
         </ui:VisualElement>

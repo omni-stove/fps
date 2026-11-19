@@ -94,5 +94,34 @@
       "team": "Bravo",
       "position": [0, -1, 27]
     }
-  ]
+  ],
+  "payload": {
+    "attackers": "Alpha",
+    "radius": 5,
+    "height": 6,
+    "route": [
+      {
+        "position": [0, -1, -18]
+      },
+      {
+        "position": [0, -1, -13]
+      },
+      {
+        "position": [4, -1, -10]
+      },
+      {
+        "position": [4, -1, 0],
+        "checkpoint": true
+      },
+      {
+        "position": [4, -1, 10]
+      },
+      {
+        "position": [0, -1, 13]
+      },
+      {
+        "position": [0, -1, 18]
+      }
+    ]
+  }
 }

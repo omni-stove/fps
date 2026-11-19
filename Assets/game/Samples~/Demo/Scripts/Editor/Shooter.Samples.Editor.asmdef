@@ -3,6 +3,8 @@
     "rootNamespace": "Shooter.Editor",
     "references": [
         "Shooter.Core",
+        "Shooter.Aircraft.Core",
+        "Shooter.Aircraft",
         "Shooter.Editor",
         "Shooter.NetV2.Client",
         "Shooter.Protocol",

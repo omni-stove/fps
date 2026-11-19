@@ -4,7 +4,9 @@
     "references": [
         "Shooter.Tests.Support",
         "Shooter.Core",
+        "Shooter.Aircraft.Core",
         "Shooter.Runtime",
+        "Shooter.Aircraft",
         "Shooter.Runtime.UI",
         "Shooter.Editor",
         "Shooter.Samples.Editor",

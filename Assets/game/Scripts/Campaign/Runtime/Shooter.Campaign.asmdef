@@ -1,0 +1,19 @@
+{
+    "name": "Shooter.Campaign",
+    "rootNamespace": "Shooter.Runtime",
+    "references": [
+        "Shooter.Core",
+        "Shooter.Campaign.Core",
+        "Shooter.Runtime",
+        "Unity.InputSystem"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

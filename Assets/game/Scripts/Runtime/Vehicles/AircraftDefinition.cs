@@ -91,6 +91,18 @@ namespace Shooter.Runtime
             }
         }
 
+        public AircraftGroundSpec ToGroundSpec()
+        {
+            try
+            {
+                return Ground.ToSpec();
+            }
+            catch (ArgumentException e)
+            {
+                throw Invalid(e);
+            }
+        }
+
         public void CopyFrom(AircraftSpec spec)
         {
             if (spec == null)

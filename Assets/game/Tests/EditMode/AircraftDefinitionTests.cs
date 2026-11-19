@@ -51,6 +51,14 @@ namespace Shooter.Tests.EditMode
             Assert.That(aim.RollGain, Is.EqualTo(AircraftAimSpec.DefaultRollGain));
             Assert.That(aim.LevelGain, Is.EqualTo(AircraftAimSpec.DefaultLevelGain));
             Assert.That(aim.ThrottleRate, Is.EqualTo(AircraftAimSpec.DefaultThrottleRate));
+
+            var ground = definition.ToGroundSpec();
+            Assert.That(ground.MaxSteerAngle, Is.EqualTo(AircraftGroundSpec.DefaultMaxSteerAngle));
+            Assert.That(ground.HighSpeedSteerAngle, Is.EqualTo(AircraftGroundSpec.DefaultHighSpeedSteerAngle));
+            Assert.That(ground.SteerFadeSpeed, Is.EqualTo(AircraftGroundSpec.DefaultSteerFadeSpeed));
+            Assert.That(ground.BrakeTorque, Is.EqualTo(AircraftGroundSpec.DefaultBrakeTorque));
+            Assert.That(ground.IdleBrakeTorque, Is.EqualTo(AircraftGroundSpec.DefaultIdleBrakeTorque));
+            Assert.That(ground.HeightProbeDistance, Is.EqualTo(AircraftGroundSpec.DefaultHeightProbeDistance));
         }
 
         [Test]

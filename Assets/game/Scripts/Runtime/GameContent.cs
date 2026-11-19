@@ -119,6 +119,22 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("リプレイの再生の調整値の JSON。空なら Resources/Tuning/replay")]
         private TextAsset _replayTuning;
 
+        [Header("Payload・お金・補給・ルールの変え方・プレイリスト")]
+        [SerializeField, Tooltip("Payload の調整値の JSON。空なら Resources/Tuning/payload")]
+        private TextAsset _payloadTuning;
+
+        [SerializeField, Tooltip("お金と購入の調整値の JSON。空なら Resources/Tuning/economy")]
+        private TextAsset _economyTuning;
+
+        [SerializeField, Tooltip("補給の投下の調整値の JSON。空なら Resources/Tuning/supply-drops")]
+        private TextAsset _supplyDropsTuning;
+
+        [SerializeField, Tooltip("ルールを変える組 (ミューテーター) の一覧の JSON。空なら Resources/Tuning/mutators")]
+        private TextAsset _mutatorsTuning;
+
+        [SerializeField, Tooltip("プレイリスト (モードとマップの巡り方) の JSON。空なら Resources/Tuning/playlists")]
+        private TextAsset _playlistsTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -239,6 +255,9 @@ namespace Shooter.Runtime
 
         [SerializeField, Tooltip("エモートのアニメーション (エモートの Id ごと)。空なら Resources/Presentation/EmoteCatalog、それも無ければ体を動かさずにエモートを出す")]
         private EmoteCatalog _emoteAnimations;
+
+        [SerializeField, Tooltip("暗視と熱源視の覆いと音。空なら Resources/Presentation/VisionVisualsCatalog、それも無ければ既定の色だけで覆う")]
+        private VisionVisualCatalog _visionVisuals;
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
@@ -437,6 +456,36 @@ namespace Shooter.Runtime
         {
             get => _replayTuning;
             set => _replayTuning = value;
+        }
+
+        public TextAsset PayloadTuning
+        {
+            get => _payloadTuning;
+            set => _payloadTuning = value;
+        }
+
+        public TextAsset EconomyTuning
+        {
+            get => _economyTuning;
+            set => _economyTuning = value;
+        }
+
+        public TextAsset SupplyDropsTuning
+        {
+            get => _supplyDropsTuning;
+            set => _supplyDropsTuning = value;
+        }
+
+        public TextAsset MutatorsTuning
+        {
+            get => _mutatorsTuning;
+            set => _mutatorsTuning = value;
+        }
+
+        public TextAsset PlaylistsTuning
+        {
+            get => _playlistsTuning;
+            set => _playlistsTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog
@@ -671,6 +720,12 @@ namespace Shooter.Runtime
         {
             get => _emoteAnimations;
             set => _emoteAnimations = value;
+        }
+
+        public VisionVisualCatalog VisionVisuals
+        {
+            get => _visionVisuals;
+            set => _visionVisuals = value;
         }
 
         public static GameContent Current

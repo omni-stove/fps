@@ -494,6 +494,74 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AMeleeSwingThrustsTheModelForwardAndRollsItThenItReturns()
+        {
+            _presenter.Refresh();
+            var motion = _presenter.Motion;
+            motion.HorizontalSpeedSource = () => 0f;
+            motion.AdsProgressSource = () => 0f;
+            motion.Step(Frame);
+            var melee = _body.AddComponent<ViewmodelMeleePresenter>();
+
+            melee.OnSwingStarted(_body, MeleeSpec.Default);
+            Step(motion, 12);
+
+            Assert.That(motion.MeleeSwing.IsActive, Is.True);
+            Assert.That(motion.Pivot.localPosition.z, Is.GreaterThan(0.1f), "thrust forward at the impact (0.2 s)");
+            Assert.That(Mathf.DeltaAngle(0f, motion.Pivot.localEulerAngles.z), Is.GreaterThan(20f), "rolled to the left");
+            Assert.That(Mathf.DeltaAngle(0f, motion.Pivot.localEulerAngles.y), Is.LessThan(-10f), "swept to the left");
+
+            Step(motion, 30);
+
+            Assert.That(motion.MeleeSwing.IsActive, Is.False);
+            Assert.That(motion.Pivot.localPosition, Is.EqualTo(Vector3.zero));
+            Assert.That(motion.Pivot.localRotation, Is.EqualTo(Quaternion.identity));
+        }
+
+        [Test]
+        public void TheMotionMultiplierScalesTheMeleeSwing()
+        {
+            _presenter.Refresh();
+            var motion = _presenter.Motion;
+            motion.HorizontalSpeedSource = () => 0f;
+            motion.AdsProgressSource = () => 0f;
+            motion.Step(Frame);
+            ViewmodelMotion.GlobalMultiplier = 0f;
+
+            motion.Swing(MeleeSpec.DefaultSwingSeconds, MeleeSpec.DefaultImpactSeconds);
+            Step(motion, 12);
+
+            Assert.That(motion.MeleeSwing.IsActive, Is.True);
+            Assert.That(motion.Pivot.localPosition, Is.EqualTo(Vector3.zero));
+            Assert.That(motion.Pivot.localRotation, Is.EqualTo(Quaternion.identity));
+        }
+
+        [Test]
+        public void ResettingTheMotionStopsTheMeleeSwing()
+        {
+            _presenter.Refresh();
+            var motion = _presenter.Motion;
+            motion.Swing(MeleeSpec.DefaultSwingSeconds, MeleeSpec.DefaultImpactSeconds);
+
+            motion.ResetMotion();
+
+            Assert.That(motion.MeleeSwing.IsActive, Is.False);
+        }
+
+        [Test]
+        public void TheCatalogCarriesTheMeleeSwingValues()
+        {
+            var parameters = new ViewmodelSwayParameters(new ViewmodelSwaySettings(meleeThrustMeters: 0.3f, meleeRollDegrees: 10f));
+
+            var settings = parameters.ToSettings();
+
+            Assert.That(settings.MeleeThrustMeters, Is.EqualTo(0.3f));
+            Assert.That(settings.MeleeRollDegrees, Is.EqualTo(10f));
+            Assert.That(settings.MeleeSweepDegrees, Is.EqualTo(ViewmodelSwaySettings.DefaultMeleeSweepDegrees));
+            Assert.That(new ViewmodelSwayParameters().ToSettings().MeleeWindupFraction, Is.EqualTo(ViewmodelSwaySettings.DefaultMeleeWindupFraction));
+        }
+
+        [Test]
         public void FiringKicksTheModelUpAndBackThenItReturns()
         {
             _presenter.Refresh();

@@ -139,6 +139,7 @@ namespace Shooter.Core.Tests
                 (nameof(ActionRules.ReviveRange), a => a.WithReviveRange(3.5f), 3.5f),
                 (nameof(ActionRules.Emote), a => a.WithEmote(Emote.Off), Emote.Off),
                 (nameof(ActionRules.Stamina), a => a.WithStamina(Stamina.Off), Stamina.Off),
+                (nameof(ActionRules.ReloadInterruptedBy), a => a.WithReloadInterruptedBy(new[] { ReloadInterrupt.Melee }), new[] { ReloadInterrupt.Melee }),
             };
 
             // Cover は BlindFire が On のままでは Off にできないので、BlindFire を切った値から確かめる。

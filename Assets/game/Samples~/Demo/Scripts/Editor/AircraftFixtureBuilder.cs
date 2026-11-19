@@ -117,8 +117,8 @@ namespace Shooter.Editor
                 vehicle.RefreshSeats();
                 vehicle.Configure(Spec());
 
-                root.AddComponent<SimpleAircraftMotor>().Configure(AircraftSpec.Default);
-                root.AddComponent<AircraftControlScheme>().Configure(AircraftAimSpec.Default);
+                root.AddComponent<SimpleAircraftMotor>();
+                root.AddComponent<AircraftControlScheme>();
                 root.AddComponent<VehicleMotorLink>();
                 root.AddComponent<VehicleImpactDamage>().Configure(VehicleImpactSpec.Default);
                 return vehicle;

@@ -8,48 +8,29 @@ namespace Shooter.Runtime
     [RequireComponent(typeof(Rigidbody))]
     public sealed class SimpleAircraftMotor : MonoBehaviour, IVehicleMotor, IVehicleTopSpeed
     {
-        [SerializeField, Min(0.01f), Tooltip("機体の質量 (kg)。Rigidbody に入れる。飛び方は変わらず、ぶつかったときの重さだけが変わる")]
-        private float _mass = AircraftSpec.DefaultMass;
+        [SerializeField, Tooltip("飛び方の値 (Create > Shooter > Aircraft Definition)。空なら既定値で飛ぶ")]
+        private AircraftDefinition _definition;
 
-        [SerializeField, Min(0.01f), Tooltip("スロットルを開き切ったときの、前へ押す加速 (m/s²)")]
-        private float _maxThrust = AircraftSpec.DefaultMaxThrust;
-
-        [SerializeField, Min(0.01f), Tooltip("水平に飛んでスロットルを開き切ったときに落ち着く速さ (m/s)")]
-        private float _maxSpeed = AircraftSpec.DefaultMaxSpeed;
-
-        [SerializeField, Min(0.01f), Tooltip("この速さ (m/s) で、翼が重さと同じだけ持ち上げる。これより遅いと沈む")]
-        private float _liftSpeed = AircraftSpec.DefaultLiftSpeed;
-
-        [SerializeField, Min(0.01f), Tooltip("この速さ (m/s) で、舵が効き切る")]
-        private float _controlSpeed = AircraftSpec.DefaultControlSpeed;
-
-        [SerializeField, Range(0f, 1f), Tooltip("止まっていても残る舵の効き (0 から 1)")]
-        private float _minControl = AircraftSpec.DefaultMinControl;
-
-        [SerializeField, Min(0f), Tooltip("ピッチを倒し切ったときの、機首を上下に回す速さ (度/秒)")]
-        private float _pitchRate = AircraftSpec.DefaultPitchRate;
-
-        [SerializeField, Min(0f), Tooltip("ロールを倒し切ったときの、機体を傾ける速さ (度/秒)")]
-        private float _rollRate = AircraftSpec.DefaultRollRate;
-
-        [SerializeField, Min(0f), Tooltip("ヨーを倒し切ったときの、機首を左右に回す速さ (度/秒)")]
-        private float _yawRate = AircraftSpec.DefaultYawRate;
-
-        [SerializeField, Min(0f), Tooltip("回る速さを舵の求める速さへ寄せる強さ (1/秒)。大きいほど機敏")]
-        private float _responsiveness = AircraftSpec.DefaultResponsiveness;
-
-        [SerializeField, Min(0f), Tooltip("横と上下へ流れる速さを、機首の向きへ寄せる強さ (1/秒)。大きいほど滑らずに曲がる")]
-        private float _alignment = AircraftSpec.DefaultAlignment;
-
-        [SerializeField, Min(0f), Tooltip("エアブレーキを掛け切ったときに、空気の抵抗へ足す倍率")]
-        private float _airBrakeDrag = AircraftSpec.DefaultAirBrakeDrag;
-
-        private AircraftSpec _spec;
+        private AircraftSpec _configuredSpec;
+        private AircraftSpec _definitionSpec;
         private Rigidbody _body;
         private VehicleMotorInput _input;
         private AircraftFlightCommand _lastCommand;
 
-        public AircraftSpec Spec => _spec ??= BuildSpec();
+        public AircraftDefinition Definition
+        {
+            get => _definition;
+            set
+            {
+                _definition = value;
+                _configuredSpec = null;
+                _definitionSpec = null;
+                Body.mass = Spec.Mass;
+            }
+        }
+
+        // Configure で渡した値をアセットより優先するのは、テストやコードから組んだ機体がアセット無しでも値を差し替えられるようにするため。
+        public AircraftSpec Spec => _configuredSpec ?? (_definitionSpec ??= BuildSpec());
 
         public Rigidbody Body => _body != null ? _body : (_body = GetComponent<Rigidbody>());
 
@@ -57,9 +38,11 @@ namespace Shooter.Runtime
 
         public AircraftFlightCommand LastCommand => _lastCommand;
 
+        public AircraftFlightState State => _lastCommand.State;
+
         public float ForwardSpeed => Vector3.Dot(Body.linearVelocity, transform.forward);
 
-        public float TopSpeed => AircraftFlight.TopSpeed(Spec, Physics.gravity.magnitude);
+        public float TopSpeed => AircraftAero.TopSpeed(Spec, Physics.gravity.magnitude);
 
         private void Awake()
         {
@@ -68,7 +51,7 @@ namespace Shooter.Runtime
 
         private void OnValidate()
         {
-            _spec = null;
+            _definitionSpec = null;
         }
 
         private void FixedUpdate()
@@ -76,21 +59,10 @@ namespace Shooter.Runtime
             Step();
         }
 
+        // 渡した値をシリアライズしないのは、残す値の置き場をアセット (Definition) だけにし、シーンとアセットで値が食い違わないようにするため。
         public void Configure(AircraftSpec spec)
         {
-            _spec = spec ?? throw new ArgumentNullException(nameof(spec));
-            _mass = spec.Mass;
-            _maxThrust = spec.MaxThrust;
-            _maxSpeed = spec.MaxSpeed;
-            _liftSpeed = spec.LiftSpeed;
-            _controlSpeed = spec.ControlSpeed;
-            _minControl = spec.MinControl;
-            _pitchRate = spec.PitchRate;
-            _rollRate = spec.RollRate;
-            _yawRate = spec.YawRate;
-            _responsiveness = spec.Responsiveness;
-            _alignment = spec.Alignment;
-            _airBrakeDrag = spec.AirBrakeDrag;
+            _configuredSpec = spec ?? throw new ArgumentNullException(nameof(spec));
             Body.mass = spec.Mass;
         }
 
@@ -104,12 +76,25 @@ namespace Shooter.Runtime
         {
             var body = Body;
             var toLocal = Quaternion.Inverse(body.rotation);
+            var localVelocity = toLocal * body.linearVelocity;
+            var localAngularVelocity = toLocal * body.angularVelocity;
+
+            // 毎ステップ引き直すのは、壊れ方や車輪を受け持つ部品が乗っている間に付け外しされても、次のステップから効くようにするため。
+            var ground = TryGetComponent<IAircraftGroundSource>(out var groundSource)
+                ? groundSource.GroundContact(_input, localVelocity, localAngularVelocity)
+                : AircraftGroundContact.Airborne;
+            var condition = TryGetComponent<IAircraftConditionSource>(out var conditionSource)
+                ? conditionSource.Condition
+                : AircraftCondition.Intact;
+
             _lastCommand = AircraftFlight.Compute(
                 Spec,
                 _input,
-                (toLocal * body.linearVelocity).ToNumerics(),
-                (toLocal * body.angularVelocity).ToNumerics(),
-                Physics.gravity.magnitude);
+                localVelocity.ToNumerics(),
+                localAngularVelocity.ToNumerics(),
+                Physics.gravity.magnitude,
+                ground,
+                condition);
             if (body.isKinematic)
             {
                 return;
@@ -121,19 +106,7 @@ namespace Shooter.Runtime
 
         private AircraftSpec BuildSpec()
         {
-            return new AircraftSpec(
-                _mass,
-                _maxThrust,
-                _maxSpeed,
-                _liftSpeed,
-                _controlSpeed,
-                _minControl,
-                _pitchRate,
-                _rollRate,
-                _yawRate,
-                _responsiveness,
-                _alignment,
-                _airBrakeDrag);
+            return _definition != null ? _definition.ToSpec() : AircraftSpec.Default;
         }
     }
 }

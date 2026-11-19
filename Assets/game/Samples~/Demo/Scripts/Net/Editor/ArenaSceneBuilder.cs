@@ -128,6 +128,14 @@ namespace Shooter.Editor
             (ControlPointName(2), new Vector3(0f, GroundY, 15f), 2),
         };
 
+        // 旗取りのサーバーは両チームの台が無いマップを断るので、拠点と同じくどのルールでも置く。Alpha の台を自陣の出現地点の奥の中央に置き、Bravo はその鏡にする。
+        // 範囲の円が掛からないかは FlagBaseOverlaps が確かめる。
+        public static readonly IReadOnlyList<(Side Side, Vector3 Position)> FlagBases = new[]
+        {
+            (Side.Alpha, new Vector3(0f, GroundY, -27f)),
+            (Side.Bravo, MirrorZ(new Vector3(0f, GroundY, -27f))),
+        };
+
         [MenuItem(MenuPath)]
         public static void Build()
         {
@@ -151,6 +159,15 @@ namespace Shooter.Editor
                 throw new InvalidOperationException(LogTag + " control point areas overlap the level: " + string.Join("; ", overlaps));
             }
 
+            // NewScene(Single) は参照されていないアセットをアンロードするので、試合の設定はシーンを作る前に読んで値だけ持つ
+            var captureRadius = NetSceneBuilder.CaptureRadius(NetSceneBuilder.LoadOrBuildMatch());
+            var baseOverlaps = FlagBaseOverlaps(captureRadius);
+            if (baseOverlaps.Count > 0)
+            {
+                throw new InvalidOperationException(LogTag + " flag base areas (capture radius " + captureRadius + " m) overlap the level: "
+                    + string.Join("; ", baseOverlaps));
+            }
+
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             // NewScene(Single) は参照されていないアセットをアンロードするので、プレハブはシーンを作ってから読む
@@ -165,13 +182,14 @@ namespace Shooter.Editor
             SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
             RequireNavigable();
 
-            PopulateScene(scene, pieceVisualPrefab);
+            PopulateScene(scene, pieceVisualPrefab, captureRadius);
             SaveScene(scene, scenePath);
 
             BuildSceneList.Register(scenePath);
             AssetDatabase.SaveAssets();
             Debug.Log(LogTag + " wrote " + scenePath + " and " + navMeshDataPath + " (" + SpawnPoints.Count + " spawn point(s), "
-                + Buildings.Count + " building(s), " + ControlPoints.Count + " control point(s)); start a server with "
+                + Buildings.Count + " building(s), " + ControlPoints.Count + " control point(s), "
+                + FlagBases.Count + " flag base(s)); start a server with "
                 + NetLaunchOptions.MapFlag + " " + MapName);
         }
 
@@ -220,6 +238,11 @@ namespace Shooter.Editor
                 points.Add(position);
             }
 
+            foreach (var (_, position) in FlagBases)
+            {
+                points.Add(position);
+            }
+
             var doorOffset = (BuildingDepth * PieceSize / 2f) + 1.5f;
             foreach (var (_, center) in Buildings)
             {
@@ -230,7 +253,8 @@ namespace Shooter.Editor
             return points;
         }
 
-        public static void PopulateScene(Scene scene, GameObject pieceVisualPrefab = null)
+        public static void PopulateScene(
+            Scene scene, GameObject pieceVisualPrefab = null, float captureRadius = CaptureTheFlagSpec.DefaultCaptureRadius)
         {
             SceneBuildHelpers.RequireLoaded(scene);
 
@@ -257,6 +281,8 @@ namespace Shooter.Editor
             {
                 CreateControlPoint(scene, pointName, position, index);
             }
+
+            NetSceneBuilder.CreateFlagBases(scene, FlagBases, captureRadius);
 
             EditorSceneManager.MarkSceneDirty(scene);
         }
@@ -294,15 +320,7 @@ namespace Shooter.Editor
         {
             var problems = new List<string>();
             var reach = ControlPointRadius + ControlPointClearance;
-            var obstacles = new List<(string Name, Vector3 Center, Vector3 Size)>();
-            obstacles.AddRange(BoundaryWalls);
-            obstacles.AddRange(HighWalls);
-            obstacles.AddRange(LowWalls);
-            obstacles.AddRange(Steps);
-            foreach (var (buildingName, groundCenter) in Buildings)
-            {
-                obstacles.Add((buildingName, groundCenter, new Vector3(BuildingWidth, 0f, BuildingDepth) * PieceSize));
-            }
+            var obstacles = Obstacles();
 
             for (var i = 0; i < ControlPoints.Count; i++)
             {
@@ -329,6 +347,49 @@ namespace Shooter.Editor
                     if (HorizontalDistance(position, otherPosition) < 2f * reach)
                     {
                         problems.Add(pointName + " overlaps " + otherName);
+                    }
+                }
+            }
+
+            return problems;
+        }
+
+        // 台の円は拠点と同じく、縁に立つプレイヤーが遮蔽物にめり込まないよう ControlPointClearance を空ける。
+        // 出現地点を覆うと出てすぐ旗を運び込めてしまい、拠点の円と重なるとどちらの円盤か見分けにくいので、それも断る。
+        public static List<string> FlagBaseOverlaps(float captureRadius)
+        {
+            if (!(captureRadius > 0f) || float.IsInfinity(captureRadius))
+            {
+                throw new ArgumentOutOfRangeException(nameof(captureRadius), captureRadius, "the capture radius must be positive and finite");
+            }
+
+            var problems = new List<string>();
+            var reach = captureRadius + ControlPointClearance;
+            var obstacles = Obstacles();
+            foreach (var (side, position) in FlagBases)
+            {
+                var baseName = NetSceneBuilder.FlagBaseName(side);
+                foreach (var (obstacleName, center, size) in obstacles)
+                {
+                    if (HorizontalDistanceToBox(position, center, size) < reach)
+                    {
+                        problems.Add(baseName + " overlaps " + obstacleName);
+                    }
+                }
+
+                foreach (var (spawnName, spawnPosition, _) in SpawnPoints)
+                {
+                    if (HorizontalDistance(position, spawnPosition) < reach)
+                    {
+                        problems.Add(baseName + " covers " + spawnName);
+                    }
+                }
+
+                foreach (var (pointName, pointPosition, _) in ControlPoints)
+                {
+                    if (HorizontalDistance(position, pointPosition) < captureRadius + ControlPointRadius + ControlPointClearance)
+                    {
+                        problems.Add(baseName + " overlaps " + pointName);
                     }
                 }
             }
@@ -439,6 +500,21 @@ namespace Shooter.Editor
             }
 
             return points.ToArray();
+        }
+
+        private static List<(string Name, Vector3 Center, Vector3 Size)> Obstacles()
+        {
+            var obstacles = new List<(string Name, Vector3 Center, Vector3 Size)>();
+            obstacles.AddRange(BoundaryWalls);
+            obstacles.AddRange(HighWalls);
+            obstacles.AddRange(LowWalls);
+            obstacles.AddRange(Steps);
+            foreach (var (buildingName, groundCenter) in Buildings)
+            {
+                obstacles.Add((buildingName, groundCenter, new Vector3(BuildingWidth, 0f, BuildingDepth) * PieceSize));
+            }
+
+            return obstacles;
         }
 
         private static float HorizontalDistance(Vector3 a, Vector3 b)

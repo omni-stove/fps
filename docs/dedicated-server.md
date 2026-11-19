@@ -54,7 +54,9 @@ make server-dotnet ARGS="-rules FreeForAll"
 | `GunGame` | `GunGame` | `gunGame` (`tierWeaponIds` は 1 つ以上) | 出現地点 |
 
 - マップに要るものが無いと、起動のときにマップの名前と足りないものを添えたエラー (`[Server] failed to start: ...`) で終了コード 1 になる。`mapPool` の他のマップも起動のうちに確かめる。
-  例のマップ (`NetArena01`・`NetTest`) には旗の台が無いので、旗取りはシーンに旗の台を置いて `make export-server-data` したマップで動かす。
+  例のマップ (`NetArena01`・`NetTest`) には両チームの旗の台 (`FlagBase`) を自陣の出現地点の奥に置いてあり、`make export-server-rules` で `<map>.points.json` の `flagBases` に書き出す。
+  台を置く前に作ったシーンには、`make export-server-data`・`make export-server-rules` が書き出す前に台を足して保存する (台が 1 つでもあるシーンには触らない)。
+  台の円盤の大きさは書き出すときの `captureTheFlag.captureRadius` に揃える。運び込んだかの判定はサーバーがルールの値で決める。
 - `GunGame` の段の武器 (`tierWeaponIds`) は、同じ JSON の `loadout` か `catalog` にある武器の Id にする。無い Id があると起動しない。
   近接で倒した相手の段を下げるには、`meleeWeaponIds` の先頭に近接の Id を書く。サーバーの近接はその Id で倒したことにする。
 - 近接 (`rules.actions.melee`)・ストリーク (`rules.streaks`)・キルカム (`rules.deathCamera` が `KillCam`) はどのモードでも使え、

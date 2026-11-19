@@ -86,6 +86,41 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void HasOneFlagBasePerTeamTheCaptureTheFlagServerCanUse()
+        {
+            var bases = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<FlagBase>(false))
+                .ToArray();
+
+            Assert.That(bases.Select(b => b.Side), Is.EqualTo(new[] { Side.Alpha, Side.Bravo }),
+                "the CaptureTheFlag server refuses a map without both bases; run Shooter.Editor.ServerDataMaps.EnsureFlagBases or " + _rerun);
+            for (var i = 0; i < bases.Length; i++)
+            {
+                Assert.That(bases[i].name, Is.EqualTo(NetSceneBuilder.FlagBaseName(bases[i].Side)));
+                Assert.That(bases[i].Position, Is.EqualTo(NetSceneBuilder.FlagBases[i].Position));
+                Assert.That(bases[i].ShowsMarker, Is.True);
+            }
+
+            var match = AssetDatabase.LoadAssetAtPath<NetMatchDefinition>(NetSceneBuilder.MatchDefinitionPath);
+            Assert.That(match, Is.Not.Null, NetSceneBuilder.MatchDefinitionPath + " is missing; " + _rerun);
+            Assert.That(bases.Select(b => b.Radius), Is.All.EqualTo(NetSceneBuilder.CaptureRadius(match)), "the disc matches the radius the server judges by");
+
+            // 床に立つプレイヤーのカプセルの中心 (y=0) で、自陣の台に運び込める
+            foreach (var flagBase in bases)
+            {
+                Assert.That(flagBase.Contains(new Vector3(flagBase.Position.x, 0f, flagBase.Position.z)), Is.True, flagBase.name);
+            }
+
+            var spawns = _scene.GetRootGameObjects()
+                .SelectMany(go => go.GetComponentsInChildren<NetSpawnPoint>(true))
+                .ToArray();
+            foreach (var spawn in spawns)
+            {
+                Assert.That(bases.Any(b => b.Contains(spawn.transform.position)), Is.False, spawn.name + " is not inside a flag base");
+            }
+        }
+
+        [Test]
         public void HasACameraForBeforeTheLocalPlayerSpawns()
         {
             var cameras = _scene.GetRootGameObjects()

@@ -16,6 +16,8 @@ namespace Shooter.NetV2.Tests
         {
             var status = new ClientKillConfirmedStatus(_self);
             var snapshot = Snapshot(10, alphaScore: 3, bravoScore: 1, alphaConfirmed: 3, bravoConfirmed: 1, remaining: 42);
+            snapshot.Match.AlphaDenied = 2;
+            snapshot.Match.BravoDenied = 4;
             AddTag(snapshot, 5, _enemy, Team.Bravo, new Vector3(1f, 0f, 2f));
 
             Assert.That(status.Apply(snapshot), Is.True);
@@ -32,7 +34,8 @@ namespace Shooter.NetV2.Tests
             var detail = (KillConfirmed)shown.Detail;
             Assert.That(detail.GetConfirmed(Side.Alpha), Is.EqualTo(3));
             Assert.That(detail.GetConfirmed(Side.Bravo), Is.EqualTo(1));
-            Assert.That(detail.GetDenied(Side.Alpha), Is.Zero, "the snapshot has no denied counts");
+            Assert.That(detail.GetDenied(Side.Alpha), Is.EqualTo(2));
+            Assert.That(detail.GetDenied(Side.Bravo), Is.EqualTo(4));
             Assert.That(detail.Tags.Count, Is.EqualTo(1));
             Assert.That(detail.Tags[0].Id, Is.EqualTo(5));
             Assert.That(detail.Tags[0].OwnerId, Is.EqualTo(_enemy));
@@ -53,6 +56,22 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(status.Apply(second), Is.False);
             Assert.That(status.Status, Is.SameAs(shown));
+        }
+
+        [Test]
+        public void AChangedDeniedCountMakesANewStatus()
+        {
+            var status = new ClientKillConfirmedStatus(_self);
+            Assert.That(status.Apply(Snapshot(10, alphaScore: 0, bravoScore: 0, alphaConfirmed: 0, bravoConfirmed: 0, remaining: 30)), Is.True);
+            var shown = status.Status;
+
+            var denied = Snapshot(11, alphaScore: 0, bravoScore: 0, alphaConfirmed: 0, bravoConfirmed: 0, remaining: 30);
+            denied.Match.BravoDenied = 1;
+
+            Assert.That(status.Apply(denied), Is.True, "a deny changes no score but still changes what the HUD shows");
+            Assert.That(status.Status, Is.Not.SameAs(shown));
+            Assert.That(status.Detail.GetDenied(Side.Alpha), Is.Zero);
+            Assert.That(status.Detail.GetDenied(Side.Bravo), Is.EqualTo(1));
         }
 
         [Test]
@@ -135,6 +154,7 @@ namespace Shooter.NetV2.Tests
         {
             var status = new ClientKillConfirmedStatus(_self);
             var first = Snapshot(10, alphaScore: 1, bravoScore: 0, alphaConfirmed: 1, bravoConfirmed: 0, remaining: 30);
+            first.Match.AlphaDenied = 3;
             AddTag(first, 1, _enemy, Team.Bravo, Vector3.Zero);
             status.Apply(first);
 
@@ -145,6 +165,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(status.Status, Is.Null);
             Assert.That(status.Detail.Tags, Is.Empty);
             Assert.That(status.Detail.GetConfirmed(Side.Alpha), Is.Zero);
+            Assert.That(status.Detail.GetDenied(Side.Alpha), Is.Zero);
             Assert.That(status.Apply(Snapshot(12, 0, 0, 0, 0, 30, MatchObjective.None)), Is.False, "staying in another mode is no change");
         }
 

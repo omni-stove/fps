@@ -89,6 +89,8 @@ namespace Shooter.Server.Tests
             Assert.That(snapshot.BravoScore, Is.Zero);
             Assert.That(snapshot.AlphaPoints, Is.EqualTo(1));
             Assert.That(snapshot.BravoPoints, Is.Zero);
+            Assert.That(snapshot.AlphaDenied, Is.Zero, "a confirm is not a deny");
+            Assert.That(snapshot.BravoDenied, Is.Zero);
             Assert.That(_match.AlphaScore, Is.EqualTo(1));
             Assert.That(_match.State, Is.EqualTo(GameModeState.Playing));
 
@@ -136,6 +138,8 @@ namespace Shooter.Server.Tests
             Assert.That(Match().AlphaScore, Is.Zero);
             Assert.That(Match().BravoScore, Is.Zero);
             Assert.That(Match().BravoPoints, Is.Zero);
+            Assert.That(Match().AlphaDenied, Is.EqualTo(1));
+            Assert.That(Match().BravoDenied, Is.Zero);
             Assert.That(_match.BravoScore, Is.Zero);
         }
 

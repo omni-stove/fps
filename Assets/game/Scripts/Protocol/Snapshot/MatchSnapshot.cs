@@ -25,6 +25,10 @@ namespace Shooter.Protocol
         public int AlphaPoints { get; set; }
         public int BravoPoints { get; set; }
 
+        // Kill Confirmed の阻止の数は勝敗の点に数えないので、AlphaPoints に混ぜずに別の欄で送る
+        public int AlphaDenied { get; set; }
+        public int BravoDenied { get; set; }
+
         public bool HasRound { get; set; }
 
         public RoundPhase Round { get; set; }
@@ -59,7 +63,11 @@ namespace Shooter.Protocol
                 fields |= MatchFields.Rules;
             }
 
-            if (Objective != baseline.Objective || AlphaPoints != baseline.AlphaPoints || BravoPoints != baseline.BravoPoints)
+            if (Objective != baseline.Objective
+                || AlphaPoints != baseline.AlphaPoints
+                || BravoPoints != baseline.BravoPoints
+                || AlphaDenied != baseline.AlphaDenied
+                || BravoDenied != baseline.BravoDenied)
             {
                 fields |= MatchFields.Objective;
             }
@@ -105,6 +113,8 @@ namespace Shooter.Protocol
                 writer.WriteByte((byte)Objective);
                 writer.WriteInt32(AlphaPoints);
                 writer.WriteInt32(BravoPoints);
+                writer.WriteInt32(AlphaDenied);
+                writer.WriteInt32(BravoDenied);
             }
 
             if ((fields & MatchFields.Round) != 0)
@@ -158,6 +168,8 @@ namespace Shooter.Protocol
                 Objective = (MatchObjective)reader.ReadByteBelow(EnumRange<MatchObjective>.Count, "match objective");
                 AlphaPoints = reader.ReadInt32AtLeast(0, "alpha points");
                 BravoPoints = reader.ReadInt32AtLeast(0, "bravo points");
+                AlphaDenied = reader.ReadInt32AtLeast(0, "alpha denied");
+                BravoDenied = reader.ReadInt32AtLeast(0, "bravo denied");
             }
 
             if ((fields & MatchFields.Round) != 0)
@@ -201,6 +213,8 @@ namespace Shooter.Protocol
                 Objective = baseline.Objective;
                 AlphaPoints = baseline.AlphaPoints;
                 BravoPoints = baseline.BravoPoints;
+                AlphaDenied = baseline.AlphaDenied;
+                BravoDenied = baseline.BravoDenied;
             }
 
             if ((missing & MatchFields.Round) != 0)

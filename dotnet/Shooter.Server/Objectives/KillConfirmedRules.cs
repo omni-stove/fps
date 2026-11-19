@@ -208,6 +208,8 @@ namespace Shooter.Server
             snapshot.BravoScore = ScoreOf(session.GetScore(Side.Bravo));
             snapshot.AlphaPoints = _killConfirmed.GetConfirmed(Side.Alpha);
             snapshot.BravoPoints = _killConfirmed.GetConfirmed(Side.Bravo);
+            snapshot.AlphaDenied = _killConfirmed.GetDenied(Side.Alpha);
+            snapshot.BravoDenied = _killConfirmed.GetDenied(Side.Bravo);
         }
 
         public void FillControlPoints(SnapshotList<ControlPointSnapshot> points)

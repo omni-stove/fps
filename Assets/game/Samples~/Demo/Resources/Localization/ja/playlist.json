@@ -1,0 +1,17 @@
+{
+  "playlist.title": "プレイリスト",
+  "playlist.empty": "選べるプレイリストがありません",
+  "playlist.back": "戻る",
+  "playlist.order.sequential": "順番に回す",
+  "playlist.order.shuffle": "一巡ごとに混ぜる",
+  "playlist.entry": "{0}",
+  "playlist.entryWithMutators": "{0} ({1})",
+  "playlist.mutatorSeparator": "、",
+  "playlist.starting": "{0} を始めています…",
+  "playlist.cannotStart": "{0} を始められません: プレイリストのデータを確かめてください",
+  "playlist.noScene": "{0} を始められません: どのモードのシーンもこのビルドにありません",
+  "playlist.mutator.low-health": "体力半分",
+  "playlist.mutator.headshots-only": "ヘッドショットのみ",
+  "playlist.mutator.no-regen": "自然回復なし",
+  "playlist.mutator.infinite-ammo": "弾数無限"
+}

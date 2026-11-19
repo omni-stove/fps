@@ -6,26 +6,17 @@ using Shooter.Protocol;
 namespace Shooter.NetV2
 {
     // 届いたスナップショットから、オフラインの SearchAndDestroyRunner と同じ形の ModeStatus (Detail は SearchAndDestroyStatus) を作る。
-    // スナップショットに無い値 (勝ちに要るラウンド数・設置にかかる秒数) は、受け取った Spec の値を使う。
-    // 設置の進み具合は送られないので、同じ地点で設置が続いている間の経過を手元で数える。
-    // 解除している人・ラウンドの終わり方は送られないので、写しでは無いものとして出す
+    // ラウンドの番号・勝ちに要るラウンド数・前のラウンドの結果・設置と解除の進み具合はサーバーが送る値をそのまま出す
     public sealed class ClientSearchAndDestroyStatus
     {
         private readonly int _localPlayerId;
-        private readonly SearchAndDestroySpec _spec;
         private readonly List<KeyValuePair<int, Team>> _players = new List<KeyValuePair<int, Team>>();
         private Side _attacker = Side.Alpha;
-        private int _alphaWins;
-        private int _bravoWins;
-        private Side? _lastRoundWinner;
-        private int? _plantingSite;
-        private float _plantElapsed;
         private View _view;
 
-        public ClientSearchAndDestroyStatus(int localPlayerId, SearchAndDestroySpec spec)
+        public ClientSearchAndDestroyStatus(int localPlayerId)
         {
             _localPlayerId = localPlayerId;
-            _spec = spec ?? throw new ArgumentNullException(nameof(spec));
         }
 
         // 爆弾設置の試合でなければ null。変わるたびに別のものになる
@@ -60,14 +51,8 @@ namespace Shooter.NetV2
                 _attacker = Side.FromTeam(snapshot.ObjectiveItems[bombItem].Team);
             }
 
-            TrackRoundWinner(match.AlphaPoints, match.BravoPoints);
-
             var plantingSite = match.HasBomb && bomb == BombState.Carried && match.HasActivePoint ? match.ActivePointIndex : (int?)null;
-            if (plantingSite != _plantingSite)
-            {
-                _plantingSite = plantingSite;
-                _plantElapsed = 0f;
-            }
+            var defuserId = bomb == BombState.Planted && match.HasDefuser ? match.DefuserId : (int?)null;
 
             _players.Clear();
             Side? ownSide = null;
@@ -89,22 +74,26 @@ namespace Shooter.NetV2
                 : (int?)null;
             var ended = match.State == GameModeState.Ended;
             var view = new View(
-                this,
                 phase,
+                Math.Max(0, match.RoundNumber),
+                Math.Max(0, match.RoundsToWin),
                 _attacker,
                 ended && match.HasWinner ? Side.FromTeam(match.Winner) : (Side?)null,
                 bomb,
                 carrier,
                 plantingSite,
+                plantingSite.HasValue ? match.PlantFraction : 0f,
                 plantedOrAfter ? match.ActivePointIndex : (int?)null,
+                defuserId,
+                defuserId.HasValue ? match.DefuseFraction : 0f,
                 phase == RoundPhase.Preparing ? remaining : 0f,
                 phase == RoundPhase.Live && !plantedOrAfter ? remaining : 0f,
-                plantedOrAfter ? Math.Max(0, match.ObjectiveRemainingSeconds) : _spec.FuseSeconds,
+                plantedOrAfter ? Math.Max(0, match.ObjectiveRemainingSeconds) : 0f,
+                match.HasLastRound ? match.LastRoundEnd : (RoundEndReason?)null,
+                match.HasLastRound && match.HasLastRoundWinner ? Side.FromTeam(match.LastRoundWinner) : (Side?)null,
                 Math.Max(0, match.AlphaPoints),
                 Math.Max(0, match.BravoPoints),
-                _lastRoundWinner,
-                _players.ToArray(),
-                plantingSite.HasValue ? Math.Min(1f, _plantElapsed / _spec.PlantSeconds) : 0f);
+                _players.ToArray());
 
             if (Status != null && _view != null && _view.SameAs(view) && Status.OwnSide == ownSide && Status.IsEnded == ended
                 && Status.RemainingSeconds == remaining && (Status.Detail as SearchAndDestroyStatus)?.LocalPlayerId == (localPresent ? _localPlayerId : (int?)null))
@@ -124,35 +113,6 @@ namespace Shooter.NetV2
             return true;
         }
 
-        // 設置の進み具合を進める。表示の割合が変わって Status を作り直したら true
-        public bool Tick(float deltaSeconds)
-        {
-            if (!(deltaSeconds > 0f) || float.IsInfinity(deltaSeconds) || _view == null || !_plantingSite.HasValue)
-            {
-                return false;
-            }
-
-            var before = PercentOf(_plantElapsed);
-            _plantElapsed = Math.Min(_spec.PlantSeconds, _plantElapsed + deltaSeconds);
-            if (PercentOf(_plantElapsed) == before)
-            {
-                return false;
-            }
-
-            var status = Status;
-            _view = _view.WithPlantFraction(_plantElapsed / _spec.PlantSeconds);
-            var detail = (SearchAndDestroyStatus)status.Detail;
-            Status = new ModeStatus(
-                status.RemainingSeconds,
-                status.SideScores,
-                status.OwnSide,
-                status.RespawnSeconds,
-                status.IsEnded,
-                status.Winner,
-                new SearchAndDestroyStatus(_view, detail.LocalPlayerId));
-            return true;
-        }
-
         // Status を捨てたら true
         public bool Reset()
         {
@@ -160,16 +120,9 @@ namespace Shooter.NetV2
             Status = null;
             _view = null;
             _attacker = Side.Alpha;
-            _alphaWins = 0;
-            _bravoWins = 0;
-            _lastRoundWinner = null;
-            _plantingSite = null;
-            _plantElapsed = 0f;
             _players.Clear();
             return had;
         }
-
-        private int PercentOf(float elapsed) => (int)Math.Floor(Math.Min(1f, elapsed / _spec.PlantSeconds) * 100f);
 
         private static int FindBomb(SnapshotList<ObjectiveItemSnapshot> items)
         {
@@ -184,86 +137,60 @@ namespace Shooter.NetV2
             return -1;
         }
 
-        // 勝ち数が増えた側を前のラウンドの勝者にする。両方が減ったら次の試合が始まったので忘れる
-        private void TrackRoundWinner(int alpha, int bravo)
-        {
-            if (alpha < _alphaWins || bravo < _bravoWins)
-            {
-                _lastRoundWinner = null;
-            }
-            else if (alpha > _alphaWins)
-            {
-                _lastRoundWinner = Side.Alpha;
-            }
-            else if (bravo > _bravoWins)
-            {
-                _lastRoundWinner = Side.Bravo;
-            }
-
-            _alphaWins = alpha;
-            _bravoWins = bravo;
-        }
-
         private sealed class View : ISearchAndDestroyView
         {
-            private readonly ClientSearchAndDestroyStatus _owner;
             private readonly KeyValuePair<int, Team>[] _players;
 
             public View(
-                ClientSearchAndDestroyStatus owner,
                 RoundPhase phase,
+                int roundNumber,
+                int winsToWin,
                 Side attacker,
                 Side? winner,
                 BombState bomb,
                 int? carrierId,
                 int? plantingSite,
+                float plantFraction,
                 int? plantedSite,
+                int? defuserId,
+                float defuseFraction,
                 float preparationRemaining,
                 float roundRemaining,
                 float fuseRemaining,
+                RoundEndReason? lastRoundEnd,
+                Side? lastRoundWinner,
                 int alphaWins,
                 int bravoWins,
-                Side? lastRoundWinner,
-                KeyValuePair<int, Team>[] players,
-                float plantFraction = 0f)
+                KeyValuePair<int, Team>[] players)
             {
-                _owner = owner;
                 Phase = phase;
+                RoundNumber = roundNumber;
+                WinsToWin = winsToWin;
                 Attacker = attacker;
                 Defender = attacker == Side.Alpha ? Side.Bravo : Side.Alpha;
                 Winner = winner;
                 Bomb = bomb;
                 CarrierId = carrierId;
                 PlantingSite = plantingSite;
+                PlantFraction = plantFraction;
                 PlantedSite = plantedSite;
+                DefuserId = defuserId;
+                DefuseFraction = defuseFraction;
                 PreparationRemaining = preparationRemaining;
                 RoundRemaining = roundRemaining;
                 FuseRemaining = fuseRemaining;
+                LastRoundEnd = lastRoundEnd;
+                LastRoundWinner = lastRoundWinner;
                 AlphaWins = alphaWins;
                 BravoWins = bravoWins;
-                LastRoundWinner = lastRoundWinner;
                 _players = players;
-                PlantFraction = plantFraction;
             }
 
             public RoundPhase Phase { get; }
 
-            // スナップショットにラウンドの番号が無いので、勝ち数の和から数える。引き分けのラウンドは数えられない
-            public int RoundNumber
-            {
-                get
-                {
-                    if (Phase == RoundPhase.Waiting)
-                    {
-                        return 0;
-                    }
+            public int RoundNumber { get; }
 
-                    var played = AlphaWins + BravoWins;
-                    return Phase == RoundPhase.Ended ? Math.Max(1, played) : played + 1;
-                }
-            }
-
-            public int WinsToWin => _owner._spec.WinsToWin;
+            public int WinsToWin { get; }
 
             public float PreparationRemaining { get; }
 
@@ -283,15 +210,16 @@ namespace Shooter.NetV2
 
             public int? PlantedSite { get; }
 
-            public int? DefuserId => null;
+            public int? DefuserId { get; }
 
-            public float DefuseFraction => 0f;
+            public float DefuseFraction { get; }
 
             public float RoundRemaining { get; }
 
+            // 設置の前は HUD に出ないので 0
             public float FuseRemaining { get; }
 
-            public RoundEndReason? LastRoundEnd => null;
+            public RoundEndReason? LastRoundEnd { get; }
 
             public Side? LastRoundWinner { get; }
 
@@ -326,21 +254,17 @@ namespace Shooter.NetV2
                 return Side.FromTeam(team) == Attacker;
             }
 
-            public View WithPlantFraction(float fraction)
-            {
-                return new View(
-                    _owner, Phase, Attacker, Winner, Bomb, CarrierId, PlantingSite, PlantedSite, PreparationRemaining, RoundRemaining,
-                    FuseRemaining, AlphaWins, BravoWins, LastRoundWinner, _players, fraction);
-            }
-
-            // 設置の進み具合は Tick で数えるので比べない
+            // 進み具合は毎 tick 届くので、HUD に出る百分率が同じ間は同じとみなして ModeStatus を出し直さない
             public bool SameAs(View other)
             {
-                if (Phase != other.Phase || Attacker != other.Attacker || Winner != other.Winner || Bomb != other.Bomb
-                    || CarrierId != other.CarrierId || PlantingSite != other.PlantingSite || PlantedSite != other.PlantedSite
-                    || PreparationRemaining != other.PreparationRemaining || RoundRemaining != other.RoundRemaining
-                    || FuseRemaining != other.FuseRemaining || AlphaWins != other.AlphaWins || BravoWins != other.BravoWins
-                    || LastRoundWinner != other.LastRoundWinner || _players.Length != other._players.Length)
+                if (Phase != other.Phase || RoundNumber != other.RoundNumber || WinsToWin != other.WinsToWin || Attacker != other.Attacker
+                    || Winner != other.Winner || Bomb != other.Bomb || CarrierId != other.CarrierId || PlantingSite != other.PlantingSite
+                    || PercentOf(PlantFraction) != PercentOf(other.PlantFraction) || PlantedSite != other.PlantedSite
+                    || DefuserId != other.DefuserId || PercentOf(DefuseFraction) != PercentOf(other.DefuseFraction)
+                    || PreparationRemaining != other.PreparationRemaining
+                    || RoundRemaining != other.RoundRemaining || FuseRemaining != other.FuseRemaining || LastRoundEnd != other.LastRoundEnd
+                    || LastRoundWinner != other.LastRoundWinner || AlphaWins != other.AlphaWins || BravoWins != other.BravoWins
+                    || _players.Length != other._players.Length)
                 {
                     return false;
                 }
@@ -355,6 +279,8 @@ namespace Shooter.NetV2
 
                 return true;
             }
+
+            private static int PercentOf(float fraction) => (int)Math.Floor(Math.Min(1f, Math.Max(0f, fraction)) * 100f);
 
             private bool TryGetTeam(int playerId, out Team team)
             {

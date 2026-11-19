@@ -291,6 +291,16 @@ namespace Shooter.Server
                 snapshot.HasActivePoint = false;
                 snapshot.ActivePointIndex = 0;
                 snapshot.ObjectiveRemainingSeconds = 0;
+                snapshot.RoundNumber = 0;
+                snapshot.RoundsToWin = _settings.SearchAndDestroy.WinsToWin;
+                snapshot.HasLastRound = false;
+                snapshot.LastRoundEnd = default;
+                snapshot.HasLastRoundWinner = false;
+                snapshot.LastRoundWinner = Team.Alpha;
+                snapshot.PlantFraction = 0f;
+                snapshot.HasDefuser = false;
+                snapshot.DefuserId = 0;
+                snapshot.DefuseFraction = 0f;
                 return;
             }
 
@@ -304,6 +314,23 @@ namespace Shooter.Server
             snapshot.ObjectiveRemainingSeconds = IsPlantedOrAfter(_game.Bomb) && _game.Phase != RoundPhase.Waiting
                 ? (int)Math.Ceiling(Math.Max(0f, _game.FuseRemaining))
                 : 0;
+            snapshot.RoundNumber = _game.RoundNumber;
+            snapshot.RoundsToWin = _game.WinsToWin;
+            snapshot.HasLastRound = _game.LastRoundEnd.HasValue;
+            snapshot.LastRoundEnd = _game.LastRoundEnd ?? default;
+            snapshot.HasLastRoundWinner = _game.LastRoundEnd.HasValue && _game.LastRoundWinner.HasValue;
+            snapshot.LastRoundWinner = snapshot.HasLastRoundWinner ? _game.LastRoundWinner.Value.ToTeam() : Team.Alpha;
+            snapshot.PlantFraction = _game.PlantingSite.HasValue ? Fraction(_game.PlantFraction) : 0f;
+            var defusing = _game.Bomb == BombState.Planted && _game.DefuserId.HasValue;
+            snapshot.HasDefuser = defusing;
+            snapshot.DefuserId = defusing ? _game.DefuserId.Value : 0;
+            snapshot.DefuseFraction = defusing ? Fraction(_game.DefuseFraction) : 0f;
+        }
+
+        // 浮動小数の誤差で 1 をわずかに超えても書けるよう、0〜1 に収める
+        private static float Fraction(float value)
+        {
+            return value > 0f ? Math.Min(1f, value) : 0f;
         }
 
         public void FillControlPoints(SnapshotList<ControlPointSnapshot> points)

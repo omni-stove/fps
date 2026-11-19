@@ -124,6 +124,9 @@ namespace Shooter.Server.Tests
             Assert.That(planting.HasActivePoint, Is.True);
             Assert.That(planting.ActivePointIndex, Is.Zero);
             Assert.That(planting.ObjectiveRemainingSeconds, Is.Zero);
+            Assert.That(planting.PlantFraction, Is.EqualTo(_module.SearchAndDestroy.PlantFraction));
+            Assert.That(planting.PlantFraction, Is.GreaterThan(0.4f).And.LessThan(0.6f), "half of the 1 second plant has passed");
+            Assert.That(planting.HasDefuser, Is.False);
             var carried = Items().Single();
             Assert.That(carried.ItemId, Is.EqualTo(SearchAndDestroyRules.BombItemId));
             Assert.That(carried.Present, Is.EqualTo(ObjectiveItemFields.All));
@@ -142,6 +145,7 @@ namespace Shooter.Server.Tests
             Assert.That(planted.ActivePointIndex, Is.Zero);
             Assert.That(planted.ObjectiveRemainingSeconds, Is.EqualTo(5));
             Assert.That(planted.RemainingSeconds, Is.EqualTo(5), "the clock shows the fuse after the plant");
+            Assert.That(planted.PlantFraction, Is.Zero, "nobody is planting once the bomb is planted");
             var item = Items().Single();
             Assert.That(item.State, Is.EqualTo(ObjectiveItemState.Planted));
             Assert.That(item.HasCarrier, Is.False);
@@ -169,6 +173,12 @@ namespace Shooter.Server.Tests
             Advance(1f);
             Assert.That(_module.SearchAndDestroy.DefuserId, Is.EqualTo(2));
             Assert.That(_module.SearchAndDestroy.Bomb, Is.EqualTo(BombState.Planted), "the defuse takes 2 seconds");
+            var defusing = Match();
+            Assert.That(defusing.HasDefuser, Is.True);
+            Assert.That(defusing.DefuserId, Is.EqualTo(2));
+            Assert.That(defusing.DefuseFraction, Is.EqualTo(_module.SearchAndDestroy.DefuseFraction));
+            Assert.That(defusing.DefuseFraction, Is.GreaterThan(0.4f).And.LessThan(0.6f), "half of the 2 second defuse has passed");
+            Assert.That(defusing.HasLastRound, Is.False, "no round has ended yet");
 
             Advance(1.1f);
 
@@ -176,7 +186,14 @@ namespace Shooter.Server.Tests
             Assert.That(game.GetRoundWins(Side.Bravo), Is.EqualTo(1));
             Assert.That(game.LastRoundEnd, Is.EqualTo(RoundEndReason.Defused));
             Assert.That(_match.BravoScore, Is.EqualTo(1));
-            Assert.That(Match().BravoPoints, Is.EqualTo(1));
+            var after = Match();
+            Assert.That(after.BravoPoints, Is.EqualTo(1));
+            Assert.That(after.HasLastRound, Is.True);
+            Assert.That(after.LastRoundEnd, Is.EqualTo(RoundEndReason.Defused));
+            Assert.That(after.HasLastRoundWinner, Is.True);
+            Assert.That(after.LastRoundWinner, Is.EqualTo(Team.Bravo));
+            Assert.That(after.HasDefuser, Is.False, "the defuser is not sent once the bomb is defused");
+            Assert.That(after.DefuseFraction, Is.Zero);
             var log = _log.ToString();
             Assert.That(log, Does.Contain("[SearchAndDestroy] defused player=2"));
             Assert.That(log, Does.Contain("[SearchAndDestroy] round_end round=1 winner=1 reason=Defused wins=0:0,1:1"));
@@ -332,17 +349,24 @@ namespace Shooter.Server.Tests
             Assert.That(snapshot.RemainingSeconds, Is.EqualTo(3));
             Assert.That(snapshot.HasBomb, Is.True);
             Assert.That(snapshot.Bomb, Is.EqualTo(BombState.Carried));
+            Assert.That(snapshot.RoundNumber, Is.EqualTo(1));
+            Assert.That(snapshot.RoundsToWin, Is.EqualTo(4));
+            Assert.That(snapshot.HasLastRound, Is.False);
         }
 
         [Test]
         public void NothingIsSentAboutTheBombBeforeTheFirstRound()
         {
-            Start(Spec());
+            Start(Spec(winsToWin: 3));
 
             var snapshot = Match();
             Assert.That(snapshot.Objective, Is.EqualTo(MatchObjective.SearchAndDestroy));
             Assert.That(snapshot.HasBomb, Is.False);
             Assert.That(snapshot.HasActivePoint, Is.False);
+            Assert.That(snapshot.RoundNumber, Is.Zero);
+            Assert.That(snapshot.RoundsToWin, Is.EqualTo(3), "the rounds to win are the configured ones");
+            Assert.That(snapshot.HasLastRound, Is.False);
+            Assert.That(snapshot.HasDefuser, Is.False);
             Assert.That(Items(), Is.Empty);
         }
 
@@ -367,6 +391,32 @@ namespace Shooter.Server.Tests
             Assert.That(game.Phase, Is.EqualTo(RoundPhase.Live));
             Assert.That(game.RoundNumber, Is.EqualTo(1));
             Assert.That(game.Attacker, Is.EqualTo(Side.Alpha));
+            var snapshot = Match();
+            Assert.That(snapshot.RoundNumber, Is.EqualTo(1));
+            Assert.That(snapshot.HasLastRound, Is.False, "the next match forgets the last round of the previous one");
+            Assert.That(snapshot.HasLastRoundWinner, Is.False);
+        }
+
+        [Test]
+        public void TheNextRoundCarriesItsNumberAndHowThePreviousOneEnded()
+        {
+            Start(Spec(preparationSeconds: 4f));
+            Join(1);
+            Join(2);
+            Advance(4.1f);
+            Assert.That(_module.SearchAndDestroy.Phase, Is.EqualTo(RoundPhase.Live));
+
+            _module.ApplyDamage(1, 2, 100);
+            Step();
+
+            Assert.That(_module.SearchAndDestroy.Phase, Is.EqualTo(RoundPhase.Preparing));
+            var snapshot = Match();
+            Assert.That(snapshot.RoundNumber, Is.EqualTo(2));
+            Assert.That(snapshot.RoundsToWin, Is.EqualTo(4));
+            Assert.That(snapshot.HasLastRound, Is.True);
+            Assert.That(snapshot.LastRoundEnd, Is.EqualTo(RoundEndReason.DefendersEliminated));
+            Assert.That(snapshot.HasLastRoundWinner, Is.True);
+            Assert.That(snapshot.LastRoundWinner, Is.EqualTo(Team.Alpha));
         }
 
         [Test]

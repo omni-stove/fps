@@ -102,7 +102,7 @@
         <ui:VisualElement name="stamina" class="stamina" picking-mode="Ignore" style="display: none;">
             <ui:VisualElement name="stamina-fill" class="stamina__fill" picking-mode="Ignore" />
         </ui:VisualElement>
-        <!-- 自分の乗り物が狙われている警告。GameSignals.LockOnWarning が無し以外の間だけビューが出し、段階の文字と向きの印を入れ、ロック済みなら lock-warning--locked を付ける。 -->
+        <!-- 自分の乗り物が狙われている警告。GameSignals.LockOnWarning が無し以外の間だけ LockOnWarningView が出し、向きの矢印 (lock-warning__arrow) と段階の文字 (lock-warning__text) を入れ、捕捉中は lock-warning--tracking を付けて lock-warning--dim で点滅させ、ロック済みなら lock-warning--locked を付ける。 -->
         <ui:VisualElement name="lock-warning" class="lock-warning" picking-mode="Ignore" style="display: none;" />
         <!-- エモートを選ぶ輪。GameSignals.Emotes がある間に Emote を長押しすると EmoteWheelView が出し、エモートごとの枠 (emote-wheel__slot) を円に並べ、中央 (emote-wheel__center) に指している名前を入れる。 -->
         <ui:VisualElement name="emote-wheel" class="emote-wheel" picking-mode="Ignore" style="display: none;" />

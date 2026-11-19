@@ -157,6 +157,60 @@ namespace Shooter.Tests.EditMode
             Assert.That(turret.Tick(0.1f), Is.False);
         }
 
+        [Test]
+        public void ATargetTagLetsItWatchTheGroundForPlayersOnlyAndSkipsTheDummies()
+        {
+            var dummy = CreateTarget("dummy", new Vector3(-3f, 1f, 5f));
+            var player = CreateTarget("player", new Vector3(0f, 1f, 20f));
+            player.gameObject.tag = GameBootstrap.PlayerTag;
+            var turret = CreateTurret(Vector3.zero);
+            turret.Configure(new LockOnTurretSpec(LockOnTurretSpec.DefaultTurnDegreesPerSecond, 0f, GameBootstrap.PlayerTag));
+
+            Assert.That(turret.Spec.TargetTag, Is.EqualTo(GameBootstrap.PlayerTag));
+            Assert.That(turret.Tick(0.1f), Is.True, "a floor of 0m takes someone walking on the ground");
+            Assert.That(turret.TargetPoint, Is.EqualTo(player.AimPoint), "the nearer dummy has no player tag");
+            Assert.That(turret.TargetPoint, Is.Not.EqualTo(dummy.AimPoint));
+
+            turret.Tick(2f);
+            turret.Aim.Tick(0.5f);
+            Assert.That(turret.Aim.Stage, Is.EqualTo(LockOnWarningStage.Tracking));
+            turret.Aim.Tick(0.6f);
+            Assert.That(turret.Aim.Stage, Is.EqualTo(LockOnWarningStage.Locked));
+            Assert.That(turret.Aim.Target, Is.SameAs(player));
+        }
+
+        [Test]
+        public void TheTargetTagIsAlsoFoundOnTheParentOfTheBody()
+        {
+            var holder = new GameObject("holder") { tag = GameBootstrap.PlayerTag };
+            _created.Add(holder);
+            var body = CreateTarget("body", new Vector3(0f, 1f, 20f));
+            body.transform.SetParent(holder.transform, true);
+            Physics.SyncTransforms();
+            var turret = CreateTurret(Vector3.zero);
+            turret.Configure(new LockOnTurretSpec(90f, 0f, GameBootstrap.PlayerTag));
+
+            Assert.That(turret.Tick(0.1f), Is.True);
+            Assert.That(turret.TargetPoint, Is.EqualTo(body.AimPoint));
+        }
+
+        [Test]
+        public void WithoutAPlayerOnTheGroundATaggedTurretStaysIdle()
+        {
+            CreateTarget("dummy", new Vector3(0f, 1f, 5f));
+            CreateTarget("flyer", new Vector3(0f, 20f, 20f));
+            var turret = CreateTurret(Vector3.zero);
+            turret.Configure(new LockOnTurretSpec(90f, 0f, GameBootstrap.PlayerTag));
+
+            Assert.That(turret.Tick(0.1f), Is.False, "untagged bodies are not taken, high or low");
+            turret.Aim.Tick(1f);
+            Assert.That(turret.Aim.Stage, Is.EqualTo(LockOnWarningStage.None));
+
+            turret.Configure(LockOnTurretSpec.Default);
+            Assert.That(turret.Spec.TargetTag, Is.Empty);
+            Assert.That(turret.Tick(0.1f), Is.True, "an empty tag takes anyone again");
+        }
+
         private LockOnTurret CreateTurret(Vector3 position)
         {
             var root = new GameObject("Turret");

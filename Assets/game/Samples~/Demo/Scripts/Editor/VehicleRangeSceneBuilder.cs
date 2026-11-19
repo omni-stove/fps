@@ -535,13 +535,62 @@ namespace Shooter.Editor
             pilot.FollowWaypointHeight = true;
         }
 
-        // 台と頭の箱は試すための目印なので、差し替える参照は持たない。頭の当たりを外すのは、捉えた相手との間の見通しを自分の頭で遮らないようにするため。
         private static void CreateLockOnTurret(Scene scene, WeaponDefinition weapon, List<GameObject> created)
         {
-            var root = new GameObject(LockOnTurretName);
-            created.Add(root);
-            SceneManager.MoveGameObjectToScene(root, scene);
-            root.transform.position = LockOnTurretOrigin;
+            var turret = CreateLockOnTurret(
+                scene,
+                null,
+                LockOnTurretName,
+                LockOnTurretOrigin,
+                Quaternion.LookRotation(new Vector3(0f, 1f, -1f), Vector3.up),
+                weapon,
+                LockOnTurretSpec.Default);
+            created.Add(turret.gameObject);
+        }
+
+        // 射撃場 (BootstrapSceneBuilder) も地上を見張るタレットを同じ形で置くので、置き場・頭の向き・設定を受け取る。
+        // 台と頭の箱は試すための目印なので、差し替える参照は持たない。頭の当たりを外すのは、捉えた相手との間の見通しを自分の頭で遮らないようにするため。
+        public static LockOnTurret CreateLockOnTurret(
+            Scene scene,
+            Transform parent,
+            string name,
+            Vector3 origin,
+            Quaternion headRotation,
+            WeaponDefinition weapon,
+            LockOnTurretSpec spec)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("the turret needs a name", nameof(name));
+            }
+
+            if (weapon == null)
+            {
+                throw new ArgumentNullException(nameof(weapon));
+            }
+
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (weapon.ToSpec().Round.Homing == null)
+            {
+                throw new ArgumentException($"weapon '{weapon.Id}' has no homing round, so the turret could never lock on", nameof(weapon));
+            }
+
+            var root = new GameObject(name);
+            if (parent != null)
+            {
+                root.transform.SetParent(parent, false);
+            }
+            else
+            {
+                SceneManager.MoveGameObjectToScene(root, scene);
+            }
+
+            root.transform.position = origin;
 
             var pedestal = GameObject.CreatePrimitive(PrimitiveType.Cube);
             pedestal.name = "Base";
@@ -552,7 +601,7 @@ namespace Shooter.Editor
             var head = new GameObject(LockOnTurretHeadName).transform;
             head.SetParent(root.transform, false);
             head.localPosition = LockOnTurretHeadLocal;
-            head.localRotation = Quaternion.LookRotation(new Vector3(0f, 1f, -1f), Vector3.up);
+            head.localRotation = headRotation;
 
             var barrel = GameObject.CreatePrimitive(PrimitiveType.Cube);
             barrel.name = "Barrel";
@@ -564,7 +613,8 @@ namespace Shooter.Editor
             var turret = root.AddComponent<LockOnTurret>();
             turret.Weapon = weapon;
             turret.Head = head;
-            turret.Configure(LockOnTurretSpec.Default);
+            turret.Configure(spec);
+            return turret;
         }
 
         // CreateStaticBox は回さずに置くので、置いてから傾ける。

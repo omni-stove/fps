@@ -1,0 +1,19 @@
+{
+  "startMoney": 800,
+  "maxMoney": 16000,
+  "killReward": 300,
+  "roundWinReward": 3000,
+  "roundLossReward": 1400,
+  "lossStreakBonus": 500,
+  "maxLossReward": 3400,
+  "resetOnSwap": true,
+  "items": [
+    { "id": "a9ae4aeb-607f-41a8-875f-2e8deed9bfa6", "kind": "Weapon", "price": 500, "slot": 1, "nameKey": "weapon.ricochetPistol" },
+    { "id": "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83", "kind": "Weapon", "price": 2700, "slot": 0, "nameKey": "weapon.rifle" },
+    { "id": "9795f821-8fac-4c4f-90f8-c0a80841de96", "kind": "Weapon", "price": 3100, "slot": 0, "nameKey": "weapon.burstRifle" },
+    { "id": "8e9139d0-8779-4ec7-af73-198c0289f616", "kind": "Weapon", "price": 3700, "slot": 0, "nameKey": "weapon.dmr" },
+    { "id": "5b2af293-a0d8-45cb-af68-8c63628c80d1", "kind": "Weapon", "price": 4750, "slot": 0, "nameKey": "weapon.boltSniper" },
+    { "id": "ff94f232-2647-4b77-a077-5693d8f954d1", "kind": "Throwable", "price": 300, "nameKey": "grenade.frag" },
+    { "id": "ecaf6e57-cb77-4707-9321-6ea5b659408f", "kind": "Throwable", "price": 300, "nameKey": "grenade.smoke" }
+  ]
+}

@@ -124,6 +124,18 @@ namespace Shooter.Core
             }
         }
 
+        public bool RefillAt(int index)
+        {
+            var pouch = _pouches[Check(index)];
+            if (pouch.Remaining >= pouch.Capacity)
+            {
+                return false;
+            }
+
+            pouch.Refill();
+            return true;
+        }
+
         private int Check(int index)
         {
             if ((uint)index >= (uint)_types.Count)

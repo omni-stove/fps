@@ -164,6 +164,26 @@ namespace Shooter.Core
             return $"{Tag} '{vehicle}' has no IVehicleMotor; the driver's input moves nothing";
         }
 
+        public static string BotDriverMissingVehicle(string driver)
+        {
+            return $"{Tag} bot driver '{driver}' has no Vehicle; it drives nothing";
+        }
+
+        public static string BotDriverMissingDriverSeat(string vehicle)
+        {
+            return $"{Tag} '{vehicle}' has no driver seat; the bot driver drives nothing";
+        }
+
+        public static string BotDriverMissingRoute(string vehicle)
+        {
+            return $"{Tag} '{vehicle}' bot driver has no route with points; it stays put";
+        }
+
+        public static string BotDriverPhase(string vehicle, VehicleRoutePhase phase, int targetIndex)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' bot driver phase={2} target={3}", Tag, vehicle, phase, targetIndex);
+        }
+
         public static string EffectsMissingMotor(string vehicle)
         {
             return $"{Tag} '{vehicle}' has no SimpleAircraftMotor; the aircraft effects show nothing";

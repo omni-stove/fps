@@ -186,6 +186,19 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ADownedPlayerIsRefusedAsDownedNotDead()
+        {
+            var emotes = Player(Emote.On);
+            var damageable = emotes.GetComponent<Damageable>();
+            damageable.Kill();
+            damageable.SetDowned(true);
+
+            LogAssert.Expect(LogType.Log, EmoteLog.Refused(_wave, EmoteRefusal.Downed));
+            Assert.That(emotes.Play(_wave), Is.False);
+            Assert.That(emotes.LastRefusal, Is.EqualTo(EmoteRefusal.Downed));
+        }
+
+        [Test]
         public void AOneShotEmoteEndsAfterItsLengthAndALoopingOneDoesNot()
         {
             var emotes = Player(Emote.On);

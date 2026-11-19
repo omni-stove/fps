@@ -217,14 +217,15 @@ namespace Shooter.Runtime
                 return Refuse(emoteId, EmoteRefusal.UnknownId);
             }
 
-            if (_self != null && _self.IsDead)
-            {
-                return Refuse(emoteId, EmoteRefusal.Dead);
-            }
-
+            // ダウンは体力 0 で倒れた後の状態で IsDead も true になるので、先に見ないと Downed が出ない。
             if (_self != null && _self.IsDowned)
             {
                 return Refuse(emoteId, EmoteRefusal.Downed);
+            }
+
+            if (_self != null && _self.IsDead)
+            {
+                return Refuse(emoteId, EmoteRefusal.Dead);
             }
 
             if (_rider != null && _rider.IsRiding)
@@ -274,15 +275,15 @@ namespace Shooter.Runtime
                 return;
             }
 
-            if (_self != null && _self.IsDead)
-            {
-                StopCurrent(EmoteStopReason.Died);
-                return;
-            }
-
             if (_self != null && _self.IsDowned)
             {
                 StopCurrent(EmoteStopReason.Downed);
+                return;
+            }
+
+            if (_self != null && _self.IsDead)
+            {
+                StopCurrent(EmoteStopReason.Died);
                 return;
             }
 

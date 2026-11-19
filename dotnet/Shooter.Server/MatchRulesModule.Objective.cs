@@ -50,6 +50,19 @@ namespace Shooter.Server
             ClearDowned();
         }
 
+        // 試合に居ない人は陣営が無いので、敵味方を決められない。呼ぶ側が先に Session.HasPlayer で確かめる
+        internal bool AreHostile(int a, int b)
+        {
+            if (_session == null || !_session.HasPlayer(a) || !_session.HasPlayer(b))
+            {
+                throw new InvalidOperationException("both players must be in the match to tell whether they are hostile");
+            }
+
+            var aTeam = _session.GetTeam(a);
+            var bTeam = _session.GetTeam(b);
+            return _objective != null ? _objective.AreHostile(a, aTeam, b, bTeam) : aTeam != bTeam;
+        }
+
         public void FillControlPoints(SnapshotList<ControlPointSnapshot> points)
         {
             ArgumentNullException.ThrowIfNull(points);

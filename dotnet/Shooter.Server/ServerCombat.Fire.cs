@@ -236,7 +236,7 @@ namespace Shooter.Server
             return attackerId == victimId
                 || !session.HasPlayer(attackerId)
                 || session.Spec.Rules.FriendlyFire == FriendlyFire.On
-                || session.GetTeam(attackerId) != session.GetTeam(victimId);
+                || _rules.AreHostile(attackerId, victimId);
         }
 
         internal void DamageStructure(int colliderId, Vector3 point, int amount, float radius)

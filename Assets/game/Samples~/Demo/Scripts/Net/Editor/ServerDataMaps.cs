@@ -143,5 +143,125 @@ namespace Shooter.Editor
             Debug.Log(LogTag + " added " + bases.Count + " flag base(s) (capture radius " + radius + " m) to " + scenePath + "; commit it");
             return true;
         }
+
+        // 箱の Id は部品に持たせたものを使う。オブジェクトの名前は複製すると重なり、付け直すと変わるので、サーバーとクライアントの間で箱を引く鍵にしない
+        public static IReadOnlyList<NetMapLootContainer> ToLootContainers(string scenePath, IReadOnlyList<LootContainer> containers)
+        {
+            if (containers == null)
+            {
+                throw new ArgumentNullException(nameof(containers));
+            }
+
+            var written = new List<NetMapLootContainer>(containers.Count);
+            var owners = new Dictionary<string, LootContainer>(StringComparer.Ordinal);
+            foreach (var container in containers)
+            {
+                var id = RequireId(scenePath, container, container.ContainerId, "container id", owners);
+                // 遊ぶときの IsInReach と同じく、使えない距離は既定の距離に読み替える
+                var reach = LootContainer.IsValidReach(container.Reach) ? container.Reach : LootContainer.DefaultReach;
+                written.Add(new NetMapLootContainer(id, container.TableId, container.Position.ToNumerics(), reach));
+            }
+
+            return written;
+        }
+
+        public static IReadOnlyList<NetMapExtractionPoint> ToExtractionPoints(string scenePath, IReadOnlyList<ExtractionZone> zones)
+        {
+            if (zones == null)
+            {
+                throw new ArgumentNullException(nameof(zones));
+            }
+
+            var written = new List<NetMapExtractionPoint>(zones.Count);
+            var owners = new Dictionary<string, ExtractionZone>(StringComparer.Ordinal);
+            foreach (var zone in zones)
+            {
+                var id = RequireId(scenePath, zone, zone.PointId, "point id", owners);
+                // 遊ぶときの Contains と同じく、使えない半径は既定の半径に読み替える
+                var radius = ExtractionZone.IsValidRadius(zone.Radius) ? zone.Radius : ExtractionZone.DefaultRadius;
+                written.Add(new NetMapExtractionPoint(id, zone.transform.position.ToNumerics(), radius));
+            }
+
+            return written;
+        }
+
+        // エリアの無いシーンは null。サーバーは BR のルールでエリアの無いマップを起動のときに断る
+        public static NetMapZoneCircle ToZone(string scenePath, IReadOnlyList<ShrinkingZone> zones)
+        {
+            if (zones == null)
+            {
+                throw new ArgumentNullException(nameof(zones));
+            }
+
+            if (zones.Count == 0)
+            {
+                return null;
+            }
+
+            // サーバーは 1 つのエリアだけを縮めるので、どれを書き出すかを黙って選ばない
+            if (zones.Count > 1)
+            {
+                throw new InvalidOperationException(LogTag + " " + scenePath + " has " + zones.Count + " ShrinkingZones; the server shrinks one, so keep one");
+            }
+
+            var zone = zones[0];
+            try
+            {
+                return new NetMapZoneCircle(zone.transform.position.ToNumerics(), zone.InitialRadius);
+            }
+            catch (ArgumentException e)
+            {
+                throw new InvalidOperationException(LogTag + " ShrinkingZone '" + zone.name + "' in " + scenePath + " has an invalid circle: " + e.Message, e);
+            }
+        }
+
+        // パラシュートで降ろす Runner が無ければ null (地面から始める)。高さはアセットがあればそちら (遊ぶときの EffectiveDropHeight と同じ)
+        public static float? ToDropHeight(string scenePath, IReadOnlyList<BattleRoyaleRunner> runners)
+        {
+            if (runners == null)
+            {
+                throw new ArgumentNullException(nameof(runners));
+            }
+
+            float? height = null;
+            foreach (var runner in runners)
+            {
+                if (runner.StartFrom != BattleRoyaleStart.Parachute)
+                {
+                    continue;
+                }
+
+                var next = runner.EffectiveDropHeight;
+                if (height.HasValue && !Mathf.Approximately(height.Value, next))
+                {
+                    throw new InvalidOperationException(
+                        LogTag + " " + scenePath + " has BattleRoyaleRunners that drop from " + height.Value + " m and " + next + " m; the server drops from one height");
+                }
+
+                height = next;
+            }
+
+            return height;
+        }
+
+        private static string RequireId<T>(string scenePath, T component, string id, string label, Dictionary<string, T> owners)
+            where T : Component
+        {
+            var kind = typeof(T).Name;
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw new InvalidOperationException(
+                    LogTag + " " + kind + " '" + component.name + "' in " + scenePath + " has no " + label + "; set one that no other " + kind + " uses");
+            }
+
+            if (owners.TryGetValue(id, out var other))
+            {
+                throw new InvalidOperationException(
+                    LogTag + " " + kind + "s '" + other.name + "' and '" + component.name + "' in " + scenePath + " share the " + label + " '" + id + "'");
+            }
+
+            owners.Add(id, component);
+            return id;
+        }
     }
 }

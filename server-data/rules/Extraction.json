@@ -2,7 +2,7 @@
   "name": "Extraction",
   "rules": {
     "friendlyFire": "On",
-    "respawnMode": "Individual",
+    "respawnMode": "None",
     "waveIntervalSeconds": 10,
     "regenDelaySeconds": 0,
     "regenPerSecond": 0,
@@ -43,7 +43,7 @@
       "stamina": "Off",
       "reloadInterruptedBy": ["Melee", "Grenade"]
     },
-    "spawnProtectionSeconds": 2,
+    "spawnProtectionSeconds": 0,
     "fallDamage": "Off",
     "hudDensity": "Full",
     "objective": "Extraction",

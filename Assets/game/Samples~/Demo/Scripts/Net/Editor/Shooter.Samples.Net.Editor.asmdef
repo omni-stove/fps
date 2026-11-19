@@ -4,6 +4,8 @@
     "references": [
         "Shooter.Core",
         "Shooter.Editor",
+        "Shooter.NetV2.Client",
+        "Shooter.Protocol",
         "Shooter.Samples.Editor",
         "Shooter.Runtime",
         "Shooter.Runtime.UI",

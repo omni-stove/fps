@@ -32,6 +32,8 @@ namespace Shooter.Tests.EditMode
                     nameof(WeaponSwitchSmokeRun),
                     nameof(LauncherSmokeRun),
                     nameof(VehicleSmokeRun),
+                    nameof(InfectedSmokeRun),
+                    nameof(ExtractionSmokeRun),
                 }));
             Assert.That(SmokeSuite.Runs.Select(run => run.LogTag), Is.Unique);
         }

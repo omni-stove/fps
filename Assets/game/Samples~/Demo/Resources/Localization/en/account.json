@@ -1,0 +1,12 @@
+{
+  "account.title": "Account",
+  "account.none": "Not signed in. Saves stay on this device",
+  "account.device": "Playing as this device. Saves sync only for this device",
+  "account.epic": "Signed in with an Epic account. Saves sync across your devices",
+  "account.signingIn": "Signing in…",
+  "account.signingOut": "Signing out…",
+  "account.cancelled": "Sign-in was cancelled",
+  "account.failed": "Could not sign in. Try again later",
+  "account.signIn": "Sign in with Epic",
+  "account.signOut": "Sign out"
+}

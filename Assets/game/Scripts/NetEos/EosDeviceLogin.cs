@@ -6,7 +6,7 @@ namespace Shooter.NetEos
 {
     // Epic アカウントでなく Device ID でログインするのは、アカウントを持たない専用サーバー・ヘッドレスのクライアントでも使えるようにするため。
     // 端末ごとに同じ ID になるので、同じ PC・同じ OS ユーザーで起動したサーバーとクライアントは互いにつながらない。
-    internal sealed class EosDeviceLogin
+    internal sealed class EosDeviceLogin : IEosLogin
     {
         // EOS が受け付ける表示名の最大文字数。
         private const int _maxDisplayNameLength = 32;

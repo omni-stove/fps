@@ -101,6 +101,11 @@ namespace Shooter.Runtime
 
         public static GameSignal<AircraftStatus?> Aircraft { get; } = new GameSignal<AircraftStatus?>(nameof(Aircraft));
 
+        public static GameSignal<AccountStatus?> Account { get; } = new GameSignal<AccountStatus?>(nameof(Account));
+
+        // UI は NetEos を参照しないので、サインインの部品がここに出す。サインインを使えないビルドや設定では出さない。
+        public static GameSignal<IAccountControl> AccountControl { get; } = new GameSignal<IAccountControl>(nameof(AccountControl));
+
         // ドメインの再読み込みを切った Play でも、前の Play の値や消えた UI の購読が残らないよう、シーンを読む前にすべて空に戻す。
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         internal static void ResetAll()
@@ -146,6 +151,8 @@ namespace Shooter.Runtime
             Cosmetics.Reset();
             Stash.Reset();
             Aircraft.Reset();
+            Account.Reset();
+            AccountControl.Reset();
         }
     }
 }

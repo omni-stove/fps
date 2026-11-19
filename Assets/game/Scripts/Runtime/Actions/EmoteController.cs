@@ -228,7 +228,7 @@ namespace Shooter.Runtime
                 return Refuse(emoteId, EmoteRefusal.Dead);
             }
 
-            if (_rider != null && _rider.IsRiding)
+            if (IsRiding())
             {
                 return Refuse(emoteId, EmoteRefusal.Riding);
             }
@@ -263,6 +263,13 @@ namespace Shooter.Runtime
             return true;
         }
 
+        private bool IsRiding()
+        {
+            // 乗り手の部品は GameBootstrap がインストーラーの後に付けるので、Configure で見つからなければ使うたびに探し直す。
+            _rider = _rider != null ? _rider : GetComponent<PlayerVehicleRider>();
+            return _rider != null && _rider.IsRiding;
+        }
+
         public void Stop()
         {
             StopCurrent(EmoteStopReason.Cancelled);
@@ -287,7 +294,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            if (_rider != null && _rider.IsRiding)
+            if (IsRiding())
             {
                 StopCurrent(EmoteStopReason.Riding);
                 return;

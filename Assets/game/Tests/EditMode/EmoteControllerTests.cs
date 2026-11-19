@@ -4,6 +4,7 @@ using NUnit.Framework;
 using Shooter.Core;
 using Shooter.Runtime;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
@@ -363,6 +364,66 @@ namespace Shooter.Tests.EditMode
 
             camera.Restore();
             Assert.That(rig.Mode, Is.EqualTo(ViewMode.FirstPerson));
+        }
+
+        [Test]
+        public void ARiderAddedAfterConfigureStillRefusesAndStopsWhileRiding()
+        {
+            var emotes = Player(Emote.On);
+            var rider = AddRider(emotes.gameObject, out var actions);
+            try
+            {
+                Assert.That(emotes.Play(_stand), Is.True);
+
+                var vehicle = CreateVehicle();
+                Assert.That(vehicle.TryEnter(rider, 0, false), Is.True);
+
+                LogAssert.Expect(LogType.Log, EmoteLog.Stopped(_stand, EmoteStopReason.Riding, 0f));
+                emotes.Tick(_now);
+                Assert.That(emotes.IsPlaying, Is.False);
+                Assert.That(emotes.LastStop, Is.EqualTo(EmoteStopReason.Riding));
+
+                LogAssert.Expect(LogType.Log, EmoteLog.Refused(_wave, EmoteRefusal.Riding));
+                Assert.That(emotes.Play(_wave), Is.False);
+                Assert.That(emotes.LastRefusal, Is.EqualTo(EmoteRefusal.Riding));
+            }
+            finally
+            {
+                foreach (var action in actions)
+                {
+                    action.Dispose();
+                }
+            }
+        }
+
+        private PlayerVehicleRider AddRider(GameObject body, out InputAction[] actions)
+        {
+            var controller = body.AddComponent<CharacterController>();
+            controller.height = 2f;
+            controller.radius = 0.5f;
+            controller.center = Vector3.zero;
+            var player = body.AddComponent<PlayerController>();
+            var move = new InputAction("Move", InputActionType.Value, expectedControlType: "Vector2");
+            var sprint = new InputAction("Sprint", InputActionType.Button);
+            var crouch = new InputAction("Crouch", InputActionType.Button);
+            var jump = new InputAction("Jump", InputActionType.Button);
+            actions = new[] { move, sprint, crouch, jump };
+            var look = body.AddComponent<FirstPersonLook>();
+            player.Initialize(controller, look, move, sprint, crouch, jump, new MotorSpec(5f, 8f, 1.2f, 20f, 0.1f, 2.5f));
+            var rider = body.AddComponent<PlayerVehicleRider>();
+            rider.Bind(player, null);
+            return rider;
+        }
+
+        private Vehicle CreateVehicle()
+        {
+            var root = Body("Car");
+            var seat = new GameObject("Driver Seat").AddComponent<VehicleSeat>();
+            seat.transform.SetParent(root.transform, false);
+            seat.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+            var vehicle = root.AddComponent<Vehicle>();
+            vehicle.Configure(new VehicleSpec("car", 500, new[] { new VehicleSeatSpec(VehicleSeatRole.Driver) }));
+            return vehicle;
         }
 
         private EmoteController Player(Emote rule)

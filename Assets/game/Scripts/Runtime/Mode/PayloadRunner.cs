@@ -249,6 +249,8 @@ namespace Shooter.Runtime
         {
             var motion = PayloadLog.MotionName(_payload);
             var pushers = _payload.Pushers;
+            // 守り側の出入りだけでも持ち主の色が変わるので、ログの変化とは別に毎回塗り直す
+            ShowZone();
             if (motion == _loggedMotion && pushers == _loggedPushers)
             {
                 return;
@@ -257,7 +259,6 @@ namespace Shooter.Runtime
             _loggedMotion = motion;
             _loggedPushers = pushers;
             Debug.Log(PayloadLog.Motion(_payload), this);
-            ShowZone();
         }
 
         private void ShowZone()

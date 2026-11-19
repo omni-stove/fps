@@ -9,6 +9,10 @@ namespace Shooter.Core.Tests
         private static readonly string[] _unknownMutator = { "not-in-mutators-json" };
         private static readonly string[] _playlistItems = { "id", "order", "nextDelaySeconds", "entries" };
         private static readonly string[] _entryItems = { "scene", "rules", "mutators" };
+        private static readonly string[] _teamIds = { "team-rotation", "solo" };
+        private static readonly string[] _teamScenes = { "Arena", "Assets/Scenes/Yard.unity", "Range" };
+        private static readonly string[] _teamRules = { "TeamDeathmatch", "Domination", string.Empty };
+        private static readonly string[] _teamMutators = { "low-health", "no-regen" };
 
         [Test]
         public void ParseReadsEveryPlaylistAndEntryInOrder()
@@ -34,14 +38,14 @@ namespace Shooter.Core.Tests
 
             var playlists = PlaylistJson.Parse(text, _source);
 
-            Assert.That(playlists.Select(p => p.Id), Is.EqualTo(new[] { "team-rotation", "solo" }));
+            Assert.That(playlists.Select(p => p.Id), Is.EqualTo(_teamIds));
 
             var team = playlists[0];
             Assert.That(team.Order, Is.EqualTo(PlaylistOrder.Shuffle));
             Assert.That(team.NextDelaySeconds, Is.EqualTo(4.5f));
-            Assert.That(team.Entries.Select(e => e.Scene), Is.EqualTo(new[] { "Arena", "Assets/Scenes/Yard.unity", "Range" }));
-            Assert.That(team.Entries.Select(e => e.Rules), Is.EqualTo(new[] { "TeamDeathmatch", "Domination", string.Empty }));
-            Assert.That(team.Entries[0].MutatorIds, Is.EqualTo(new[] { "low-health", "no-regen" }));
+            Assert.That(team.Entries.Select(e => e.Scene), Is.EqualTo(_teamScenes));
+            Assert.That(team.Entries.Select(e => e.Rules), Is.EqualTo(_teamRules));
+            Assert.That(team.Entries[0].MutatorIds, Is.EqualTo(_teamMutators));
             Assert.That(team.Entries[1].MutatorIds, Is.Empty);
             Assert.That(team.Entries[2].HasRules, Is.False);
 

@@ -163,6 +163,23 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ASceneReloadedWhileWaitingCancelsTheAdvance()
+        {
+            _runner.Begin(ThreeEntries(10f), RulesTable());
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 1, 0, 10));
+            _runner.Tick(3f);
+
+            _runner.CancelPendingAdvance();
+            _runner.Tick(20f);
+
+            Assert.That(_runner.IsAdvancePending, Is.False);
+            Assert.That(_loaded, Is.EqualTo(new[] { "Arena" }), "the restarted match is not cut short");
+
+            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 1, 0, 10));
+            Assert.That(_runner.IsAdvancePending, Is.True, "the restarted match can still finish and advance");
+        }
+
+        [Test]
         public void NothingAdvancesWithoutAFinishedMatch()
         {
             _runner.Begin(ThreeEntries(0f), RulesTable());

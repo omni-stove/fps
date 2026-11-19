@@ -207,6 +207,19 @@ namespace Shooter.Runtime
             Debug.Log(PlaylistLog.MatchFinished(_cursor.Playlist, _remainingSeconds), this);
         }
 
+        // 待っている間に R の再開などでシーンが読み直されたら、やり直した試合の途中で次へ進まないよう待ちを下ろす。
+        // Runner 自身が読むときは Advance が先に待ちを下ろしているので、ここに残る待ちは外から読まれたシーンのものである。
+        private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            CancelPendingAdvance();
+        }
+
+        public void CancelPendingAdvance()
+        {
+            _advancePending = false;
+            _remainingSeconds = 0f;
+        }
+
         private void LoadCurrent()
         {
             var playlist = _cursor.Playlist;
@@ -288,6 +301,7 @@ namespace Shooter.Runtime
             }
 
             CombatEvents.MatchFinished += OnMatchFinished;
+            SceneManager.sceneLoaded += OnSceneLoaded;
             _subscribed = true;
         }
 
@@ -299,6 +313,7 @@ namespace Shooter.Runtime
             }
 
             CombatEvents.MatchFinished -= OnMatchFinished;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
             _subscribed = false;
         }
     }

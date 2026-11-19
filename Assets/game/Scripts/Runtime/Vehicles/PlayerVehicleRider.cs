@@ -220,7 +220,7 @@ namespace Shooter.Runtime
 
             if (_seat == null)
             {
-                RefreshBoardHint();
+                KeySharing.SetClaim(InputActionPaths.Interact, this, RefreshBoardHint());
                 return;
             }
 
@@ -889,7 +889,7 @@ namespace Shooter.Runtime
         }
 
         // 乗れる席が近くにあるときに案内を出す。出さないと、長押しの Interact で乗れることが分からないため。
-        public void RefreshBoardHint()
+        public bool RefreshBoardHint()
         {
             Vehicle vehicle = null;
             var seatIndex = -1;
@@ -901,10 +901,11 @@ namespace Shooter.Runtime
             if (vehicle == null)
             {
                 BoardHint.Clear();
-                return;
+                return false;
             }
 
             BoardHint.Show(new VehicleBoardHint(vehicle.Seats[seatIndex].Role, InteractActionPath));
+            return true;
         }
 
         private InteractHintSlot BoardHint => _boardHint ?? (_boardHint = new InteractHintSlot(this));

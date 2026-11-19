@@ -460,6 +460,7 @@ namespace Shooter.Runtime
             var look = definition != null ? definition.Projectile : null;
             _pelletHits.Clear();
             var homingTarget = round.Homing != null && LockOn != null ? LockOn.FollowLocked() : null;
+            var homingDecoy = homingTarget != null ? LockOn.DecoyOfLocked() : null;
             foreach (var planned in rounds)
             {
                 // 撃たれた側が撃った方向へ向かえるよう、弾ごとの始点を撃った者の位置として渡す。
@@ -475,7 +476,8 @@ namespace Shooter.Runtime
                     charge,
                     look,
                     ConfirmHit,
-                    homingTarget);
+                    homingTarget,
+                    homingDecoy);
                 CollectHit(delivery.Deliver(request, planned));
             }
 

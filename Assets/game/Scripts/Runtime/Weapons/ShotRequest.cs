@@ -18,7 +18,8 @@ namespace Shooter.Runtime
             float chargeFraction = 0f,
             ProjectileSettings projectileLook = null,
             Action<ShotOutcome> landed = null,
-            Func<System.Numerics.Vector3?> homingTarget = null)
+            Func<System.Numerics.Vector3?> homingTarget = null,
+            ILockOnDecoy homingDecoy = null)
         {
             if (!(chargeFraction >= 0f) || chargeFraction > 1f)
             {
@@ -37,6 +38,7 @@ namespace Shooter.Runtime
             ProjectileLook = projectileLook;
             Landed = landed;
             HomingTarget = homingTarget;
+            HomingDecoy = homingDecoy;
         }
 
         // 撃った者が分からない弾 (仕掛けや試験の弾) もあるので null を許す。
@@ -66,5 +68,8 @@ namespace Shooter.Runtime
 
         // 誘導する弾は飛んでいる間ずっと相手の今の位置へ曲がるので、位置ではなく引く関数を渡す。null なら追わない。
         public Func<System.Numerics.Vector3?> HomingTarget { get; }
+
+        // 追う相手の撒く囮。null なら囮に逸れない。
+        public ILockOnDecoy HomingDecoy { get; }
     }
 }

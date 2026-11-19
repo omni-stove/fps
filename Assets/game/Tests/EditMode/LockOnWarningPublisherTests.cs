@@ -333,6 +333,8 @@ namespace Shooter.Tests.EditMode
             {
                 return null;
             }
+
+            public ILockOnDecoy Decoy(int id) => null;
         }
     }
 }

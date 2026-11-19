@@ -202,6 +202,10 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("切り替えて撃てる弾薬の種類。空なら切り替えない")]
         private AmmoTypeSettings[] _ammoTypes = Array.Empty<AmmoTypeSettings>();
 
+        [Header("盾")]
+        [SerializeField]
+        private RiotShieldSettings _shield = new RiotShieldSettings();
+
         // この項目が無かった頃に保存したアセットも読み込むと 0 になるので、0 を未設定とする。
         public const float UnsetAdsFieldOfView = 0f;
 
@@ -493,6 +497,8 @@ namespace Shooter.Runtime
             set => _ammoTypes = value ?? Array.Empty<AmmoTypeSettings>();
         }
 
+        public RiotShieldSettings Shield => _shield ??= new RiotShieldSettings();
+
         public bool AssignIdIfEmpty()
         {
             if (!string.IsNullOrWhiteSpace(_id))
@@ -561,7 +567,7 @@ namespace Shooter.Runtime
                     _swayDegrees,
                     Sight.ToSpec());
                 return new WeaponSpec(
-                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description, DrawSeconds, _holsterSeconds);
+                    Id, NameKey, _category, trigger, ammo, round, impact, aim, AmmoTypeSettings.ToSpecs(AmmoTypes), _shotNoiseRadius, _weight, _moveSpeedMultiplier, Description, DrawSeconds, _holsterSeconds, Shield.ToSpec());
             }
             catch (ArgumentException e)
             {

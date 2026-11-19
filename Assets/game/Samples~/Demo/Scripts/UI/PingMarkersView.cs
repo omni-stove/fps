@@ -37,12 +37,27 @@ namespace Shooter.Runtime
         private IReadOnlyList<PingMarker> _markers;
         private bool _subscribed;
 
+        // 設定の色の組は PlayerPrefs から読むので、フィールドの初期化子では引けない (結び付けたときにパレットの色にする)
+        private Color _enemyColor = EnemyColorOf(TeamPalette.Standard);
+
         // 出している印が GameSignals から来たか。来ていれば、要素を持っていない間に印が消されたことを、受けたときに消して合わせる
         private bool _showsSignal;
 
         public override string ElementName => UxmlName;
 
         public IReadOnlyList<PingMarker> Markers => _markers;
+
+        public Color EnemyColor => _enemyColor;
+
+        public static Color EnemyColorOf(TeamPalette palette)
+        {
+            if (palette == null)
+            {
+                throw new ArgumentNullException(nameof(palette));
+            }
+
+            return TeamColors.ToColor(palette.Enemy);
+        }
 
         public Camera Viewer { get; set; }
 
@@ -123,9 +138,11 @@ namespace Shooter.Runtime
             foreach (var entry in _entries.Values)
             {
                 entry.Root = null;
+                entry.Icon = null;
                 entry.Arrow = null;
             }
 
+            _enemyColor = EnemyColorOf(TeamColors.Current);
             Subscribe();
             var markers = GameSignals.Pings.Value;
             if (markers != null || _showsSignal)
@@ -181,6 +198,7 @@ namespace Shooter.Runtime
             if (!_subscribed)
             {
                 GameSignals.Pings.Changed += HandlePingsChanged;
+                AppliedControlSettings.Changed += HandleSettingsChanged;
                 _subscribed = true;
                 Debug.Log(PingLog.View(GetType().Name), this);
             }
@@ -191,7 +209,30 @@ namespace Shooter.Runtime
             if (_subscribed)
             {
                 GameSignals.Pings.Changed -= HandlePingsChanged;
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
                 _subscribed = false;
+            }
+        }
+
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                return;
+            }
+
+            var enemy = EnemyColorOf(TeamPalette.For(settings.Palette));
+            if (enemy == _enemyColor)
+            {
+                return;
+            }
+
+            _enemyColor = enemy;
+            foreach (var entry in _entries.Values)
+            {
+                PaintEntry(entry);
             }
         }
 
@@ -282,6 +323,7 @@ namespace Shooter.Runtime
             if (entry.Root == null)
             {
                 CreateElements(parent, entry);
+                PaintEntry(entry);
             }
 
             if (!entry.HasPlacement)
@@ -317,7 +359,21 @@ namespace Shooter.Runtime
 
             parent.Add(root);
             entry.Root = root;
+            entry.Icon = icon;
             entry.Arrow = arrow;
+        }
+
+        // 敵の印の色はパレットで変わるので USS に決め打ちせずここで入れる。場所の印は USS の色のまま。
+        private void PaintEntry(Entry entry)
+        {
+            if (entry.Kind != PingKind.Enemy || entry.Root == null)
+            {
+                return;
+            }
+
+            entry.Root.style.color = _enemyColor;
+            entry.Icon.style.backgroundColor = _enemyColor;
+            entry.Arrow.MarkDirtyRepaint();
         }
 
         private static void DrawArrow(MeshGenerationContext context)
@@ -343,6 +399,7 @@ namespace Shooter.Runtime
             }
 
             entry.Root = null;
+            entry.Icon = null;
             entry.Arrow = null;
         }
 
@@ -352,6 +409,7 @@ namespace Shooter.Runtime
             public PingScreenPlacement Placement;
             public bool HasPlacement;
             public VisualElement Root;
+            public VisualElement Icon;
             public VisualElement Arrow;
         }
     }

@@ -148,6 +148,31 @@ namespace Shooter.Core.Tests
             Assert.That(attachment.Sight.ScopeOverlay, Is.True);
             Assert.That(attachment.Sight.EyeViewInThirdPerson, Is.True);
             Assert.That(attachment.Sight.AimedInProgress, Is.EqualTo(0.8f));
+            Assert.That(attachment.Sight.VisionMode, Is.EqualTo(VisionMode.None), "a sight without visionMode is not a night sight");
+        }
+
+        [Test]
+        public void ReadsTheVisionModeOfAnAttachmentSight()
+        {
+            var catalog = InventoryJson.Parse(
+                "{ \"items\": [ { \"id\": \"" + _herbId + "\", \"attachment\": { \"slot\": \"optic\","
+                + " \"sight\": { \"scopeOverlay\": true, \"visionMode\": \"Thermal\" } } } ] }",
+                "inventory.json");
+
+            Assert.That(catalog.Items[0].Attachment.Sight.VisionMode, Is.EqualTo(VisionMode.Thermal));
+            Assert.That(catalog.Items[0].Attachment.IsOptic, Is.True);
+        }
+
+        [TestCase("\"Infrared\"")]
+        [TestCase("\"1\"")]
+        [TestCase("1")]
+        public void ABadVisionModeNamesTheItem(string value)
+        {
+            var e = Assert.Throws<TuningJsonException>(() => InventoryJson.Parse(
+                "{ \"items\": [ { \"id\": \"" + _herbId + "\", \"attachment\": { \"slot\": \"optic\", \"sight\": { \"visionMode\": " + value + " } } } ] }",
+                "inventory.json"));
+
+            Assert.That(e.Item, Is.EqualTo("items[0].attachment.sight.visionMode"));
         }
 
         [Test]

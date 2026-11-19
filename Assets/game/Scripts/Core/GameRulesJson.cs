@@ -297,6 +297,70 @@ namespace Shooter.Core
             return writer.Finish();
         }
 
+        // 一覧の JSON (MutatorJson) の中に書いたルールの一部を、Parse に渡せる 1 つの文書として取り出すために、読んだ木を字句のまま書き戻す。
+        internal static string WriteNode(Node node)
+        {
+            if (node == null)
+            {
+                throw new ArgumentNullException(nameof(node));
+            }
+
+            var builder = new StringBuilder();
+            AppendNode(builder, node);
+            return builder.ToString();
+        }
+
+        private static void AppendNode(StringBuilder builder, Node node)
+        {
+            switch (node.Kind)
+            {
+                case NodeKind.Object:
+                    builder.Append('{');
+                    for (var i = 0; i < node.Members.Count; i++)
+                    {
+                        if (i > 0)
+                        {
+                            builder.Append(", ");
+                        }
+
+                        builder.Append(ServerDataJson.Writer.Quote(node.Members[i].Key)).Append(": ");
+                        AppendNode(builder, node.Members[i].Value);
+                    }
+
+                    builder.Append('}');
+                    return;
+                case NodeKind.Array:
+                    builder.Append('[');
+                    for (var i = 0; i < node.Elements.Count; i++)
+                    {
+                        if (i > 0)
+                        {
+                            builder.Append(", ");
+                        }
+
+                        AppendNode(builder, node.Elements[i]);
+                    }
+
+                    builder.Append(']');
+                    return;
+                case NodeKind.String:
+                    builder.Append(ServerDataJson.Writer.Quote(node.Text));
+                    return;
+                case NodeKind.Number:
+                    builder.Append(node.Text);
+                    return;
+                case NodeKind.True:
+                    builder.Append("true");
+                    return;
+                case NodeKind.False:
+                    builder.Append("false");
+                    return;
+                default:
+                    builder.Append("null");
+                    return;
+            }
+        }
+
         private static ActionRules ReadActions(string source, Fields top, string topPrefix, ActionRules defaults)
         {
             var node = top.ReadNested(ActionsItem);

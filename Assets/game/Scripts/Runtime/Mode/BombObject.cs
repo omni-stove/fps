@@ -11,18 +11,44 @@ namespace Shooter.Runtime
 
         public const float CarryBack = 0.35f;
 
-        public static readonly Color CarriedColor = new Color(0.9f, 0.55f, 0.1f);
-        public static readonly Color DroppedColor = new Color(1f, 0.85f, 0.2f);
-        public static readonly Color PlantedColor = new Color(1f, 0.1f, 0.1f);
-        public static readonly Color DefusedColor = new Color(0.2f, 0.8f, 0.3f);
+        // 運ばれている爆弾は落ちている爆弾より暗くし、地面に落ちた爆弾を見つけやすくする。
+        public const float CarriedBrightness = 0.85f;
 
         private Transform _carrier;
         private Renderer _renderer;
         private Material _material;
+        private BombState _shownState = BombState.Carried;
+        private bool _followsSettings;
 
         public Transform Carrier => _carrier;
 
         public bool IsVisible => Renderer != null && Renderer.enabled;
+
+        public BombState ShownState => _shownState;
+
+        public static Color ColorOf(BombState state, TeamPalette palette)
+        {
+            if (palette == null)
+            {
+                throw new System.ArgumentNullException(nameof(palette));
+            }
+
+            switch (state)
+            {
+                case BombState.Carried:
+                    var objective = TeamColors.ToColor(palette.Objective);
+                    return new Color(objective.r * CarriedBrightness, objective.g * CarriedBrightness, objective.b * CarriedBrightness, objective.a);
+                case BombState.Dropped:
+                    return TeamColors.ToColor(palette.Objective);
+                case BombState.Planted:
+                case BombState.Detonated:
+                    return TeamColors.ToColor(palette.Danger);
+                case BombState.Defused:
+                    return TeamColors.ToColor(palette.Safe);
+                default:
+                    throw new System.ArgumentOutOfRangeException(nameof(state), state, "unknown bomb state");
+            }
+        }
 
         private Renderer Renderer
         {
@@ -47,7 +73,7 @@ namespace Shooter.Runtime
             }
 
             Follow();
-            Paint(CarriedColor, true);
+            Paint(BombState.Carried, true);
         }
 
         public void ShowOnGround(Vector3 ground, BombState state)
@@ -57,16 +83,14 @@ namespace Shooter.Runtime
             switch (state)
             {
                 case BombState.Planted:
-                    Paint(PlantedColor, true);
-                    break;
                 case BombState.Defused:
-                    Paint(DefusedColor, true);
+                    Paint(state, true);
                     break;
                 case BombState.Detonated:
-                    Paint(PlantedColor, false);
+                    Paint(state, false);
                     break;
                 default:
-                    Paint(DroppedColor, true);
+                    Paint(BombState.Dropped, true);
                     break;
             }
         }
@@ -74,7 +98,7 @@ namespace Shooter.Runtime
         public void Hide()
         {
             _carrier = null;
-            Paint(CarriedColor, false);
+            Paint(BombState.Carried, false);
         }
 
         private void LateUpdate()
@@ -87,6 +111,12 @@ namespace Shooter.Runtime
 
         private void OnDestroy()
         {
+            if (_followsSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _followsSettings = false;
+            }
+
             if (_material != null)
             {
                 if (Application.isPlaying)
@@ -118,8 +148,21 @@ namespace Shooter.Runtime
             return transform.lossyScale.y * 0.5f;
         }
 
-        private void Paint(Color color, bool visible)
+        private void HandleSettingsChanged(ControlSettings settings)
         {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                return;
+            }
+
+            ApplyColor();
+        }
+
+        private void Paint(BombState state, bool visible)
+        {
+            _shownState = state;
             var renderer = Renderer;
             if (renderer == null)
             {
@@ -127,6 +170,22 @@ namespace Shooter.Runtime
             }
 
             renderer.enabled = visible;
+            if (!_followsSettings)
+            {
+                AppliedControlSettings.Changed += HandleSettingsChanged;
+                _followsSettings = true;
+            }
+
+            ApplyColor();
+        }
+
+        private void ApplyColor()
+        {
+            var renderer = Renderer;
+            if (renderer == null)
+            {
+                return;
+            }
 
             // 共有のマテリアルを塗り替えると他のプリミティブまで色が変わるので、この爆弾用に複製する。
             if (_material == null)
@@ -140,7 +199,7 @@ namespace Shooter.Runtime
                 renderer.sharedMaterial = _material;
             }
 
-            _material.color = color;
+            _material.color = ColorOf(_shownState, TeamColors.Current);
         }
     }
 }

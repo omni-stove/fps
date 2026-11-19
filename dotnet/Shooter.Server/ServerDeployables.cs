@@ -65,6 +65,7 @@ namespace Shooter.Server
             _match.PlayerLeft += HandlePlayerLeft;
             _match.MapChanged += HandleMapChanged;
             _rules.MatchStarted += HandleMatchStarted;
+            _rules.RulesChanged += HandleRulesChanged;
             _log.WriteLine(ServerDeployableLog.Catalog(_catalog.Count, _catalog.Count - _unusable.Count, _catalogPath));
         }
 
@@ -122,8 +123,15 @@ namespace Shooter.Server
             _match.PlayerLeft -= HandlePlayerLeft;
             _match.MapChanged -= HandleMapChanged;
             _rules.MatchStarted -= HandleMatchStarted;
+            _rules.RulesChanged -= HandleRulesChanged;
             _placed.Clear();
             _rosters.Clear();
+        }
+
+        // 置ける物の種類は武器の並び (ルールのファイルのロードアウト) で決まり、ルールを替えても変わらないので選び直さない
+        private void HandleRulesChanged(ServerRulesData data)
+        {
+            _data = data;
         }
 
         // Place が全体の数を SnapshotMessage.MaxDeployables までに抑えるので、置いた物は全部載る

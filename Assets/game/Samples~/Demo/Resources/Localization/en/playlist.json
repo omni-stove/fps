@@ -1,0 +1,17 @@
+{
+  "playlist.title": "PLAYLISTS",
+  "playlist.empty": "No playlists are available",
+  "playlist.back": "BACK",
+  "playlist.order.sequential": "In order",
+  "playlist.order.shuffle": "Shuffled each round",
+  "playlist.entry": "{0}",
+  "playlist.entryWithMutators": "{0} ({1})",
+  "playlist.mutatorSeparator": ", ",
+  "playlist.starting": "Starting {0}…",
+  "playlist.cannotStart": "Cannot start {0}: check the playlist data",
+  "playlist.noScene": "Cannot start {0}: none of its mode scenes are in this build",
+  "playlist.mutator.low-health": "Half health",
+  "playlist.mutator.headshots-only": "Headshots only",
+  "playlist.mutator.no-regen": "No regeneration",
+  "playlist.mutator.infinite-ammo": "Infinite ammo"
+}

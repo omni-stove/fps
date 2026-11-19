@@ -11,10 +11,11 @@ namespace Shooter.Core
         public const string ScopeOverlayItem = "scopeOverlay";
         public const string EyeViewInThirdPersonItem = "eyeViewInThirdPerson";
         public const string AimedInProgressItem = "aimedInProgress";
+        public const string VisionModeItem = "visionMode";
 
         public static IReadOnlyList<string> ItemNames { get; } = new[]
         {
-            ReticleIdItem, ScopeOverlayItem, EyeViewInThirdPersonItem, AimedInProgressItem,
+            ReticleIdItem, ScopeOverlayItem, EyeViewInThirdPersonItem, AimedInProgressItem, VisionModeItem,
         };
 
         public static SightSpec Read(ServerDataJson.Fields fields)
@@ -30,7 +31,8 @@ namespace Shooter.Core
                     fields.ReadString(ReticleIdItem, null),
                     fields.ReadBool(ScopeOverlayItem, false),
                     fields.ReadBool(EyeViewInThirdPersonItem, false),
-                    fields.ReadFloat(AimedInProgressItem, SightSpec.DefaultAimedInProgress));
+                    fields.ReadFloat(AimedInProgressItem, SightSpec.DefaultAimedInProgress),
+                    fields.ReadEnum(VisionModeItem, VisionMode.None));
             }
             catch (ArgumentException e)
             {
@@ -60,6 +62,13 @@ namespace Shooter.Core
             writer.Bool(ScopeOverlayItem, sight.ScopeOverlay);
             writer.Bool(EyeViewInThirdPersonItem, sight.EyeViewInThirdPerson);
             writer.Float(AimedInProgressItem, sight.AimedInProgress);
+
+            // 暗視の無い照準器は今まで通りの JSON のまま書き出すため、None のときは項目を出さない。
+            if (sight.VisionMode != VisionMode.None)
+            {
+                writer.Enum(VisionModeItem, sight.VisionMode);
+            }
+
             writer.EndObject();
         }
 

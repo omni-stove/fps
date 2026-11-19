@@ -239,6 +239,75 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AWeaponIsNotAShieldUntilTheShieldIsTurnedOn()
+        {
+            var definition = NewDefinition("RiotShield");
+            Assert.That(definition.Shield.Enabled, Is.False);
+            Assert.That(definition.ToSpec().Shield, Is.Null);
+
+            definition.Shield.Enabled = true;
+            var spec = definition.ToSpec();
+
+            Assert.That(spec.IsShield, Is.True);
+            Assert.That(spec.Shield.BlockArcDegrees, Is.EqualTo(RiotShieldSpec.DefaultBlockArcDegrees));
+            Assert.That(spec.Shield.Width, Is.EqualTo(RiotShieldSpec.DefaultWidth));
+            Assert.That(spec.Shield.Height, Is.EqualTo(RiotShieldSpec.DefaultHeight));
+            Assert.That(spec.Shield.MoveSpeedMultiplier, Is.EqualTo(RiotShieldSpec.DefaultMoveSpeedMultiplier));
+            Assert.That(spec.Shield.Bash.Damage, Is.EqualTo(RiotShieldSpec.DefaultBashDamage));
+            Assert.That(spec.Shield.Bash.Reach, Is.EqualTo(RiotShieldSpec.DefaultBashReach));
+            Assert.That(spec.Shield.Bash.ArcDegrees, Is.EqualTo(RiotShieldSpec.DefaultBashArcDegrees));
+            Assert.That(spec.Shield.Bash.SwingSeconds, Is.EqualTo(RiotShieldSpec.DefaultBashSwingSeconds));
+            Assert.That(spec.Shield.Bash.CooldownSeconds, Is.EqualTo(RiotShieldSpec.DefaultBashCooldownSeconds));
+            Assert.That(spec.Shield.Bash.ImpactSeconds, Is.EqualTo(RiotShieldSpec.DefaultBashImpactSeconds));
+            Assert.That(spec.Shield.Bash.LungeDistance, Is.EqualTo(RiotShieldSpec.DefaultBashLungeDistance));
+        }
+
+        [Test]
+        public void TheShieldValuesRoundTripThroughTheDefinitionAndKeepThePrefab()
+        {
+            var definition = NewDefinition("RiotShield");
+            var prefab = new GameObject("ShieldLook");
+            _created.Add(prefab);
+            definition.Shield.Prefab = prefab;
+            var source = new WeaponSpec(
+                _rifleId,
+                "weapon.riotShield",
+                WeaponCategory.Handgun,
+                shield: new RiotShieldSpec(90f, 0.5f, 1f, 0.7f, new MeleeSpec(30, 1.4f, 70f, 0.5f, 0.3f, 0.2f, 0.3f)));
+
+            WeaponAssets.Configure(definition, source);
+            var spec = definition.ToSpec();
+
+            Assert.That(definition.Shield.Prefab, Is.SameAs(prefab), "the look is not in the spec, so configuring keeps it");
+            Assert.That(spec.Shield.BlockArcDegrees, Is.EqualTo(90f));
+            Assert.That(spec.Shield.Width, Is.EqualTo(0.5f));
+            Assert.That(spec.Shield.Height, Is.EqualTo(1f));
+            Assert.That(spec.Shield.MoveSpeedMultiplier, Is.EqualTo(0.7f));
+            Assert.That(spec.Shield.Bash.Damage, Is.EqualTo(30));
+            Assert.That(spec.Shield.Bash.Reach, Is.EqualTo(1.4f));
+            Assert.That(spec.Shield.Bash.ArcDegrees, Is.EqualTo(70f));
+            Assert.That(spec.Shield.Bash.SwingSeconds, Is.EqualTo(0.5f));
+            Assert.That(spec.Shield.Bash.CooldownSeconds, Is.EqualTo(0.3f));
+            Assert.That(spec.Shield.Bash.ImpactSeconds, Is.EqualTo(0.2f));
+            Assert.That(spec.Shield.Bash.LungeDistance, Is.EqualTo(0.3f));
+
+            WeaponAssets.Configure(definition, TestWeapons.RifleSpec());
+            Assert.That(definition.ToSpec().Shield, Is.Null, "configuring a weapon without a shield turns it off");
+        }
+
+        [Test]
+        public void ABadShieldValueNamesTheWeapon()
+        {
+            var definition = NewDefinition("BadShield");
+            definition.Shield.Enabled = true;
+            definition.Shield.MoveSpeedMultiplier = 1.5f;
+
+            var e = Assert.Throws<WeaponDefinitionException>(() => definition.ToSpec());
+
+            Assert.That(e.Message, Does.Contain("BadShield").And.Contain("moveSpeedMultiplier"));
+        }
+
+        [Test]
         public void DrawSecondsAreUnsetUntilGivenAndZeroIsKept()
         {
             var definition = NewDefinition("Draw");
@@ -295,9 +364,29 @@ namespace Shooter.Tests.EditMode
             Assert.That(sight.ScopeOverlay, Is.True);
             Assert.That(sight.EyeViewInThirdPerson, Is.False);
             Assert.That(sight.AimedInProgress, Is.EqualTo(SightSpec.DefaultAimedInProgress));
+            Assert.That(sight.VisionMode, Is.EqualTo(VisionMode.None));
 
             definition.Sight.Set(SightSpec.Default);
             Assert.That(definition.Sight.Enabled, Is.False);
+        }
+
+        [Test]
+        public void TheSightsVisionModeGoesIntoTheSpecAndBack()
+        {
+            var definition = NewDefinition("Thermal");
+            Assert.That(definition.Sight.VisionMode, Is.EqualTo(VisionMode.None));
+
+            definition.Sight.Enabled = true;
+            definition.Sight.VisionMode = VisionMode.Thermal;
+            var sight = definition.ToSpec().Aim.Sight;
+            Assert.That(sight.VisionMode, Is.EqualTo(VisionMode.Thermal));
+            Assert.That(sight.IsDefault, Is.False, "a vision mode alone makes the sight worth keeping");
+
+            var other = NewDefinition("Night");
+            other.Sight.Set(new SightSpec("nv", visionMode: VisionMode.Night));
+            Assert.That(other.Sight.Enabled, Is.True);
+            Assert.That(other.Sight.VisionMode, Is.EqualTo(VisionMode.Night));
+            Assert.That(other.ToSpec().Aim.Sight.VisionMode, Is.EqualTo(VisionMode.Night));
         }
 
         [Test]

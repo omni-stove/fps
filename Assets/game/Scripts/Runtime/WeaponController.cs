@@ -118,7 +118,7 @@ namespace Shooter.Runtime
             }
 
             var armed = _loadout != null && !_unarmed;
-            return carry.SpeedMultiplier(armed ? _loadout.Current.Spec : null, armed ? _specs : null, extraWeight);
+            return carry.SpeedMultiplier(armed ? _loadout.Current.Spec : null, armed ? _specs : null, extraWeight) * ShieldMoveSpeedMultiplier;
         }
 
         public int CurrentIndex => _loadout != null && !_unarmed ? _loadout.CurrentIndex : -1;
@@ -137,7 +137,7 @@ namespace Shooter.Runtime
 
         public Func<bool> FireBlocker { get; set; }
 
-        public bool IsFireBlocked => IsHolstered || IsSwitching || (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
+        public bool IsFireBlocked => IsHolstered || IsSwitching || IsShieldWeapon || (FireBlocker != null && FireBlocker()) || IsFireBlockedByModifier;
 
         public ControlHandoff Holster { get; } = new ControlHandoff();
 
@@ -178,10 +178,12 @@ namespace Shooter.Runtime
         private void OnDisable()
         {
             DisableActions();
+            PutAwayShield();
         }
 
         private void OnDestroy()
         {
+            PutAwayShield();
             SetLoadout(null, null, null, null);
         }
 
@@ -238,6 +240,11 @@ namespace Shooter.Runtime
             if (weapon == null)
             {
                 return false;
+            }
+
+            if (weapon.Spec.IsShield)
+            {
+                return PullShieldTrigger(weapon, wasPressedThisFrame);
             }
 
             if (IsFireBlocked || !weapon.Ammo.CanFire)
@@ -533,7 +540,7 @@ namespace Shooter.Runtime
         {
             EnsureInitialized();
             var weapon = Weapon;
-            if (weapon == null || IsSwitching || IsReloadBlockedByModifier || !weapon.TryStartReload())
+            if (weapon == null || weapon.Spec.IsShield || IsSwitching || IsReloadBlockedByModifier || !weapon.TryStartReload())
             {
                 return false;
             }
@@ -581,6 +588,7 @@ namespace Shooter.Runtime
             _trigger.Advance(deltaSeconds);
             _recoil.Tick(deltaSeconds);
             RecoverSpread(deltaSeconds);
+            SyncShield();
         }
 
         public static bool TryApplyHit(

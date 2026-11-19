@@ -209,6 +209,73 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheBoundaryIsRepaintedInTheDangerColorWhenThePaletteChanges()
+        {
+            var before = AppliedControlSettings.Current;
+            var volume = AudioListener.volume;
+            try
+            {
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.Standard));
+                _zone.ShowsBoundary = true;
+                _zone.Begin();
+                var material = _zone.Boundary.GetComponent<Renderer>().sharedMaterial;
+                _created.Add(material);
+                _created.Add(_zone.Boundary.GetComponent<MeshFilter>().sharedMesh);
+
+                AssertColor(material.color, TeamColors.ToColor(TeamPalette.Standard.Danger), ShrinkingZone.DefaultBoundaryColor.a);
+
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.RedGreen));
+
+                AssertColor(material.color, TeamColors.ToColor(TeamPalette.RedGreen.Danger), ShrinkingZone.DefaultBoundaryColor.a);
+
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.BlueYellow));
+
+                AssertColor(material.color, TeamColors.ToColor(TeamPalette.BlueYellow.Danger), ShrinkingZone.DefaultBoundaryColor.a);
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(before);
+                AudioListener.volume = volume;
+            }
+        }
+
+        [Test]
+        public void ABoundaryColorNotFromThePaletteIsKeptWhenThePaletteChanges()
+        {
+            var before = AppliedControlSettings.Current;
+            var volume = AudioListener.volume;
+            try
+            {
+                var own = new Color(0.1f, 0.2f, 0.9f, 0.5f);
+                _zone.BoundaryColorFromPalette = false;
+                _zone.BoundaryColor = own;
+                _zone.ShowsBoundary = true;
+                _zone.Begin();
+                var material = _zone.Boundary.GetComponent<Renderer>().sharedMaterial;
+                _created.Add(material);
+                _created.Add(_zone.Boundary.GetComponent<MeshFilter>().sharedMesh);
+
+                AppliedControlSettings.Apply(before.WithPalette(before.Palette == ColorPalette.RedGreen ? ColorPalette.BlueYellow : ColorPalette.RedGreen));
+
+                AssertColor(material.color, own, own.a);
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(before);
+                AudioListener.volume = volume;
+            }
+        }
+
+        // 材質に書いた色は、読み戻すと丸めで最下位の桁がずれることがあるので、ぴったりでは比べない。
+        private static void AssertColor(Color actual, Color expected, float alpha)
+        {
+            Assert.That(actual.r, Is.EqualTo(expected.r).Within(1e-3f));
+            Assert.That(actual.g, Is.EqualTo(expected.g).Within(1e-3f));
+            Assert.That(actual.b, Is.EqualTo(expected.b).Within(1e-3f));
+            Assert.That(actual.a, Is.EqualTo(alpha).Within(1e-3f));
+        }
+
+        [Test]
         public void ShorterShrinkSecondsCloseTheCircleFaster()
         {
             _zone.Begin();

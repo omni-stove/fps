@@ -27,6 +27,12 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("パラシュートで降ろすとき、出現点からどれだけ上に出すか (m)")]
         private float _dropHeight = BattleRoyaleRunner.DefaultDropHeight;
 
+        [SerializeField, Tooltip("補給の投下の調整値の JSON (supply-drops.json の形)。空なら SupplyDropper の設定を使う")]
+        private TextAsset _supplyDropTuning;
+
+        [SerializeField, Tooltip("倒されたときにパラシュートで戻る調整値の JSON (redeploy.json の形)。空なら入口 (GameContent) のもの、それも無ければ Resources/Tuning/redeploy を読む")]
+        private TextAsset _redeployTuning;
+
         public int SquadCount
         {
             get => _squadCount;
@@ -63,7 +69,35 @@ namespace Shooter.Runtime
             set => _dropHeight = value;
         }
 
-        public BattleRoyaleSession CreateBattleRoyale(ActionRules actions)
+        public TextAsset SupplyDropTuning
+        {
+            get => _supplyDropTuning;
+            set => _supplyDropTuning = value;
+        }
+
+        public TextAsset RedeployTuning
+        {
+            get => _redeployTuning;
+            set => _redeployTuning = value;
+        }
+
+        // 空なら null を返し、入口の調整値を使わせる。
+        public RedeploySpec ReadRedeploy()
+        {
+            return _redeployTuning != null
+                ? KitTuning.Read(_redeployTuning.text, $"TextAsset '{_redeployTuning.name}'", RedeployJson.Parse, RedeploySpec.Default)
+                : null;
+        }
+
+        // 空なら null を返し、SupplyDropper の設定を使わせる。
+        public SupplyDropSpec ReadSupplyDrops()
+        {
+            return _supplyDropTuning != null
+                ? KitTuning.Read(_supplyDropTuning.text, $"TextAsset '{_supplyDropTuning.name}'", SupplyDropJson.Parse, SupplyDropSpec.Default)
+                : null;
+        }
+
+        public BattleRoyaleSession CreateBattleRoyale(ActionRules actions, RedeploySpec redeploy = null)
         {
             if (actions == null)
             {
@@ -75,7 +109,7 @@ namespace Shooter.Runtime
             RequireFinite(_dropHeight >= 0f, "dropHeight must not be negative", _dropHeight);
             try
             {
-                return BattleRoyaleRunner.CreateBattleRoyale(_squadCount, _squadSize, _timeLimitSeconds, actions);
+                return BattleRoyaleRunner.CreateBattleRoyale(_squadCount, _squadSize, _timeLimitSeconds, actions, redeploy);
             }
             catch (ArgumentOutOfRangeException e)
             {

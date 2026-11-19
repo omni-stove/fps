@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // 画像が空なら覆う側が色だけで覆い、音が空なら鳴らさない。カタログが無ければ Default* の色で同じようにする。
+    // 画像が空なら覆う側が色だけで覆い、音が空なら鳴らさず、熱源視の材質が空なら ThermalHighlighter がコードで作る。カタログが無ければ Default* の値で同じようにする。
     [CreateAssetMenu(fileName = "VisionVisualsCatalog", menuName = "Shooter/Vision Visuals Catalog")]
     public sealed class VisionVisualCatalog : ScriptableObject
     {
@@ -14,6 +14,14 @@ namespace Shooter.Runtime
         public static readonly Color DefaultNightColor = new Color(0.25f, 1f, 0.35f, 0.35f);
 
         public static readonly Color DefaultThermalColor = new Color(1f, 0.55f, 0.15f, 0.35f);
+
+        public static readonly Color DefaultThermalHighlightColor = new Color(1f, 0.95f, 0.75f, 1f);
+
+        public const float DefaultSwitchVolume = 0.6f;
+
+        public const float DefaultThermalRescanSeconds = 0.5f;
+
+        public const float MinThermalRescanSeconds = 0.05f;
 
         [SerializeField, Tooltip("暗視のときに画面 (照準器なら照準の中) に重ねる画像。空なら色だけで覆う")]
         private Texture2D _nightImage;
@@ -34,7 +42,16 @@ namespace Shooter.Runtime
         private AudioClip _switchOff;
 
         [SerializeField, Range(0f, 1f), Tooltip("入れ切りの音の音量")]
-        private float _switchVolume = 0.6f;
+        private float _switchVolume = DefaultSwitchVolume;
+
+        [SerializeField, Tooltip("熱源視の間、敵の体 (Damageable の下の Renderer) に貼る材質。空なら熱源の色で光る材質をコードで作る")]
+        private Material _thermalMaterial;
+
+        [SerializeField, Tooltip("熱源視の材質が空のとき、コードで作る材質の色")]
+        private Color _thermalHighlightColor = DefaultThermalHighlightColor;
+
+        [SerializeField, Min(MinThermalRescanSeconds), Tooltip("熱源視の間に、新しく現れた敵と倒れた敵を探し直す間隔 (秒)")]
+        private float _thermalRescanSeconds = DefaultThermalRescanSeconds;
 
         public Texture2D NightImage
         {
@@ -76,6 +93,50 @@ namespace Shooter.Runtime
         {
             get => _switchVolume;
             set => _switchVolume = Mathf.Clamp01(value);
+        }
+
+        public Material ThermalMaterial
+        {
+            get => _thermalMaterial;
+            set => _thermalMaterial = value;
+        }
+
+        public Color ThermalHighlightColor
+        {
+            get => _thermalHighlightColor;
+            set => _thermalHighlightColor = value;
+        }
+
+        public float ThermalRescanSeconds
+        {
+            get => _thermalRescanSeconds;
+            set => _thermalRescanSeconds = Mathf.Max(MinThermalRescanSeconds, value);
+        }
+
+        public static AudioClip SwitchSoundFor(VisionVisualCatalog catalog, bool on)
+        {
+            if (catalog == null)
+            {
+                return null;
+            }
+
+            return on ? catalog.SwitchOn : catalog.SwitchOff;
+        }
+
+        public static float SwitchVolumeOf(VisionVisualCatalog catalog)
+        {
+            return catalog != null ? catalog.SwitchVolume : DefaultSwitchVolume;
+        }
+
+        public static Color ThermalHighlightColorOf(VisionVisualCatalog catalog)
+        {
+            return catalog != null ? catalog.ThermalHighlightColor : DefaultThermalHighlightColor;
+        }
+
+        // アセットの Inspector で下限より小さく入っていても、毎フレーム探し直さないよう下限で止める。
+        public static float ThermalRescanSecondsOf(VisionVisualCatalog catalog)
+        {
+            return catalog != null ? Mathf.Max(MinThermalRescanSeconds, catalog.ThermalRescanSeconds) : DefaultThermalRescanSeconds;
         }
 
         public static VisionVisualCatalog Load()

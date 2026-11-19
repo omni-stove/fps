@@ -52,7 +52,13 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("パラシュートで降ろすとき、出現点からどれだけ上に出すか (m)")]
         private float _dropHeight = DefaultDropHeight;
 
+        [SerializeField, Tooltip("縮むエリアの次の円の中へ補給の箱を落とす部品。空ならシーンから探し、それも無ければ落とさない")]
+        private SupplyDropper _supplyDropper;
+
         private readonly List<Damageable> _zoneTargets = new List<Damageable>();
+        private readonly List<SupplyDropMark> _supplyMarks = new List<SupplyDropMark>();
+        private readonly List<System.Numerics.Vector3> _crateTargets = new List<System.Numerics.Vector3>();
+        private SupplyDropper _runningDropper;
         private readonly Dictionary<int, BotErrandKind> _loggedErrands = new Dictionary<int, BotErrandKind>();
         private readonly List<BotPickupOption> _pickupOptions = new List<BotPickupOption>();
         private readonly List<System.Numerics.Vector3> _downedSquadmates = new List<System.Numerics.Vector3>();
@@ -72,6 +78,14 @@ namespace Shooter.Runtime
 
         public ShrinkingZone RunningZone => _runningZone;
 
+        public SupplyDropper RunningSupplyDropper => _runningDropper;
+
+        public SupplyDropper SupplyDropper
+        {
+            get => _supplyDropper;
+            set => _supplyDropper = value;
+        }
+
         public SideMember LocalReviveTarget => _localReviveTarget.HasValue ? MemberOf(_localReviveTarget.Value) : null;
 
         public BattleRoyaleDefinition Definition
@@ -81,6 +95,18 @@ namespace Shooter.Runtime
         }
 
         public BattleRoyaleDefinition EffectiveDefinition => GameContent.Pick(_definition, c => c.BattleRoyale);
+
+        public static RedeploySpec RedeployTuning =>
+            KitTuning.Load(c => c.RedeployTuning, RedeployJson.ResourcePath, RedeployJson.Parse, RedeploySpec.Default);
+
+        public RedeploySpec EffectiveRedeploy
+        {
+            get
+            {
+                var definition = EffectiveDefinition;
+                return (definition != null ? definition.ReadRedeploy() : null) ?? RedeployTuning;
+            }
+        }
 
         public float EffectiveBotPlanIntervalSeconds
         {
@@ -180,7 +206,9 @@ namespace Shooter.Runtime
         }
 
         // このモードはダウンが前提なので、actions のダウンが Off でも Revive にして使う。
-        public static BattleRoyaleSession CreateBattleRoyale(int squadCount, int squadSize, float timeLimitSeconds, ActionRules actions)
+        // redeploy が null なら戻らない試合にするのは、調整値の読み先を決めるのが Runner (EffectiveRedeploy) で、ここではないため。
+        public static BattleRoyaleSession CreateBattleRoyale(
+            int squadCount, int squadSize, float timeLimitSeconds, ActionRules actions, RedeploySpec redeploy = null)
         {
             if (actions == null)
             {
@@ -194,15 +222,16 @@ namespace Shooter.Runtime
 
             var withDowned = actions.Downed == Downed.Revive ? actions : actions.WithDowned(Downed.Revive);
             var limit = timeLimitSeconds > 0f ? timeLimitSeconds : float.PositiveInfinity;
-            return new BattleRoyaleSession(squadCount, squadSize, limit, withDowned);
+            return new BattleRoyaleSession(squadCount, squadSize, limit, withDowned, redeploy);
         }
 
         public BattleRoyaleSession CreateConfiguredBattleRoyale(ActionRules actions)
         {
             var definition = EffectiveDefinition;
+            var redeploy = EffectiveRedeploy;
             return definition != null
-                ? definition.CreateBattleRoyale(actions)
-                : CreateBattleRoyale(_squadCount, _squadSize, _timeLimitSeconds, actions);
+                ? definition.CreateBattleRoyale(actions, redeploy)
+                : CreateBattleRoyale(_squadCount, _squadSize, _timeLimitSeconds, actions, redeploy);
         }
 
         public void Begin(
@@ -262,6 +291,37 @@ namespace Shooter.Runtime
             return step;
         }
 
+        // 倒れた者とダウンした者は開けられない。開けた物は拾える物として地面に置くので、拾う順は Pickup に任せる。
+        public bool TryOpenCrate(SideMember actor)
+        {
+            if (!IsStarted)
+            {
+                throw new InvalidOperationException($"{GetType().Name} '{name}' has not started a mode");
+            }
+
+            var actorId = IdOf(actor);
+            if (actorId < 0)
+            {
+                throw new ArgumentException($"'{(actor != null ? actor.name : "null")}' is not a member of this mode", nameof(actor));
+            }
+
+            if (_runningDropper == null || !_battleRoyale.IsLive || !_battleRoyale.IsStanding(actorId))
+            {
+                return false;
+            }
+
+            var crate = _runningDropper.NearestOpenable(actor.GroundPosition);
+            if (crate == null)
+            {
+                return false;
+            }
+
+            var pickups = _runningDropper.Open(crate, actorId);
+            Debug.Log(BattleRoyaleLog.CrateOpened(actorId, crate.Number, pickups.Count), actor);
+            RefreshHud();
+            return true;
+        }
+
         public void PlanBots()
         {
             if (!IsStarted)
@@ -272,6 +332,14 @@ namespace Shooter.Runtime
             var zone = _runningZone != null && _runningZone.IsRunning ? _runningZone.State : (ZoneState?)null;
             var pickups = Pickup.FindActive();
             var searchRadius = EffectiveBotSearchRadius;
+            var crateSearchRadius = 0f;
+            _crateTargets.Clear();
+            if (_runningDropper != null)
+            {
+                _runningDropper.CollectUnopenedLandingPoints(_crateTargets);
+                crateSearchRadius = _runningDropper.ActiveSpec.BotSearchRadius;
+            }
+
             foreach (var member in Members)
             {
                 var agent = member != null ? member.GetComponent<EnemyAgent>() : null;
@@ -291,7 +359,14 @@ namespace Shooter.Runtime
                 CollectOptions(member, agent, pickups);
                 CollectDownedSquadmates(member);
                 var errand = BattleRoyaleBotPlanner.Plan(
-                    member.GroundPosition.ToNumerics(), zone, !agent.IsUnarmed, _pickupOptions, _downedSquadmates, searchRadius);
+                    member.GroundPosition.ToNumerics(),
+                    zone,
+                    !agent.IsUnarmed,
+                    _pickupOptions,
+                    _downedSquadmates,
+                    searchRadius,
+                    _crateTargets,
+                    crateSearchRadius);
 
                 if (errand.HasErrand)
                 {
@@ -361,6 +436,8 @@ namespace Shooter.Runtime
             }
 
             StartZone();
+            StartSupplyDrops();
+            SyncZonePhase();
             _untilBotPlan = 0f;
 
             // Begin は OnBegan の前に HUD を書くので、エリアと武器なしの案内を出すためにもう一度書く。
@@ -380,10 +457,15 @@ namespace Shooter.Runtime
                 return;
             }
 
+            SyncZonePhase();
             var local = LocalPlayer;
             if (local != null && _interactAction != null && _interactAction.IsPressed())
             {
-                HoldRevive(local, deltaSeconds);
+                // 同じボタンで起こすのと開けるのを兼ねるので、起こせる味方がいなかったときだけ、押した瞬間に箱を開ける。
+                if (HoldRevive(local, deltaSeconds) == ReviveStep.Rejected && _interactAction.WasPressedThisFrame())
+                {
+                    TryOpenCrate(local);
+                }
             }
 
             foreach (var member in Members)
@@ -391,6 +473,7 @@ namespace Shooter.Runtime
                 if (member != null && member != local && member.GetComponent<EnemyAgent>() != null && _battleRoyale.IsStanding(IdOf(member)))
                 {
                     HoldRevive(member, deltaSeconds);
+                    TryOpenCrate(member);
                 }
             }
 
@@ -400,6 +483,12 @@ namespace Shooter.Runtime
                 _untilBotPlan = Mathf.Max(0.05f, EffectiveBotPlanIntervalSeconds);
                 PlanBots();
             }
+        }
+
+        // このモードで戻るのは倒されて戻る待ちを終えた人だけなので、戻った場所から上空へ出してパラシュートで降ろす。
+        protected override void OnSpawned(SideMember member)
+        {
+            DropByParachute(member);
         }
 
         protected override bool InterceptDeath(SideMember killer, SideMember victim)
@@ -435,7 +524,24 @@ namespace Shooter.Runtime
                 var controller = local != null ? local.GetComponentInChildren<WeaponController>(true) : null;
                 var unarmed = controller != null && controller.IsInitialized && controller.IsUnarmed;
                 var zone = _runningZone != null && _runningZone.IsRunning ? _runningZone.State : (ZoneState?)null;
-                return new BattleRoyaleStatus(_battleRoyale, localId >= 0 ? localId : (int?)null, _localReviveTarget, zone, unarmed);
+                var atCrate = false;
+                _supplyMarks.Clear();
+                if (_runningDropper != null)
+                {
+                    _runningDropper.CollectMarks(_supplyMarks);
+                    atCrate = local != null && localId >= 0 && _battleRoyale.IsStanding(localId)
+                        && _runningDropper.NearestOpenable(local.GroundPosition) != null;
+                }
+
+                return new BattleRoyaleStatus(
+                    _battleRoyale,
+                    localId >= 0 ? localId : (int?)null,
+                    _localReviveTarget,
+                    zone,
+                    unarmed,
+                    _supplyMarks,
+                    atCrate,
+                    InteractKeyLabel());
             }
         }
 
@@ -451,6 +557,7 @@ namespace Shooter.Runtime
         {
             Unsubscribe();
             ReleaseInteractAction();
+            StopSupplyDrops();
             StopZone();
             ClearErrands();
             foreach (var member in Members)
@@ -501,6 +608,15 @@ namespace Shooter.Runtime
             }
         }
 
+        // エリアが無いシーンでは段階が進まないので、回数を使い切るまで戻れる。
+        private void SyncZonePhase()
+        {
+            if (_runningZone != null && _runningZone.IsRunning)
+            {
+                _battleRoyale.SetZonePhase(_runningZone.State.PhaseIndex);
+            }
+        }
+
         private void StopZone()
         {
             if (_runningZone != null)
@@ -510,6 +626,47 @@ namespace Shooter.Runtime
             }
 
             _runningZone = null;
+        }
+
+        // エリアが無ければ次の円も無いので落とさない。箱は前の試合の物を消してから落とし始める。
+        private void StartSupplyDrops()
+        {
+            var dropper = _supplyDropper != null ? _supplyDropper : FindAnyObjectByType<SupplyDropper>();
+            if (dropper == null)
+            {
+                return;
+            }
+
+            if (_runningZone == null)
+            {
+                Debug.LogWarning($"{LogTag} 縮むエリアが動いていないため、補給の箱は落としません。", this);
+                return;
+            }
+
+            var definition = EffectiveDefinition;
+            dropper.Stop();
+            dropper.ClearCrates();
+            dropper.Begin(_runningZone, definition != null ? definition.ReadSupplyDrops() : null);
+            _runningDropper = dropper;
+        }
+
+        private void StopSupplyDrops()
+        {
+            if (_runningDropper != null)
+            {
+                _runningDropper.Stop();
+            }
+
+            _runningDropper = null;
+            _supplyMarks.Clear();
+            _crateTargets.Clear();
+        }
+
+        private string InteractKeyLabel()
+        {
+            return _interactAction != null
+                ? _interactAction.GetBindingDisplayString(InputBinding.DisplayStringOptions.DontIncludeInteractions)
+                : null;
         }
 
         private void ClearErrands()
@@ -707,6 +864,7 @@ namespace Shooter.Runtime
             _battleRoyale.PlayerBledOut += OnPlayerBledOut;
             _battleRoyale.PlayerFinished += OnPlayerFinished;
             _battleRoyale.SquadEliminated += OnSquadEliminated;
+            _battleRoyale.RedeployDecided += OnRedeployDecided;
             _battleRoyale.Ended += OnBattleRoyaleEnded;
             _subscribed = true;
         }
@@ -724,6 +882,7 @@ namespace Shooter.Runtime
             _battleRoyale.PlayerBledOut -= OnPlayerBledOut;
             _battleRoyale.PlayerFinished -= OnPlayerFinished;
             _battleRoyale.SquadEliminated -= OnSquadEliminated;
+            _battleRoyale.RedeployDecided -= OnRedeployDecided;
             _battleRoyale.Ended -= OnBattleRoyaleEnded;
             _subscribed = false;
         }
@@ -772,6 +931,20 @@ namespace Shooter.Runtime
             DropBelongings(member);
         }
 
+        // 戻る設定の無い試合では倒れるたびに Disabled を出しても役に立たないので出さない。
+        private void OnRedeployDecided(int playerId, RedeployVerdict verdict)
+        {
+            if (verdict == RedeployVerdict.Disabled)
+            {
+                return;
+            }
+
+            var seconds = verdict == RedeployVerdict.Waiting ? _battleRoyale.RedeployRules.DelaySeconds : (float?)null;
+            Debug.Log(
+                BattleRoyaleLog.Redeploy(playerId, verdict, _battleRoyale.ZonePhaseIndex, _battleRoyale.GetRedeploysLeft(playerId), seconds),
+                MemberOf(playerId));
+        }
+
         private void OnSquadEliminated(Side squad, int place)
         {
             Debug.Log(BattleRoyaleLog.Eliminated(squad, place, _battleRoyale.SquadsRemaining), this);
@@ -779,6 +952,7 @@ namespace Shooter.Runtime
 
         private void OnBattleRoyaleEnded(Side? winner)
         {
+            StopSupplyDrops();
             StopZone();
             ClearErrands();
             EndMatch(winner);

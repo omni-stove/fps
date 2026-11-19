@@ -47,7 +47,7 @@ namespace Shooter.Tests.EditMode
         {
             var (_, damageable, _) = CreateShieldedBody();
 
-            LogAssert.Expect(LogType.Log, "[AI] id=Shield shield blocked dmg=25 by=unknown");
+            LogAssert.Expect(LogType.Log, "[AI] id=target shield blocked dmg=25 by=unknown");
             var result = FireFromTheFront(25);
 
             Assert.That(result.Hit, Is.True);
@@ -88,7 +88,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(plate.Collider.enabled, Is.True);
             Assert.That(plate.transform.localPosition, Is.EqualTo(raisedPosition));
-            LogAssert.Expect(LogType.Log, "[AI] id=Shield shield blocked dmg=25 by=unknown");
+            LogAssert.Expect(LogType.Log, "[AI] id=target shield blocked dmg=25 by=unknown");
             Assert.That(FireFromTheFront(25).Damage, Is.Zero);
         }
 

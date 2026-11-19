@@ -72,6 +72,18 @@ namespace Shooter.Core
                 + " parachute=" + verdict;
         }
 
+        public static string Redeploy(int playerId, RedeployVerdict verdict, int phaseIndex, int chargesLeft, float? seconds)
+        {
+            var text = Tag + " redeploy player=" + Number(playerId) + " verdict=" + verdict
+                + " phase=" + Number(phaseIndex + 1) + " left=" + Number(chargesLeft);
+            return seconds.HasValue ? text + " in=" + seconds.Value.ToString("F2", CultureInfo.InvariantCulture) : text;
+        }
+
+        public static string CrateOpened(int playerId, int crate, int pickups)
+        {
+            return Tag + " crate-opened player=" + Number(playerId) + " crate=" + Number(crate) + " pickups=" + Number(pickups);
+        }
+
         private static string Optional(int? value)
         {
             return value.HasValue ? Number(value.Value) : "-";

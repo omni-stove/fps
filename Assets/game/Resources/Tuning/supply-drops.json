@@ -1,0 +1,13 @@
+{
+  "stages": [
+    { "count": 1, "delaySeconds": 5, "intervalSeconds": 10 },
+    { "count": 2, "delaySeconds": 5, "intervalSeconds": 10 },
+    { "count": 2, "delaySeconds": 5, "intervalSeconds": 8 }
+  ],
+  "tableId": "",
+  "dropHeight": 40,
+  "fallSpeed": 6,
+  "placeFraction": 0.8,
+  "reach": 2.5,
+  "botSearchRadius": 80
+}

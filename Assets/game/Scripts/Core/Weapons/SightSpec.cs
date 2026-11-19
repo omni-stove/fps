@@ -12,7 +12,8 @@ namespace Shooter.Core
             string reticleId = null,
             bool scopeOverlay = false,
             bool eyeViewInThirdPerson = false,
-            float aimedInProgress = DefaultAimedInProgress)
+            float aimedInProgress = DefaultAimedInProgress,
+            VisionMode visionMode = VisionMode.None)
         {
             ReticleId = SpecGuard.ReferenceId(reticleId);
             ScopeOverlay = scopeOverlay;
@@ -24,6 +25,7 @@ namespace Shooter.Core
             }
 
             AimedInProgress = aimedInProgress;
+            VisionMode = SpecGuard.Defined(visionMode, nameof(visionMode));
         }
 
         public string ReticleId { get; }
@@ -36,7 +38,10 @@ namespace Shooter.Core
 
         public float AimedInProgress { get; }
 
+        public VisionMode VisionMode { get; }
+
         public bool IsDefault =>
-            !HasReticle && !ScopeOverlay && !EyeViewInThirdPerson && AimedInProgress == DefaultAimedInProgress;
+            !HasReticle && !ScopeOverlay && !EyeViewInThirdPerson && AimedInProgress == DefaultAimedInProgress
+            && VisionMode == VisionMode.None;
     }
 }

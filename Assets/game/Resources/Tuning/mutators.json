@@ -1,0 +1,8 @@
+{
+  "mutators": [
+    { "id": "low-health", "rules": { "playerMaxHealth": 50 } },
+    { "id": "headshots-only", "rules": { "zoneDamage": { "body": 0, "limb": 0 } } },
+    { "id": "no-regen", "rules": { "regenPerSecond": 0 } },
+    { "id": "infinite-ammo", "rules": { "infiniteReserve": true } }
+  ]
+}

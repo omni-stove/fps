@@ -148,6 +148,111 @@ namespace Shooter.Runtime
             return lines;
         }
 
+        public static LocalizedText SupplyFalling(int count)
+        {
+            if (count < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "count must be at least 1");
+            }
+
+            return new LocalizedText("mode.br.supplyFalling", count);
+        }
+
+        public static LocalizedText SupplyWaiting(int count)
+        {
+            if (count < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "count must be at least 1");
+            }
+
+            return new LocalizedText("mode.br.supplyWaiting", count);
+        }
+
+        public static LocalizedText SupplyOpenPrompt(string keyLabel)
+        {
+            var body = new LocalizedText("mode.br.supplyOpen");
+            return string.IsNullOrWhiteSpace(keyLabel) ? body : new LocalizedText("mode.br.supplyOpenKey", keyLabel.Trim(), body);
+        }
+
+        // 落ちている箱を先に出すのは、着く前に向かえば取り合いで先に着けるため。終わった試合では出さない。
+        public static IReadOnlyList<LocalizedText> SupplyLines(BattleRoyaleStatus detail)
+        {
+            if (detail == null)
+            {
+                throw new ArgumentNullException(nameof(detail));
+            }
+
+            var lines = new List<LocalizedText>();
+            if (detail.Session.Mode.State != GameModeState.Playing)
+            {
+                return lines;
+            }
+
+            if (detail.FallingSupplyDrops > 0)
+            {
+                lines.Add(SupplyFalling(detail.FallingSupplyDrops));
+            }
+
+            if (detail.LandedSupplyDrops > 0)
+            {
+                lines.Add(SupplyWaiting(detail.LandedSupplyDrops));
+            }
+
+            if (detail.IsLocalPlayerAtSupplyDrop)
+            {
+                lines.Add(SupplyOpenPrompt(detail.InteractKeyLabel));
+            }
+
+            return lines;
+        }
+
+        public static LocalizedText RedeployIn(int seconds)
+        {
+            if (seconds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seconds), seconds, "seconds must not be negative");
+            }
+
+            return new LocalizedText("mode.br.redeployIn", seconds);
+        }
+
+        public static LocalizedText RedeploysLeft(int count)
+        {
+            if (count < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count), count, "count must not be negative");
+            }
+
+            return new LocalizedText("mode.br.redeploysLeft", count);
+        }
+
+        // 戻る待ちは ModeStatus の復活までの秒にも載るが、空から戻ることを言うため、このモードではこちらの行で出す。終わった試合では出さない。
+        public static IReadOnlyList<LocalizedText> RedeployLines(BattleRoyaleStatus detail)
+        {
+            if (detail == null)
+            {
+                throw new ArgumentNullException(nameof(detail));
+            }
+
+            var lines = new List<LocalizedText>();
+            if (detail.Session.Mode.State != GameModeState.Playing)
+            {
+                return lines;
+            }
+
+            if (detail.LocalRedeploySeconds.HasValue)
+            {
+                lines.Add(RedeployIn(HudFormat.DisplayedSeconds(detail.LocalRedeploySeconds.Value)));
+            }
+
+            if (detail.LocalRedeploysLeft.HasValue)
+            {
+                lines.Add(RedeploysLeft(detail.LocalRedeploysLeft.Value));
+            }
+
+            return lines;
+        }
+
         public static LocalizedText Result(BattleRoyaleSession session)
         {
             if (session == null)
@@ -178,11 +283,16 @@ namespace Shooter.Runtime
 
         public void AppendLines(ModeStatus status, List<LocalizedText> lines)
         {
-            ModeStatusFormat.AppendRespawn(status, lines);
             if (status.Detail is BattleRoyaleStatus detail)
             {
+                lines.AddRange(RedeployLines(detail));
                 var zoneLine = detail.Zone.HasValue ? ZoneHudFormatter.Line(detail.Zone.Value) : default;
                 lines.AddRange(Lines(detail.Session, detail.LocalPlayerId, detail.ReviveTargetId, zoneLine, detail.IsLocalPlayerUnarmed));
+                lines.AddRange(SupplyLines(detail));
+            }
+            else
+            {
+                ModeStatusFormat.AppendRespawn(status, lines);
             }
         }
 

@@ -95,11 +95,11 @@ namespace Shooter.Tests.EditMode
             Assert.That(marker.GetComponentsInChildren<Collider>(true), Is.Empty);
             Assert.That(marker.transform.localScale, Is.EqualTo(new Vector3(4f, 1f, 4f)));
             var markerMaterial = TrackMaterials(marker);
-            AssertColor(markerMaterial.color, BombSite.IdleColor);
+            AssertColor(markerMaterial.color, BombSite.MarkerColorOf(false, TeamColors.Current));
 
             site.ShowPlanted(true);
 
-            AssertColor(markerMaterial.color, BombSite.PlantedColor);
+            AssertColor(markerMaterial.color, BombSite.MarkerColorOf(true, TeamColors.Current));
         }
 
         [Test]
@@ -115,7 +115,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(marker.GetComponent<MeshFilter>(), Is.Not.Null);
             Assert.That(marker.GetComponent<Collider>() == null, Is.True);
             Assert.That(marker.transform.localScale, Is.EqualTo(new Vector3(4f, ControlPointZone.MarkerThickness * 0.5f, 4f)));
-            AssertColor(TrackMaterials(marker).color, BombSite.PlantedColor);
+            AssertColor(TrackMaterials(marker).color, BombSite.MarkerColorOf(true, TeamColors.Current));
         }
 
         [Test]

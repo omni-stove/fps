@@ -97,6 +97,7 @@ namespace Shooter.Editor
             new TuningSlot("PayloadTuning", KitTuning.PayloadResourcePath, c => c.PayloadTuning, (c, v) => c.PayloadTuning = v),
             new TuningSlot("EconomyTuning", KitTuning.EconomyResourcePath, c => c.EconomyTuning, (c, v) => c.EconomyTuning = v),
             new TuningSlot("SupplyDropsTuning", KitTuning.SupplyDropsResourcePath, c => c.SupplyDropsTuning, (c, v) => c.SupplyDropsTuning = v),
+            new TuningSlot("RedeployTuning", KitTuning.RedeployResourcePath, c => c.RedeployTuning, (c, v) => c.RedeployTuning = v),
             new TuningSlot("MutatorsTuning", KitTuning.MutatorsResourcePath, c => c.MutatorsTuning, (c, v) => c.MutatorsTuning = v),
             new TuningSlot("PlaylistsTuning", KitTuning.PlaylistsResourcePath, c => c.PlaylistsTuning, (c, v) => c.PlaylistsTuning = v),
         };

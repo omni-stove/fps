@@ -319,6 +319,8 @@ namespace Shooter.Core.Tests
         [TestCase("{\"round\": {\"penetration\": {\"maxPenetrations\": 1, \"damageMultiplierPerPenetration\": 0.5, \"maxThickness\": 0.3, \"materials\": [{\"materialId\": \"metal\", \"penetrability\": 0}, {\"materialId\": \"metal\", \"penetrability\": 1}]}}}", "round.penetration.materials")]
         [TestCase("{\"aim\": {\"sight\": {\"aimedInProgress\": 1.5}}}", "aim.sight.aimedInProgress")]
         [TestCase("{\"aim\": {\"sight\": {\"overlay\": true}}}", "aim.sight.overlay")]
+        [TestCase("{\"aim\": {\"sight\": {\"visionMode\": \"Infrared\"}}}", "aim.sight.visionMode")]
+        [TestCase("{\"aim\": {\"sight\": {\"visionMode\": 2}}}", "aim.sight.visionMode")]
         [TestCase("{\"weight\": -1}", "weight")]
         [TestCase("{\"moveSpeedMultiplier\": -0.5}", "moveSpeedMultiplier")]
         [TestCase("{\"drawSeconds\": -0.5}", "drawSeconds")]
@@ -369,6 +371,34 @@ namespace Shooter.Core.Tests
             Assert.That(read.Aim.Sight.ScopeOverlay, Is.False);
             Assert.That(read.Aim.Sight.EyeViewInThirdPerson, Is.False);
             Assert.That(read.Aim.Sight.AimedInProgress, Is.EqualTo(SightSpec.DefaultAimedInProgress));
+            Assert.That(read.Aim.Sight.VisionMode, Is.EqualTo(VisionMode.None));
+        }
+
+        [TestCase(VisionMode.Night, "\"Night\"")]
+        [TestCase(VisionMode.Thermal, "\"Thermal\"")]
+        public void TheSightsVisionModeReadsBack(VisionMode mode, string written)
+        {
+            var spec = new WeaponSpec(
+                _rifleId,
+                "weapon.nightRifle",
+                WeaponCategory.MarksmanRifle,
+                aim: new AimSpec(sight: new SightSpec(visionMode: mode)));
+
+            var text = WeaponSpecJson.Write(spec);
+            var read = WeaponSpecJson.Parse(text, "night.json");
+
+            Assert.That(text, Does.Contain("\"visionMode\": " + written));
+            Assert.That(read.Aim.Sight.VisionMode, Is.EqualTo(mode));
+            Assert.That(WeaponSpecJson.Write(read), Is.EqualTo(text));
+        }
+
+        [Test]
+        public void ASightWithoutVisionDoesNotWriteIt()
+        {
+            var scoped = new WeaponSpec(
+                _rifleId, "weapon.scopedRifle", WeaponCategory.MarksmanRifle, aim: new AimSpec(sight: new SightSpec("mildot", true)));
+
+            Assert.That(WeaponSpecJson.Write(scoped), Does.Not.Contain("visionMode"));
         }
 
         [TestCase("{\"category\": \"AssaultRifle\"}", "id")]
@@ -430,6 +460,74 @@ namespace Shooter.Core.Tests
             Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(read), "again.json").HolsterSeconds, Is.EqualTo(0.4f));
             Assert.That(WeaponSpecJson.Write(bare), Does.Not.Contain(WeaponSpecJson.HolsterSecondsItem), "a weapon without a holster time writes the same JSON as before");
             Assert.That(read.WithFireInterval(read.FireInterval * 2f).HolsterSeconds, Is.EqualTo(0.4f));
+        }
+
+        [Test]
+        public void TheShieldReadsBackAndANonShieldWeaponWritesNoShield()
+        {
+            var shield = new WeaponSpec(
+                _rifleId,
+                "weapon.riotShield",
+                WeaponCategory.Handgun,
+                shield: new RiotShieldSpec(100f, 0.7f, 1.4f, 0.6f, new MeleeSpec(45, 1.5f, 80f, 0.7f, 0.6f, 0.3f, 0.4f)));
+
+            var written = WeaponSpecJson.Write(shield);
+            var read = WeaponSpecJson.Parse(written, "shield.json");
+
+            Assert.That(written, Does.Contain("\"shield\""));
+            Assert.That(read.IsShield, Is.True);
+            Assert.That(read.Shield.BlockArcDegrees, Is.EqualTo(100f));
+            Assert.That(read.Shield.Width, Is.EqualTo(0.7f));
+            Assert.That(read.Shield.Height, Is.EqualTo(1.4f));
+            Assert.That(read.Shield.MoveSpeedMultiplier, Is.EqualTo(0.6f));
+            Assert.That(read.Shield.Bash.Damage, Is.EqualTo(45));
+            Assert.That(read.Shield.Bash.Reach, Is.EqualTo(1.5f));
+            Assert.That(read.Shield.Bash.ArcDegrees, Is.EqualTo(80f));
+            Assert.That(read.Shield.Bash.SwingSeconds, Is.EqualTo(0.7f));
+            Assert.That(read.Shield.Bash.CooldownSeconds, Is.EqualTo(0.6f));
+            Assert.That(read.Shield.Bash.ImpactSeconds, Is.EqualTo(0.3f));
+            Assert.That(read.Shield.Bash.LungeDistance, Is.EqualTo(0.4f));
+            Assert.That(read.WithFireInterval(read.FireInterval * 2f).Shield, Is.SameAs(read.Shield));
+
+            var plain = new WeaponSpec(_rifleId, "weapon.rifle", WeaponCategory.AssaultRifle);
+            Assert.That(WeaponSpecJson.Write(plain), Does.Not.Contain("\"shield\""), "a weapon without a shield writes the same JSON as before");
+            Assert.That(WeaponSpecJson.Parse(WeaponSpecJson.Write(plain), "plain.json").Shield, Is.Null);
+        }
+
+        [Test]
+        public void ALeftOutShieldItemTakesItsDefault()
+        {
+            var read = WeaponSpecJson.Parse(
+                "{\"id\": \"" + _rifleId + "\", \"category\": \"Handgun\", \"shield\": {\"bash\": {\"damage\": 60}}}", "shield.json");
+
+            Assert.That(read.Shield.BlockArcDegrees, Is.EqualTo(RiotShieldSpec.DefaultBlockArcDegrees));
+            Assert.That(read.Shield.Width, Is.EqualTo(RiotShieldSpec.DefaultWidth));
+            Assert.That(read.Shield.Height, Is.EqualTo(RiotShieldSpec.DefaultHeight));
+            Assert.That(read.Shield.MoveSpeedMultiplier, Is.EqualTo(RiotShieldSpec.DefaultMoveSpeedMultiplier));
+            Assert.That(read.Shield.Bash.Damage, Is.EqualTo(60));
+            Assert.That(read.Shield.Bash.Reach, Is.EqualTo(RiotShieldSpec.DefaultBashReach));
+            Assert.That(read.Shield.Bash.SwingSeconds, Is.EqualTo(RiotShieldSpec.DefaultBashSwingSeconds));
+
+            var empty = WeaponSpecJson.Parse("{\"id\": \"" + _rifleId + "\", \"category\": \"Handgun\", \"shield\": {}}", "shield.json");
+            Assert.That(empty.Shield.Bash, Is.SameAs(RiotShieldSpec.DefaultBash));
+        }
+
+        [TestCase("{\"blockArcDegrees\": 0}", "shield.blockArcDegrees")]
+        [TestCase("{\"blockArcDegrees\": 361}", "shield.blockArcDegrees")]
+        [TestCase("{\"width\": 0}", "shield.width")]
+        [TestCase("{\"height\": -1}", "shield.height")]
+        [TestCase("{\"moveSpeedMultiplier\": 1.5}", "shield.moveSpeedMultiplier")]
+        [TestCase("{\"bash\": {\"damage\": 0}}", "shield.bash.damage")]
+        [TestCase("{\"bash\": {\"impactSeconds\": 5}}", "shield.bash.impactSeconds")]
+        [TestCase("{\"bash\": {\"finisherSeconds\": 1}}", "shield.bash.finisherSeconds")]
+        [TestCase("{\"angle\": 90}", "shield.angle")]
+        public void ABadShieldValueNamesItsItem(string shield, string item)
+        {
+            var text = "{\"id\": \"" + _rifleId + "\", \"category\": \"Handgun\", \"shield\": " + shield + "}";
+
+            var e = Assert.Throws<ServerDataJsonException>(() => WeaponSpecJson.Parse(text, "bad.json"));
+
+            Assert.That(e.Item, Is.EqualTo(item));
         }
 
         [Test]

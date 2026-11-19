@@ -53,6 +53,39 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void WithRulesReplacesOnlyTheRules()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+            var settings = data.Settings.WithPrivacy(true, "FRIENDS");
+            data = data.WithSettings(settings);
+            var rules = GameRules.Default.WithObjective(MatchObjective.Domination);
+
+            var changed = data.WithRules(rules);
+
+            Assert.That(changed.Rules, Is.SameAs(rules));
+            Assert.That(changed.File.Rules, Is.SameAs(rules));
+            Assert.That(changed.Settings, Is.SameAs(settings), "a settings override is kept");
+            Assert.That(changed.File.Settings, Is.SameAs(data.File.Settings));
+            Assert.That(changed.File.Name, Is.EqualTo(data.File.Name));
+            Assert.That(changed.File.LoadoutName, Is.EqualTo(data.File.LoadoutName));
+            Assert.That(changed.File.LoadoutWeapons, Is.EqualTo(data.File.LoadoutWeapons));
+            Assert.That(changed.File.Catalog, Is.SameAs(data.File.Catalog));
+            Assert.That(changed.File.Motor, Is.SameAs(data.File.Motor));
+            Assert.That(changed.Name, Is.EqualTo(data.Name));
+            Assert.That(changed.Path, Is.EqualTo(data.Path));
+            Assert.That(changed.Ping, Is.SameAs(data.Ping));
+            Assert.That(changed.Grenades, Is.SameAs(data.Grenades));
+            Assert.That(changed.Bots, Is.SameAs(data.Bots));
+            Assert.That(changed.Items, Is.SameAs(data.Items));
+            Assert.That(changed.Knockback, Is.SameAs(data.Knockback));
+            Assert.That(changed.Assist, Is.SameAs(data.Assist));
+            Assert.That(changed.ChatWords, Is.SameAs(data.ChatWords));
+            Assert.That(data.Rules.Objective, Is.EqualTo(MatchObjective.None));
+            Assert.Throws<System.ArgumentNullException>(() => data.WithRules(null));
+        }
+
+        [Test]
         public void LoadsTheRulesFromTheFirstRootThatHasThem()
         {
             var path = TestRules.Write(_second.Path, "Domination", TestRules.File(GameRules.Default.WithObjective(MatchObjective.Domination), name: "Domination"));

@@ -21,6 +21,7 @@ namespace Shooter.Editor
 
         public const string ZoneObjectName = "Zone";
         public const string PickupsObjectName = "Pickups";
+        public const string SupplyDropsObjectName = "SupplyDrops";
         public const string HillMeshName = "BattleRoyaleHill";
 
         public const int WeaponPickupAmmoIfOwned = 30;
@@ -309,7 +310,30 @@ namespace Shooter.Editor
             zone.BeginsOnStart = false;
 
             ((BattleRoyaleRunner)context.Runner).Zone = zone;
+
+            // キットの loot.json には表が無く、表から引く物が無いので、どの箱にも決まった武器と回復と弾を入れる。
+            var dropsObject = new GameObject(SupplyDropsObjectName);
+            SceneManager.MoveGameObjectToScene(dropsObject, context.Scene);
+            dropsObject.transform.position = ZoneCenter;
+            var dropper = dropsObject.AddComponent<SupplyDropper>();
+            dropper.SetFixedContents(SupplyCrateContents(rifle));
+            ((BattleRoyaleRunner)context.Runner).SupplyDropper = dropper;
             EditorSceneManager.MarkSceneDirty(context.Scene);
+        }
+
+        public static IReadOnlyList<PickupContents> SupplyCrateContents(WeaponDefinition rifle)
+        {
+            if (rifle == null)
+            {
+                throw new ArgumentNullException(nameof(rifle));
+            }
+
+            return new[]
+            {
+                PickupContents.ForWeapon(rifle, WeaponPickupAmmoIfOwned),
+                PickupContents.ForHealth(HealthPickupAmount),
+                PickupContents.ForReserveAmmo(AmmoPickupAmount),
+            };
         }
 
         private static void CreateHill(Transform parent, TerrainHill hill, Mesh mesh)

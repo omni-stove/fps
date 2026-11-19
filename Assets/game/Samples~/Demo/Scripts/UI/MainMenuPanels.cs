@@ -61,8 +61,8 @@ namespace Shooter.Runtime
         {
             Validate(kind);
             var removed = _factories.Remove(kind);
-            // 既定は消さず隠す印だけ残すのは、既定の登録が後から (UseDefault で) 入り直してもゲームが消したボタンを戻さないため。
-            if (_defaults.ContainsKey(kind) && _hidden.Add(kind))
+            // 隠す印は既定が入っているかに関わらず残すのは、既定が後から (UseDefault で) 入っても、ゲームが先に消したボタンを戻さないため。
+            if (_hidden.Add(kind) && _defaults.ContainsKey(kind))
             {
                 removed = true;
             }
@@ -101,9 +101,11 @@ namespace Shooter.Runtime
         {
             foreach (var kind in Kinds)
             {
+                var changed = IsRegistered(kind);
+                _factories.Remove(kind);
+                _defaults.Remove(kind);
                 _hidden.Remove(kind);
-                var removed = _defaults.Remove(kind);
-                if (!Unregister(kind) && removed)
+                if (changed)
                 {
                     Changed?.Invoke(kind);
                 }

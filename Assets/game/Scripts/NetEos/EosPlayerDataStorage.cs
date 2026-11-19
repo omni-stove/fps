@@ -8,13 +8,11 @@ using Shooter.Core;
 using Shooter.NetV2;
 using Shooter.Runtime;
 using UnityEngine;
-// Connect と Player Data Storage の名前空間を両方開くと型名がぶつかりうるので、ロビーと同じく Connect は別名で参照する
-using EosConnect = Epic.OnlineServices.Connect;
 
 namespace Shooter.NetEos
 {
-    // ロビー・パーティと同じ EOS のユーザー (EosPlatform.LocalUserId) を使い、まだ誰もログインしていなければ起動時に自分でログインする。
-    // 対戦の画面を開くまで待つと、起動時に他の端末の新しいセーブを採れないため。
+    // ロビー・パーティと同じ EOS のユーザー (EosPlatform.LocalUserId) を使う。起動時のログインは AccountSignIn が行い、
+    // Epic アカウントで入っていれば端末をまたいで同じクラウドを読み書きする。
     internal sealed class EosPlayerDataStorage : ICloudSaveBackend
     {
         // EOS_PLAYERDATASTORAGE_FILENAME_MAX_LENGTH_BYTES。名前は ASCII だけなので文字数で比べてよい。
@@ -23,22 +21,12 @@ namespace Shooter.NetEos
         // EOS が 1 回の呼び戻しで受け渡す量の上限 (EOS_PLAYERDATASTORAGE_FILE_MAX_SIZE_BYTES より十分小さく、セーブ 1 つが数回で済む大きさ)。
         private const uint _chunkLengthBytes = 16 * 1024;
 
-        // 起動時にオフラインでも、つながった後で同期を始められるよう、ログインに失敗したらこの間を置いてやり直す。
-        private const double _loginRetrySeconds = 60d;
-
         // BOM を付けず、読み込みでは不正なバイト列を黙って置き換えずに失敗にする (FileSaveStorage と同じ)。
         private static readonly Encoding _encoding = new UTF8Encoding(false, true);
 
         private readonly IEosClientTransportFactory _factory;
-        private EosCredentials _credentials;
-        private EosDeviceLogin _login;
-        private double _retryLoginAt;
-        private bool _off;
-        private Epic.OnlineServices.Platform.PlatformInterface _watchedPlatform;
-        private EosConnect.ConnectInterface _watchedConnect;
-        private ulong _authExpirationNotification;
-        private ulong _loginStatusNotification;
-        private EosDeviceLogin _refresh;
+        private bool _credentialsRead;
+        private bool _checked;
 
         public EosPlayerDataStorage(IEosClientTransportFactory factory)
         {
@@ -58,29 +46,24 @@ namespace Shooter.NetEos
 
         public void Tick()
         {
-            EnsureLogin();
-            WatchLogin();
+            CheckSettings();
             if (EosPlatform.Current != null)
             {
                 EosPlatform.Tick();
             }
         }
 
-        private void EnsureLogin()
+        // ログインは AccountSignIn に任せ、ここでは手元だけになる理由をログに 1 回だけ出す。
+        private void CheckSettings()
         {
-            if (_off || _login != null || EosPlatform.LocalUserId != null)
+            if (_checked)
             {
                 return;
             }
 
-            var now = Time.realtimeSinceStartupAsDouble;
-            if (now < _retryLoginAt)
+            if (!_credentialsRead)
             {
-                return;
-            }
-
-            if (_credentials == null)
-            {
+                _credentialsRead = true;
                 if (!_factory.TryLoadCredentials(out var credentials, out var missing, out var loadError))
                 {
                     TurnOff("cannot load EOS credentials: " + loadError);
@@ -89,7 +72,7 @@ namespace Shooter.NetEos
 
                 if (credentials == null)
                 {
-                    TurnOff("no EOS credentials; missing " + string.Join(", ", missing));
+                    TurnOff("no EOS credentials; missing " + string.Join(", ", missing ?? Array.Empty<string>()));
                     return;
                 }
 
@@ -99,116 +82,25 @@ namespace Shooter.NetEos
                         + EosCredentials.EncryptionKeyLength + " hex characters");
                     return;
                 }
-
-                _credentials = credentials;
             }
 
-            var platform = EosPlatform.Acquire(_credentials, out var acquireError);
-            if (platform == null)
-            {
-                TurnOff(acquireError);
-                return;
-            }
-
-            if (!EosPlatform.HasEncryptionKey)
+            // 鍵はプラットフォームを作るときにしか渡せないので、鍵より先に別の部品が作っていれば読み書きできない。
+            if (EosPlatform.Current != null && !EosPlatform.HasEncryptionKey)
             {
                 TurnOff("the EOS platform was created without " + EosCredentials.EncryptionKeyVariable);
                 return;
             }
 
-            var connect = platform.GetConnectInterface();
-            if (connect == null)
+            if (EosPlatform.Current != null)
             {
-                TurnOff("EOS Connect interface is unavailable");
-                return;
+                _checked = true;
             }
-
-            _login = new EosDeviceLogin(connect, EosTransportInstaller.LobbyDisplayName, SystemInfo.deviceModel);
-            _login.Begin((userId, loginError) =>
-            {
-                _login = null;
-                if (loginError != null)
-                {
-                    _retryLoginAt = Time.realtimeSinceStartupAsDouble + _loginRetrySeconds;
-                    Debug.LogWarning(CloudSaveLog.Off(loginError + "; signing in again later"));
-                }
-            });
-        }
-
-        // ロビーが先にログインしていても、ロビーを閉じると通知が外れるので、ここでも自分で見張る。
-        private void WatchLogin()
-        {
-            var platform = EosPlatform.Current;
-            if (platform == null || EosPlatform.LocalUserId == null || ReferenceEquals(platform, _watchedPlatform))
-            {
-                return;
-            }
-
-            _watchedPlatform = platform;
-            _refresh?.Cancel();
-            _refresh = null;
-            _watchedConnect = platform.GetConnectInterface();
-            _authExpirationNotification = 0;
-            _loginStatusNotification = 0;
-            if (_watchedConnect != null)
-            {
-                var expirationOptions = new EosConnect.AddNotifyAuthExpirationOptions();
-                _authExpirationNotification = _watchedConnect.AddNotifyAuthExpiration(ref expirationOptions, null, HandleAuthExpiration);
-                var statusOptions = new EosConnect.AddNotifyLoginStatusChangedOptions();
-                _loginStatusNotification = _watchedConnect.AddNotifyLoginStatusChanged(ref statusOptions, null, HandleLoginStatusChanged);
-            }
-
-            if (_authExpirationNotification == 0 || _loginStatusNotification == 0)
-            {
-                Debug.LogWarning(CloudSaveLog.LoginNotWatched());
-            }
-        }
-
-        private void HandleAuthExpiration(ref EosConnect.AuthExpirationCallbackInfo info)
-        {
-            if (_refresh != null || !IsSignedIn(info.LocalUserId) || !ReferenceEquals(EosPlatform.Current, _watchedPlatform))
-            {
-                return;
-            }
-
-            _refresh = new EosDeviceLogin(_watchedConnect, EosTransportInstaller.LobbyDisplayName, SystemInfo.deviceModel);
-            _refresh.Begin((userId, error) =>
-            {
-                _refresh = null;
-                if (error != null)
-                {
-                    // 期限が切れればログインの状態の通知が来て、EnsureLogin からログインし直す。
-                    Debug.LogWarning(CloudSaveLog.LoginRefreshFailed(error));
-                    return;
-                }
-
-                Debug.Log(CloudSaveLog.LoginRefreshed());
-            });
-        }
-
-        private void HandleLoginStatusChanged(ref EosConnect.LoginStatusChangedCallbackInfo info)
-        {
-            if (info.CurrentStatus == LoginStatus.LoggedIn || !IsSignedIn(info.LocalUserId))
-            {
-                return;
-            }
-
-            EosPlatform.ForgetLogin(info.LocalUserId);
-            _refresh?.Cancel();
-            _refresh = null;
-        }
-
-        private static bool IsSignedIn(ProductUserId userId)
-        {
-            var current = EosPlatform.LocalUserId;
-            return userId != null && current != null
-                && string.Equals(userId.ToString(), current.ToString(), StringComparison.OrdinalIgnoreCase);
         }
 
         // 設定が足りないのはやり直しても直らないので、この起動の間は手元だけにする。
         private void TurnOff(string reason)
         {
-            _off = true;
+            _checked = true;
             Debug.Log(CloudSaveLog.Off(reason));
         }
 

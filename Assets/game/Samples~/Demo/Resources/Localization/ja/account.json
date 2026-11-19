@@ -1,0 +1,12 @@
+{
+  "account.title": "アカウント",
+  "account.none": "サインインしていません。セーブはこの端末だけに残ります",
+  "account.device": "この端末のアカウントで遊んでいます。セーブはこの端末の分だけ同期します",
+  "account.epic": "Epic アカウントでサインインしています。セーブを他の端末と同期します",
+  "account.signingIn": "サインインしています…",
+  "account.signingOut": "サインアウトしています…",
+  "account.cancelled": "サインインを取りやめました",
+  "account.failed": "サインインできませんでした。時間をおいてもう一度試してください",
+  "account.signIn": "Epic アカウントでサインイン",
+  "account.signOut": "サインアウト"
+}

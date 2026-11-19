@@ -18,6 +18,7 @@ namespace Shooter.NetEos
 
         private static PlatformInterface _platform;
         private static ProductUserId _localUserId;
+        private static EpicAccountId _localEpicAccountId;
         private static bool _quitHooked;
         private static int _lastTickFrame = -1;
         private static bool _hasEncryptionKey;
@@ -34,21 +35,74 @@ namespace Shooter.NetEos
         // ロビーと transport が同じユーザーを使い、ログインを 1 回で済ませるために持つ。
         public static ProductUserId LocalUserId => _platform != null && _localUserId != null && _localUserId.IsValid() ? _localUserId : null;
 
+        // Connect のログインをどの手段で入れたか。期限切れで入り直すときに、同じ手段で同じユーザーへ戻すために持つ。
+        public static EpicAccountId LocalEpicAccountId => LocalUserId != null && _localEpicAccountId != null && _localEpicAccountId.IsValid()
+            ? _localEpicAccountId
+            : null;
+
+        public static AccountKind LocalAccountKind
+        {
+            get
+            {
+                if (LocalUserId == null)
+                {
+                    return AccountKind.None;
+                }
+
+                return LocalEpicAccountId != null ? AccountKind.Epic : AccountKind.Device;
+            }
+        }
+
         public static void RememberLogin(ProductUserId userId)
         {
             if (_platform != null && userId != null && userId.IsValid())
             {
                 _localUserId = userId;
+                _localEpicAccountId = null;
+            }
+        }
+
+        public static void RememberEpicLogin(ProductUserId userId, EpicAccountId epicAccountId)
+        {
+            if (_platform != null && userId != null && userId.IsValid() && epicAccountId != null && epicAccountId.IsValid())
+            {
+                _localUserId = userId;
+                _localEpicAccountId = epicAccountId;
             }
         }
 
         public static void ForgetLogin(ProductUserId userId)
         {
-            if (_localUserId != null && userId != null
-                && string.Equals(_localUserId.ToString(), userId.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (IsLocalUser(userId))
             {
                 _localUserId = null;
+                _localEpicAccountId = null;
             }
+        }
+
+        public static bool IsLocalUser(ProductUserId userId)
+        {
+            return _localUserId != null && userId != null
+                && string.Equals(_localUserId.ToString(), userId.ToString(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Device ID で入り直すと、Epic アカウントのユーザーが端末のユーザーへ替わってしまうので、入れた手段で入り直す。
+        public static IEosLogin CreateRefresh(
+            Epic.OnlineServices.Connect.ConnectInterface connect, ProductUserId userId, string displayName, string deviceModel)
+        {
+            if (connect == null)
+            {
+                throw new ArgumentNullException(nameof(connect));
+            }
+
+            var epicAccountId = IsLocalUser(userId) ? LocalEpicAccountId : null;
+            var auth = epicAccountId != null ? _platform?.GetAuthInterface() : null;
+            if (auth != null)
+            {
+                return new EosEpicConnectLogin(auth, connect, epicAccountId);
+            }
+
+            return new EosDeviceLogin(connect, displayName, deviceModel);
         }
 
         public static PlatformInterface Acquire(EosCredentials credentials, out string error)
@@ -82,7 +136,8 @@ namespace Shooter.NetEos
                 LoggingInterface.SetLogLevel(LogCategory.AllCategories, LogLevel.Warning);
                 LoggingInterface.SetCallback(HandleLog);
 
-                var flags = PlatformFlags.DisableOverlay;
+                // Epic アカウントのサインイン (AccountPortal) は Windows では EOS のオーバーレイの上に出るので、使うときだけ切らずに残す。
+                var flags = credentials.AccountLogin.EpicAccount ? PlatformFlags.None : PlatformFlags.DisableOverlay;
                 if (Application.isEditor)
                 {
                     flags |= PlatformFlags.LoadingInEditor;
@@ -153,6 +208,7 @@ namespace Shooter.NetEos
             _platform.Release();
             _platform = null;
             _localUserId = null;
+            _localEpicAccountId = null;
             _lastTickFrame = -1;
             _hasEncryptionKey = false;
 

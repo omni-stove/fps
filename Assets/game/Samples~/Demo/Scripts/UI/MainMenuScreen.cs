@@ -120,6 +120,7 @@ namespace Shooter.Runtime
         private CampaignSelectPanel _campaignPanel;
         private VisualElement _profileSlot;
         private ProfilePanel _profilePanel;
+        private ProgressionRecorder _profileSource;
         private VisualElement _partySlot;
         private PartyPanel _partyPanel;
         private VisualElement _customMatchSlot;
@@ -628,6 +629,10 @@ namespace Shooter.Runtime
             SetButtonsEnabled(false);
             _profilePanel = new ProfilePanel(_profileSlot, progression.Ledger, progression.Profile, ProfileWeapons(), KitTuning.Items);
             _profilePanel.Cancelled += CloseProfile;
+
+            // Epic アカウントで入ると他の端末のプロフィールがクラウドから入ってくるので、開いたままでも出し直す。
+            _profileSource = progression;
+            progression.ProfileChanged += HandleProfileChanged;
         }
 
         public void CloseProfile()
@@ -637,11 +642,29 @@ namespace Shooter.Runtime
                 return;
             }
 
+            StopFollowingProfile();
             _profilePanel.Dispose();
             _profilePanel = null;
             SetDisplayed(_profileSlot, false);
             SetButtonsEnabled(true);
             FocusAt(IndexOf(ProfileButtonName));
+        }
+
+        private void HandleProfileChanged(PlayerProfile profile)
+        {
+            if (_profilePanel != null && profile != null)
+            {
+                _profilePanel.Show(profile);
+            }
+        }
+
+        private void StopFollowingProfile()
+        {
+            if (_profileSource != null)
+            {
+                _profileSource.ProfileChanged -= HandleProfileChanged;
+                _profileSource = null;
+            }
         }
 
         // ボタンを出していないときは開かない。開いた後に口が消えたときは、パネルが「使えない」を出す。
@@ -1297,6 +1320,7 @@ namespace Shooter.Runtime
 
             if (_profilePanel != null)
             {
+                StopFollowingProfile();
                 _profilePanel.Dispose();
                 _profilePanel = null;
             }

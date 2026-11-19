@@ -6,31 +6,21 @@ namespace Shooter.Core.Tests
     public sealed class CloudSaveLogTests
     {
         [Test]
-        public void LoginRefreshedIsTagged()
+        public void OffCarriesTheReason()
         {
-            Assert.That(CloudSaveLog.LoginRefreshed(), Is.EqualTo("[CloudSave] refreshed the EOS login"));
+            Assert.That(CloudSaveLog.Off("no EOS credentials"), Is.EqualTo("[CloudSave] local only: no EOS credentials"));
         }
 
         [Test]
-        public void LoginRefreshFailedCarriesTheError()
+        public void OffRejectsNullReason()
         {
-            Assert.That(
-                CloudSaveLog.LoginRefreshFailed("timed out"),
-                Is.EqualTo("[CloudSave] refreshing the EOS login failed: timed out; signing in again when it expires"));
+            Assert.Throws<ArgumentNullException>(() => CloudSaveLog.Off(null));
         }
 
         [Test]
-        public void LoginRefreshFailedRejectsNullError()
+        public void SignedOutSaysSavesStayLocal()
         {
-            Assert.Throws<ArgumentNullException>(() => CloudSaveLog.LoginRefreshFailed(null));
-        }
-
-        [Test]
-        public void LoginNotWatchedSaysTheLoginWillNotBeRefreshed()
-        {
-            Assert.That(
-                CloudSaveLog.LoginNotWatched(),
-                Is.EqualTo("[CloudSave] EOS connect notifications could not be registered; an expired login will not be refreshed"));
+            Assert.That(CloudSaveLog.SignedOut(), Is.EqualTo("[CloudSave] signed out; saving locally until the next sign-in"));
         }
     }
 }

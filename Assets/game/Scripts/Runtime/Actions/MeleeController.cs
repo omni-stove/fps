@@ -139,6 +139,8 @@ namespace Shooter.Runtime
             set => _meleeWeapon = value;
         }
 
+        public WeaponDefinition LastThrownWeapon { get; private set; }
+
         public string StrikeWeaponId
         {
             get
@@ -462,6 +464,8 @@ namespace Shooter.Runtime
                 aim.right,
                 settings != null ? settings.ThrownPrefab : null,
                 settings != null ? settings.ThrownCollectMode : PickupCollectMode.Touch);
+            // 投げた武器はロードアウトから外れるので、投げで倒した帰属の名前を引けるよう定義を残す。
+            LastThrownWeapon = held.Definition;
             Debug.Log(MeleeLog.Thrown(AttackerId, weaponId), this);
             return true;
         }

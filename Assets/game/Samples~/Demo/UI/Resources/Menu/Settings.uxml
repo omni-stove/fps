@@ -65,6 +65,28 @@
                 <ui:Label name="settings-rumble-strength-value" text="" class="settings__value" />
             </ui:VisualElement>
 
+            <ui:Label text="#settings.section.gyro" class="settings__section" />
+            <!-- ジャイロの無い機器では、SettingsView が下の欄を触れなくしてこの理由を出す。 -->
+            <ui:Label name="settings-gyro-unavailable" text="#settings.gyro.unavailable" class="settings__note" style="display: none;" />
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.gyro" class="settings__caption" />
+                <ui:Button name="settings-gyro" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+            <!-- ジャイロを切っている間は、SettingsView が下の 3 つの欄を触れなくする。 -->
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.gyroSensitivity" class="settings__caption" />
+                <ui:SliderInt name="settings-gyro-sensitivity" class="settings__slider" />
+                <ui:Label name="settings-gyro-sensitivity-value" text="" class="settings__value" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.gyroAimOnly" class="settings__caption" />
+                <ui:Button name="settings-gyro-aim-only" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.invertGyroY" class="settings__caption" />
+                <ui:Button name="settings-invert-gyro-y" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+
             <ui:Label text="#settings.section.effects" class="settings__section" />
             <ui:VisualElement class="settings__row">
                 <ui:Label text="#settings.value.cameraShake" class="settings__caption" />

@@ -96,6 +96,9 @@ namespace Shooter.Tests.EditMode
                 SettingsView.AimAssistButtonName,
                 SettingsView.InvertLookYButtonName,
                 SettingsView.RumbleButtonName,
+                SettingsView.GyroButtonName,
+                SettingsView.GyroAimOnlyButtonName,
+                SettingsView.InvertGyroYButtonName,
                 SettingsView.BloodButtonName,
                 SettingsView.PaletteButtonName,
                 SettingsView.SubtitlesButtonName,
@@ -115,6 +118,9 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(root.Q<Label>(SettingsView.PaletteFriendlySampleName), Is.Not.Null);
             Assert.That(root.Q<Label>(SettingsView.PaletteEnemySampleName), Is.Not.Null);
+            Assert.That(root.Q<SliderInt>(SettingsView.GyroSensitivitySliderName), Is.Not.Null);
+            Assert.That(root.Q<Label>(SettingsView.GyroSensitivityValueName), Is.Not.Null);
+            Assert.That(root.Q<Label>(SettingsView.GyroUnavailableName), Is.Not.Null);
             Assert.That(root.Q<SliderInt>(SettingsView.VoiceVolumeSliderName), Is.Not.Null);
             Assert.That(root.Q<Label>(SettingsView.VoiceVolumeValueName), Is.Not.Null);
             Assert.That(root.Q<VisualElement>(SettingsView.RebindNoticeRowName), Is.Not.Null);
@@ -146,9 +152,12 @@ namespace Shooter.Tests.EditMode
             {
                 Localizer.Get("settings.section.viewAndSound"),
                 Localizer.Get("settings.section.gamepad"),
+                Localizer.Get("settings.section.gyro"),
                 Localizer.Get("settings.section.effects"),
                 Localizer.Get("settings.section.accessibility"),
                 Localizer.Get(VoiceText.SettingsSectionKey),
+                Localizer.Get("settings.section.online"),
+                Localizer.Get("settings.section.privacy"),
                 Localizer.Get("settings.section.language"),
                 Localizer.Get("settings.section.holdModes"),
                 Localizer.Get("settings.section.bindings"),

@@ -300,14 +300,27 @@ namespace Shooter.Server
         private void HandlePlayerSpawned(int playerId)
         {
             var fighter = GetOrAdd(playerId);
-            fighter.Weapons.Equip(_rules.WeaponsFor(playerId), _data.File.SwitchSeconds, _data.Rules);
+            EquipChosen(fighter, playerId);
             RefillGrenades(fighter);
         }
 
         // Gun Game で段が上がった人は、出直しを待たずにその場で次の段の武器に持ち替える (オフラインの GunGameRunner と同じ)
         private void HandleWeaponsChanged(int playerId)
         {
-            GetOrAdd(playerId).Weapons.Equip(_rules.WeaponsFor(playerId), _data.File.SwitchSeconds, _data.Rules);
+            EquipChosen(GetOrAdd(playerId), playerId);
+        }
+
+        // 目的が配る武器を無しにする (Extraction で持ち込める物が無い) ときは、前の出撃の武器を残さず手ぶらにする
+        private void EquipChosen(Fighter fighter, int playerId)
+        {
+            var specs = _rules.WeaponsFor(playerId);
+            if (specs.Count == 0)
+            {
+                fighter.Weapons.Clear();
+                return;
+            }
+
+            fighter.Weapons.Equip(specs, _data.File.SwitchSeconds, _data.Rules);
         }
 
         // ルールのモジュールは続けて全員を出現させるので、持ち替え (HandlePlayerSpawned) とグレネードの数はそこで新しいルールのものになる

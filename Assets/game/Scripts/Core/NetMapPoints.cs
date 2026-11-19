@@ -17,24 +17,32 @@ namespace Shooter.Core
         public const string CenterItem = "center";
         public const string RadiusItem = "radius";
         public const string HeightItem = "height";
+        public const string PayloadItem = "payload";
+        public const string AttackersItem = "attackers";
+        public const string RouteItem = "route";
+        public const string CheckpointItem = "checkpoint";
 
         private const string _kind = "map points JSON";
 
-        private static readonly string[] _topItems = { SpawnPointsItem, ControlPointsItem, FlagBasesItem };
+        private static readonly string[] _topItems = { SpawnPointsItem, ControlPointsItem, FlagBasesItem, PayloadItem };
         private static readonly string[] _spawnItems = { PositionItem, TeamItem };
         private static readonly string[] _controlItems = { IndexItem, CenterItem, RadiusItem, HeightItem };
         private static readonly string[] _flagBaseItems = { TeamItem, PositionItem };
+        private static readonly string[] _payloadItems = { AttackersItem, RadiusItem, HeightItem, RouteItem };
+        private static readonly string[] _routePointItems = { PositionItem, CheckpointItem };
 
         public NetMapPoints(
             IReadOnlyList<SpawnPoint> spawnPoints,
             IReadOnlyList<ControlPointArea> controlPoints,
-            IReadOnlyList<FlagBasePoint> flagBases = null)
+            IReadOnlyList<FlagBasePoint> flagBases = null,
+            NetMapPayload payload = null)
         {
             SpawnPoints = Copy(spawnPoints, nameof(spawnPoints));
             ControlPoints = new List<ControlPointArea>(controlPoints ?? throw new ArgumentNullException(nameof(controlPoints))).AsReadOnly();
             FlagBases = flagBases == null
                 ? (IReadOnlyList<FlagBasePoint>)Array.Empty<FlagBasePoint>()
                 : new List<FlagBasePoint>(flagBases).AsReadOnly();
+            Payload = payload;
         }
 
         // 並びはシーンの階層順。SpawnSelector の同点の決め手になるので並べ替えない。
@@ -44,6 +52,9 @@ namespace Shooter.Core
 
         // 陣営ごとに 1 つかは、旗を使う目的が始めるときに確かめる。旗を使わないマップでも同じファイルを読むため
         public IReadOnlyList<FlagBasePoint> FlagBases { get; }
+
+        // 台車を置いていないマップでは null。道筋があるかは Payload の目的が始めるときに確かめる
+        public NetMapPayload Payload { get; }
 
         public static NetMapPoints Parse(string text, string sourceName)
         {
@@ -105,7 +116,7 @@ namespace Shooter.Core
                 }
             }
 
-            return new NetMapPoints(spawns, controls, flagBases);
+            return new NetMapPoints(spawns, controls, flagBases, ReadPayload(top));
         }
 
         public static string Write(NetMapPoints points)
@@ -158,7 +169,91 @@ namespace Shooter.Core
                 writer.EndArray();
             }
 
+            // 旗の台と同じく、台車の無いマップは台車を知らなかったころと同じ中身に保つ
+            if (points.Payload != null)
+            {
+                WritePayload(writer, points.Payload);
+            }
+
             return writer.Finish();
+        }
+
+        // 中継点を点の番号でなく点ごとの印で書くのは、手で点を足し引きしたときに番号を数え直さずに済むようにするため
+        private static void WritePayload(ServerDataJson.Writer writer, NetMapPayload payload)
+        {
+            writer.BeginObject(PayloadItem);
+            writer.Enum(AttackersItem, payload.Attackers);
+            writer.Float(RadiusItem, payload.Radius);
+            writer.Float(HeightItem, payload.Height);
+            writer.BeginArray(RouteItem);
+            var route = payload.Route;
+            var next = 0;
+            for (var i = 0; i < route.PointCount; i++)
+            {
+                writer.BeginElement();
+                writer.Vector3(PositionItem, route.Point(i));
+                if (next < route.CheckpointCount && route.CheckpointPoint(next) == i)
+                {
+                    writer.Bool(CheckpointItem, true);
+                    next++;
+                }
+
+                writer.EndObject();
+            }
+
+            writer.EndArray();
+            writer.EndObject();
+        }
+
+        private static NetMapPayload ReadPayload(ServerDataJson.Fields top)
+        {
+            var fields = top.Object(PayloadItem, _payloadItems);
+            if (fields == null)
+            {
+                return null;
+            }
+
+            var attackers = fields.ToEnum<Team>(fields.ItemPath(AttackersItem), fields.Require(AttackersItem));
+            var radius = fields.ToFloat(fields.ItemPath(RadiusItem), fields.Require(RadiusItem));
+            var height = fields.ToFloat(fields.ItemPath(HeightItem), fields.Require(HeightItem));
+            fields.Require(RouteItem);
+            var nodes = fields.Array(RouteItem);
+            var positions = new List<System.Numerics.Vector3>(nodes.Count);
+            var checkpoints = new List<int>();
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                var point = fields.Element(nodes[i], RouteItem, i, _routePointItems);
+                positions.Add(point.ReadVector3(PositionItem));
+                if (point.ReadBool(CheckpointItem, false))
+                {
+                    checkpoints.Add(i);
+                }
+            }
+
+            try
+            {
+                return new NetMapPayload(attackers, positions, checkpoints, radius, height);
+            }
+            catch (ArgumentException e)
+            {
+                throw fields.Rejected(PayloadItemOf(fields, e.ParamName), e.Message, e);
+            }
+        }
+
+        // 道筋の点と中継点の誤りは route、それ以外は引数の名前と同じ項目を指す
+        private static string PayloadItemOf(ServerDataJson.Fields fields, string paramName)
+        {
+            switch (paramName)
+            {
+                case "radius":
+                    return fields.ItemPath(RadiusItem);
+                case "height":
+                    return fields.ItemPath(HeightItem);
+                case "attackers":
+                    return fields.ItemPath(AttackersItem);
+                default:
+                    return fields.ItemPath(RouteItem);
+            }
         }
 
         private static System.Collections.ObjectModel.ReadOnlyCollection<SpawnPoint> Copy(IReadOnlyList<SpawnPoint> points, string name)

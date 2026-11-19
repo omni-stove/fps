@@ -40,6 +40,43 @@ namespace Shooter.Editor
             }
 
             EnsureFlagBases();
+            EnsurePayloadCarts();
+        }
+
+        // 台車を置く前に作ったシーンは、旗の台と同じく作り直さずに台車と道筋だけを足して書き出しに載せる。
+        public static IReadOnlyList<string> EnsurePayloadCarts()
+        {
+            var added = new List<string>();
+            if (AddPayloadCartIfMissing(ArenaSceneBuilder.ScenePath, ArenaSceneBuilder.PayloadRoutePoints, ArenaSceneBuilder.PayloadCheckpoints))
+            {
+                added.Add(ArenaSceneBuilder.ScenePath);
+            }
+
+            return added;
+        }
+
+        // 台車が 1 台でもあれば、ゲームが置き直したものとみなして触らない。
+        public static bool AddPayloadCartIfMissing(string scenePath, IReadOnlyList<Vector3> route, IReadOnlyList<int> checkpoints)
+        {
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) == null)
+            {
+                throw new FileNotFoundException(LogTag + " " + scenePath + " is missing", scenePath);
+            }
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            if (scene.GetRootGameObjects().Any(root => root.GetComponentsInChildren<PayloadCart>(true).Length > 0))
+            {
+                return false;
+            }
+
+            ArenaSceneBuilder.CreatePayloadCart(scene, route, checkpoints);
+            if (!EditorSceneManager.SaveScene(scene, scenePath))
+            {
+                throw new IOException(LogTag + " failed to save " + scenePath);
+            }
+
+            Debug.Log(LogTag + " added a payload cart with " + route.Count + " route point(s) to " + scenePath + "; commit it");
+            return true;
         }
 
         // 旗の台を置く前に作ったシーンは、作り直すと NavMesh や壊れる建物まで変わってしまうので、台だけを足して書き出しに載せる。

@@ -441,6 +441,114 @@ namespace Shooter.Net.Tests
             Assert.That(ArenaSceneBuilder.DoorHeight * ArenaSceneBuilder.PieceSize, Is.GreaterThan(NetSceneBuilder.PlayerHeight), "a player fits through");
         }
 
+        [Test]
+        public void PopulatedSceneHasOnePayloadCartOnItsRouteWithoutAZoneOrCollider()
+        {
+            ArenaSceneBuilder.PopulateScene(_scene);
+
+            var carts = Components<PayloadCart>();
+            Assert.That(carts, Has.Length.EqualTo(1));
+            var cart = carts[0];
+            Assert.That(cart.name, Is.EqualTo(ArenaSceneBuilder.PayloadCartName));
+            Assert.That(cart.transform.parent.name, Is.EqualTo(ArenaSceneBuilder.PayloadRootName));
+            Assert.That(cart.transform.position, Is.EqualTo(ArenaSceneBuilder.PayloadRoutePoints[0]), "the cart waits at the start");
+            Assert.That(cart.Points.Select(p => p.position), Is.EqualTo(ArenaSceneBuilder.PayloadRoutePoints));
+            Assert.That(cart.Points.All(p => !p.IsChildOf(cart.transform)), Is.True, "route points do not move with the cart");
+            Assert.That(cart.Checkpoints, Is.EqualTo(new[] { 3 }));
+            Assert.That(cart.GetComponentInChildren<ControlPointZone>(true), Is.Null, "the net client would count a zone as a control point");
+            Assert.That(cart.GetComponentInChildren<Collider>(true), Is.Null, "the server collision would get a box that never moves");
+            Assert.That(Components<ControlPointZone>(), Has.Length.EqualTo(ArenaSceneBuilder.ControlPoints.Count));
+        }
+
+        [Test]
+        public void ThePayloadGoesFromInFrontOfAlphaToInFrontOfBravo()
+        {
+            var route = ArenaSceneBuilder.PayloadRoutePoints;
+            Assert.That(route[0], Is.EqualTo(new Vector3(0f, ArenaSceneBuilder.GroundY, -18f)));
+            Assert.That(route[route.Count - 1], Is.EqualTo(new Vector3(0f, ArenaSceneBuilder.GroundY, 18f)));
+            Assert.That(route.All(p => Mathf.Approximately(p.y, ArenaSceneBuilder.GroundY)), Is.True, "the cart rolls on the ground");
+
+            var payload = ServerRulesExporter.ToPayload(ArenaSceneBuilder.ScenePath, new[] { CartOnTheArenaRoute() }, PayloadRunner.DefaultAttackerSideId);
+            Assert.That(payload.Attackers, Is.EqualTo(Team.Alpha));
+            Assert.That(payload.Route.Length, Is.EqualTo(5d + 5d + 10d + 10d + 5d + 5d).Within(1e-4), "5 + 5 + 10 + 10 + 5 + 5 m");
+            Assert.That(payload.Route.FractionAt(payload.Route.CheckpointDistance(0)), Is.EqualTo(0.5f).Within(1e-4f), "the checkpoint is half way");
+        }
+
+        // 台車の箱 (PayloadCart.DefaultBodySize) の長い方の半分を半径にして、道筋のどこでも壁・段差・建物に掛からないかを 0.25m ごとに確かめる
+        [Test]
+        public void ThePayloadRouteKeepsTheCartClearOfTheLevel()
+        {
+            var reach = Mathf.Max(PayloadCart.DefaultBodySize.x, PayloadCart.DefaultBodySize.z) / 2f;
+            var route = ArenaSceneBuilder.PayloadRoutePoints;
+            for (var i = 1; i < route.Count; i++)
+            {
+                var steps = Mathf.CeilToInt(Vector3.Distance(route[i - 1], route[i]) / 0.25f);
+                for (var s = 0; s <= steps; s++)
+                {
+                    var at = Vector3.Lerp(route[i - 1], route[i], (float)s / steps);
+                    foreach (var (name, center, size) in LevelBoxes())
+                    {
+                        Assert.That(HorizontalDistanceToBox(at, center, size), Is.GreaterThan(reach), "segment " + i + " at " + at + " hits " + name);
+                    }
+
+                    foreach (var (name, groundCenter) in ArenaSceneBuilder.Buildings)
+                    {
+                        var footprint = new Vector3(ArenaSceneBuilder.BuildingWidth, 0f, ArenaSceneBuilder.BuildingDepth) * ArenaSceneBuilder.PieceSize;
+                        Assert.That(HorizontalDistanceToBox(at, groundCenter, footprint), Is.GreaterThan(reach), "segment " + i + " at " + at + " hits " + name);
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void PayloadRoutePointsAreCheckedOnTheNavMesh()
+        {
+            var points = ArenaSceneBuilder.NavMeshCheckPoints();
+
+            foreach (var position in ArenaSceneBuilder.PayloadRoutePoints)
+            {
+                Assert.That(points, Has.Member(position));
+            }
+        }
+
+        [Test]
+        public void TheAttackersComeFromThePayloadRunnerOrTheRunnerDefault()
+        {
+            ArenaSceneBuilder.PopulateScene(_scene);
+            Assert.That(ServerRulesExporter.FindAttackerSideId(_scene), Is.EqualTo(PayloadRunner.DefaultAttackerSideId), "the net scene has no runner");
+
+            var host = new GameObject("Mode");
+            SceneManager.MoveGameObjectToScene(host, _scene);
+            var runner = host.AddComponent<PayloadRunner>();
+            runner.AttackerSideId = 1;
+            Assert.That(ServerRulesExporter.FindAttackerSideId(_scene), Is.EqualTo(1));
+
+            var definition = ScriptableObject.CreateInstance<PayloadDefinition>();
+            try
+            {
+                definition.AttackerSideId = 0;
+                runner.Definition = definition;
+                Assert.That(ServerRulesExporter.FindAttackerSideId(_scene), Is.EqualTo(0), "the definition asset wins over the runner field");
+            }
+            finally
+            {
+                Object.DestroyImmediate(definition);
+            }
+        }
+
+        private PayloadCart CartOnTheArenaRoute()
+        {
+            ArenaSceneBuilder.PopulateScene(_scene);
+            return Components<PayloadCart>().Single();
+        }
+
+        private static float HorizontalDistanceToBox(Vector3 point, Vector3 center, Vector3 size)
+        {
+            var dx = Mathf.Max(0f, Mathf.Abs(point.x - center.x) - (size.x / 2f));
+            var dz = Mathf.Max(0f, Mathf.Abs(point.z - center.z) - (size.z / 2f));
+            return Mathf.Sqrt((dx * dx) + (dz * dz));
+        }
+
         private static IEnumerable<(string Name, Vector3 Center, Vector3 Size)> LevelBoxes()
         {
             return ArenaSceneBuilder.HighWalls.Concat(ArenaSceneBuilder.LowWalls).Concat(ArenaSceneBuilder.Steps);

@@ -46,6 +46,7 @@ namespace Shooter.Core.Tests
         [TestCase(20f, float.PositiveInfinity, 2f, 1f, 8)]
         [TestCase(20f, 5f, 0f, 1f, 8)]
         [TestCase(20f, 5f, 2f, -1f, 8)]
+        [TestCase(20f, 5f, 1f, 1.5f, 8)]
         [TestCase(20f, 5f, 2f, 1f, 0)]
         public void RejectsInvalidSpec(float minEnemyDistance, float damageCooldownSeconds, float mateDistance, float clearance, int slotCount)
         {

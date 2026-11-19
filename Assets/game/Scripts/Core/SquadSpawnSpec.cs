@@ -22,6 +22,12 @@ namespace Shooter.Core
             // 0 を許すと出る位置が味方の体と重なり、空きの判定で必ず弾かれて分隊からの復活が決して選ばれなくなる。
             MateDistance = SpecGuard.PositiveFinite(mateDistance, nameof(mateDistance));
             Clearance = SpecGuard.NonNegativeFinite(clearance, nameof(clearance));
+            // 出る位置は味方からちょうど mateDistance の所にあり、clearance より近いと選んだ味方自身に塞がれて必ず null になる。
+            if (mateDistance < clearance)
+            {
+                throw new System.ArgumentOutOfRangeException(nameof(mateDistance), mateDistance, "mateDistance must be at least clearance.");
+            }
+
             SlotCount = SpecGuard.AtLeast(slotCount, 1, nameof(slotCount));
         }
 

@@ -137,6 +137,10 @@ run = "bash scripts/comments-test.sh"
 description = "Run the tests of the /// comment check in scripts/lint.sh"
 run = "bash scripts/lint-test.sh"
 
+[affected-test]
+description = "Run the tests of scripts/affected.sh and the --since option of scripts/lint.sh and scripts/test.sh (which CI checks a PR narrows to)"
+run = "bash scripts/affected-test.sh"
+
 [gitattributes-test]
 description = "Run the tests of the attributes .gitattributes gives each file type (LF line endings, binary files)"
 run = "sh scripts/gitattributes-test.sh"

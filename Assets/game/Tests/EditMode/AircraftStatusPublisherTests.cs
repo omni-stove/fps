@@ -91,7 +91,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_publisher.Refresh(), Is.Null);
             Assert.That(_publisher.Published, Is.Null);
-            Assert.That(GameSignals.Aircraft.HasValue, Is.False);
+            Assert.That(AircraftSignals.Status.HasValue, Is.False);
         }
 
         [Test]
@@ -103,7 +103,7 @@ namespace Shooter.Tests.EditMode
             var status = _publisher.Refresh();
 
             Assert.That(status.HasValue, Is.True);
-            Assert.That(GameSignals.Aircraft.Value, Is.EqualTo(status));
+            Assert.That(AircraftSignals.Status.Value, Is.EqualTo(status));
             Assert.That(status.Value.Speed, Is.EqualTo(50f).Within(Epsilon));
             Assert.That(status.Value.Altitude, Is.EqualTo(Altitude).Within(Epsilon));
             Assert.That(status.Value.Throttle, Is.EqualTo(0.5f));
@@ -142,7 +142,7 @@ namespace Shooter.Tests.EditMode
             Fly(new Vector3(0f, 0f, 50f), 1f);
 
             Assert.That(_publisher.Refresh(), Is.Null);
-            Assert.That(GameSignals.Aircraft.HasValue, Is.False);
+            Assert.That(AircraftSignals.Status.HasValue, Is.False);
         }
 
         [Test]
@@ -151,13 +151,13 @@ namespace Shooter.Tests.EditMode
             _vehicle.TryEnter(_rider, 0, false);
             Fly(new Vector3(0f, 0f, 50f), 1f);
             _publisher.Refresh();
-            Assert.That(GameSignals.Aircraft.HasValue, Is.True);
+            Assert.That(AircraftSignals.Status.HasValue, Is.True);
 
             Assert.That(_vehicle.ForceExit(_rider, VehicleLeaveReason.Forced), Is.True);
 
             Assert.That(_publisher.Refresh(), Is.Null);
             Assert.That(_publisher.Published, Is.Null);
-            Assert.That(GameSignals.Aircraft.Value, Is.Null);
+            Assert.That(AircraftSignals.Status.Value, Is.Null);
         }
 
         [Test]
@@ -167,12 +167,31 @@ namespace Shooter.Tests.EditMode
             Fly(new Vector3(0f, 0f, 50f), 1f);
             _publisher.Refresh();
             var other = new AircraftStatus(10f, 5f, 0f, 0f, 1f, false, true);
-            GameSignals.Aircraft.Publish(other);
+            AircraftSignals.Status.Publish(other);
 
             _vehicle.ForceExit(_rider, VehicleLeaveReason.Forced);
             _publisher.Refresh();
 
-            Assert.That(GameSignals.Aircraft.Value, Is.EqualTo(other));
+            Assert.That(AircraftSignals.Status.Value, Is.EqualTo(other));
+        }
+
+        [Test]
+        public void ResetAllEmptiesTheAircraftSignalAndDropsItsSubscribers()
+        {
+            var heard = 0;
+            AircraftSignals.Status.Changed += _ => heard++;
+            _vehicle.TryEnter(_rider, 0, false);
+            Fly(new Vector3(0f, 0f, 50f), 1f);
+            _publisher.Refresh();
+            Assert.That(AircraftSignals.Status.HasValue, Is.True);
+            heard = 0;
+
+            GameSignals.ResetAll();
+
+            Assert.That(AircraftSignals.Status.Value, Is.Null);
+            Assert.That(AircraftSignals.Status.HasValue, Is.False);
+            AircraftSignals.Status.Publish(new AircraftStatus(10f, 5f, 0f, 0f, 1f, false, true));
+            Assert.That(heard, Is.Zero, "subscribers from before the reset are gone");
         }
 
         [Test]

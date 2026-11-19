@@ -34,9 +34,9 @@ namespace Shooter.Runtime
                 WarningOf(motor));
             _published = status;
             // 同じ中身を出し直さないのは、止まっている間に UI が毎フレーム描き直さないようにするため。
-            if (!(GameSignals.Aircraft.Value is AircraftStatus current) || current != status)
+            if (!(AircraftSignals.Status.Value is AircraftStatus current) || current != status)
             {
-                GameSignals.Aircraft.Publish(status);
+                AircraftSignals.Status.Publish(status);
             }
 
             return status;
@@ -113,7 +113,7 @@ namespace Shooter.Runtime
             if (_published.HasValue)
             {
                 // 後から別の部品が出した値までは消さない。
-                GameSignals.Aircraft.ClearIfCurrent(_published);
+                AircraftSignals.Status.ClearIfCurrent(_published);
             }
 
             _published = null;

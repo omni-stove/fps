@@ -65,7 +65,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Replays.Value, Is.Null);
             Assert.That(GameSignals.Cosmetics.Value, Is.Null);
             Assert.That(GameSignals.Stash.Value, Is.Null);
-            Assert.That(GameSignals.Aircraft.Value, Is.Null);
             Assert.That(GameSignals.Stamina.Value, Is.Null);
             Assert.That(GameSignals.LockOnWarning.Value, Is.Null);
             Assert.That(GameSignals.Emotes.Value, Is.Null);
@@ -197,7 +196,6 @@ namespace Shooter.Tests.EditMode
             GameSignals.Replays.Publish(new FakeReplayLibrary());
             GameSignals.Cosmetics.Publish(new FakeCosmeticLocker());
             GameSignals.Stash.Publish(new StashStatus(60, null));
-            GameSignals.Aircraft.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
             GameSignals.Stamina.Publish(new StaminaStatus(0f, 100f, true));
             GameSignals.LockOnWarning.Publish(new LockOnWarningStatus(LockOnWarningStage.Locked, 90f));
             GameSignals.Emotes.Publish(new FakeEmoteControl());

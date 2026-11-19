@@ -1336,9 +1336,9 @@ namespace Shooter.Editor
         // 木を作らない画面 (batchmode など) では表示が結ばれないので、そのときはシグナルまでを確かめる。
         private static string HudProblem(Vehicle aircraft)
         {
-            if (!(GameSignals.Aircraft.Value is AircraftStatus status) || status.Grounded)
+            if (!(AircraftSignals.Status.Value is AircraftStatus status) || status.Grounded)
             {
-                return $"GameSignals.Aircraft does not carry '{aircraft.name}' in flight; the HUD has no speed or altitude to show";
+                return $"AircraftSignals.Status does not carry '{aircraft.name}' in flight; the HUD has no speed or altitude to show";
             }
 
             var hud = DefaultHudFactory.Current;

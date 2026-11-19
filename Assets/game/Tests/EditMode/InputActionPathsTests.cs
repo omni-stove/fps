@@ -43,6 +43,7 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.CycleMagnification)]
         [TestCase(InputActionPaths.HoldBreath)]
         [TestCase(InputActionPaths.UseStreak)]
+        [TestCase(InputActionPaths.SwitchStreak)]
         [TestCase(InputActionPaths.LeanLeft)]
         [TestCase(InputActionPaths.LeanRight)]
         [TestCase(InputActionPaths.Chat)]
@@ -109,6 +110,7 @@ namespace Shooter.Tests.EditMode
         [TestCase(InputActionPaths.Chat, "<Keyboard>/enter")]
         [TestCase(InputActionPaths.TeamChat, "<Keyboard>/u")]
         [TestCase(InputActionPaths.PushToTalk, "<Keyboard>/capsLock")]
+        [TestCase(InputActionPaths.SwitchStreak, "<Keyboard>/3")]
         public void KeyboardOnlyButtonsAreBoundToOneKeyUsedByNoOtherPlayerAction(string path, string key)
         {
             var action = Find(path);

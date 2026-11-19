@@ -12,7 +12,7 @@ namespace Shooter.Server
 
         NothingReady,
 
-        NotNext,
+        NotReady,
 
         InvalidAim,
 

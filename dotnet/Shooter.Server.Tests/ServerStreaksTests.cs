@@ -288,16 +288,34 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void ARequestForAnotherRewardThanTheNextIsRefused()
+        public void ARequestForARewardNotHeldIsRefused()
         {
             Start(Rules(), Spec(uavKills: 1, airstrikeKills: 3));
             JoinTwoTeams(4);
             Kill(1, 2);
 
-            Assert.That(Use(1, StreakSpec.AirstrikeRewardId), Is.EqualTo(ServerStreakRefusal.NotNext));
+            Assert.That(Use(1, StreakSpec.AirstrikeRewardId), Is.EqualTo(ServerStreakRefusal.NotReady));
 
             Assert.That(_streaks.StatusOf(1).Value.ReadyCount, Is.EqualTo(1));
-            Assert.That(_log.ToString(), Does.Contain(ServerStreakLog.Refused(1, StreakSpec.AirstrikeRewardId, nameof(ServerStreakRefusal.NotNext))));
+            Assert.That(_log.ToString(), Does.Contain(ServerStreakLog.Refused(1, StreakSpec.AirstrikeRewardId, nameof(ServerStreakRefusal.NotReady))));
+        }
+
+        [Test]
+        public void AHeldRewardCanBeUsedBeforeOneEarnedEarlier()
+        {
+            Start(Rules(), Spec(uavKills: 1, airstrikeKills: 2, shellCount: 1, intervalSeconds: 0f, spread: 0f, lineLength: 10f));
+            JoinTwoTeams(4);
+            Kill(1, 2);
+            Kill(1, 4);
+            Assert.That(_streaks.StatusOf(1).Value.ReadyCount, Is.EqualTo(2));
+            var user = Body(1).Position;
+
+            Assert.That(Use(1, StreakSpec.AirstrikeRewardId, new Vector3(user.X, user.Y, user.Z + 10f), 90f), Is.EqualTo(ServerStreakRefusal.None));
+
+            var status = _streaks.StatusOf(1).Value;
+            Assert.That(status.ReadyCount, Is.EqualTo(1));
+            Assert.That(status.Slots.Single(slot => slot.Ready).RewardId, Is.EqualTo(StreakSpec.UavRewardId), "the UAV earned first is still held");
+            Assert.That(Use(1, StreakSpec.UavRewardId), Is.EqualTo(ServerStreakRefusal.None));
         }
 
         [Test]

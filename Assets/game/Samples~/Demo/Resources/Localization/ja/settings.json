@@ -90,6 +90,7 @@
   "settings.input.action.SwitchGrenade": "グレネードの切り替え",
   "settings.input.action.Inventory": "持ち物",
   "settings.input.action.UseStreak": "ストリークを使う",
+  "settings.input.action.SwitchStreak": "ストリークの切り替え",
   "settings.input.action.LeanLeft": "左へリーン",
   "settings.input.action.LeanRight": "右へリーン",
   "settings.input.action.Chat": "チャット",

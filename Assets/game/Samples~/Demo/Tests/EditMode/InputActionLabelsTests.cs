@@ -25,6 +25,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("SwitchGrenade", "グレネードの切り替え")]
         [TestCase("Inventory", "持ち物")]
         [TestCase("UseStreak", "ストリークを使う")]
+        [TestCase("SwitchStreak", "ストリークの切り替え")]
         [TestCase("LeanLeft", "左へリーン")]
         [TestCase("LeanRight", "右へリーン")]
         [TestCase("Chat", "チャット")]

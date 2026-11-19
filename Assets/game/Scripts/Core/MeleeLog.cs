@@ -12,6 +12,12 @@ namespace Shooter.Core
             return $"{LogTag} swing id={attackerId}";
         }
 
+        // 当たりと外れの行は普通の振りと同じにし、盾で殴ったかは振り始めの行で見分ける。
+        public static string ShieldBash(string attackerId, string weaponId)
+        {
+            return $"{LogTag} shield-bash id={attackerId} weapon={weaponId}";
+        }
+
         public static string Hit(string attackerId, string targetId, int damage, float distance)
         {
             return string.Format(

@@ -102,6 +102,11 @@ namespace Shooter.Core
         // この武器から別の武器へ持ち替えるとき、構える前に待つ秒数。
         public float HolsterSeconds { get; }
 
+        // null なら盾ではない。盾の武器は持っている間に前へ盾を出し、撃つ代わりに攻撃のボタンで盾で殴る。
+        public RiotShieldSpec Shield { get; }
+
+        public bool IsShield => Shield != null;
+
         public WeaponSpec(
             string id,
             string nameKey,
@@ -182,7 +187,8 @@ namespace Shooter.Core
             float moveSpeedMultiplier = DefaultMoveSpeedMultiplier,
             string description = null,
             float? drawSeconds = null,
-            float holsterSeconds = DefaultHolsterSeconds)
+            float holsterSeconds = DefaultHolsterSeconds,
+            RiotShieldSpec shield = null)
         {
             var normalizedId = SpecGuard.LowercaseUuid(id, nameof(id));
 
@@ -221,6 +227,7 @@ namespace Shooter.Core
             Description = description ?? string.Empty;
             DrawSeconds = drawSeconds;
             HolsterSeconds = holsterSeconds;
+            Shield = shield;
         }
 
         public WeaponSpec WithFireInterval(float fireInterval)
@@ -228,7 +235,7 @@ namespace Shooter.Core
             var trigger = Trigger.WithFireInterval(fireInterval);
             return ReferenceEquals(trigger, Trigger)
                 ? this
-                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier, Description, DrawSeconds, HolsterSeconds);
+                : new WeaponSpec(Id, NameKey, Category, trigger, Ammo, Round, Impact, Aim, AmmoTypes, ShotNoiseRadius, Weight, MoveSpeedMultiplier, Description, DrawSeconds, HolsterSeconds, Shield);
         }
 
         // 起爆を止まったとき・寿命が尽きたときにすると、ヒットスキャンなどの止まりも尽きもしない弾では爆発しないまま設定だけが残る。

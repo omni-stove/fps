@@ -25,6 +25,7 @@ namespace Shooter.Core
         public const string ImpactItem = "impact";
         public const string AimItem = "aim";
         public const string AmmoTypesItem = "ammoTypes";
+        public const string ShieldItem = RiotShieldSpecJson.ShieldItem;
 
         public const string FireModeItem = "fireMode";
         public const string FireIntervalItem = "fireInterval";
@@ -159,7 +160,7 @@ namespace Shooter.Core
         public static IReadOnlyList<string> ItemNames { get; } = Concat(
             new[]
             {
-                IdItem, NameKeyItem, DescriptionItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, DrawSecondsItem, HolsterSecondsItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem,
+                IdItem, NameKeyItem, DescriptionItem, CategoryItem, ShotNoiseRadiusItem, WeightItem, MoveSpeedMultiplierItem, DrawSecondsItem, HolsterSecondsItem, TriggerItem, AmmoItem, RoundItem, ImpactItem, AimItem, AmmoTypesItem, ShieldItem,
             },
             _triggerFlatItems,
             _ammoFlatItems,
@@ -257,6 +258,8 @@ namespace Shooter.Core
             var impact = ReadImpact(Part.Of(fields, ImpactItem, ImpactItemNames, _impactFlatItems));
             var aim = ReadAim(Part.Of(fields, AimItem, AimItemNames, _aimFlatItems));
             var ammoTypes = ReadAmmoTypes(fields);
+            var shieldFields = fields.Object(ShieldItem, RiotShieldSpecJson.ItemNames);
+            var shield = shieldFields == null ? null : RiotShieldSpecJson.Read(shieldFields);
 
             // 名前を出さない武器を null で書いていた頃の JSON も、書かないのと同じに読む。
             var nameKeyNode = fields.FindRaw(NameKeyItem);
@@ -286,7 +289,8 @@ namespace Shooter.Core
                     fields.ReadFloat(MoveSpeedMultiplierItem, WeaponSpec.DefaultMoveSpeedMultiplier),
                     fields.ReadString(DescriptionItem, string.Empty),
                     drawSeconds,
-                    fields.ReadFloat(HolsterSecondsItem, WeaponSpec.DefaultHolsterSeconds));
+                    fields.ReadFloat(HolsterSecondsItem, WeaponSpec.DefaultHolsterSeconds),
+                    shield);
             }
             catch (ArgumentException e)
             {
@@ -368,6 +372,8 @@ namespace Shooter.Core
 
                 writer.EndArray();
             }
+
+            RiotShieldSpecJson.Write(writer, spec.Shield);
         }
 
         private static TriggerSpec ReadTrigger(Part part)

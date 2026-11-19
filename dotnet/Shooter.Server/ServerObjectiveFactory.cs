@@ -29,6 +29,8 @@ namespace Shooter.Server
                     return new KillConfirmedRules(settings, host);
                 case MatchObjective.GunGame:
                     return new GunGameRules(settings, host);
+                case MatchObjective.Payload:
+                    return new PayloadRules(settings, host);
                 default:
                     throw new InvalidOperationException("the dedicated server has no rules for the match objective " + objective);
             }

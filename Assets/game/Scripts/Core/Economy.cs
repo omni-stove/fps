@@ -40,6 +40,12 @@ namespace Shooter.Core
             WalletChanged?.Invoke(playerId);
         }
 
+        // 連敗の数は陣営のものなので、最後の 1 人が抜けても残す。
+        public bool RemovePlayer(int playerId)
+        {
+            return _wallets.Remove(playerId);
+        }
+
         public bool HasPlayer(int playerId)
         {
             return _wallets.ContainsKey(playerId);

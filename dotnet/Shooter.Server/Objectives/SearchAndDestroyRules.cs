@@ -10,7 +10,7 @@ namespace Shooter.Server
     // Session (TeamDeathmatchSession) は倒れた人を出直させず、キル数でも時間でも試合を終えない形で作る。
     // 設置地点はマップの拠点の範囲 (NetMapPoints.ControlPoints) を使い、番号もそのまま地点の番号にする。
     // 設置・解除の長押しはオフラインの bot と同じく、立っている間ずっと押しているとみなす (入力に長押しのボタンが無いため)
-    internal sealed class SearchAndDestroyRules : IMatchObjectiveRules
+    internal sealed class SearchAndDestroyRules : IMatchObjectiveRules, IEconomyRounds
     {
         // オフラインの SearchAndDestroyRunner.ReachHeight と揃える。Runtime はサーバーから参照できないため
         internal const float ReachHeight = 2f;
@@ -30,6 +30,17 @@ namespace Shooter.Server
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
             _host = host ?? throw new ArgumentNullException(nameof(host));
         }
+
+        // マップが替わると Game を作り直すので、経済は Game ではなくこちらの出来事を受ける
+        public event Action<int> PreparationStarted;
+
+        public event Action<int> RoundStarted;
+
+        public event Action<Side?> RoundEnded;
+
+        public event Action SidesSwapped;
+
+        public event Action<Side> Ended;
 
         public MatchObjective Objective => MatchObjective.SearchAndDestroy;
 
@@ -514,11 +525,13 @@ namespace Shooter.Server
             _hasBombGround = false;
             _host.ClearDowned();
             _host.Session?.RespawnAll();
+            PreparationStarted?.Invoke(round);
         }
 
         private void HandleRoundStarted(int round)
         {
             _host.Log.WriteLine(SearchAndDestroyText.LiveLog(round));
+            RoundStarted?.Invoke(round);
         }
 
         private void HandleRoundEnded(Side? winner, RoundEndReason reason)
@@ -527,16 +540,19 @@ namespace Shooter.Server
             var bravo = _game.GetRoundWins(Side.Bravo);
             _host.Log.WriteLine(SearchAndDestroyText.RoundEndLog(_game.RoundNumber, winner, reason, alpha, bravo));
             _host.SetMatchScores(alpha, bravo);
+            RoundEnded?.Invoke(winner);
         }
 
         private void HandleSidesSwapped()
         {
             _host.Log.WriteLine(SearchAndDestroyText.SwapLog(_game.Attacker, _game.Defender));
+            SidesSwapped?.Invoke();
         }
 
         private void HandleEnded(Side winner)
         {
             _host.Log.WriteLine(SearchAndDestroyText.EndedLog(winner));
+            Ended?.Invoke(winner);
         }
 
         private void HandleBombPickedUp(int playerId)

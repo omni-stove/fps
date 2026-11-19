@@ -224,6 +224,7 @@ namespace Shooter.Server
                 _match.CheckNextRules = null;
             }
 
+            StopEconomy();
             StopObjective();
             StopMapVote();
             StopVoteKick();
@@ -277,6 +278,7 @@ namespace Shooter.Server
             }
 
             snapshot.Owner.RespawnSeconds = RespawnSecondsOf(receiver);
+            snapshot.Owner.Money = MoneyOf(receiver);
             FillControlPoints(snapshot.ControlPoints);
             FillObjectiveItems(snapshot.ObjectiveItems);
 
@@ -313,7 +315,7 @@ namespace Shooter.Server
 
         public IReadOnlyList<WeaponSpec> WeaponsFor(int playerId)
         {
-            return TryGunGameWeapons(playerId, out var gunGame) ? gunGame : _loadout.WeaponsFor(playerId);
+            return TryGunGameWeapons(playerId, out var gunGame) ? gunGame : LoadoutFor(playerId);
         }
 
         public void FillMatch(ref MatchSnapshot snapshot)
@@ -388,6 +390,7 @@ namespace Shooter.Server
             ObjectivePlayerJoined(playerId);
             VoicePlayerJoined(player);
             VoteKickPlayerJoined(player);
+            EconomyPlayerJoined(playerId);
             OnPlayerJoined(player);
         }
 
@@ -405,6 +408,7 @@ namespace Shooter.Server
             SpectatePlayerLeft(playerId);
             VoicePlayerLeft(player);
             VoteKickPlayerLeft(playerId);
+            EconomyPlayerLeft(playerId);
             OnPlayerLeft(player);
             if (_session.HasPlayer(playerId) && _session.Leave(playerId))
             {
@@ -469,6 +473,7 @@ namespace Shooter.Server
             _lastKillers.Clear();
             ClearDowned();
             PingMatchRestarted();
+            EconomyMatchRestarted();
         }
 
         // ラウンド制のように目的が試合の点数を書くなら、キルの点数では書き換えない
@@ -492,6 +497,9 @@ namespace Shooter.Server
             _match.WriteKill(killerId, victimId, byAlly, assisterIds);
             var entry = KillFeedEntryFor(killerId, victimId, byAlly, _killShot, assisterIds);
             SendKill(entry);
+
+            // 目的がこのキルでラウンドを終えて額を渡す前に、キルの額と失う武器を決める
+            EconomyPlayerKilled(killerId, victimId);
             _objective.PlayerKilled(killerId, victimId);
             CreditGunGameKill(entry);
             SpectatePlayerKilled(victimId);

@@ -19,6 +19,12 @@ namespace Shooter.Server
             return _cosmetics.TryGetValue(playerId, out var id) ? id : string.Empty;
         }
 
+        // 出現のたびに配る並び。経済で買った武器は、選んだ並び (無ければ既定の並び) の同じ枠を置き換え、倒れて失うまで次の出現でも持つ
+        private IReadOnlyList<WeaponSpec> LoadoutFor(int playerId)
+        {
+            return WithBoughtWeapons(playerId, _loadout.WeaponsFor(playerId));
+        }
+
         // サーバーは見た目のカタログを持たないので Id を確かめずに中継し、知らない Id は受け取った側が既定の見た目にする。
         // 見た目は当たりに関わらないので、解けているかもクライアントの申告をそのまま信じる。
         private void ServerChooseCosmetic(ServerPlayer player, string cosmeticId)

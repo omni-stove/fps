@@ -136,6 +136,25 @@ namespace Shooter.Editor
             (Side.Bravo, MirrorZ(new Vector3(0f, GroundY, -27f))),
         };
 
+        public const string PayloadRootName = "Payload";
+        public const string PayloadCartName = "PayloadCart";
+
+        // Payload のサーバーは道筋の無いマップを断るので、拠点・旗の台と同じくどのルールでも置く。Alpha の出現地点の手前から Bravo の出現地点の手前まで押させる。
+        // 中央の低い壁 (z = ±9, x = -2〜2) と中央東の高い壁 (x = 6) の間 (x = 4) を通し、幅 2m の台車が壁に掛からないようにする。
+        public static readonly IReadOnlyList<Vector3> PayloadRoutePoints = new[]
+        {
+            new Vector3(0f, GroundY, -18f),
+            new Vector3(0f, GroundY, -13f),
+            new Vector3(4f, GroundY, -10f),
+            new Vector3(4f, GroundY, 0f),
+            new Vector3(4f, GroundY, 10f),
+            new Vector3(0f, GroundY, 13f),
+            new Vector3(0f, GroundY, 18f),
+        };
+
+        // 道のりの真ん中 (中央の拠点の横) を中継点にする
+        public static readonly IReadOnlyList<int> PayloadCheckpoints = new[] { 3 };
+
         public static void Build()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -242,6 +261,9 @@ namespace Shooter.Editor
                 points.Add(position);
             }
 
+            // Bot は台車のまわりを歩いて押すので、道筋の点にも歩いて行けるようにする
+            points.AddRange(PayloadRoutePoints);
+
             var doorOffset = (BuildingDepth * PieceSize / 2f) + 1.5f;
             foreach (var (_, center) in Buildings)
             {
@@ -282,8 +304,52 @@ namespace Shooter.Editor
             }
 
             NetSceneBuilder.CreateFlagBases(scene, FlagBases, captureRadius);
+            CreatePayloadCart(scene, PayloadRoutePoints, PayloadCheckpoints);
 
             EditorSceneManager.MarkSceneDirty(scene);
+        }
+
+        // 範囲 (ControlPointZone) は付けない。付けるとネットのクライアントがシーンの拠点として数えてしまうので、遊ぶときに PayloadCart.BuildRoute が既定の半径で足す形に任せる。
+        // 当たり (Collider) も付けないのは、サーバーへ書き出す当たりに動かない箱として入ってしまうため
+        public static PayloadCart CreatePayloadCart(Scene scene, IReadOnlyList<Vector3> route, IReadOnlyList<int> checkpoints)
+        {
+            SceneBuildHelpers.RequireLoaded(scene);
+            if (route == null)
+            {
+                throw new ArgumentNullException(nameof(route));
+            }
+
+            if (route.Count < PayloadRoute.MinPointCount)
+            {
+                throw new ArgumentException("a payload route needs at least " + PayloadRoute.MinPointCount + " points", nameof(route));
+            }
+
+            var root = new GameObject(PayloadRootName);
+            SceneManager.MoveGameObjectToScene(root, scene);
+            try
+            {
+                // 点を台車の子にすると台車と一緒に動いてしまうので、台車と並べて置く
+                var points = new Transform[route.Count];
+                for (var i = 0; i < route.Count; i++)
+                {
+                    var point = new GameObject("Route Point " + i);
+                    point.transform.SetParent(root.transform, false);
+                    point.transform.SetPositionAndRotation(route[i], Quaternion.identity);
+                    points[i] = point.transform;
+                }
+
+                var cartObject = new GameObject(PayloadCartName);
+                cartObject.transform.SetParent(root.transform, false);
+                cartObject.transform.SetPositionAndRotation(route[0], Quaternion.identity);
+                var cart = cartObject.AddComponent<PayloadCart>();
+                cart.SetRoute(points, checkpoints ?? Array.Empty<int>());
+                return cart;
+            }
+            catch
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+                throw;
+            }
         }
 
         public static ControlPointZone CreateControlPoint(Scene scene, string pointName, Vector3 position, int index)

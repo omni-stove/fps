@@ -280,7 +280,7 @@ public sealed class HealthOnlyHud : MonoBehaviour
 1. `Rigidbody` と当たり判定を持つ機体の根元に、`Vehicle`・`VehicleMotorLink`・`SimpleAircraftMotor`・`AircraftControlScheme` を付ける。
    - 試走場では西の端 (`VehicleRangeSceneBuilder.AircraftOrigin`) に北向きで置いてあり、smoke の通しで離陸して 15m 昇るまでを確かめる。
 2. 飛び方の値は **Create > Shooter > Aircraft Definition** で作ったアセット (`AircraftDefinition`) に置き、`SimpleAircraftMotor` と `AircraftControlScheme` の Definition の欄に付ける。空なら既定値で飛ぶ。コードからは `Configure(AircraftSpec)` でその実行の間だけ差し替えられる。押す力は加速 (m/s²) で持つので、質量を変えても飛び方は変わらない。
-   - アセットは質量・推力と、Aero (空力)・Aim (当て方)・Stick (操縦桿)・Ground (地上)・Damage (壊れ方) の欄に分かれる。Stick・Damage はまだ値を持たない。
+   - アセットは質量・推力と、Aero (空力)・Aim (当て方)・Stick (操縦桿)・Ground (地上)・Damage (壊れ方) の欄に分かれる。Damage はまだ値を持たない。
    - Aero の `MaxSpeed` は水平に全開で飛んだときに落ち着く速さ。降下では重さの分だけ速くなり、`TopSpeed` (`AircraftAero.TopSpeed`) はその速さを返す。
    - `LiftSpeed` より遅いと翼が重さを支えきれずに沈み、`ControlSpeed` より遅いと舵が効きにくくなる (止まっていても `MinControl` だけは効く)。
 3. 軸は `AircraftFlight.ThrottleAxis` (0、負はエアブレーキ)・`PitchAxis` (1、+ で機首上げ)・`RollAxis` (2、+ で右へ傾く)・`YawAxis` (3、+ で右へ向く)。
@@ -293,6 +293,8 @@ public sealed class HealthOnlyHud : MonoBehaviour
    - 乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれは、そのまま曲がり続ける速さになる。上下は視線の高さへ機首が合う。
    - 同じ GameObject の `SimpleAircraftMotor.State` を読み、G が `MaxLoadFactor` の `LoadFactorMargin` 手前を越えるか、迎え角が `CriticalAngleOfAttack` (度) の `AngleOfAttackMargin` 手前を越えると、機首を上げる舵を上限で 0 になるまで絞る (下げる向きは負の G・迎え角で同じく絞る)。接地中は絞らない。
    - `MinSinkRate` (m/s) より速く降りていて、真下へのレイ (`GroundMask` のレイヤー、機体自身の当たり判定は除く) で測った地面まで `GroundWarningSeconds` を切ると、視線の代わりに真上へ機首を向け、ロールのキーを無視して引き起こす。0 秒にすると引き起こさない。判定は `AircraftAim.ShouldPullUp`・`AircraftAim.LimitPitch` で引ける。
+   - 視線を使わずに操縦桿で直接操るときは、`AircraftControlScheme` の代わりに `AircraftStickControlScheme` を付ける。移動の前後がピッチ (既定では前で機首下げ)、左右がロール、上下 (`Vertical`) がラダー。デッドゾーン・指数・スロットルの変わる速さ・ピッチの向きはアセットの Stick の欄か `Configure(AircraftStickSpec)` で入れる。
+   - スロットルは ThrottleAction の欄の 1 軸のアクション (0〜1) を狙いの開き具合として読む。空ならブーストを押している間だけ開き、離すと同じ速さで閉じる。
 5. 見た目と音は `AircraftEffects` を機体に付けると、`SimpleAircraftMotor` の入力と `State` から毎フレーム動く。サーバー専用ビルドでは止まる。
    - 舵面は `AircraftControlSurface` (Transform・役割 Elevator / Aileron / Rudder・蝶番の軸・逆向き) を並べる。回す角度は入力 × アセットの Effects の欄の角度。左右の補助翼は片方を逆向きにする。
    - エンジン音は AudioClip を入れると繰り返し鳴り、高さと大きさはスロットルと速さ (`MaxSpeed` に対する割合) を `EngineSpeedShare` で混ぜた値で Min から Max の間を動く。空なら鳴らさない。

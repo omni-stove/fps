@@ -1,0 +1,9 @@
+{
+  "aircraft.speed": "SPD {0} km/h",
+  "aircraft.altitude": "ALT {0} m",
+  "aircraft.throttle": "THR {0}%",
+  "aircraft.airBrake": "AIR BRAKE {0}%",
+  "aircraft.angleOfAttack": "AOA {0}°",
+  "aircraft.loadFactor": "{0} G",
+  "aircraft.stall": "STALL"
+}

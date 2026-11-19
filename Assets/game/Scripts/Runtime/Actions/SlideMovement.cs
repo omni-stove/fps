@@ -301,8 +301,12 @@ namespace Shooter.Runtime
             _airborneSeconds = 0f;
             _expectedHorizontal = 0f;
             _stepFrom = mover.transform.position;
-            _motion.TryStart(_pendingDirection, _pendingSpeed);
+            var started = _motion.TryStart(_pendingDirection, _pendingSpeed);
             Debug.Log(SlideMotion.FormatStartLog(_motion.Speed, _motion.Direction), this);
+            if (started)
+            {
+                mover.SpendStamina(StaminaUse.Slide);
+            }
         }
 
         private bool CanContinue()
@@ -348,6 +352,13 @@ namespace Shooter.Runtime
 
             // 歩きより速くなければダッシュで走っているとは言えず、滑り出しの加速が歩きやその場からの瞬間移動になってしまう。
             if (!(speed > _mover.WalkSpeed))
+            {
+                speed = 0f;
+                return false;
+            }
+
+            // 滑り続けている間は呼ばれないので、払えるかを聞くのは滑り出すときだけになる。ほかの条件より後に聞き、断ったログを出し過ぎない。
+            if (!_mover.HasStaminaFor(StaminaUse.Slide))
             {
                 speed = 0f;
                 return false;

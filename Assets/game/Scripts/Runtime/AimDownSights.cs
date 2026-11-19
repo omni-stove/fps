@@ -350,6 +350,7 @@ namespace Shooter.Runtime
 
             var adsScale = 1f + ((_controlSettings.AdsSensitivity - 1f) * _zoom.Progress);
             _look.SensitivityMultiplier = AdsZoom.SensitivityMultiplier(_hipFieldOfView, fieldOfView) * adsScale;
+            _look.Aiming = IsAiming;
         }
 
         private void ReportAiming(bool aiming)

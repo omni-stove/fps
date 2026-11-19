@@ -174,6 +174,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheEmoteTextsAreReadFromTheEmoteTableOfEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var emote = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("emote.json", StringComparison.Ordinal))
+                    .Value;
+                var code = GameLanguages.Code(language);
+
+                Assert.That(emote.Keys.All(key => key.StartsWith("emote.", StringComparison.Ordinal)), Is.True, code);
+                Assert.That(emote.Contains(EmoteWheelView.CancelKey), Is.True, code);
+                Assert.That(emote.Contains(EmoteWheelView.NameKeyOf("wave")), Is.True, code);
+            }
+
+            var japanese = JapaneseGameTextSetUp.LoadLayers(GameLanguage.Japanese)
+                .Single(layer => layer.Key.EndsWith("emote.json", StringComparison.Ordinal))
+                .Value;
+            Assert.That(japanese.Get("emote.name.salute"), Is.EqualTo("敬礼"));
+        }
+
+        [Test]
         public void TheWeaponNamesAreReadFromTheItemsTableOfEveryLanguage()
         {
             foreach (var language in GameLanguages.All)

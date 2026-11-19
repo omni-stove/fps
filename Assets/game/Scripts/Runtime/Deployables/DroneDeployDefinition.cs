@@ -15,6 +15,8 @@ namespace Shooter.Runtime
         // 差し替えた見た目にこの名前の子があれば、操縦のカメラをそこに置く。無ければ胴の中心に置く。
         public const string CameraAnchorName = "CameraAnchor";
 
+        public const float AnchorNearClipMargin = 0.05f;
+
         public const float BodyHeightFraction = 0.6f;
 
         public const float RotorSizeFraction = 0.35f;
@@ -174,7 +176,9 @@ namespace Shooter.Runtime
 
             var anchor = new GameObject(CameraAnchorName);
             anchor.transform.SetParent(root.transform, false);
-            anchor.transform.localPosition = new Vector3(0f, bodyHeight / 2f, (spec.Depth - rotorSize) / 2f);
+            // 壁との当たりの球 (CollisionRadiusOf) の内に収めるため、前へは胴の端まで出さず、半径から近クリップ分を引いた所までにする。
+            var forward = Mathf.Min((spec.Depth - rotorSize) / 2f, Mathf.Max(0f, CollisionRadiusOf(spec) - AnchorNearClipMargin));
+            anchor.transform.localPosition = new Vector3(0f, bodyHeight / 2f, forward);
             return root;
         }
 

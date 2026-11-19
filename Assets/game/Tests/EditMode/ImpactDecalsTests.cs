@@ -177,6 +177,74 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ADecalOnABrokenPieceIsReleasedAndOthersStay()
+        {
+            var decals = Decals();
+            var surface = Surface("concrete", 0.1f);
+            var structure = Track(new GameObject("Structure"));
+            var piece = DestructiblePiece.Create(structure.transform, "Piece", Vector3.zero, Vector3.one, 0);
+            var wall = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+
+            var onPiece = decals.Place(new ImpactInfo(Vector3.zero, Vector3.back, piece.Collider, "concrete", false, null), surface, 0f);
+            var onWall = decals.Place(new ImpactInfo(Vector3.zero, Vector3.back, wall.GetComponent<Collider>(), "concrete", false, null), surface, 0f);
+            var loose = decals.Place(Impact("concrete"), surface, 0f);
+
+            Assert.That(decals.ReleaseDetached(), Is.Zero, "nothing is released while every surface stands");
+
+            piece.SetBroken(true);
+            LogAssert.Expect(LogType.Log, ImpactDecals.FormatDetachedLog(1, 2, ImpactDecals.DefaultCapacity));
+            Assert.That(decals.ReleaseDetached(), Is.EqualTo(1));
+
+            Assert.That(onPiece.Root.activeSelf, Is.False);
+            Assert.That(onWall.Root.activeSelf, Is.True);
+            Assert.That(loose.Root.activeSelf, Is.True, "a decal placed without a collider is never released by this");
+            Assert.That(decals.ActiveCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void ADecalIsReleasedWhenItsColliderIsDestroyedOrDeactivated()
+        {
+            var decals = Decals();
+            var surface = Surface("wood", 0.1f);
+            var destroyed = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            var hidden = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            var first = decals.Place(new ImpactInfo(Vector3.zero, Vector3.back, destroyed.GetComponent<Collider>(), "wood", false, null), surface, 0f);
+            var second = decals.Place(new ImpactInfo(Vector3.zero, Vector3.back, hidden.GetComponent<Collider>(), "wood", false, null), surface, 0f);
+
+            Object.DestroyImmediate(destroyed);
+            hidden.SetActive(false);
+
+            Assert.That(first.IsDetached, Is.True);
+            Assert.That(second.IsDetached, Is.True);
+            LogAssert.Expect(LogType.Log, ImpactDecals.FormatDetachedLog(2, 0, ImpactDecals.DefaultCapacity));
+            Assert.That(decals.ReleaseDetached(), Is.EqualTo(2));
+            Assert.That(decals.ActiveCount, Is.Zero);
+        }
+
+        [Test]
+        public void ReusingADecalForAnotherSurfaceReplacesItsAnchor()
+        {
+            var decals = Decals();
+            var surface = Surface("metal", 0.1f);
+            var wall = Track(GameObject.CreatePrimitive(PrimitiveType.Cube));
+            var decal = decals.Place(new ImpactInfo(Vector3.zero, Vector3.back, wall.GetComponent<Collider>(), "metal", false, null), surface, 0f);
+
+            decals.Clear();
+            var reused = decals.Place(Impact("metal"), surface, 0f);
+            wall.SetActive(false);
+
+            Assert.That(reused, Is.SameAs(decal));
+            Assert.That(reused.Anchor, Is.Null);
+            Assert.That(reused.IsDetached, Is.False);
+        }
+
+        [Test]
+        public void TheDetachedLogNamesTheCountAndWhatIsLeft()
+        {
+            Assert.That(ImpactDecals.FormatDetachedLog(3, 5, 64), Is.EqualTo("[Presentation] decal released detached count=3 active=5/64"));
+        }
+
+        [Test]
         public void ForReturnsOneSharedInstancePerScene()
         {
             var scene = SceneManager.GetActiveScene();

@@ -200,6 +200,28 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WreckingInTheAirDoesNotBailOutARiderWhoDiedInTheSeat()
+        {
+            var damageable = _body.AddComponent<Damageable>();
+            damageable.Initialize("player", 10);
+            _rider.Bind(_player, null);
+            Board(new Vector3(0f, AirborneHeight, 0f));
+            _vehicleBody.linearVelocity = new Vector3(20f, 0f, 0f);
+
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=player");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' died in seat rider=Player seat=0");
+            damageable.TakeDamage(10);
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' wrecked riders=1");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Plane' leave rider=Player seat=0 reason=BailOut exit=0");
+            Assert.That(_vehicle.Wreck(), Is.True);
+
+            Assert.That(_rider.IsRiding, Is.False);
+            Assert.That(_parachute.IsOpen, Is.False, "the dead do not open a parachute");
+            Assert.That(_player.Motor.Velocity.Length(), Is.Zero, "the dead keep none of the vehicle's speed");
+        }
+
+        [Test]
         public void WreckingOnTheGroundStillEjectsBesideTheVehicle()
         {
             Board(Vector3.zero);

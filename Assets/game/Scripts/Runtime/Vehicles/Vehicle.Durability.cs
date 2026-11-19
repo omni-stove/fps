@@ -275,6 +275,7 @@ namespace Shooter.Runtime
                 }
 
                 _blastColliders.Clear();
+                DeathBodyPresenter.ReapplyAnchoredIgnores(transform);
             }
 
             Debug.Log(VehicleLog.Exploded(name, center.x, center.y, center.z, riders, blast.Damaged, blast.Killed), this);

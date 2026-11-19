@@ -77,6 +77,20 @@ namespace Shooter.Tests.EditMode
             Physics.SyncTransforms();
         }
 
+        private void UseTimedSpec(float enterSeconds, float exitSeconds)
+        {
+            _vehicle.Configure(new VehicleSpec(
+                "car",
+                500,
+                new[]
+                {
+                    new VehicleSeatSpec(VehicleSeatRole.Driver),
+                    new VehicleSeatSpec(VehicleSeatRole.Passenger, VehicleSeatPose.Hidden, VehicleCameraView.Seat),
+                },
+                enterSeconds: enterSeconds,
+                exitSeconds: exitSeconds));
+        }
+
         [TearDown]
         public void TearDown()
         {
@@ -110,6 +124,74 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void NearAFreeSeatTheRiderShowsWhichSeatInteractBoardsAndHidesItWhenAboardOrAway()
+        {
+            GameSignals.ResetAll();
+            KeySharing.Reset();
+            var interact = new InputAction("Interact", InputActionType.Button);
+            try
+            {
+                _rider.SetActions(interact, null, null, null, null, null);
+
+                _rider.RefreshBoardHint();
+                Assert.That(
+                    GameSignals.InteractHint.Value,
+                    Is.EqualTo(new InteractHint(_rider, new VehicleBoardHint(VehicleSeatRole.Driver, "Player/Interact"))));
+                Assert.That(KeySharing.IsClaimed("Interact"), Is.True, "melee and reload yield the shared key while a seat is offered");
+
+                LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' board rider=Player seat=0 role=Driver");
+                Assert.That(_rider.Interact(), Is.True);
+                Assert.That(GameSignals.InteractHint.Value, Is.Null, "aboard there is no seat to offer");
+
+                LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' leave rider=Player seat=0 reason=Request exit=0");
+                Assert.That(_rider.Exit(), Is.True);
+                _body.transform.position = new Vector3(30f, 1f, 0f);
+                _rider.RefreshBoardHint();
+                Assert.That(GameSignals.InteractHint.Value, Is.Null);
+                Assert.That(KeySharing.IsClaimed("Interact"), Is.False);
+            }
+            finally
+            {
+                interact.Dispose();
+                GameSignals.ResetAll();
+                KeySharing.Reset();
+            }
+        }
+
+        [Test]
+        public void WithoutAnInteractActionTheRiderOffersNoSeat()
+        {
+            GameSignals.ResetAll();
+            try
+            {
+                _rider.RefreshBoardHint();
+                Assert.That(GameSignals.InteractHint.Value, Is.Null);
+            }
+            finally
+            {
+                GameSignals.ResetAll();
+            }
+        }
+
+        [Test]
+        public void TheSeatsFiringIsPublishedWhileRiding()
+        {
+            GameSignals.ResetAll();
+            try
+            {
+                _vehicle.TryEnter(_rider);
+                Assert.That(GameSignals.SeatFiring.Value, Is.EqualTo(VehicleSeatFiring.None), "the driver cannot fire");
+
+                Assert.That(_rider.Exit(), Is.True);
+                Assert.That(GameSignals.SeatFiring.Value, Is.Null, "on foot there is no seat");
+            }
+            finally
+            {
+                GameSignals.ResetAll();
+            }
+        }
+
+        [Test]
         public void InteractFarFromAnyVehicleDoesNothing()
         {
             _body.transform.position = new Vector3(30f, 1f, 0f);
@@ -137,6 +219,97 @@ namespace Shooter.Tests.EditMode
             Assert.That(_rider.FeetBelowRoot, Is.EqualTo(1f).Within(1e-4f), "crouching keeps the feet where they were");
             AssertNear(_body.transform.position, _driverSeat + Vector3.up, "the root stays above the seat despite the input");
             Assert.That(Mathf.DeltaAngle(_body.transform.eulerAngles.y, 0f), Is.EqualTo(0f).Within(0.01f), "faces the seat's forward");
+        }
+
+        [Test]
+        public void GettingInTakesTheVehiclesSecondsAndCarriesTheBodyToTheSeat()
+        {
+            UseTimedSpec(1f, 0.5f);
+            var start = _body.transform.position;
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' board rider=Player seat=0 role=Driver");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' enter begin rider=Player seat=0 seconds=1.00");
+            Assert.That(_rider.Interact(), Is.True);
+
+            Assert.That(_rider.IsRiding, Is.True, "the seat is taken as soon as the rider starts getting in");
+            Assert.That(_vehicle.FindBoardableSeat(new Vector3(-1.3f, 1f, 0f), out _), Is.Not.EqualTo(0), "nobody else can take the seat meanwhile");
+            Assert.That(_rider.Transition, Is.EqualTo(VehicleSeatTransitionKind.Entering));
+            Assert.That(_rider.IsSettled, Is.False);
+            Assert.That(_rider.SwitchSeat(1), Is.False, "the seat cannot be changed while getting in");
+            Assert.That(_rider.Interact(), Is.False, "Interact does not leave while getting in");
+
+            _rider.StepTransition(0.5f);
+            _player.Tick(Vector2.zero, false, false, false, StepSeconds);
+            var seated = _driverSeat + Vector3.up;
+            var halfway = _body.transform.position;
+            Assert.That(Vector3.Distance(halfway, start), Is.GreaterThan(0.1f), "the body has moved off the enter point");
+            Assert.That(Vector3.Distance(halfway, seated), Is.GreaterThan(0.1f), "the body is not in the seat yet");
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' enter end rider=Player seat=0");
+            _rider.StepTransition(0.5f);
+            _player.Tick(Vector2.zero, false, false, false, StepSeconds);
+            Assert.That(_rider.IsSettled, Is.True);
+            Assert.That(_rider.Transition, Is.EqualTo(VehicleSeatTransitionKind.None));
+            AssertNear(_body.transform.position, seated, "the body ends in the seat");
+        }
+
+        [Test]
+        public void TheVehicleGetsNoDrivingInputUntilTheRiderIsSeated()
+        {
+            UseTimedSpec(1f, 0f);
+            var sink = new RecordingSink();
+            _vehicle.AddInputSink(sink);
+            _rider.SeatInputFilter = new ForwardFireFilter();
+            _vehicle.TryEnter(_rider);
+
+            Assert.That(_rider.SubmitSeatInput(StepSeconds), Is.True);
+            Assert.That(sink.Inputs[0].Move, Is.EqualTo(Vector2.zero), "getting in sends an idle input");
+            Assert.That(sink.Inputs[0].FireHeld, Is.False);
+
+            _rider.StepTransition(1f);
+            Assert.That(_rider.SubmitSeatInput(StepSeconds), Is.True);
+            Assert.That(sink.Inputs[1].Move, Is.EqualTo(Vector2.up), "once seated the input goes through");
+            Assert.That(sink.Inputs[1].FireHeld, Is.True);
+        }
+
+        [Test]
+        public void GettingOutWaitsTheVehiclesSecondsBeforeStandingAtTheExit()
+        {
+            UseTimedSpec(0f, 0.5f);
+            _vehicle.TryEnter(_rider);
+            _player.Tick(Vector2.zero, false, false, false, StepSeconds);
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' exit begin rider=Player seat=0 seconds=0.50");
+            Assert.That(_rider.Interact(), Is.True);
+            Assert.That(_rider.IsRiding, Is.True, "the rider stays in the seat while getting out");
+            Assert.That(_rider.Transition, Is.EqualTo(VehicleSeatTransitionKind.Exiting));
+            Assert.That(_rider.Interact(), Is.False, "pressing again does not restart getting out");
+
+            _rider.StepTransition(0.25f);
+            Assert.That(_rider.IsRiding, Is.True);
+            Assert.That(_rider.TransitionProgress, Is.EqualTo(0.5f).Within(1e-4f));
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' exit end rider=Player seat=0");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' leave rider=Player seat=0 reason=Request exit=0");
+            _rider.StepTransition(0.25f);
+            Assert.That(_rider.IsRiding, Is.False);
+            AssertNear(_body.transform.position, _leftExit + Vector3.up, "the root is placed above the exit");
+        }
+
+        [Test]
+        public void ForcedOutWhileGettingOutLeavesAtOnce()
+        {
+            UseTimedSpec(0f, 2f);
+            _vehicle.TryEnter(_rider);
+            _rider.Exit();
+            Assert.That(_rider.Transition, Is.EqualTo(VehicleSeatTransitionKind.Exiting));
+
+            Assert.That(_vehicle.ForceExit(_rider, VehicleLeaveReason.Forced), Is.True);
+
+            Assert.That(_rider.IsRiding, Is.False);
+            Assert.That(_rider.Transition, Is.EqualTo(VehicleSeatTransitionKind.None));
+            _rider.StepTransition(5f);
+            Assert.That(_rider.IsRiding, Is.False, "the cleared exit does not fire later");
         }
 
         [Test]
@@ -209,22 +382,87 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void DyingInTheSeatLeavesTheVehicle()
+        public void DyingInTheSeatKeepsTheBodySeatedAndStopsDriving()
+        {
+            var damageable = _body.AddComponent<Damageable>();
+            damageable.Initialize("player", 10);
+            _rider.Bind(_player, null);
+            var sink = new RecordingSink();
+            _vehicle.AddInputSink(sink);
+            _rider.SeatInputFilter = new ForwardFireFilter();
+            _vehicle.TryEnter(_rider);
+
+            LogAssert.Expect(LogType.Log, "[Combat] target died id=player");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' died in seat rider=Player seat=0");
+            damageable.TakeDamage(10);
+
+            Assert.That(_rider.IsRiding, Is.True, "the dead stay in the seat");
+            Assert.That(_rider.IsDead, Is.True);
+            Assert.That(_rider.IsSettled, Is.False);
+            _player.Tick(Vector2.up, true, false, true, StepSeconds);
+            AssertNear(_body.transform.position, _driverSeat + Vector3.up, "the body is still pinned to the seat");
+
+            Assert.That(_rider.SubmitSeatInput(StepSeconds), Is.True);
+            Assert.That(sink.Inputs[0].Move, Is.EqualTo(Vector2.zero), "a dead driver does not drive");
+            Assert.That(sink.Inputs[0].FireHeld, Is.False);
+            Assert.That(_rider.Interact(), Is.False, "the dead cannot get out");
+            Assert.That(_rider.Exit(), Is.False);
+            Assert.That(_rider.SwitchSeat(1), Is.False);
+            Assert.That(_vehicle.FindBoardableSeat(new Vector3(-1.3f, 1f, 0f), out _), Is.Not.EqualTo(0), "the seat stays taken");
+        }
+
+        [Test]
+        public void RespawningElsewhereFreesTheSeatAndKeepsTheRespawnPosition()
+        {
+            var damageable = _body.AddComponent<Damageable>();
+            damageable.Initialize("player", 10);
+            _rider.Bind(_player, null);
+            _vehicle.TryEnter(_rider);
+            damageable.TakeDamage(10);
+
+            // DominationRunner のように、体を移してから体力を戻す。
+            var spawn = new Vector3(20f, 1f, 5f);
+            _body.transform.position = spawn;
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' leave rider=Player seat=0 reason=Forced exit=0");
+            damageable.ResetHealth();
+
+            Assert.That(_rider.IsRiding, Is.False);
+            Assert.That(_player.IsMovementOverridden, Is.False);
+            AssertNear(_body.transform.position, spawn, "the respawn position is kept");
+        }
+
+        [Test]
+        public void RefillingTheHealthOfALivingRiderKeepsThemSeated()
         {
             var damageable = _body.AddComponent<Damageable>();
             damageable.Initialize("player", 10);
             _rider.Bind(_player, null);
             _vehicle.TryEnter(_rider);
 
-            LogAssert.Expect(LogType.Log, "[Combat] target died id=player");
-            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' leave rider=Player seat=0 reason=RiderDied exit=0");
+            damageable.ResetHealth();
+
+            Assert.That(_rider.IsRiding, Is.True, "a round reset does not throw the living out");
+        }
+
+        [Test]
+        public void RevivingInTheSeatGetsOutAtTheExit()
+        {
+            var damageable = _body.AddComponent<Damageable>();
+            damageable.Initialize("player", 10);
+            _rider.Bind(_player, null);
+            _vehicle.TryEnter(_rider);
             damageable.TakeDamage(10);
+            _player.Tick(Vector2.zero, false, false, false, StepSeconds);
+
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' leave rider=Player seat=0 reason=Forced exit=0");
+            damageable.ResetHealth();
 
             Assert.That(_rider.IsRiding, Is.False);
-            Assert.That(_player.IsControlHandedOff, Is.False);
+            AssertNear(_body.transform.position, _leftExit + Vector3.up, "brought back where the body lay, it steps out of the vehicle");
 
-            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' board refused rider=Player reason=rider_unavailable");
-            Assert.That(_vehicle.TryEnter(_rider), Is.False, "the dead do not board");
+            LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' board rider=Player seat=0 role=Driver");
+            _body.transform.position = new Vector3(-1.3f, 1f, 0f);
+            Assert.That(_vehicle.TryEnter(_rider), Is.True, "alive again, the seat can be taken");
         }
 
         [Test]

@@ -39,6 +39,9 @@ namespace Shooter.Runtime
                 case AmmoCrateHint crate:
                     text = AmmoCratePrompt.Describe(crate, keyLabel);
                     return true;
+                case VehicleBoardHint board:
+                    text = VehicleBoardPrompt.Describe(board, keyLabel);
+                    return true;
                 default:
                     text = default;
                     return false;
@@ -53,6 +56,8 @@ namespace Shooter.Runtime
                     return pickup.InputActionPath;
                 case AmmoCrateHint crate:
                     return crate.InputActionPath;
+                case VehicleBoardHint board:
+                    return board.InputActionPath;
                 default:
                     return string.Empty;
             }

@@ -112,6 +112,15 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheCrosshairHidesInASeatThatCannotFire()
+        {
+            Assert.That(Hud.SeatShowsCrosshair(null), Is.True, "on foot the weapon decides");
+            Assert.That(Hud.SeatShowsCrosshair(VehicleSeatFiring.None), Is.False, "the driver has nothing to aim");
+            Assert.That(Hud.SeatShowsCrosshair(VehicleSeatFiring.OwnWeapon), Is.True);
+            Assert.That(Hud.SeatShowsCrosshair(VehicleSeatFiring.VehicleWeapon), Is.True);
+        }
+
+        [Test]
         public void TheCrosshairLinesMoveOutWithTheSpreadAndTheCrosshairHidesWhenAsked()
         {
             var model = new HudModel();

@@ -747,7 +747,7 @@ namespace Shooter.Editor
                     return null;
 
                 case Step.ExitCar:
-                    if (!_rider.Interact() || _rider.IsRiding)
+                    if (!LeaveVehicle())
                     {
                         return $"Interact did not get the player out of '{gunCar.name}'";
                     }
@@ -790,7 +790,7 @@ namespace Shooter.Editor
                     return null;
 
                 case Step.ExitMountedGun:
-                    if (!_rider.Interact() || _rider.IsRiding)
+                    if (!LeaveVehicle())
                     {
                         return $"Interact did not get the player off '{mountedGun.name}'";
                     }
@@ -906,7 +906,7 @@ namespace Shooter.Editor
                     return null;
 
                 case Step.ExitHelicopter:
-                    if (!_rider.Interact() || _rider.IsRiding)
+                    if (!LeaveVehicle())
                     {
                         return $"Interact did not get the player out of '{helicopter.name}'";
                     }
@@ -964,7 +964,7 @@ namespace Shooter.Editor
                     return null;
 
                 case Step.ExitBoat:
-                    if (!_rider.Interact() || _rider.IsRiding)
+                    if (!LeaveVehicle())
                     {
                         return $"Interact did not get the player out of '{boat.name}'";
                     }
@@ -1296,7 +1296,7 @@ namespace Shooter.Editor
                         return $"'{aircraft.name}' cannot be bailed out of ({verdict}, height {shown})";
                     }
 
-                    if (!_rider.Interact() || _rider.IsRiding)
+                    if (!LeaveVehicle())
                     {
                         return $"Interact did not get the player out of '{aircraft.name}' in the air";
                     }
@@ -1415,6 +1415,23 @@ namespace Shooter.Editor
             var direction = point - mounts[0].Muzzle.position;
             _input.Aim = direction;
             return Vector3.Angle(mounts[0].AimDirection, direction) <= AimToleranceDegrees;
+        }
+
+        // 降車に掛かる秒数を待つ手順を足さず、その時間をここで一度に進める。通しで見たいのは降りられるかで、待ち時間は PlayerVehicleRiderTests で確かめる。
+        private static bool LeaveVehicle()
+        {
+            var vehicle = _rider.Vehicle;
+            if (vehicle == null || !_rider.Interact())
+            {
+                return false;
+            }
+
+            if (_rider.Transition == VehicleSeatTransitionKind.Exiting)
+            {
+                _rider.StepTransition(vehicle.Spec.ExitSeconds);
+            }
+
+            return !_rider.IsRiding;
         }
 
         private static Vehicle FindVehicle(string vehicleId)

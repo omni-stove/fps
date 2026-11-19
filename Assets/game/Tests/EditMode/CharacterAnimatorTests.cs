@@ -332,6 +332,43 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void InASeatThatCannotFireTheRigFacesTheSeatWhateverWayTheViewTurns()
+        {
+            var car = new GameObject("Car");
+            try
+            {
+                var seat = new GameObject("Driver").AddComponent<VehicleSeat>();
+                seat.transform.SetParent(car.transform, false);
+                seat.transform.localPosition = new Vector3(0f, 0.5f, 0f);
+                var vehicle = car.AddComponent<Vehicle>();
+                vehicle.Configure(new VehicleSpec("car", 100, new[] { new VehicleSeatSpec(VehicleSeatRole.Driver) }));
+                var rider = _player.AddComponent<PlayerVehicleRider>();
+                rider.Bind(_mover, null);
+                _animator.TryBind();
+                _animator.RigPrefab = _rigPrefab;
+                _animator.BuildRig();
+
+                Assert.That(vehicle.TryEnter(rider, 0, requireInRange: false), Is.True);
+                Assert.That(rider.Firing, Is.EqualTo(VehicleSeatFiring.None));
+                _player.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                _animator.Refresh(DeltaSeconds);
+
+                Assert.That(
+                    Quaternion.Angle(_animator.Rig.rotation, Quaternion.Euler(0f, seat.SitYawDegrees, 0f)),
+                    Is.LessThan(0.01f),
+                    "looking aside with the chase camera does not turn the seated body");
+
+                vehicle.ForceExit(rider, VehicleLeaveReason.Forced);
+                _animator.Refresh(DeltaSeconds);
+                Assert.That(Quaternion.Angle(_animator.Rig.localRotation, Quaternion.identity), Is.LessThan(0.01f), "on foot the rig turns with the body again");
+            }
+            finally
+            {
+                Object.DestroyImmediate(car);
+            }
+        }
+
+        [Test]
         public void ChangedMotorSpeedsRebuildThePose()
         {
             _animator.TryBind();

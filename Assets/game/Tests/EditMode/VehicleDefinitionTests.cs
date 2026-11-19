@@ -42,8 +42,30 @@ namespace Shooter.Tests.EditMode
             Assert.That(definition.Id, Is.EqualTo(VehicleSpec.DefaultId));
             Assert.That(definition.MaxHealth, Is.EqualTo(VehicleSpec.DefaultMaxHealth));
             Assert.That(definition.EnterRange, Is.EqualTo(VehicleSpec.DefaultEnterRange));
+            Assert.That(definition.EnterSeconds, Is.EqualTo(VehicleSpec.DefaultEnterSeconds));
+            Assert.That(definition.ExitSeconds, Is.EqualTo(VehicleSpec.DefaultExitSeconds));
             Assert.That(definition.ChaseDistance, Is.EqualTo(VehicleSpec.DefaultChaseDistance));
             Assert.That(definition.ChaseHeight, Is.EqualTo(VehicleSpec.DefaultChaseHeight));
+        }
+
+        [Test]
+        public void TheGettingInAndOutSecondsGoIntoTheSpecAndBack()
+        {
+            var definition = Jeep();
+            definition.EnterSeconds = 1.25f;
+            definition.ExitSeconds = 0.5f;
+
+            var spec = definition.ToSpec(_twoSeats);
+            Assert.That(spec.EnterSeconds, Is.EqualTo(1.25f));
+            Assert.That(spec.ExitSeconds, Is.EqualTo(0.5f));
+
+            var copy = NewDefinition("Copy");
+            copy.CopyFrom(spec);
+            Assert.That(copy.EnterSeconds, Is.EqualTo(1.25f));
+            Assert.That(copy.ExitSeconds, Is.EqualTo(0.5f));
+
+            definition.ExitSeconds = -1f;
+            Assert.Throws<VehicleDefinitionException>(() => definition.ToSpec(_twoSeats));
         }
 
         [Test]

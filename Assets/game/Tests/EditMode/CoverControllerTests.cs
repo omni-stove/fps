@@ -268,6 +268,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TakesCoverBehindABodyRaisedOffTheGroundLikeACar()
+        {
+            // 底が足元の Ray (0.5m) より高い車体でも、上の Ray (0.9m) で当たってカバーにできる。
+            BuildWall(1.4f, -2f, 2f, bottom: 0.6f);
+
+            LogAssert.Expect(LogType.Log, "[Cover] enter high");
+            Enter();
+            Frame(false, false, Vector2.zero);
+
+            Assert.That(_cover.IsInCover, Is.True, "holding the raised body keeps the cover");
+            Assert.That(_cover.CoverHeight, Is.EqualTo(CoverHeight.High));
+            Assert.That(_cover.CoverTopY, Is.EqualTo(1.4f).Within(_tolerance));
+        }
+
+        [Test]
         public void StaysStandingBehindAHighWall()
         {
             BuildWall(2f, -2f, 2f);
@@ -427,12 +442,12 @@ namespace Shooter.Tests.EditMode
         }
 
         // 足元から height の高さの壁を、x が minX〜maxX、こちら側の面が faceZ になるよう置く。
-        private void BuildWall(float height, float minX, float maxX, float faceZ = _wallFaceZ)
+        private void BuildWall(float height, float minX, float maxX, float faceZ = _wallFaceZ, float bottom = 0f)
         {
             _wall = new GameObject("Wall");
-            _wall.transform.position = new Vector3((minX + maxX) * 0.5f, height * 0.5f, faceZ + (_wallThickness * 0.5f));
+            _wall.transform.position = new Vector3((minX + maxX) * 0.5f, (bottom + height) * 0.5f, faceZ + (_wallThickness * 0.5f));
             var box = _wall.AddComponent<BoxCollider>();
-            box.size = new Vector3(maxX - minX, height, _wallThickness);
+            box.size = new Vector3(maxX - minX, height - bottom, _wallThickness);
             Physics.SyncTransforms();
         }
 

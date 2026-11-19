@@ -47,6 +47,37 @@ namespace Shooter.Core
             return $"{Tag} '{vehicle}' switch refused rider={rider} reason={reason}";
         }
 
+        public static string TransitionBegin(string vehicle, string rider, int seat, VehicleSeatTransitionKind kind, float seconds)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} '{1}' {2} begin rider={3} seat={4} seconds={5:0.00}",
+                Tag,
+                vehicle,
+                KindName(kind),
+                rider,
+                seat,
+                seconds);
+        }
+
+        public static string TransitionEnd(string vehicle, string rider, int seat, VehicleSeatTransitionKind kind)
+        {
+            return $"{Tag} '{vehicle}' {KindName(kind)} end rider={rider} seat={seat}";
+        }
+
+        private static string KindName(VehicleSeatTransitionKind kind)
+        {
+            switch (kind)
+            {
+                case VehicleSeatTransitionKind.Entering:
+                    return "enter";
+                case VehicleSeatTransitionKind.Exiting:
+                    return "exit";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(kind), kind, "kind must be Entering or Exiting");
+            }
+        }
+
         public static string Leave(string vehicle, string rider, int seat, VehicleLeaveReason reason, int exitIndex)
         {
             var exit = exitIndex >= 0 ? exitIndex.ToString(CultureInfo.InvariantCulture) : "-";
@@ -63,6 +94,16 @@ namespace Shooter.Core
                 rider,
                 inheritedSpeed,
                 parachute.HasValue ? parachute.Value.ToString() : "-");
+        }
+
+        public static string DiedInSeat(string vehicle, string rider, int seat)
+        {
+            return $"{Tag} '{vehicle}' died in seat rider={rider} seat={seat}";
+        }
+
+        public static string ExitBlockedBy(string vehicle, int exitIndex, string blocker)
+        {
+            return $"{Tag} '{vehicle}' exit={exitIndex} blocked by={blocker}";
         }
 
         public static string LeaveRefused(string vehicle, string rider, string reason)

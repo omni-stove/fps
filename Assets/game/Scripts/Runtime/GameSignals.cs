@@ -42,6 +42,9 @@ namespace Shooter.Runtime
 
         public static GameSignal<InteractHint?> InteractHint { get; } = new GameSignal<InteractHint?>(nameof(InteractHint));
 
+        // 手元のプレイヤーが座っている席で何を撃てるか。座っていなければ値なし。照準を出すかを UI が決めるのに使う。
+        public static GameSignal<VehicleSeatFiring?> SeatFiring { get; } = new GameSignal<VehicleSeatFiring?>(nameof(SeatFiring));
+
         public static GameSignal<KillCamStatus?> KillCam { get; } = new GameSignal<KillCamStatus?>(nameof(KillCam));
 
         public static GameSignal<IReadOnlyList<PingMarker>> Pings { get; } = new GameSignal<IReadOnlyList<PingMarker>>(nameof(Pings));
@@ -146,6 +149,7 @@ namespace Shooter.Runtime
             Domination.Reset();
             Scoreboard.Reset();
             InteractHint.Reset();
+            SeatFiring.Reset();
             KillCam.Reset();
             Pings.Reset();
             SquadOrder.Reset();

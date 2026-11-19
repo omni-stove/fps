@@ -61,6 +61,7 @@ namespace Shooter.Runtime
         private float _remaining;
         private Damageable _target;
         private bool _awaitingHitDirection;
+        private Transform _anchor;
 
         public DeathBody Mode
         {
@@ -109,6 +110,20 @@ namespace Shooter.Runtime
         }
 
         public DeathRagdoll Ragdoll => HasShell && _ragdoll != null ? _ragdoll : null;
+
+        // 乗り物の座席で倒れたときは、抜け殻を乗り物に付けてその場に止める。押して倒すと車体の当たり判定に押し出され、外へ飛び出すため。
+        // 抜け殻を作る前にも後にも置けるよう、作った時点と置いた時点の両方で付ける。
+        public Transform Anchor
+        {
+            get => _anchor;
+            set
+            {
+                _anchor = value;
+                AnchorShell();
+            }
+        }
+
+        public bool IsAnchored => HasShell && _anchor != null && _shell.transform.parent == _anchor;
 
         public bool IsRagdoll => Ragdoll != null;
 
@@ -246,6 +261,7 @@ namespace Shooter.Runtime
             }
 
             var push = ApplyPush(hitDirection);
+            AnchorShell();
             Debug.Log(
                 $"{LogTag} collapse id={Id} parts={parts.ToString(CultureInfo.InvariantCulture)} push={FormatDirection(push)} lifetime={_lifetime.ToString("0.##", CultureInfo.InvariantCulture)}s",
                 this);
@@ -260,6 +276,11 @@ namespace Shooter.Runtime
         public bool Push(Vector3? direction, int damage)
         {
             if (!HasShell)
+            {
+                return false;
+            }
+
+            if (IsAnchored)
             {
                 return false;
             }
@@ -289,7 +310,7 @@ namespace Shooter.Runtime
             }
 
             _awaitingHitDirection = false;
-            if (!HasShell)
+            if (!HasShell || IsAnchored)
             {
                 return false;
             }
@@ -366,6 +387,7 @@ namespace Shooter.Runtime
 
         private void OnDestroy()
         {
+            AnchoredPresenters.Remove(this);
             Unbind();
             Clear(ReasonDestroyed);
         }
@@ -422,7 +444,77 @@ namespace Shooter.Runtime
 
         private void OnHealthReset(Health _)
         {
+            _anchor = null;
             Clear(ReasonRespawn);
+        }
+
+        private static readonly List<DeathBodyPresenter> AnchoredPresenters = new List<DeathBodyPresenter>();
+
+        // 車体が爆発の間だけコライダーを切って戻すと IgnoreCollision が消える。戻した後に、その車体へ固定した抜け殻の無視を掛け直す。
+        public static void ReapplyAnchoredIgnores(Transform anchor)
+        {
+            foreach (var presenter in AnchoredPresenters)
+            {
+                if (presenter != null && presenter._anchor == anchor && presenter.IsAnchored)
+                {
+                    presenter.IgnoreAnchorCollisions();
+                }
+            }
+        }
+
+        private void IgnoreAnchorCollisions()
+        {
+            // 座席の抜け殻は車体と重なっている。kinematic の抜け殻は動かないので、重なりを解く力が車体に掛かり続けて揺らす。
+            var shellColliders = _shell.GetComponentsInChildren<Collider>(true);
+            foreach (var anchorCollider in _anchor.GetComponentsInChildren<Collider>(true))
+            {
+                if (anchorCollider == null || anchorCollider.transform.IsChildOf(_shell.transform))
+                {
+                    continue;
+                }
+
+                foreach (var shellCollider in shellColliders)
+                {
+                    if (shellCollider != null)
+                    {
+                        Physics.IgnoreCollision(anchorCollider, shellCollider, true);
+                    }
+                }
+            }
+        }
+
+        private void AnchorShell()
+        {
+            if (!HasShell || _anchor == null || _shell.transform.parent == _anchor)
+            {
+                return;
+            }
+
+            // 親にする前に、車体のコライダーとの衝突を切る。
+            IgnoreAnchorCollisions();
+            if (!AnchoredPresenters.Contains(this))
+            {
+                AnchoredPresenters.Add(this);
+            }
+
+            _shell.transform.SetParent(_anchor, true);
+            if (_ragdoll != null)
+            {
+                _ragdoll.Freeze();
+            }
+
+            foreach (var body in _shell.GetComponentsInChildren<Rigidbody>())
+            {
+                // kinematic にしてから速度を書くと Unity が警告を出すので、先に止める。
+                if (!body.isKinematic)
+                {
+                    body.linearVelocity = Vector3.zero;
+                    body.angularVelocity = Vector3.zero;
+                    body.isKinematic = true;
+                }
+            }
+
+            Debug.Log($"{LogTag} anchored id={Id} to={_anchor.name}", this);
         }
 
         private GameObject TryPresentRagdoll(Renderer[] renderers, Vector3? hitDirection, int damage)
@@ -472,6 +564,7 @@ namespace Shooter.Runtime
             }
 
             var push = PushRagdoll(hitDirection, damage, out var speed);
+            AnchorShell();
             Debug.Log(
                 $"{LogTag} collapse id={Id} ragdoll bones={bones.Count.ToString(CultureInfo.InvariantCulture)} parts={parts.ToString(CultureInfo.InvariantCulture)}"
                 + $" push={FormatDirection(push)} speed={FormatSpeed(speed)} damage={damage.ToString(CultureInfo.InvariantCulture)}"

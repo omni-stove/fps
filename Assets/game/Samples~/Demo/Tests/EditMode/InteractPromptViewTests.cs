@@ -69,6 +69,22 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheVehicleBoardPromptTextsExistInEveryLanguage()
+        {
+            Assert.That(VehicleBoardPrompt.Describe(new VehicleBoardHint(VehicleSeatRole.Driver, Interact), "E"), Is.EqualTo(new LocalizedText(VehicleBoardPrompt.DriverKey, "E")));
+            Assert.That(VehicleBoardPrompt.Describe(new VehicleBoardHint(VehicleSeatRole.Passenger, Interact), null), Is.EqualTo(new LocalizedText(VehicleBoardPrompt.PassengerKey, string.Empty)));
+            foreach (var language in new[] { GameLanguage.English, GameLanguage.Japanese })
+            {
+                var table = Localizer.TableOf(language);
+                foreach (var key in new[] { VehicleBoardPrompt.DriverKey, VehicleBoardPrompt.PassengerKey, VehicleBoardPrompt.GunnerKey })
+                {
+                    Assert.That(table.Contains(key), Is.True, $"{language} has {key}");
+                    Assert.That(table.Get(key), Does.Contain("{0}"), $"{language} {key} shows the key");
+                }
+            }
+        }
+
+        [Test]
         public void EachHintDetailHasItsOwnText()
         {
             Assert.That(InteractPromptView.TryDescribe(new AmmoCrateHint(true, Interact), "E", out var crate), Is.True);
@@ -77,11 +93,15 @@ namespace Shooter.Tests.EditMode
             Assert.That(InteractPromptView.TryDescribe(new PickupHint(PickupHintAction.Health, null, null, 0, Interact), "E", out var pickup), Is.True);
             Assert.That(pickup, Is.EqualTo(new LocalizedText(PickupPrompt.HealthKey, "E")));
 
+            Assert.That(InteractPromptView.TryDescribe(new VehicleBoardHint(VehicleSeatRole.Gunner, Interact), "E", out var board), Is.True);
+            Assert.That(board, Is.EqualTo(new LocalizedText(VehicleBoardPrompt.GunnerKey, "E")));
+
             Assert.That(InteractPromptView.TryDescribe("unknown", "E", out var unknown), Is.False);
             Assert.That(unknown.IsEmpty, Is.True);
 
             Assert.That(InteractPromptView.InputActionPathOf(new PickupHint(PickupHintAction.Health, null, null, 0, Interact)), Is.EqualTo(Interact));
             Assert.That(InteractPromptView.InputActionPathOf(new AmmoCrateHint(false, "Player/Use")), Is.EqualTo("Player/Use"));
+            Assert.That(InteractPromptView.InputActionPathOf(new VehicleBoardHint(VehicleSeatRole.Driver, "Player/Use")), Is.EqualTo("Player/Use"));
             Assert.That(InteractPromptView.InputActionPathOf(null), Is.Empty);
         }
 

@@ -130,6 +130,30 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheDefaultHudCarriesTheAircraftViewWhichShowsTheFlownAircraft()
+        {
+            var hud = DefaultHud;
+            var view = hud.GetComponent<AircraftHudView>();
+
+            Assert.That(view, Is.Not.Null, "the default HUD shows the aircraft readings");
+            Assert.That(hud.GetComponents<AircraftHudView>(), Has.Length.EqualTo(1));
+            Assert.That(DefaultHudFactory.AddAircraftView(hud), Is.SameAs(view), "adding it again keeps the one view");
+            Assert.That(hud.GetComponents<AircraftHudView>(), Has.Length.EqualTo(1));
+            Assert.Throws<System.ArgumentNullException>(() => DefaultHudFactory.AddAircraftView(null));
+
+            // Edit Mode では UIDocument が木を作らないことがあり、そのときは表示が結ばれない。
+            Assume.That(hud.View, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
+            Assert.That(view.Element, Is.Not.Null);
+            Assert.That(view.Element.name, Is.EqualTo(AircraftHudView.UxmlName));
+            Assert.That(view.IsShown, Is.False, "nothing to show until the player flies");
+
+            GameSignals.Aircraft.Publish(new AircraftStatus(50f, 120f, 0.5f, 5f, 1f, false, false));
+            Assert.That(view.IsShown, Is.True);
+            Assert.That(view.Lines, Has.Count.EqualTo(5));
+            Assert.That(view.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+        }
+
+        [Test]
         public void HudUsesAUIDocumentWithCodeBuiltPanelSettings()
         {
             var hud = DefaultHud;

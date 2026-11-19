@@ -26,6 +26,22 @@ namespace Shooter.Editor
         public const float RotateSpeedFraction = 0.8f;
         public const float ClimbPitchDegrees = 15f;
         public const float FlyAltitude = 15f;
+
+        // 前輪は速いほど向けられなくなる (AircraftGround.SteerLimit) ので、歩くほどの速さで曲げる。
+        // 15° で滑走路へ向け直すので、横へずれるのは 1m ほどで、離陸に使える長さもほとんど減らない。
+        public const float TaxiSpeed = 4f;
+        public const float TaxiAimDegrees = 40f;
+        public const float TaxiTurnDegrees = 15f;
+
+        // 真上の手前を狙わせるのは、真上だと機首が上を越えた途端に視線が背中側へ回り、宙返りを始めてしまうため。
+        public const float PullPitchDegrees = 75f;
+        public const float PullHoldSeconds = 4f;
+        public const float PullSinkAllowance = 2f;
+
+        public const float LevelToleranceDegrees = 10f;
+
+        // 片翼を失った機体を当て方 (AircraftControlScheme) が水平へ戻そうとしても、揚力の差で釣り合う傾きは 9° ほど残るので、その手前で見る。
+        public const float BrokenWingBankDegrees = 5f;
         public const float StoppedSpeed = 0.3f;
         public const float AimToleranceDegrees = 1.5f;
 
@@ -44,6 +60,7 @@ namespace Shooter.Editor
 
         private static readonly List<string> _errors = new List<string>();
         private static readonly List<string> _lines = new List<string>();
+        private static readonly string[] _stepLogVerbs = { "drove", "taxied", "flew", "held", "banked" };
         private static readonly ScriptedSeatInput _input = new ScriptedSeatInput();
         private static double _playStartedAt = -1d;
         private static double _stepStartedAt;
@@ -56,6 +73,9 @@ namespace Shooter.Editor
         private static TargetDummy _target;
         private static bool _sawTargetHit;
         private static PlayerVehicleRider _rider;
+        private static float _pullFloor;
+        private static float _maxAngleOfAttack;
+        private static float _bankAtBreak;
 
         static VehicleSmokeRun()
         {
@@ -81,8 +101,12 @@ namespace Shooter.Editor
             ExitMountedGun,
             MoveToAircraft,
             BoardAircraft,
+            Taxi,
             TakeOff,
             Climb,
+            PullUp,
+            Level,
+            BankLeft,
             Done,
         }
 
@@ -121,6 +145,7 @@ namespace Shooter.Editor
             var gunCar = Prefix(VehicleRangeSceneBuilder.GunCarName);
             var mountedGun = Prefix(VehicleRangeSceneBuilder.MountedGunName);
             var car = Prefix(VehicleRangeSceneBuilder.CarName);
+            var aircraft = VehicleRangeSceneBuilder.AircraftName;
             return new[]
             {
                 new LogExpectation(gunCar + "board rider=", " seat=0 role=" + VehicleSeatRole.Driver),
@@ -132,9 +157,72 @@ namespace Shooter.Editor
                 new LogExpectation(car + "exploded at=", null),
                 new LogExpectation(car + "wrecked ", null),
                 new LogExpectation(mountedGun + "leave rider=", " seat=0 reason=" + VehicleLeaveReason.Request + " "),
-                new LogExpectation(Prefix(VehicleRangeSceneBuilder.AircraftName) + "board rider=", " seat=0 role=" + VehicleSeatRole.Driver),
-                new LogExpectation(FlewLogPrefix(VehicleRangeSceneBuilder.AircraftName), null),
+                new LogExpectation(Prefix(aircraft) + "board rider=", " seat=0 role=" + VehicleSeatRole.Driver),
+                new LogExpectation(TaxiedLogPrefix(aircraft), null),
+                new LogExpectation(FlewLogPrefix(aircraft), null),
+                new LogExpectation(HeldLogPrefix(aircraft), null),
+                new LogExpectation(Prefix(aircraft) + "part broken part=", " effect=" + AircraftDamageEffect.LeftLift + " "),
+                new LogExpectation(BankedLogPrefix(aircraft), null),
             };
+        }
+
+        public static string TaxiedLogPrefix(string vehicle)
+        {
+            return $"{LogTag} taxied '{vehicle}' ";
+        }
+
+        public static string TaxiedLog(string vehicle, float turnedDegrees, float speed)
+        {
+            return TaxiedLogPrefix(vehicle)
+                + "turned=" + turnedDegrees.ToString("0.0", CultureInfo.InvariantCulture)
+                + " speed=" + speed.ToString("0.0", CultureInfo.InvariantCulture);
+        }
+
+        public static string HeldLogPrefix(string vehicle)
+        {
+            return $"{LogTag} held '{vehicle}' ";
+        }
+
+        public static string HeldLog(string vehicle, float seconds, float maxAngleOfAttackDegrees, float altitude)
+        {
+            return HeldLogPrefix(vehicle)
+                + "seconds=" + seconds.ToString("0.0", CultureInfo.InvariantCulture)
+                + " aoa=" + maxAngleOfAttackDegrees.ToString("0.0", CultureInfo.InvariantCulture)
+                + " altitude=" + altitude.ToString("0.0", CultureInfo.InvariantCulture);
+        }
+
+        public static string BankedLogPrefix(string vehicle)
+        {
+            return $"{LogTag} banked '{vehicle}' ";
+        }
+
+        public static string BankedLog(string vehicle, float leftBankDegrees)
+        {
+            return BankedLogPrefix(vehicle) + "left=" + leftBankDegrees.ToString("0.0", CultureInfo.InvariantCulture);
+        }
+
+        // 左へ傾く (右の翼が上がる) 向きを正にするのは、壊す翼が左で、壊した後の傾きの増え方をそのまま閾値と比べられるようにするため。
+        public static float LeftBankDegrees(Quaternion rotation)
+        {
+            return Mathf.Asin(Mathf.Clamp((rotation * Vector3.right).y, -1f, 1f)) * Mathf.Rad2Deg;
+        }
+
+        public static float PitchDegrees(Quaternion rotation)
+        {
+            return Mathf.Asin(Mathf.Clamp((rotation * Vector3.forward).y, -1f, 1f)) * Mathf.Rad2Deg;
+        }
+
+        // 左へ曲がる向きを正にするのは、滑走路の右 (東) に銃座と車があり、地上では左へ曲げるため。
+        public static float LeftTurnDegrees(Vector3 from, Quaternion rotation)
+        {
+            return -Vector3.SignedAngle(from, Heading(rotation, from), Vector3.up);
+        }
+
+        // fallback を受けるのは、真上か真下を向くと機首の水平の向きが決まらないため。
+        public static Vector3 Heading(Quaternion rotation, Vector3 fallback)
+        {
+            var flat = Vector3.ProjectOnPlane(rotation * Vector3.forward, Vector3.up);
+            return flat.sqrMagnitude > 0.01f ? flat.normalized : fallback;
         }
 
         public static LogExpectation TargetHitLog()
@@ -231,8 +319,7 @@ namespace Shooter.Editor
                 return;
             }
 
-            if (condition.StartsWith(VehicleLog.Tag + " ", StringComparison.Ordinal) || condition.StartsWith(LogTag + " drove ", StringComparison.Ordinal)
-                || condition.StartsWith(LogTag + " flew ", StringComparison.Ordinal))
+            if (condition.StartsWith(VehicleLog.Tag + " ", StringComparison.Ordinal) || IsStepLog(condition))
             {
                 _lines.Add(condition);
             }
@@ -241,6 +328,25 @@ namespace Shooter.Editor
             {
                 _sawTargetHit = true;
             }
+        }
+
+        // 自分の行のうち手順の行だけを数えるのは、最後に出す要約の行 (step=...) が並びの確かめに混ざらないようにするため。
+        public static bool IsStepLog(string line)
+        {
+            if (line == null)
+            {
+                return false;
+            }
+
+            foreach (var verb in _stepLogVerbs)
+            {
+                if (line.StartsWith(LogTag + " " + verb + " '", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static void OnUpdate()
@@ -497,18 +603,48 @@ namespace Shooter.Editor
 
                     _runwayStart = aircraft.transform.position;
                     _runwayForward = Vector3.ProjectOnPlane(aircraft.transform.forward, Vector3.up).normalized;
+                    _input.Aim = Quaternion.AngleAxis(-TaxiAimDegrees, Vector3.up) * _runwayForward;
+                    StartStep(Step.Taxi, now);
+                    return null;
+
+                default:
+                    return AdvanceAircraft(aircraft, now);
+            }
+        }
+
+        private static string AdvanceAircraft(Vehicle aircraft, double now)
+        {
+            var motor = aircraft.GetComponent<SimpleAircraftMotor>();
+            if (motor == null)
+            {
+                return $"'{aircraft.name}' has no SimpleAircraftMotor";
+            }
+
+            var rotation = aircraft.transform.rotation;
+            var altitude = aircraft.transform.position.y - _runwayStart.y;
+            switch (_step)
+            {
+                case Step.Taxi:
+                    // 全開にしないのは、速くなるほど前輪を向けられる角度が絞られ、曲がり切る前に離陸の速さへ近づくため。出過ぎたら閉じてブレーキを掛ける。
+                    _input.Move = new Vector2(0f, Mathf.Clamp((TaxiSpeed - motor.ForwardSpeed) / TaxiSpeed, -1f, 1f));
+                    var turned = LeftTurnDegrees(_runwayForward, rotation);
+                    if (turned < TaxiTurnDegrees)
+                    {
+                        return null;
+                    }
+
+                    if (!motor.State.Grounded)
+                    {
+                        return $"'{aircraft.name}' left the ground while taxiing";
+                    }
+
+                    Debug.Log(TaxiedLog(aircraft.name, turned, motor.ForwardSpeed));
                     _input.Move = new Vector2(0f, 1f);
                     _input.Aim = _runwayForward;
                     StartStep(Step.TakeOff, now);
                     return null;
 
                 case Step.TakeOff:
-                    var motor = aircraft.GetComponent<SimpleAircraftMotor>();
-                    if (motor == null)
-                    {
-                        return $"'{aircraft.name}' has no SimpleAircraftMotor";
-                    }
-
                     if (motor.ForwardSpeed < motor.Spec.Aero.LiftSpeed * RotateSpeedFraction)
                     {
                         return null;
@@ -519,13 +655,78 @@ namespace Shooter.Editor
                     return null;
 
                 case Step.Climb:
-                    var altitude = aircraft.transform.position.y - _runwayStart.y;
                     if (altitude < FlyAltitude)
                     {
                         return null;
                     }
 
-                    Debug.Log(FlewLog(aircraft.name, altitude, aircraft.GetComponent<SimpleAircraftMotor>().ForwardSpeed));
+                    var hudProblem = HudProblem(aircraft);
+                    if (hudProblem != null)
+                    {
+                        return hudProblem;
+                    }
+
+                    Debug.Log(FlewLog(aircraft.name, altitude, motor.ForwardSpeed));
+                    _input.Aim = Quaternion.AngleAxis(-PullPitchDegrees, Vector3.Cross(Vector3.up, _runwayForward)) * _runwayForward;
+                    _pullFloor = altitude - PullSinkAllowance;
+                    _maxAngleOfAttack = 0f;
+                    StartStep(Step.PullUp, now);
+                    return null;
+
+                case Step.PullUp:
+                    var state = motor.State;
+                    var angleOfAttack = Mathf.Abs(state.AngleOfAttackRadians * Mathf.Rad2Deg);
+                    _maxAngleOfAttack = Mathf.Max(_maxAngleOfAttack, angleOfAttack);
+                    var criticalAngle = motor.Spec.Aero.CriticalAngle;
+                    if (angleOfAttack > criticalAngle)
+                    {
+                        return $"the angle of attack reached {angleOfAttack.ToString("0.0", CultureInfo.InvariantCulture)}° past the critical "
+                            + $"{criticalAngle.ToString("0.0", CultureInfo.InvariantCulture)}° while pulling up; the stall guard did not hold it";
+                    }
+
+                    if (state.Grounded || altitude < _pullFloor)
+                    {
+                        return $"'{aircraft.name}' sank to {altitude.ToString("0.0", CultureInfo.InvariantCulture)}m "
+                            + $"(below {_pullFloor.ToString("0.0", CultureInfo.InvariantCulture)}m) while pulling up";
+                    }
+
+                    if (now - _stepStartedAt < PullHoldSeconds)
+                    {
+                        return null;
+                    }
+
+                    Debug.Log(HeldLog(aircraft.name, (float)(now - _stepStartedAt), _maxAngleOfAttack, altitude));
+                    _input.Aim = _runwayForward;
+                    StartStep(Step.Level, now);
+                    return null;
+
+                case Step.Level:
+                    _input.Aim = _runwayForward;
+                    if (Mathf.Abs(PitchDegrees(rotation)) > LevelToleranceDegrees || Mathf.Abs(LeftBankDegrees(rotation)) > LevelToleranceDegrees)
+                    {
+                        return null;
+                    }
+
+                    var breakProblem = BreakLeftWing(aircraft);
+                    if (breakProblem != null)
+                    {
+                        return breakProblem;
+                    }
+
+                    _bankAtBreak = LeftBankDegrees(rotation);
+                    StartStep(Step.BankLeft, now);
+                    return null;
+
+                case Step.BankLeft:
+                    // 機首の向きを追って狙うのは、曲がり始めた機体を元の向きへ戻そうとする右への傾きで、片翼の分の傾きを打ち消さないようにするため。
+                    _input.Aim = Heading(rotation, _runwayForward);
+                    var gained = LeftBankDegrees(rotation) - _bankAtBreak;
+                    if (gained < BrokenWingBankDegrees)
+                    {
+                        return null;
+                    }
+
+                    Debug.Log(BankedLog(aircraft.name, gained));
                     _input.Clear();
                     StartStep(Step.Done, now);
                     return null;
@@ -533,6 +734,58 @@ namespace Shooter.Editor
                 default:
                     return null;
             }
+        }
+
+        // 木を作らない画面 (batchmode など) では表示が結ばれないので、そのときはシグナルまでを確かめる。
+        private static string HudProblem(Vehicle aircraft)
+        {
+            if (!(GameSignals.Aircraft.Value is AircraftStatus status) || status.Grounded)
+            {
+                return $"GameSignals.Aircraft does not carry '{aircraft.name}' in flight; the HUD has no speed or altitude to show";
+            }
+
+            var hud = DefaultHudFactory.Current;
+            var view = hud != null ? hud.GetComponent<AircraftHudView>() : null;
+            if (view != null && view.Element != null && (!view.IsShown || view.Lines.Count == 0))
+            {
+                return "the default HUD does not show the aircraft readings";
+            }
+
+            return null;
+        }
+
+        // 命中の流れ (Hitbox → Vehicle.PartDamaged → AircraftPartDamage) を通すため、部位を直に削らず、左の翼の当たりへ耐久の分だけ当てる。
+        private static string BreakLeftWing(Vehicle aircraft)
+        {
+            var damage = aircraft.GetComponent<AircraftPartDamage>();
+            if (damage == null)
+            {
+                return $"'{aircraft.name}' has no AircraftPartDamage";
+            }
+
+            var wing = AircraftFixtureBuilder.PartFor(damage.Spec, AircraftDamageEffect.LeftLift);
+            if (wing == null)
+            {
+                return $"the damage of '{aircraft.name}' has no part for {AircraftDamageEffect.LeftLift}";
+            }
+
+            Hitbox hitbox = null;
+            foreach (var part in aircraft.GetComponentsInChildren<VehiclePart>())
+            {
+                if (string.Equals(part.PartId, wing.Id, StringComparison.Ordinal))
+                {
+                    hitbox = part.GetComponent<Hitbox>();
+                    break;
+                }
+            }
+
+            if (hitbox == null)
+            {
+                return $"'{aircraft.name}' has no VehiclePart with a Hitbox for '{wing.Id}'";
+            }
+
+            hitbox.ApplyResolvedHit(damage.Damage.Remaining(wing.Id), hitbox.transform.position + Vector3.up, Vector3.down, DamageKind.Bullet);
+            return damage.Damage.IsBroken(wing.Id) ? null : $"hitting '{wing.Id}' for its durability did not break it";
         }
 
         private static void StartStep(Step step, double now)

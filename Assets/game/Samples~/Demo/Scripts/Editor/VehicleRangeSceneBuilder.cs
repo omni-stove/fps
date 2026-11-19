@@ -120,6 +120,8 @@ namespace Shooter.Editor
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             // NewScene(Single) は参照されていないアセットをアンロードし、先に読んだ定義が null になるので、シーンを作ってから読む。
+            var aircraft = AircraftFixtureBuilder.LoadOrBuildDefinition(AircraftFixtureBuilder.DefinitionPath);
+            var aircraftEngine = AircraftFixtureBuilder.BuildEngineSound(AircraftFixtureBuilder.EngineSoundPath);
             var playerWeapons = TpsRangeSceneBuilder.LoadPlayerWeapons();
             var gunWeapon = MountedGunRangeFixture.PickGunWeapon(WeaponAssetBuilder.LoadRangeWeapons().Weapons);
             var rules = GameRulesAssetBuilder.LoadRules(GameRulesAssetBuilder.TpsRangePath);
@@ -132,7 +134,7 @@ namespace Shooter.Editor
             SceneBuildHelpers.BakeNavMesh(surface);
             SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
             SceneBuildHelpers.RequireOnNavMesh(new[] { EnemyGround }, NavMeshCheckRadius, "enemy");
-            CreateActors(scene, playerWeapons, gunWeapon, rules);
+            CreateActors(scene, playerWeapons, gunWeapon, rules, aircraft, aircraftEngine);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -203,7 +205,12 @@ namespace Shooter.Editor
         }
 
         public static GameBootstrap CreateActors(
-            Scene scene, IReadOnlyList<WeaponDefinition> playerWeapons, WeaponDefinition gunWeapon, GameRulesDefinition rules)
+            Scene scene,
+            IReadOnlyList<WeaponDefinition> playerWeapons,
+            WeaponDefinition gunWeapon,
+            GameRulesDefinition rules,
+            AircraftDefinition aircraft,
+            AudioClip aircraftEngine = null)
         {
             SceneBuildHelpers.RequireLoaded(scene);
             SceneBuildHelpers.RequirePlayerWeapons(playerWeapons, nameof(playerWeapons));
@@ -217,8 +224,14 @@ namespace Shooter.Editor
                 throw new ArgumentNullException(nameof(rules));
             }
 
-            // 不正なルールを配線しないよう、何か置く前に検査する。
+            if (aircraft == null)
+            {
+                throw new ArgumentNullException(nameof(aircraft));
+            }
+
+            // 不正なルールや機体の値を配線しないよう、何か置く前に検査する。
             rules.ToRules();
+            AircraftFixtureBuilder.Validate(aircraft);
 
             var created = new List<GameObject>();
             try
@@ -235,7 +248,8 @@ namespace Shooter.Editor
                 created.Add(CarFixtureBuilder.Create(scene, null, GunCarName, GunCarOrigin, GunCarRotation, playerWeapons[0]).gameObject);
                 created.Add(CarFixtureBuilder.Create(scene, null, CarName, CarOrigin, CarRotation).gameObject);
                 created.Add(MountedGunFixtureBuilder.Create(scene, null, MountedGunName, MountedGunOrigin, MountedGunRotation, gunWeapon).gameObject);
-                created.Add(AircraftFixtureBuilder.Create(scene, null, AircraftName, AircraftOrigin, AircraftRotation).gameObject);
+                created.Add(AircraftFixtureBuilder.Create(
+                    scene, null, AircraftName, AircraftOrigin, AircraftRotation, aircraft, aircraftEngine).gameObject);
 
                 var targets = new GameObject(TargetsName);
                 created.Add(targets);

@@ -277,30 +277,41 @@ public sealed class HealthOnlyHud : MonoBehaviour
 
 ### 飛行機 (`SimpleAircraftMotor`)
 
-1. `Rigidbody` と当たり判定を持つ機体の根元に、`Vehicle`・`VehicleMotorLink`・`SimpleAircraftMotor`・`AircraftControlScheme` を付ける。
-   - 試走場では西の端 (`VehicleRangeSceneBuilder.AircraftOrigin`) に北向きで置いてあり、smoke の通しで離陸して 15m 昇るまでを確かめる。
-2. 飛び方の値は **Create > Shooter > Aircraft Definition** で作ったアセット (`AircraftDefinition`) に置き、`SimpleAircraftMotor` と `AircraftControlScheme` の Definition の欄に付ける。空なら既定値で飛ぶ。コードからは `Configure(AircraftSpec)` でその実行の間だけ差し替えられる。押す力は加速 (m/s²) で持つので、質量を変えても飛び方は変わらない。
-   - アセットは質量・推力と、Aero (空力)・Aim (当て方)・Stick (操縦桿)・Ground (地上)・Damage (壊れ方) の欄に分かれる。Damage はまだ値を持たない。
+組み方の例はサンプルの `AircraftFixtureBuilder` で、試走場では西の端 (`VehicleRangeSceneBuilder.AircraftOrigin`) に北向きで置いてある。smoke の通し (`VehicleSmokeRun`) は、地上で左へ 15° 曲がり、離陸して 15m 昇り、機首を 75° 上へ引き続けても 4 秒の間に迎え角が臨界角を越えず沈まないこと、左の翼を撃ち抜くと左へ傾くことまでを確かめる。
+
+1. `Rigidbody` と当たり判定を持つ機体の根元に、次を付ける。
+   - `Vehicle`・`VehicleMotorLink`・`SimpleAircraftMotor` (飛び方)
+   - 当て方 (下の 3.) を 1 つ: `AircraftControlScheme` か `AircraftStickControlScheme`
+   - 地上を走るなら `AircraftWheels` (子に `WheelCollider`)、撃たれて飛び方が崩れるなら `AircraftPartDamage` と部位ごとの `VehiclePart`、見た目と音は `AircraftEffects`、HUD に出すなら `AircraftStatusPublisher`
+2. 値は **Create > Shooter > Aircraft Definition** で作ったアセット (`AircraftDefinition`) 1 つに置き、上の部品それぞれの Definition の欄に同じものを付ける。空の部品は既定値で動く (`AircraftEffects` だけは、空なら `SimpleAircraftMotor` の Definition を読む)。
+   - アセットは質量・推力と、Aero (空力)・Aim (視線の当て方)・Stick (操縦桿)・Ground (地上)・Damage (部位)・Effects (見た目と音)・Warning (HUD の警告) の欄に分かれる。
+   - 押す力は加速 (m/s²) で持つので、質量を変えても飛び方は変わらず、ぶつかったときの重さだけが変わる。
    - Aero の `MaxSpeed` は水平に全開で飛んだときに落ち着く速さ。降下では重さの分だけ速くなり、`TopSpeed` (`AircraftAero.TopSpeed`) はその速さを返す。
-   - `LiftSpeed` より遅いと翼が重さを支えきれずに沈み、`ControlSpeed` より遅いと舵が効きにくくなる (止まっていても `MinControl` だけは効く)。
-3. 軸は `AircraftFlight.ThrottleAxis` (0、負はエアブレーキ)・`PitchAxis` (1、+ で機首上げ)・`RollAxis` (2、+ で右へ傾く)・`YawAxis` (3、+ で右へ向く)。
-   - 1 ステップの力は、推力 + 空力 (`AircraftAero.Compute`) + 地上の力 (`AircraftGroundContact`) の和。同じ GameObject に `IAircraftGroundSource` を付けると地上の力を、`IAircraftConditionSource` を付けると左右の揚力・舵・推力の効き (0 から 1、`AircraftCondition`) を毎ステップそこから読む。
-   - `SimpleAircraftMotor.State` (`AircraftFlightState`) で、対気速度・迎え角・横滑り角 (ラジアン)・荷重倍数 (G)・接地を読める。
-   - 地上を走らせるなら、機体の根元に `AircraftWheels` を付け、子に `WheelCollider` を置く。機体の重心より前にある車輪が前輪になり、ヨーで向きが変わる (名前は見ない)。向ける角度は止まっているとき `MaxSteerAngle`、`SteerFadeSpeed` まで速くなるにつれ `HighSpeedSteerAngle` へ絞る (`AircraftGround.SteerLimit`)。
-   - ブレーキは全部の車輪に掛かる。エアブレーキ (負のスロットル) の深さに応じて `BrakeTorque` まで、誰も操縦していない (入力が Idle) 間は `IdleBrakeTorque`。浮いている間は前輪をまっすぐに戻し、ブレーキを放す。値はアセットの Ground の欄か `AircraftWheels.Configure(AircraftGroundSpec)` で入れる。
-   - `AircraftWheels` が返す `AircraftGroundContact` は、どれかの車輪が接地しているかと、地面からの高さ (`HeightAboveGround`、m) を持つ。高さは浮いているときに一番低い車輪の底から真下へ `HeightProbeDistance` まで測り、地面が無ければ null。機体自身の当たり判定は数えない。
-4. `AircraftControlScheme` は、視線の方へ機首を向け、移動の前後でスロットルを開け閉めし (閉じ切ってさらに下げるとエアブレーキ)、左右でロールを足す。強さはアセットの Aim の欄か `Configure(AircraftAimSpec)` で入れる。
-   - 乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれは、そのまま曲がり続ける速さになる。上下は視線の高さへ機首が合う。
-   - 同じ GameObject の `SimpleAircraftMotor.State` を読み、G が `MaxLoadFactor` の `LoadFactorMargin` 手前を越えるか、迎え角が `CriticalAngleOfAttack` (度) の `AngleOfAttackMargin` 手前を越えると、機首を上げる舵を上限で 0 になるまで絞る (下げる向きは負の G・迎え角で同じく絞る)。接地中は絞らない。
-   - `MinSinkRate` (m/s) より速く降りていて、真下へのレイ (`GroundMask` のレイヤー、機体自身の当たり判定は除く) で測った地面まで `GroundWarningSeconds` を切ると、視線の代わりに真上へ機首を向け、ロールのキーを無視して引き起こす。0 秒にすると引き起こさない。判定は `AircraftAim.ShouldPullUp`・`AircraftAim.LimitPitch` で引ける。
-   - 視線を使わずに操縦桿で直接操るときは、`AircraftControlScheme` の代わりに `AircraftStickControlScheme` を付ける。移動の前後がピッチ (既定では前で機首下げ)、左右がロール、上下 (`Vertical`) がラダー。デッドゾーン・指数・スロットルの変わる速さ・ピッチの向きはアセットの Stick の欄か `Configure(AircraftStickSpec)` で入れる。
-   - スロットルは ThrottleAction の欄の 1 軸のアクション (0〜1) を狙いの開き具合として読む。空ならブーストを押している間だけ開き、離すと同じ速さで閉じる。
-5. 見た目と音は `AircraftEffects` を機体に付けると、`SimpleAircraftMotor` の入力と `State` から毎フレーム動く。サーバー専用ビルドでは止まる。
-   - 舵面は `AircraftControlSurface` (Transform・役割 Elevator / Aileron / Rudder・蝶番の軸・逆向き) を並べる。回す角度は入力 × アセットの Effects の欄の角度。左右の補助翼は片方を逆向きにする。
-   - エンジン音は AudioClip を入れると繰り返し鳴り、高さと大きさはスロットルと速さ (`MaxSpeed` に対する割合) を `EngineSpeedShare` で混ぜた値で Min から Max の間を動く。空なら鳴らさない。
+   - `LiftSpeed` より遅いと翼が重さを支えきれずに沈み、`ControlSpeed` より遅いと舵が効きにくくなる (止まっていても `MinControl` だけは効く)。揚力は迎え角に比例し、`CriticalAngle` (度) を越えると失速して落ちる。
+   - どの部品もコードからは `Configure(…Spec)` でその実行の間だけ差し替えられる (アセットより勝つ)。
+   - 軸は `AircraftFlight.ThrottleAxis` (0、負はエアブレーキ)・`PitchAxis` (1、+ で機首上げ)・`RollAxis` (2、+ で右へ傾く)・`YawAxis` (3、+ で右へ向く)。`SimpleAircraftMotor.State` (`AircraftFlightState`) で、対気速度・迎え角・横滑り角 (ラジアン)・荷重倍数 (G)・接地を読める。
+3. 当て方は 2 つあり、どちらか 1 つを付ける。
+   - **視線 (`AircraftControlScheme`、Aim の欄)**: 視線の方へ機首を向け、移動の前後でスロットルを開け閉めし (閉じ切ってさらに下げるとエアブレーキ)、左右でロールを足す。乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれはそのまま曲がり続ける速さになり、上下は視線の高さへ機首が合う。
+     - G が `MaxLoadFactor` の `LoadFactorMargin` 手前を越えるか、迎え角が `CriticalAngleOfAttack` (度) の `AngleOfAttackMargin` 手前を越えると、機首を上げる舵を上限で 0 になるまで絞る (失速の防止。下げる向きは負の G・迎え角で同じく絞る)。接地中は絞らない。
+     - `MinSinkRate` (m/s) より速く降りていて、真下へのレイ (`GroundMask` のレイヤー、機体自身の当たり判定は除く) で測った地面まで `GroundWarningSeconds` を切ると、視線の代わりに真上へ機首を向け、ロールのキーを無視して引き起こす。0 秒にすると引き起こさない。判定は `AircraftAim.ShouldPullUp`・`AircraftAim.LimitPitch` で引ける。
+   - **操縦桿 (`AircraftStickControlScheme`、Stick の欄)**: 移動の前後がピッチ (既定では前で機首下げ)、左右がロール、上下 (`Vertical`) がラダー。デッドゾーン・指数・スロットルの変わる速さ・ピッチの向きを欄で決める。スロットルは ThrottleAction の欄の 1 軸のアクション (0〜1) を狙いの開き具合として読み、空ならブーストを押している間だけ開き、離すと同じ速さで閉じる。
+4. 地上 (`AircraftWheels`、Ground の欄): 機体の重心より前にある車輪が前輪になり、ヨーで向きが変わる (名前は見ない)。向ける角度は止まっているとき `MaxSteerAngle`、`SteerFadeSpeed` まで速くなるにつれ `HighSpeedSteerAngle` へ絞る (`AircraftGround.SteerLimit`)。
+   - ブレーキは全部の車輪に掛かる。エアブレーキ (負のスロットル) の深さに応じて `BrakeTorque` まで、誰も操縦していない (入力が Idle) 間は `IdleBrakeTorque`。浮いている間は前輪をまっすぐに戻し、ブレーキを放す。
+   - 接地と地面からの高さ (`HeightAboveGround`、m) を `IAircraftGroundSource` としてモーターに返す。高さは浮いているときに一番低い車輪の底から真下へ `HeightProbeDistance` まで測り、地面が無ければ null。機体自身の当たり判定は数えない。
+   - 車輪を付け外ししたり重心を動かしたりしたら `CollectWheels()` を呼ぶ。
+5. 部位 (`AircraftPartDamage`、Damage の欄): 欄に並べた部位ごとに Id・効き先 (左の揚力・右の揚力・舵・推力)・耐久を持つ。機体の体力 (`Vehicle`) とは別に減り、壊れるにつれ効き先の倍率が `MinLift`・`MinControl`・`MinThrust` へ下がる。片翼が弱ると揚力の差で、その側へ傾く。
+   - 撃たれる箱 (とその子のコライダー) に `VehiclePart` を付け、Id を Damage の欄の部位と同じにする。`Vehicle` の値 (`VehicleSpec` の部位、`VehicleDefinition`) にも同じ Id を入れて、当たりの倍率を決める。入れ忘れると、倍率 1 で受けて警告が出る。
+   - 命中は `Hitbox` → `Vehicle.PartDamaged` → `AircraftPartDamage` と届く。命中を通さずに削るなら `ApplyPartDamage(Id, 量, 位置)`。壊れると `CombatEvents.AircraftPartBroken` とログが出て、乗り物の体力を満たし直すと部位も直る。
+   - 飛び方に効くのは `IAircraftConditionSource` として毎ステップ読まれる `Condition` (`AircraftCondition`)。燃料タンクのように欄に無い Id の `VehiclePart` は、倍率だけが効いて飛び方は変わらない。
+   - オンラインでは部位の残りをサーバーが数え、運転する人の側の `AircraftPartDamage` へ乗り物のスナップショットで届く。
+6. 見た目と音 (`AircraftEffects`、Effects の欄): `SimpleAircraftMotor` の入力と `State` から毎フレーム動く。サーバー専用ビルドでは止まる。
+   - 舵面は `AircraftControlSurface` (Transform・役割 Elevator / Aileron / Rudder・蝶番の軸・逆向き) を並べる。回す角度は入力 × 欄の角度。舵面の Transform は蝶番に置き、板はその後ろへずらす。左右の補助翼は片方を逆向きにする (例では右へ傾ける入力で右の後ろの縁が上がるよう、左を逆向きにし、方向舵は軸を下向きにしている)。
+   - エンジン音は AudioClip を入れると繰り返し鳴り、高さと大きさはスロットルと速さ (`MaxSpeed` に対する割合) を `EngineSpeedShare` で混ぜた値で Min から Max の間を動く。空なら鳴らさない。例の音はサンプルが作る仮の音 (`AircraftFixtureBuilder.EngineSoundSpec`) なので、ゲームの音に差し替える。
    - ベイパーは荷重倍数の大きさが `VaporLoadFactor` を超えている間だけ、翼端 (`VaporAnchors`) に置いたプレハブの TrailRenderer・ParticleSystem を出す。プレハブが空なら白い線をコードで作り、翼端が空なら機体の見た目を包む箱の左右の端から出す。地上では出さない。
-   - 値はその部品の Definition、空なら `SimpleAircraftMotor` の Definition の Effects の欄から読む。コードからは `Configure(AircraftEffectsSpec)`、Edit Mode では `Bind(SimpleAircraftMotor)` と `Show(入力, State)` で動かせる。
-6. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。
+   - Edit Mode では `Bind(SimpleAircraftMotor)` と `Show(入力, State)` で動かせる。
+7. HUD: シーンのどこか (例では機体) に `AircraftStatusPublisher` を 1 つ置くと、ローカルのプレイヤーが運転席で飛ばしている機体の速さ・高度 (世界の高さ)・スロットル・迎え角・G・失速の警告を `GameSignals.Aircraft` (`AircraftStatus`) に出し、降りると消す。警告の閾値はアセットの Warning の欄 (`StallAngleDegrees`・`StallSpeed`、地上では出さない)。
+   - サンプルの既定の HUD は `DefaultHudFactory` が `AircraftHudView` を足し、`Hud.uxml` の `aircraft` の要素に文字で出す。文は `AircraftHudText` が `Resources/Localization/<言語>/` のキーから作る。自分の HUD なら `GameSignals.Aircraft` を購読して描く。
+8. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。
 
 プレイヤーの座席の入力を AI・チュートリアル・自動の確認から書き換えるときは、`PlayerVehicleRider.SeatInputFilter` に `IVehicleSeatInputFilter` を入れる。
 

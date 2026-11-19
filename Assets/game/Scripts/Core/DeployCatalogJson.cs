@@ -21,6 +21,7 @@ namespace Shooter.Core
         public const string TurretItem = "turret";
         public const string DecoyItem = "decoy";
         public const string BeaconItem = "beacon";
+        public const string DroneItem = "drone";
 
         public const string WeaponIdItem = "weaponId";
         public const string RoundsItem = "rounds";
@@ -34,6 +35,13 @@ namespace Shooter.Core
 
         public const string UsesItem = "uses";
         public const string SpawnDistanceItem = "spawnDistance";
+
+        public const string SpeedItem = "speed";
+        public const string ControlRangeItem = "controlRange";
+        public const string BatterySecondsItem = "batterySeconds";
+        public const string SpotRadiusItem = "spotRadius";
+        public const string SpotIntervalSecondsItem = "spotIntervalSeconds";
+        public const string RevealSecondsItem = "revealSeconds";
 
         private const string _kind = "deployable JSON";
 
@@ -56,6 +64,7 @@ namespace Shooter.Core
             TurretItem,
             DecoyItem,
             BeaconItem,
+            DroneItem,
         };
 
         public static IReadOnlyList<string> TurretItemNames { get; } = new[]
@@ -71,6 +80,16 @@ namespace Shooter.Core
         public static IReadOnlyList<string> DecoyItemNames { get; } = new[] { LifetimeSecondsItem, CallIntervalSecondsItem, CallRadiusItem };
 
         public static IReadOnlyList<string> BeaconItemNames { get; } = new[] { UsesItem, SpawnDistanceItem };
+
+        public static IReadOnlyList<string> DroneItemNames { get; } = new[]
+        {
+            SpeedItem,
+            ControlRangeItem,
+            BatterySecondsItem,
+            SpotRadiusItem,
+            SpotIntervalSecondsItem,
+            RevealSecondsItem,
+        };
 
         public static DeployCatalog Parse(string text, string sourceName)
         {
@@ -112,6 +131,7 @@ namespace Shooter.Core
             var turretFields = entry.Object(TurretItem, TurretItemNames);
             var decoyFields = entry.Object(DecoyItem, DecoyItemNames);
             var beaconFields = entry.Object(BeaconItem, BeaconItemNames);
+            var droneFields = entry.Object(DroneItem, DroneItemNames);
             if (role == DeployRole.Turret && turretFields == null)
             {
                 throw entry.Rejected(entry.ItemPath(TurretItem), "a Turret needs a turret object with weaponId");
@@ -147,9 +167,20 @@ namespace Shooter.Core
                 beacon = BeaconSpec.Default;
             }
 
+            DroneSpec drone = null;
+            if (droneFields != null)
+            {
+                drone = ReadDrone(droneFields);
+            }
+            else if (role == DeployRole.Drone)
+            {
+                // 囮と同じく、ドローンの値はどれも既定があるので、drone を書かなければ既定のドローンにする。
+                drone = DroneSpec.Default;
+            }
+
             try
             {
-                return new DeployType(id, role, deploy, turret, weaponId, decoy, beacon);
+                return new DeployType(id, role, deploy, turret, weaponId, decoy, beacon, drone);
             }
             catch (ArgumentException e)
             {
@@ -221,6 +252,24 @@ namespace Shooter.Core
             catch (ArgumentException e)
             {
                 throw Rejected(fields, BeaconItemNames, e);
+            }
+        }
+
+        private static DroneSpec ReadDrone(ServerDataJson.Fields fields)
+        {
+            var speed = fields.ReadFloat(SpeedItem, DroneSpec.DefaultSpeed);
+            var controlRange = fields.ReadFloat(ControlRangeItem, DroneSpec.DefaultControlRange);
+            var batterySeconds = fields.ReadFloat(BatterySecondsItem, DroneSpec.DefaultBatterySeconds);
+            var spotRadius = fields.ReadFloat(SpotRadiusItem, DroneSpec.DefaultSpotRadius);
+            var spotIntervalSeconds = fields.ReadFloat(SpotIntervalSecondsItem, DroneSpec.DefaultSpotIntervalSeconds);
+            var revealSeconds = fields.ReadFloat(RevealSecondsItem, DroneSpec.DefaultRevealSeconds);
+            try
+            {
+                return new DroneSpec(speed, controlRange, batterySeconds, spotRadius, spotIntervalSeconds, revealSeconds);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(fields, DroneItemNames, e);
             }
         }
 

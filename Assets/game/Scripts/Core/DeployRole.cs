@@ -8,5 +8,7 @@ namespace Shooter.Core
         Decoy,
 
         Beacon,
+
+        Drone,
     }
 }

@@ -394,20 +394,27 @@ namespace Shooter.Runtime
             min = Vector3.positiveInfinity;
             max = Vector3.negativeInfinity;
             var found = false;
-            foreach (var renderer in root.GetComponentsInChildren<Renderer>(true))
+            foreach (var renderer in root.GetComponentsInChildren<Renderer>(false))
             {
                 if (renderer is ParticleSystemRenderer || renderer is TrailRenderer || renderer is LineRenderer)
                 {
                     continue;
                 }
 
-                var bounds = renderer.bounds;
+                // 非アクティブな Renderer の bounds はワールド原点の箱になるため、除く。
+                if (!renderer.enabled || !renderer.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                var bounds = renderer.localBounds;
                 for (var corner = 0; corner < 8; corner++)
                 {
-                    var world = new Vector3(
+                    var rendererLocal = new Vector3(
                         (corner & 1) == 0 ? bounds.min.x : bounds.max.x,
                         (corner & 2) == 0 ? bounds.min.y : bounds.max.y,
                         (corner & 4) == 0 ? bounds.min.z : bounds.max.z);
+                    var world = renderer.transform.TransformPoint(rendererLocal);
                     var local = root.InverseTransformPoint(world);
                     min = Vector3.Min(min, local);
                     max = Vector3.Max(max, local);

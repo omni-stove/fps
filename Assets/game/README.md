@@ -280,7 +280,7 @@ public sealed class HealthOnlyHud : MonoBehaviour
 1. `Rigidbody` と当たり判定を持つ機体の根元に、`Vehicle`・`VehicleMotorLink`・`SimpleAircraftMotor`・`AircraftControlScheme` を付ける。
    - 試走場では西の端 (`VehicleRangeSceneBuilder.AircraftOrigin`) に北向きで置いてあり、smoke の通しで離陸して 15m 昇るまでを確かめる。
 2. 飛び方の値は **Create > Shooter > Aircraft Definition** で作ったアセット (`AircraftDefinition`) に置き、`SimpleAircraftMotor` と `AircraftControlScheme` の Definition の欄に付ける。空なら既定値で飛ぶ。コードからは `Configure(AircraftSpec)` でその実行の間だけ差し替えられる。押す力は加速 (m/s²) で持つので、質量を変えても飛び方は変わらない。
-   - アセットは質量・推力と、Aero (空力)・Aim (当て方)・Stick (操縦桿)・Ground (地上)・Damage (壊れ方) の欄に分かれる。Stick・Ground・Damage はまだ値を持たない。
+   - アセットは質量・推力と、Aero (空力)・Aim (当て方)・Stick (操縦桿)・Ground (地上)・Damage (壊れ方) の欄に分かれる。Ground・Damage はまだ値を持たない。
    - Aero の `MaxSpeed` は水平に全開で飛んだときに落ち着く速さ。降下では重さの分だけ速くなり、`TopSpeed` (`AircraftAero.TopSpeed`) はその速さを返す。
    - `LiftSpeed` より遅いと翼が重さを支えきれずに沈み、`ControlSpeed` より遅いと舵が効きにくくなる (止まっていても `MinControl` だけは効く)。
 3. 軸は `AircraftFlight.ThrottleAxis` (0、負はエアブレーキ)・`PitchAxis` (1、+ で機首上げ)・`RollAxis` (2、+ で右へ傾く)・`YawAxis` (3、+ で右へ向く)。
@@ -288,6 +288,8 @@ public sealed class HealthOnlyHud : MonoBehaviour
    - `SimpleAircraftMotor.State` (`AircraftFlightState`) で、対気速度・迎え角・横滑り角 (ラジアン)・荷重倍数 (G)・接地を読める。
 4. `AircraftControlScheme` は、視線の方へ機首を向け、移動の前後でスロットルを開け閉めし (閉じ切ってさらに下げるとエアブレーキ)、左右でロールを足す。強さはアセットの Aim の欄か `Configure(AircraftAimSpec)` で入れる。
    - 乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれは、そのまま曲がり続ける速さになる。上下は視線の高さへ機首が合う。
+   - 視線を使わずに操縦桿で直接操るときは、`AircraftControlScheme` の代わりに `AircraftStickControlScheme` を付ける。移動の前後がピッチ (既定では前で機首下げ)、左右がロール、上下 (`Vertical`) がラダー。デッドゾーン・指数・スロットルの変わる速さ・ピッチの向きはアセットの Stick の欄か `Configure(AircraftStickSpec)` で入れる。
+   - スロットルは ThrottleAction の欄の 1 軸のアクション (0〜1) を狙いの開き具合として読む。空ならブーストを押している間だけ開き、離すと同じ速さで閉じる。
 5. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。
 
 プレイヤーの座席の入力を AI・チュートリアル・自動の確認から書き換えるときは、`PlayerVehicleRider.SeatInputFilter` に `IVehicleSeatInputFilter` を入れる。

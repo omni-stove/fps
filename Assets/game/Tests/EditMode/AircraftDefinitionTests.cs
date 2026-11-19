@@ -107,6 +107,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheStickBlockSurvivesARoundTrip()
+        {
+            var definition = NewDefinition("Trainer");
+
+            Assert.That(definition.ToStickSpec().Deadzone, Is.EqualTo(AircraftStickSpec.DefaultDeadzone));
+            definition.Stick.CopyFrom(new AircraftStickSpec(deadzone: 0.25f, exponent: 1.5f, throttleRate: 0.8f, forwardPitchesDown: false));
+            var stick = definition.ToStickSpec();
+
+            Assert.That(stick.Deadzone, Is.EqualTo(0.25f));
+            Assert.That(stick.Exponent, Is.EqualTo(1.5f));
+            Assert.That(stick.ThrottleRate, Is.EqualTo(0.8f));
+            Assert.That(stick.ForwardPitchesDown, Is.False);
+        }
+
+        [Test]
         public void TheEmptyBlocksStillGiveASpec()
         {
             var definition = NewDefinition("Trainer");

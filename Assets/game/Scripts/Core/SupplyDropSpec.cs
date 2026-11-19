@@ -13,6 +13,9 @@ namespace Shooter.Core
         public const float DefaultFallSpeed = 6f;
         public const float DefaultPlaceFraction = 0.8f;
         public const float DefaultReach = 2.5f;
+
+        // LootContainer.MinReach と同じ値。Core から Runtime は参照できないので、ここで同じ下限を持つ。
+        public const float MinReach = 0.1f;
         public const float DefaultBotSearchRadius = 80f;
 
         public static IReadOnlyList<SupplyDropStage> DefaultStages { get; } = new[]
@@ -38,7 +41,12 @@ namespace Shooter.Core
             DropHeight = SpecGuard.PositiveFinite(dropHeight, nameof(dropHeight));
             FallSpeed = SpecGuard.PositiveFinite(fallSpeed, nameof(fallSpeed));
             PlaceFraction = SpecGuard.Fraction(placeFraction, nameof(placeFraction));
-            Reach = SpecGuard.PositiveFinite(reach, nameof(reach));
+            if (!(reach >= MinReach) || float.IsInfinity(reach))
+            {
+                throw new ArgumentOutOfRangeException(nameof(reach), reach, nameof(reach) + " must be at least " + MinReach + " and finite");
+            }
+
+            Reach = reach;
             BotSearchRadius = SpecGuard.NonNegativeFinite(botSearchRadius, nameof(botSearchRadius));
         }
 
@@ -69,7 +77,7 @@ namespace Shooter.Core
             return Stages.Count == 0 ? null : Stages[Math.Min(phaseIndex, Stages.Count - 1)];
         }
 
-        private static IReadOnlyList<SupplyDropStage> CopyStages(IReadOnlyList<SupplyDropStage> stages)
+        private static SupplyDropStage[] CopyStages(IReadOnlyList<SupplyDropStage> stages)
         {
             var copy = new SupplyDropStage[stages.Count];
             for (var i = 0; i < copy.Length; i++)

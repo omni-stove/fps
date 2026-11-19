@@ -21,7 +21,8 @@ namespace Shooter.Core.Tests
             HudDensity hudDensity = HudDensity.Full,
             MatchObjective objective = MatchObjective.None,
             int minPlayers = 0,
-            float idleKickSeconds = 0f)
+            float idleKickSeconds = 0f,
+            float idleWarningSeconds = GameRules.DefaultIdleWarningSeconds)
         {
             return new GameRules(
                 friendlyFire,
@@ -40,7 +41,8 @@ namespace Shooter.Core.Tests
                 hudDensity,
                 objective,
                 minPlayers,
-                idleKickSeconds);
+                idleKickSeconds,
+                idleWarningSeconds: idleWarningSeconds);
         }
 
         [Test]
@@ -65,6 +67,7 @@ namespace Shooter.Core.Tests
             Assert.That(rules.Objective, Is.EqualTo(MatchObjective.None));
             Assert.That(rules.MinPlayers, Is.EqualTo(0));
             Assert.That(rules.IdleKickSeconds, Is.EqualTo(0f));
+            Assert.That(rules.IdleWarningSeconds, Is.EqualTo(15f));
         }
 
         [Test]
@@ -124,6 +127,26 @@ namespace Shooter.Core.Tests
         {
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(idleKickSeconds: value));
             Assert.That(ex.ParamName, Is.EqualTo("idleKickSeconds"));
+        }
+
+        [Test]
+        public void TheIdleWarningIsFifteenSecondsUnlessGiven()
+        {
+            Assert.That(GameRules.DefaultIdleWarningSeconds, Is.EqualTo(15f));
+            Assert.That(Rules().IdleWarningSeconds, Is.EqualTo(15f));
+            Assert.That(Rules(idleKickSeconds: 120f, idleWarningSeconds: 30f).IdleWarningSeconds, Is.EqualTo(30f));
+            Assert.That(GameRules.Default.WithIdleWarningSeconds(30f).WithIdleKickSeconds(60f).IdleWarningSeconds, Is.EqualTo(30f), "a later With keeps it");
+        }
+
+        [TestCase(0f)]
+        [TestCase(-1f)]
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(float.NegativeInfinity)]
+        public void RejectsANonPositiveOrNonFiniteIdleWarning(float value)
+        {
+            var ex = Assert.Throws<ArgumentOutOfRangeException>(() => Rules(idleWarningSeconds: value));
+            Assert.That(ex.ParamName, Is.EqualTo("idleWarningSeconds"));
         }
 
         [Test]

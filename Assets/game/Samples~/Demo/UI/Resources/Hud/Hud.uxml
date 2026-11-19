@@ -146,7 +146,7 @@
         <ui:VisualElement name="spectate" class="spectate" picking-mode="Ignore" style="display: none;" />
         <!-- ボイスチャットで、自分が声を送っている印と話している人の名前。VoiceIndicatorView が、出す行 (voice__row) がある間だけ出す。 -->
         <ui:VisualElement name="voice" class="voice" picking-mode="Ignore" style="display: none;" />
-        <!-- 投票キックの対象・残り秒・賛否。GameSignals.VoteKick に投票がある間だけ出す (出すビューはまだ無く、隠したままにする)。 -->
+        <!-- 投票キックの対象・残り秒・賛否。GameSignals.VoteKick に投票がある間だけ VoteKickView が中身を作って出す (Hud にはまだ付けておらず、付くまでは隠したままにする)。 -->
         <ui:VisualElement name="vote-kick" class="vote-kick" picking-mode="Ignore" style="display: none;" />
         <!-- フラッシュの目くらまし。HUD の文字ごと白く覆うよう、ポーズ画面の前のいちばん上に置く。FlashOverlay がかかっている間だけ色と不透明度を入れて出す。 -->
         <ui:VisualElement name="flash-overlay" class="flash-overlay" picking-mode="Ignore" style="display: none;" />

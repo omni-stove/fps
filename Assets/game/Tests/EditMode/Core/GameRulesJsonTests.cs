@@ -80,6 +80,7 @@ namespace Shooter.Core.Tests
   ""objective"": ""Domination"",
   ""minPlayers"": 8,
   ""idleKickSeconds"": 90,
+  ""idleWarningSeconds"": 30,
   ""maxWeapons"": 2,
   ""reloadMode"": ""Manual"",
   ""viewMode"": ""ThirdPerson"",
@@ -106,7 +107,8 @@ namespace Shooter.Core.Tests
                 2,
                 ReloadMode.Manual,
                 ViewMode.ThirdPerson,
-                respawnAnchor: _everyAnchor);
+                respawnAnchor: _everyAnchor,
+                idleWarningSeconds: 30f);
 
             AssertSameRules(GameRulesJson.Parse(json, _source), expected);
         }
@@ -254,11 +256,52 @@ namespace Shooter.Core.Tests
 
             Assert.That(
                 GameRulesLog.Read(_source, rules),
-                Is.EqualTo("[GameRules] read 'Rules/Test.json' emote=On stamina=Off respawnAnchor=Squad,Base"));
+                Is.EqualTo("[GameRules] read 'Rules/Test.json' emote=On stamina=Off respawnAnchor=Squad,Base idleWarningSeconds=15"));
             Assert.That(
                 GameRulesLog.Read(null, GameRules.Default),
-                Is.EqualTo("[GameRules] read '-' emote=Off stamina=Off respawnAnchor=Base"));
+                Is.EqualTo("[GameRules] read '-' emote=Off stamina=Off respawnAnchor=Base idleWarningSeconds=15"));
+            Assert.That(
+                GameRulesLog.Read(_source, GameRules.Default.WithIdleWarningSeconds(22.5f)),
+                Is.EqualTo("[GameRules] read 'Rules/Test.json' emote=Off stamina=Off respawnAnchor=Base idleWarningSeconds=22.5"));
             Assert.Throws<ArgumentNullException>(() => GameRulesLog.Read(_source, null));
+        }
+
+        [Test]
+        public void OmittedIdleWarningSecondsIsFifteenAndWrittenSecondsAreRead()
+        {
+            Assert.That(GameRules.DefaultIdleWarningSeconds, Is.EqualTo(15f));
+            Assert.That(GameRulesJson.Parse("{}", _source).IdleWarningSeconds, Is.EqualTo(15f));
+            Assert.That(GameRulesJson.Parse("{\"idleWarningSeconds\": 30}", _source).IdleWarningSeconds, Is.EqualTo(30f));
+            Assert.That(
+                GameRulesJson.Parse("{}", _source, GameRules.Default.WithIdleWarningSeconds(45f)).IdleWarningSeconds,
+                Is.EqualTo(45f),
+                "omitted keeps the base");
+        }
+
+        [Test]
+        public void WriteThenParseKeepsIdleWarningSeconds()
+        {
+            var defaults = GameRulesJson.Write(GameRules.Default);
+            Assert.That(defaults, Does.Contain("\"idleWarningSeconds\": 15"));
+            Assert.That(GameRulesJson.Parse(defaults, _source).IdleWarningSeconds, Is.EqualTo(15f));
+
+            var rules = GameRules.Default.WithIdleKickSeconds(120f).WithIdleWarningSeconds(30f);
+            var written = GameRulesJson.Write(rules);
+            Assert.That(written, Does.Contain("\"idleWarningSeconds\": 30"));
+
+            AssertSameRules(GameRulesJson.Parse(written, _source), rules);
+        }
+
+        [TestCase("{\"idleWarningSeconds\": 0}")]
+        [TestCase("{\"idleWarningSeconds\": -5}")]
+        [TestCase("{\"idleWarningSeconds\": 1e39}")]
+        [TestCase("{\"idleWarningSeconds\": \"15\"}")]
+        [TestCase("{\"idleWarningSeconds\": null}")]
+        public void BadIdleWarningSecondsIsRejectedWithItsName(string json)
+        {
+            var e = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse(json, _source));
+
+            AssertNames(e, "idleWarningSeconds");
         }
 
         [Test]
@@ -310,7 +353,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void ItemNamesMatchTheRulesConstructors()
         {
-            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(26));
+            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(27));
             Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(29));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
@@ -631,6 +674,7 @@ namespace Shooter.Core.Tests
             Assert.That(actual.Objective, Is.EqualTo(expected.Objective), "objective");
             Assert.That(actual.MinPlayers, Is.EqualTo(expected.MinPlayers), "minPlayers");
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds), "idleKickSeconds");
+            Assert.That(actual.IdleWarningSeconds, Is.EqualTo(expected.IdleWarningSeconds), "idleWarningSeconds");
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons), "maxWeapons");
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode), "reloadMode");
             Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode), "viewMode");

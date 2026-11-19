@@ -81,6 +81,7 @@ namespace Shooter.Tests.EditMode
             definition.Objective = MatchObjective.Domination;
             definition.MinPlayers = 6;
             definition.IdleKickSeconds = 45f;
+            definition.IdleWarningSeconds = 20f;
             definition.MaxWeapons = 2;
             definition.ReloadMode = ReloadMode.Manual;
             definition.ViewMode = ViewMode.ThirdPerson;
@@ -135,6 +136,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Domination));
             Assert.That(rules.MinPlayers, Is.EqualTo(6));
             Assert.That(rules.IdleKickSeconds, Is.EqualTo(45f));
+            Assert.That(rules.IdleWarningSeconds, Is.EqualTo(20f));
             Assert.That(rules.MaxWeapons, Is.EqualTo(2));
             Assert.That(rules.ReloadMode, Is.EqualTo(ReloadMode.Manual));
             Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson));
@@ -155,6 +157,15 @@ namespace Shooter.Tests.EditMode
             Assert.That(definition.Emote, Is.EqualTo(Emote.Off));
             Assert.That(definition.Stamina, Is.EqualTo(Stamina.Off));
             Assert.That(definition.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Base }));
+        }
+
+        [Test]
+        public void ANewDefinitionWarnsFifteenSecondsBeforeTheIdleKick()
+        {
+            var definition = NewDefinition("FreshIdle");
+
+            Assert.That(definition.IdleWarningSeconds, Is.EqualTo(GameRules.DefaultIdleWarningSeconds));
+            Assert.That(definition.ToRules().IdleWarningSeconds, Is.EqualTo(15f));
         }
 
         [Test]
@@ -247,7 +258,8 @@ namespace Shooter.Tests.EditMode
                 .WithStreaks(Streaks.Off)
                 .WithTextChat(TextChat.Off)
                 .WithSpectating(Spectating.Off)
-                .WithRespawnAnchors(new[] { RespawnAnchor.Squad, RespawnAnchor.Beacon, RespawnAnchor.Base });
+                .WithRespawnAnchors(new[] { RespawnAnchor.Squad, RespawnAnchor.Beacon, RespawnAnchor.Base })
+                .WithIdleWarningSeconds(30f);
             var definition = NewDefinition("Copied");
 
             definition.CopyFrom(source);
@@ -298,6 +310,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("Objective")]
         [TestCase("MinPlayers")]
         [TestCase("IdleKickSeconds")]
+        [TestCase("IdleWarningSeconds")]
         [TestCase("MaxWeapons")]
         [TestCase("ReloadMode")]
         [TestCase("ViewMode")]
@@ -392,6 +405,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(actual.Objective, Is.EqualTo(expected.Objective));
             Assert.That(actual.MinPlayers, Is.EqualTo(expected.MinPlayers));
             Assert.That(actual.IdleKickSeconds, Is.EqualTo(expected.IdleKickSeconds));
+            Assert.That(actual.IdleWarningSeconds, Is.EqualTo(expected.IdleWarningSeconds));
             Assert.That(actual.MaxWeapons, Is.EqualTo(expected.MaxWeapons));
             Assert.That(actual.ReloadMode, Is.EqualTo(expected.ReloadMode));
             Assert.That(actual.ViewMode, Is.EqualTo(expected.ViewMode));
@@ -535,6 +549,9 @@ namespace Shooter.Tests.EditMode
                     break;
                 case "IdleKickSeconds":
                     definition.IdleKickSeconds = float.NegativeInfinity;
+                    break;
+                case "IdleWarningSeconds":
+                    definition.IdleWarningSeconds = 0f;
                     break;
                 case "MaxWeapons":
                     definition.MaxWeapons = -1;

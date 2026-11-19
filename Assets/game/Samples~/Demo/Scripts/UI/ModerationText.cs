@@ -63,6 +63,22 @@ namespace Shooter.Runtime
 
         public static LocalizedText Cancel => new LocalizedText(CancelKey);
 
+        public static LocalizedText VoteKickStart => new LocalizedText(VoteKickStartKey);
+
+        public static LocalizedText VoteKickYes => new LocalizedText(VoteKickYesKey);
+
+        public static LocalizedText VoteKickNo => new LocalizedText(VoteKickNoKey);
+
+        public static LocalizedText VoteKickCalled(string callerName, string targetName)
+        {
+            return new LocalizedText(VoteKickCalledKey, callerName ?? string.Empty, targetName ?? string.Empty);
+        }
+
+        public static LocalizedText VoteKickRemaining(int seconds)
+        {
+            return new LocalizedText(VoteKickRemainingKey, seconds);
+        }
+
         public static LocalizedText ReportPrompt(string name)
         {
             return new LocalizedText(ReportPromptKey, name ?? string.Empty);

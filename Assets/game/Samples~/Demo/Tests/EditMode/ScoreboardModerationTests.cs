@@ -263,6 +263,95 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AVoteKickSenderAddsTheVoteKickButtonAfterReport()
+        {
+            PublishPlayers();
+            PublishControls();
+            GameSignals.VoteKickSender.Publish(new FakeVoteKickSender());
+            _view.Pin();
+
+            Assert.That(ButtonTexts(RowOf(Localizer.Resolve(ScoreboardText.PlayerName(_otherId)))), Is.EqualTo(new[]
+            {
+                Localizer.Resolve(ModerationText.Mute(false)),
+                Localizer.Resolve(ModerationText.Block(false)),
+                Localizer.Resolve(ModerationText.Report(false)),
+                "キックの投票",
+            }));
+            Assert.That(ButtonTexts(RowOf(Localizer.Resolve(ScoreboardText.PlayerName(_localId)))), Is.Empty, "no vote against yourself");
+            Assert.That(ButtonTexts(RowOf("[BOT] Bot 1")), Is.Empty, "bots cannot be voted out");
+            var voteKick = RowOf(Localizer.Resolve(ScoreboardText.PlayerName(_otherId))).Q<Button>(className: ScoreboardView.VoteKickButtonClass);
+            Assert.That(voteKick.enabledSelf, Is.True);
+            Assert.That(voteKick.userData, Is.EqualTo(_otherId + ":" + ScoreboardView.VoteKickButtonClass));
+        }
+
+        [Test]
+        public void WithoutAVoteKickSenderThereIsNoVoteKickButton()
+        {
+            PublishPlayers();
+            PublishControls();
+            var sender = new FakeVoteKickSender();
+            GameSignals.VoteKickSender.Publish(sender);
+            _view.Pin();
+
+            GameSignals.VoteKickSender.ClearIfCurrent(sender);
+
+            Assert.That(_view.Element.Q<Button>(className: ScoreboardView.VoteKickButtonClass), Is.Null);
+            Assert.That(_view.CallVoteKick(_otherId), Is.False);
+            Assert.That(sender.Calls, Is.Empty);
+        }
+
+        [Test]
+        public void TheVoteKickSenderAloneShowsThePlayersButton()
+        {
+            Assert.That(PlayersButton.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            GameSignals.VoteKickSender.Publish(new FakeVoteKickSender());
+
+            Assert.That(ScoreboardView.CanModerate, Is.True);
+            Assert.That(PlayersButton.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(_pause.OpenPlayers, Is.Not.Null);
+
+            GameSignals.VoteKickSender.Clear();
+
+            Assert.That(PlayersButton.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void CallingAVoteKickSendsTheTarget()
+        {
+            PublishPlayers();
+            var sender = new FakeVoteKickSender();
+            GameSignals.VoteKickSender.Publish(sender);
+            _view.Pin();
+
+            Assert.That(_view.CallVoteKick(_otherId), Is.True);
+
+            Assert.That(sender.Calls, Is.EqualTo(new[] { _otherId }));
+        }
+
+        [Test]
+        public void WhileAVoteRunsTheVoteKickButtonIsDisabledAndNothingIsCalled()
+        {
+            PublishPlayers();
+            var sender = new FakeVoteKickSender();
+            GameSignals.VoteKickSender.Publish(sender);
+            _view.Pin();
+            var other = Localizer.Resolve(ScoreboardText.PlayerName(_otherId));
+
+            GameSignals.VoteKick.Publish(new VoteKickStatus(_otherId, _localId, 1, 2, 20f));
+
+            Assert.That(RowOf(other).Q<Button>(className: ScoreboardView.VoteKickButtonClass).enabledSelf, Is.False);
+            Assert.That(_view.CallVoteKick(_otherId), Is.False);
+            Assert.That(sender.Calls, Is.Empty);
+
+            GameSignals.VoteKick.Clear();
+
+            Assert.That(RowOf(other).Q<Button>(className: ScoreboardView.VoteKickButtonClass).enabledSelf, Is.True);
+            Assert.That(_view.CallVoteKick(_otherId), Is.True);
+            Assert.That(sender.Calls, Is.EqualTo(new[] { _otherId }));
+        }
+
+        [Test]
         public void UnpinningPutsTheBoardBackAndShowsThePausePanel()
         {
             PublishPlayers();
@@ -352,6 +441,20 @@ namespace Shooter.Tests.EditMode
             public void Report(int participantId, ReportReason reason)
             {
                 Sent.Add((participantId, reason));
+            }
+        }
+
+        private sealed class FakeVoteKickSender : IVoteKickSender
+        {
+            public List<int> Calls { get; } = new List<int>();
+
+            public void Call(int targetId)
+            {
+                Calls.Add(targetId);
+            }
+
+            public void Vote(bool inFavor)
+            {
             }
         }
 

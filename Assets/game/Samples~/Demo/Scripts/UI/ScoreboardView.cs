@@ -54,6 +54,8 @@ namespace Shooter.Runtime
 
         public const string ReportButtonClass = "scoreboard__report";
 
+        public const string VoteKickButtonClass = "scoreboard__vote-kick";
+
         public const string ReasonsRowClass = "scoreboard__reasons";
 
         public const string ReasonButtonClass = "scoreboard__reason";
@@ -90,6 +92,7 @@ namespace Shooter.Runtime
         private VisualElement _pausePanel;
         private int _homeIndex = -1;
         private int? _reportingId;
+        private bool _voteKickCallable;
         private string _focusKey;
         // シーンに置いたまま再コンパイルすると、Unity が private の値も保存し直し、null の InputAction を空のアクションとして戻してしまう (再生でシーンを読み直さないので、そのまま使われる)。
         [NonSerialized]
@@ -107,7 +110,11 @@ namespace Shooter.Runtime
 
         public IReadOnlyList<ScoreboardSection> Sections => _sections;
 
-        public static bool CanModerate => GameSignals.BlockControl.HasValue || GameSignals.ReportSender.HasValue;
+        public static bool CanModerate =>
+            GameSignals.BlockControl.HasValue || GameSignals.ReportSender.HasValue || GameSignals.VoteKickSender.HasValue;
+
+        // 投票は進行中の 1 件しか持てない (IVoteKickSender) ので、その間は押しても始まらないボタンにしない。
+        public static bool CanCallVoteKick => GameSignals.VoteKickSender.HasValue && !GameSignals.VoteKick.HasValue;
 
         // ボットや射撃場の標的は覚える相手ではなく、自分は自分を止められないので、ほかの人の行にだけ操作を出す。
         public static bool IsModeratable(ScoreboardEntry entry)
@@ -305,6 +312,20 @@ namespace Shooter.Runtime
             MarkDirty();
         }
 
+        // 投票の状態はサーバーから GameSignals.VoteKick で届くので、ここでは言い出すだけにして、ボタンは届いた状態で無効にする。
+        public bool CallVoteKick(int participantId)
+        {
+            var sender = GameSignals.VoteKickSender.Value;
+            if (sender == null || GameSignals.VoteKick.HasValue)
+            {
+                return false;
+            }
+
+            sender.Call(participantId);
+            Debug.Log($"{LogTag} called a vote to kick participant={participantId}", this);
+            return true;
+        }
+
         protected override void OnBound(VisualElement element)
         {
             element.AddToClassList(BoardClass);
@@ -339,9 +360,12 @@ namespace Shooter.Runtime
                 GameSignals.Scoreboard.Changed += HandleScoreboardChanged;
                 GameSignals.BlockControl.Changed += HandleBlockControlChanged;
                 GameSignals.ReportSender.Changed += HandleReportSenderChanged;
+                GameSignals.VoteKickSender.Changed += HandleVoteKickSenderChanged;
+                GameSignals.VoteKick.Changed += HandleVoteKickChanged;
                 _subscribed = true;
             }
 
+            _voteKickCallable = CanCallVoteKick;
             WatchBlockControl(GameSignals.BlockControl.Value);
         }
 
@@ -352,6 +376,8 @@ namespace Shooter.Runtime
                 GameSignals.Scoreboard.Changed -= HandleScoreboardChanged;
                 GameSignals.BlockControl.Changed -= HandleBlockControlChanged;
                 GameSignals.ReportSender.Changed -= HandleReportSenderChanged;
+                GameSignals.VoteKickSender.Changed -= HandleVoteKickSenderChanged;
+                GameSignals.VoteKick.Changed -= HandleVoteKickChanged;
                 _subscribed = false;
             }
 
@@ -404,6 +430,38 @@ namespace Shooter.Runtime
             }
 
             RefreshPauseHook();
+            MarkDirty();
+        }
+
+        private void HandleVoteKickSenderChanged(IVoteKickSender sender)
+        {
+            if (this == null)
+            {
+                GameSignals.VoteKickSender.Changed -= HandleVoteKickSenderChanged;
+                return;
+            }
+
+            _voteKickCallable = CanCallVoteKick;
+            RefreshPauseHook();
+            MarkDirty();
+        }
+
+        private void HandleVoteKickChanged(VoteKickStatus? status)
+        {
+            if (this == null)
+            {
+                GameSignals.VoteKick.Changed -= HandleVoteKickChanged;
+                return;
+            }
+
+            // 残り秒が変わるたびに届くので、ボタンの押せる・押せないが変わるときだけ作り直す。
+            var callable = CanCallVoteKick;
+            if (callable == _voteKickCallable)
+            {
+                return;
+            }
+
+            _voteKickCallable = callable;
             MarkDirty();
         }
 
@@ -589,6 +647,7 @@ namespace Shooter.Runtime
             var hud = GetComponent<Hud>();
             var blocks = GameSignals.BlockControl.Value;
             var reports = GameSignals.ReportSender.Value;
+            var voteKicks = GameSignals.VoteKickSender.Value;
             foreach (var section in _sections)
             {
                 var box = new VisualElement { pickingMode = PickingMode.Ignore };
@@ -647,7 +706,7 @@ namespace Shooter.Runtime
                     row.Add(Cell(ConnectionTextOrEmpty(entry.Connection), ConnectionCellClass));
                     if (_pinned)
                     {
-                        row.Add(Actions(entry, moderatable, blocks, reports, muted, blocked));
+                        row.Add(Actions(entry, moderatable, blocks, reports, voteKicks, muted, blocked));
                     }
 
                     box.Add(row);
@@ -705,7 +764,8 @@ namespace Shooter.Runtime
 
         // 操作の無い行にも同じ幅の空の列を置くのは、数の列が行ごとにずれないようにするため。
         private VisualElement Actions(
-            ScoreboardEntry entry, bool moderatable, IBlockControl blocks, IReportSender reports, bool muted, bool blocked)
+            ScoreboardEntry entry, bool moderatable, IBlockControl blocks, IReportSender reports, IVoteKickSender voteKicks,
+            bool muted, bool blocked)
         {
             var actions = EmptyActions();
             if (!moderatable)
@@ -744,6 +804,18 @@ namespace Shooter.Runtime
                 report.userData = FocusKey(id, ReportButtonClass);
                 report.SetEnabled(!reported);
                 actions.Add(report);
+            }
+
+            if (voteKicks != null)
+            {
+                var voteKick = ActionButton(Localizer.Resolve(ModerationText.VoteKickStart), VoteKickButtonClass, false, () =>
+                {
+                    _focusKey = FocusKey(id, VoteKickButtonClass);
+                    CallVoteKick(id);
+                });
+                voteKick.userData = FocusKey(id, VoteKickButtonClass);
+                voteKick.SetEnabled(CanCallVoteKick);
+                actions.Add(voteKick);
             }
 
             return actions;

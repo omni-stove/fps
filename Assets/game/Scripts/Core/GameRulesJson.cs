@@ -25,6 +25,7 @@ namespace Shooter.Core
         public const string ObjectiveItem = "objective";
         public const string MinPlayersItem = "minPlayers";
         public const string IdleKickSecondsItem = "idleKickSeconds";
+        public const string IdleWarningSecondsItem = "idleWarningSeconds";
         public const string MaxWeaponsItem = "maxWeapons";
         public const string ReloadModeItem = "reloadMode";
         public const string ViewModeItem = "viewMode";
@@ -93,6 +94,7 @@ namespace Shooter.Core
             ObjectiveItem,
             MinPlayersItem,
             IdleKickSecondsItem,
+            IdleWarningSecondsItem,
             MaxWeaponsItem,
             ReloadModeItem,
             ViewModeItem,
@@ -217,7 +219,8 @@ namespace Shooter.Core
                     top.ReadEnum(StreaksItem, defaults.Streaks),
                     top.ReadEnum(TextChatItem, defaults.TextChat),
                     top.ReadEnum(SpectatingItem, defaults.Spectating),
-                    top.ReadEnumArray(RespawnAnchorItem, defaults.RespawnAnchors));
+                    top.ReadEnumArray(RespawnAnchorItem, defaults.RespawnAnchors),
+                    top.ReadFloat(IdleWarningSecondsItem, defaults.IdleWarningSeconds));
             }
             catch (ArgumentException e)
             {
@@ -281,6 +284,7 @@ namespace Shooter.Core
             writer.Enum(ObjectiveItem, rules.Objective);
             writer.Int(MinPlayersItem, rules.MinPlayers);
             writer.Float(IdleKickSecondsItem, rules.IdleKickSeconds);
+            writer.Float(IdleWarningSecondsItem, rules.IdleWarningSeconds);
             writer.Int(MaxWeaponsItem, rules.MaxWeapons);
             writer.Enum(ReloadModeItem, rules.ReloadMode);
             writer.Enum(ViewModeItem, rules.ViewMode);

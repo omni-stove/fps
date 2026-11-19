@@ -19,6 +19,8 @@ namespace Shooter.Server
 
         partial void OnSpectateRequest(ServerPlayer player, SpectateRequestMessage request)
         {
+            // 映す相手を替えるのも操作なので、観戦している間の放置の時計を戻す
+            TouchIdle(player.PlayerId);
             ServerSpectate(player.PlayerId, request.Step);
         }
 

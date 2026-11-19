@@ -73,6 +73,7 @@ namespace Shooter.Editor
         public static string BattleRoyaleScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.BattleRoyaleName);
         public static string InfectedScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.InfectedName);
         public static string ExtractionScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.ExtractionName);
+        public static string PayloadScene => ShooterKitRoot.OutputScene(GameRulesAssetBuilder.PayloadName);
 
         public static string ModeTestScene => ShooterKitRoot.OutputScene("ModeTest");
 
@@ -111,6 +112,7 @@ namespace Shooter.Editor
                     BattleRoyaleScene,
                     InfectedScene,
                     ExtractionScene,
+                    PayloadScene,
                     ModeTestScene,
                     NetArena01Scene,
                     NetTestScene,
@@ -158,6 +160,8 @@ namespace Shooter.Editor
                     return InfectedScene;
                 case GameRulesAssetBuilder.ExtractionName:
                     return ExtractionScene;
+                case GameRulesAssetBuilder.PayloadName:
+                    return PayloadScene;
                 default:
                     throw new ArgumentException(
                         $"'{name}' is not one of the mode names ({string.Join(", ", GameRulesAssetBuilder.ModeNames)})", nameof(name));

@@ -58,6 +58,31 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ABuyItemIsNamedByItsKeyOrItsId()
+        {
+            Assert.That(
+                DisplayNames.Of(new BuyItem("rifle-id", BuyItemKind.Weapon, 2700, nameKey: "weapon.rifle")),
+                Is.EqualTo(new LocalizedText("weapon.rifle")));
+            Assert.That(DisplayNames.Of(new BuyItem("vest", BuyItemKind.Armor, 650, amount: 50)), Is.EqualTo(LocalizedText.Literal("vest")));
+            Assert.That(Localizer.Resolve(DisplayNames.Of(new BuyItem("rifle-id", BuyItemKind.Weapon, 2700, nameKey: "weapon.rifle"))), Is.EqualTo("Rifle"));
+            Assert.Throws<ArgumentNullException>(() => DisplayNames.Of((BuyItem)null));
+        }
+
+        [Test]
+        public void EveryItemInTheBundledBuyListHasANameInEveryLanguage()
+        {
+            foreach (var item in KitTuning.Economy.Catalog.Items)
+            {
+                var name = DisplayNames.Of(item);
+                Assert.That(name.Key, Is.Not.Null.And.Not.Empty, item.Id + " has a name key");
+                foreach (var language in GameLanguages.All)
+                {
+                    Assert.That(Localizer.TableOf(language).Contains(name.Key), Is.True, $"{GameLanguages.Code(language)}: {name.Key}");
+                }
+            }
+        }
+
+        [Test]
         public void AMissionWithoutAKeyHasNoName()
         {
             Assert.That(DisplayNames.Mission(null).IsEmpty, Is.True);

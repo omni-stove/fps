@@ -27,7 +27,7 @@ namespace Shooter.Tests.EditMode
             {
                 "Bootstrap", "TpsRange", "Features", "EnemyAiTest", "WaveTest", "DestructionTest", "MissionTest", "VehicleRange",
                 "ModeTest", "FreeForAll", "KillConfirmed", "CaptureTheFlag", "Domination", "Hardpoint", "SearchAndDestroy",
-                "Execution", "GunGame", "Infected", "Horde", "Guardian", "Extraction", "BattleRoyale", "Campaign", "MainMenu",
+                "Execution", "GunGame", "Infected", "Horde", "Guardian", "Extraction", "BattleRoyale", "Payload", "Campaign", "MainMenu",
             }));
             Assert.That(names.IndexOf("MainMenu"), Is.GreaterThan(names.IndexOf("Campaign")), "the menu lists the missions");
             Assert.That(SceneBuildSteps.BuiltIn.Max(step => step.Order), Is.LessThan(SceneBuildSteps.NetOrder));

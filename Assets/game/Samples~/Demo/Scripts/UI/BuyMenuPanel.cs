@@ -217,7 +217,7 @@ namespace Shooter.Runtime
                 throw new ArgumentNullException(nameof(item));
             }
 
-            return DisplayNames.Of(item.NameKey, item.Id);
+            return DisplayNames.Of(item);
         }
 
         // 武器は入る枠 (1 から数える)、防具は足す量を添える。

@@ -682,20 +682,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ModeNamesAreTheTwelveModesWithPathsUnderGameRules()
+        public void ModeNamesAreTheThirteenModesWithPathsUnderGameRules()
         {
             Assert.That(
                 GameRulesAssetBuilder.ModeNames,
                 Is.EqualTo(new[]
                 {
                     "FreeForAll", "KillConfirmed", "GunGame", "Hardpoint", "Guardian", "Execution", "SearchAndDestroy", "CaptureTheFlag", "Horde",
-                    "BattleRoyale", "Infected", "Extraction",
+                    "BattleRoyale", "Infected", "Extraction", "Payload",
                 }));
             Assert.That(GameRulesAssetBuilder.FreeForAllPath, Is.EqualTo(DemoSample.Root + "/Rules/FreeForAll.asset"));
             Assert.That(GameRulesAssetBuilder.CaptureTheFlagPath, Is.EqualTo(DemoSample.Root + "/Rules/CaptureTheFlag.asset"));
             Assert.That(GameRulesAssetBuilder.BattleRoyalePath, Is.EqualTo(DemoSample.Root + "/Rules/BattleRoyale.asset"));
             Assert.That(GameRulesAssetBuilder.InfectedPath, Is.EqualTo(DemoSample.Root + "/Rules/Infected.asset"));
             Assert.That(GameRulesAssetBuilder.ExtractionPath, Is.EqualTo(DemoSample.Root + "/Rules/Extraction.asset"));
+            Assert.That(GameRulesAssetBuilder.PayloadPath, Is.EqualTo(DemoSample.Root + "/Rules/Payload.asset"));
             foreach (var name in GameRulesAssetBuilder.ModeNames)
             {
                 Assert.That(GameRulesAssetBuilder.ModeRulesPath(name), Is.EqualTo(DemoSample.Root + "/Rules/" + name + ".asset"));
@@ -753,7 +754,7 @@ namespace Shooter.Tests.EditMode
 
             foreach (var name in new[] { GameRulesAssetBuilder.FreeForAllName, GameRulesAssetBuilder.KillConfirmedName, GameRulesAssetBuilder.GunGameName,
                          GameRulesAssetBuilder.HardpointName, GameRulesAssetBuilder.GuardianName, GameRulesAssetBuilder.CaptureTheFlagName,
-                         GameRulesAssetBuilder.InfectedName })
+                         GameRulesAssetBuilder.InfectedName, GameRulesAssetBuilder.PayloadName })
             {
                 var rules = GameRulesAssetBuilder.ModeRules(name);
                 Assert.That(rules.RespawnMode, Is.EqualTo(RespawnMode.Individual), name);
@@ -822,7 +823,8 @@ namespace Shooter.Tests.EditMode
 
             foreach (var name in new[] { GameRulesAssetBuilder.FreeForAllName, GameRulesAssetBuilder.KillConfirmedName, GameRulesAssetBuilder.HardpointName,
                          GameRulesAssetBuilder.GuardianName, GameRulesAssetBuilder.ExecutionName, GameRulesAssetBuilder.SearchAndDestroyName,
-                         GameRulesAssetBuilder.CaptureTheFlagName, GameRulesAssetBuilder.InfectedName, GameRulesAssetBuilder.ExtractionName })
+                         GameRulesAssetBuilder.CaptureTheFlagName, GameRulesAssetBuilder.InfectedName, GameRulesAssetBuilder.ExtractionName,
+                         GameRulesAssetBuilder.PayloadName })
             {
                 var rules = GameRulesAssetBuilder.ModeRules(name);
                 Assert.That(rules.InfiniteReserve, Is.False, name);
@@ -836,6 +838,75 @@ namespace Shooter.Tests.EditMode
                 Assert.That(rules.FallDamage, Is.EqualTo(FallDamage.Off), name);
                 Assert.That(rules.HudDensity, Is.EqualTo(HudDensity.Full), name);
             }
+        }
+
+        [Test]
+        public void PayloadIsTeamDeathmatchAimedAtThePayload()
+        {
+            var payload = GameRulesAssetBuilder.PayloadRules();
+            var teamDeathmatch = GameRulesAssetBuilder.TeamDeathmatchRules();
+
+            Assert.That(payload.Objective, Is.EqualTo(MatchObjective.Payload));
+            Assert.That(GameRulesAssetBuilder.ModeRules(GameRulesAssetBuilder.PayloadName).Objective, Is.EqualTo(MatchObjective.Payload));
+            Assert.That(payload.RespawnMode, Is.EqualTo(RespawnMode.Individual), "pushers come back to the cart");
+            Assert.That(payload.SpawnProtectionSeconds, Is.EqualTo(teamDeathmatch.SpawnProtectionSeconds));
+            Assert.That(payload.IdleKickSeconds, Is.EqualTo(GameRulesAssetBuilder.OnlineIdleKickSeconds));
+            Assert.That(payload.MaxWeapons, Is.EqualTo(GameRulesAssetBuilder.DemoMaxWeapons));
+            AssertActions(payload.Actions, _expectedActions[0], nameof(GameRulesAssetBuilder.PayloadRules));
+
+            foreach (var name in GameRulesAssetBuilder.ModeNames.Where(name => name != GameRulesAssetBuilder.PayloadName))
+            {
+                Assert.That(GameRulesAssetBuilder.ModeRules(name).Objective, Is.Not.EqualTo(MatchObjective.Payload), name);
+            }
+        }
+
+        [Test]
+        public void BattleRoyaleOpensTheParachuteForRedeploysButOnlyThere()
+        {
+            var battleRoyale = GameRulesAssetBuilder.BattleRoyaleRules();
+
+            Assert.That(battleRoyale.Actions.Parachute, Is.EqualTo(Parachute.On), "a redeployed player drops in by parachute");
+            Assert.That(GameRulesAssetBuilder.BattleRoyaleActions().Parachute, Is.EqualTo(Parachute.On));
+            Assert.That(battleRoyale.RespawnMode, Is.EqualTo(RespawnMode.None), "only the runner's redeploy brings a player back");
+            Assert.That(battleRoyale.Actions.Downed, Is.EqualTo(Downed.Revive));
+            Assert.That(battleRoyale.Actions.GrenadeCount, Is.EqualTo(GameRulesAssetBuilder.TeamDeathmatchGrenadeCount));
+
+            foreach (var name in GameRulesAssetBuilder.ModeNames.Where(name => name != GameRulesAssetBuilder.BattleRoyaleName))
+            {
+                Assert.That(GameRulesAssetBuilder.ModeRules(name).Actions.Parachute, Is.EqualTo(Parachute.Off), name);
+            }
+        }
+
+        [Test]
+        public void SearchAndDestroyLeavesRoomForTheBoughtWeaponsAndThrowables()
+        {
+            var rules = GameRulesAssetBuilder.SearchAndDestroyRules();
+            var asset = Resources.Load<TextAsset>(EconomyJson.ResourcePath);
+            Assert.That(asset, Is.Not.Null, "Resources/" + EconomyJson.ResourcePath + ".json is bundled");
+            var economy = EconomyJson.Parse(asset.text, EconomyJson.ResourcePath);
+            Resources.UnloadAsset(asset);
+
+            Assert.That(rules.InfiniteReserve, Is.False, "ammo is worth buying");
+            Assert.That(rules.ReserveAmmoMultiplier, Is.EqualTo(1f));
+            Assert.That(rules.Actions.Grenade, Is.EqualTo(Grenade.On), "throwables are sold");
+            Assert.That(rules.RespawnMode, Is.EqualTo(RespawnMode.None), "a fallen player loses the bought weapons until the next round");
+            foreach (var item in economy.Catalog.Items.Where(item => item.Kind == BuyItemKind.Weapon))
+            {
+                Assert.That(item.Slot, Is.LessThan(rules.MaxWeapons), $"{item.Id} goes to slot {item.Slot}");
+            }
+        }
+
+        [Test]
+        public void BuildModesAtWritesThePayloadRules()
+        {
+            var built = GameRulesAssetBuilder.BuildModesAt(_folder);
+            var payload = built[Array.IndexOf(ToArray(GameRulesAssetBuilder.ModeNames), GameRulesAssetBuilder.PayloadName)];
+
+            Assert.That(AssetDatabase.GetAssetPath(payload), Is.EqualTo(_folder + "/Payload.asset"));
+            Assert.That(payload.ToRules().Objective, Is.EqualTo(MatchObjective.Payload));
+
+            var battleRoyale = built[Array.IndexOf(ToArray(GameRulesAssetBuilder.ModeNames), GameRulesAssetBuilder.BattleRoyaleName)];
+            Assert.That(battleRoyale.ToRules().Actions.Parachute, Is.EqualTo(Parachute.On), "the parachute survives the asset round trip");
         }
 
         [Test]

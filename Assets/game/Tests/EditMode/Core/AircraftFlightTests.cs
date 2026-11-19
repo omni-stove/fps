@@ -7,7 +7,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class AircraftFlightTests
     {
-        private const float Epsilon = 1e-4f;
+        private const float _epsilon = 1e-4f;
 
         private readonly AircraftSpec _spec = new AircraftSpec(
             mass: 1000f,
@@ -35,8 +35,8 @@ namespace Shooter.Core.Tests
         [Test]
         public void LiftGrowsWithTheSquareOfSpeedUpToTheWeight()
         {
-            Assert.That(AircraftFlight.LiftRatio(_spec, 20f), Is.EqualTo(0.25f).Within(Epsilon));
-            Assert.That(AircraftFlight.LiftRatio(_spec, 40f), Is.EqualTo(1f).Within(Epsilon));
+            Assert.That(AircraftFlight.LiftRatio(_spec, 20f), Is.EqualTo(0.25f).Within(_epsilon));
+            Assert.That(AircraftFlight.LiftRatio(_spec, 40f), Is.EqualTo(1f).Within(_epsilon));
             Assert.That(AircraftFlight.LiftRatio(_spec, 80f), Is.EqualTo(1f));
             Assert.That(AircraftFlight.LiftRatio(_spec, -5f), Is.EqualTo(0f));
         }
@@ -46,7 +46,7 @@ namespace Shooter.Core.Tests
         {
             Assert.That(AircraftFlight.Control(_spec, 0f), Is.EqualTo(0.25f));
             Assert.That(AircraftFlight.Control(_spec, 2f), Is.EqualTo(0.25f));
-            Assert.That(AircraftFlight.Control(_spec, 10f), Is.EqualTo(0.5f).Within(Epsilon));
+            Assert.That(AircraftFlight.Control(_spec, 10f), Is.EqualTo(0.5f).Within(_epsilon));
             Assert.That(AircraftFlight.Control(_spec, 20f), Is.EqualTo(1f));
             Assert.That(AircraftFlight.Control(_spec, 50f), Is.EqualTo(1f));
         }
@@ -55,7 +55,7 @@ namespace Shooter.Core.Tests
         public void TheTopSpeedAddsWhatGravityPushesInADive()
         {
             Assert.That(_spec.DragCoefficient, Is.EqualTo(0.001f).Within(1e-7f));
-            Assert.That(AircraftFlight.TopSpeed(_spec, 0f), Is.EqualTo(100f).Within(Epsilon));
+            Assert.That(AircraftFlight.TopSpeed(_spec, 0f), Is.EqualTo(100f).Within(_epsilon));
             Assert.That(AircraftFlight.TopSpeed(_spec, 10f), Is.EqualTo(141.4214f).Within(1e-3f));
         }
 
@@ -137,9 +137,9 @@ namespace Shooter.Core.Tests
 
         private static void AssertNear(Vector3 actual, Vector3 expected)
         {
-            Assert.That(actual.X, Is.EqualTo(expected.X).Within(Epsilon), "x");
-            Assert.That(actual.Y, Is.EqualTo(expected.Y).Within(Epsilon), "y");
-            Assert.That(actual.Z, Is.EqualTo(expected.Z).Within(Epsilon), "z");
+            Assert.That(actual.X, Is.EqualTo(expected.X).Within(_epsilon), "x");
+            Assert.That(actual.Y, Is.EqualTo(expected.Y).Within(_epsilon), "y");
+            Assert.That(actual.Z, Is.EqualTo(expected.Z).Within(_epsilon), "z");
         }
     }
 }

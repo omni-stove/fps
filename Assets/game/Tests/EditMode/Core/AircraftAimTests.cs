@@ -7,15 +7,15 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class AircraftAimTests
     {
-        private const float Epsilon = 1e-4f;
+        private const float _epsilon = 1e-4f;
 
         private readonly AircraftAimSpec _spec = new AircraftAimSpec(pitchGain: 2f, yawGain: 1f, rollGain: 3f, levelGain: 1f, throttleRate: 0.5f);
 
         [Test]
         public void TheThrottleOpensAndClosesAtItsRateWithinZeroAndOne()
         {
-            Assert.That(AircraftAim.StepThrottle(_spec, 0.5f, 1f, 0.2f), Is.EqualTo(0.6f).Within(Epsilon));
-            Assert.That(AircraftAim.StepThrottle(_spec, 0.5f, -0.5f, 0.4f), Is.EqualTo(0.4f).Within(Epsilon));
+            Assert.That(AircraftAim.StepThrottle(_spec, 0.5f, 1f, 0.2f), Is.EqualTo(0.6f).Within(_epsilon));
+            Assert.That(AircraftAim.StepThrottle(_spec, 0.5f, -0.5f, 0.4f), Is.EqualTo(0.4f).Within(_epsilon));
             Assert.That(AircraftAim.StepThrottle(_spec, 0.5f, -1f, 2f), Is.EqualTo(0f));
             Assert.That(AircraftAim.StepThrottle(_spec, 0.5f, 1f, 10f), Is.EqualTo(1f));
             Assert.That(AircraftAim.StepThrottle(_spec, 0.5f, 0f, 1f), Is.EqualTo(0.5f));
@@ -44,17 +44,17 @@ namespace Shooter.Core.Tests
         {
             var input = AircraftAim.Compute(_spec, new Vector3(0.1f, 0.2f, 1f), 0f, 0f, 0f);
 
-            Assert.That(input[AircraftFlight.PitchAxis], Is.EqualTo(0.39036f).Within(Epsilon));
-            Assert.That(input[AircraftFlight.YawAxis], Is.EqualTo(0.09759f).Within(Epsilon));
-            Assert.That(input[AircraftFlight.RollAxis], Is.EqualTo(0.29277f).Within(Epsilon));
+            Assert.That(input[AircraftFlight.PitchAxis], Is.EqualTo(0.39036f).Within(_epsilon));
+            Assert.That(input[AircraftFlight.YawAxis], Is.EqualTo(0.09759f).Within(_epsilon));
+            Assert.That(input[AircraftFlight.RollAxis], Is.EqualTo(0.29277f).Within(_epsilon));
         }
 
         [Test]
         public void ABankedAircraftRollsBackToLevelAndTheRollKeysAddToIt()
         {
-            Assert.That(AircraftAim.Compute(_spec, Vector3.UnitZ, 0.5f, 0f, 0f)[AircraftFlight.RollAxis], Is.EqualTo(0.5f).Within(Epsilon));
-            Assert.That(AircraftAim.Compute(_spec, Vector3.UnitZ, 0.5f, -1f, 0f)[AircraftFlight.RollAxis], Is.EqualTo(-0.5f).Within(Epsilon));
-            Assert.That(AircraftAim.Compute(_spec, Vector3.Zero, -0.25f, 0f, 0f)[AircraftFlight.RollAxis], Is.EqualTo(-0.25f).Within(Epsilon));
+            Assert.That(AircraftAim.Compute(_spec, Vector3.UnitZ, 0.5f, 0f, 0f)[AircraftFlight.RollAxis], Is.EqualTo(0.5f).Within(_epsilon));
+            Assert.That(AircraftAim.Compute(_spec, Vector3.UnitZ, 0.5f, -1f, 0f)[AircraftFlight.RollAxis], Is.EqualTo(-0.5f).Within(_epsilon));
+            Assert.That(AircraftAim.Compute(_spec, Vector3.Zero, -0.25f, 0f, 0f)[AircraftFlight.RollAxis], Is.EqualTo(-0.25f).Within(_epsilon));
         }
 
         [Test]

@@ -176,6 +176,48 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void EpicAccountsAreOffUnlessSwitchedOn()
+        {
+            var credentials = EosCredentials.Resolve(Lookup(AllValues("")), null, out _);
+
+            Assert.That(credentials.AccountLogin, Is.SameAs(EosAccountLoginSettings.Disabled));
+            Assert.That(EosCredentials.VariableNames, Does.Not.Contain(EosAccountLoginSettings.EpicAccountLoginVariable));
+            Assert.That(new EosCredentials("p", "s", "d", "c", "x").AccountLogin, Is.SameAs(EosAccountLoginSettings.Disabled));
+        }
+
+        [Test]
+        public void TheEpicAccountSwitchAndDevAuthToolAreReadFromTheEnvironmentBeforeTheLocalFile()
+        {
+            var file = AllValues("file-");
+            file[EosAccountLoginSettings.EpicAccountLoginVariable] = "false";
+            file[EosAccountLoginSettings.EpicDevAuthVariable] = "localhost:6547/FromFile";
+            var environment = new Dictionary<string, string>
+            {
+                { EosAccountLoginSettings.EpicAccountLoginVariable, "true" },
+                { EosAccountLoginSettings.EpicDevAuthVariable, "localhost:6547/FromEnvironment" },
+            };
+
+            var credentials = EosCredentials.Resolve(Lookup(environment), file, out _);
+
+            Assert.That(credentials.AccountLogin.EpicAccount, Is.True);
+            Assert.That(credentials.AccountLogin.DevAuthHost, Is.EqualTo("localhost:6547"));
+            Assert.That(credentials.AccountLogin.DevAuthCredential, Is.EqualTo("FromEnvironment"));
+        }
+
+        [Test]
+        public void AnUnreadableEpicAccountSwitchStillGivesCredentials()
+        {
+            var values = AllValues("");
+            values[EosAccountLoginSettings.EpicAccountLoginVariable] = "sometimes";
+
+            var credentials = EosCredentials.Resolve(Lookup(values), null, out var missing);
+
+            Assert.That(missing, Is.Empty);
+            Assert.That(credentials.AccountLogin.EpicAccount, Is.False);
+            Assert.That(credentials.AccountLogin.Problem, Is.EqualTo("EOS_EPIC_ACCOUNT_LOGIN must be true or false"));
+        }
+
+        [Test]
         public void RejectsNullLookup()
         {
             Assert.Throws<ArgumentNullException>(() => EosCredentials.Resolve(null, null, out _));

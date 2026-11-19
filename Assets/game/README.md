@@ -36,11 +36,24 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 2. ほかの認証情報と同じく、環境変数か `eos.local.json` に `EOS_ENCRYPTION_KEY` (16 進 64 文字) を入れる。どの端末でも同じ鍵にする。鍵が違う端末からは読めない。
 
 - 保存はいつも手元に書き、同期はその後で行う。EOS が無いビルド・認証情報か鍵が無いとき・ログインできないとき (オフライン) は手元だけで動き、次にログインしたときに合わせる。
-- 起動時に Device ID で EOS にログインし、ログインできたらクラウドの一覧と手元を突き合わせる。保存するたびにそのスロットを送る。
+- 起動時に EOS にログインし (下の「アカウント」)、ログインできたらクラウドの一覧と手元を突き合わせる。保存するたびにそのスロットを送る。
 - 手元とクラウドが食い違ったら、書いた時刻 (UTC) の新しい方を採る。消したことも時刻付きで送るので、他の端末で消したセーブは戻ってこない。
 - クラウドの方で手元を書き換えたときは、前の手元の中身を `cloud-replaced-<スロット>` に残す。
-- Device ID は端末ごとの Id なので、別の端末と同じアカウントで同期するには、Epic アカウントなどで同じ EOS のユーザーにログインさせる必要がある。
 - 自分の保存先で同期するなら、`ICloudSaveBackend` を実装して `CloudSaveBootstrap.Backend` に `SubsystemRegistration` の初期化で入れる。
+
+### アカウント
+
+Device ID は端末ごとの Id なので、それだけでは端末ごとに別の EOS ユーザーになる。端末をまたいで同じユーザーとしてクラウドセーブを同期するには、Epic アカウントでのサインインを使う。
+
+1. EOS の開発者ポータルで、Epic Account Services のアプリケーションを作り、製品のクライアントにつなぐ。権限 (Permissions) には Basic Profile を入れる。Identity Providers に Epic Games を足し、サンドボックスの Connect でも有効にする。
+2. 環境変数か `eos.local.json` に `EOS_EPIC_ACCOUNT_LOGIN=true` を入れる。
+3. 開発中に DevAuthTool で入るなら、`EOS_EPIC_DEV_AUTH` に `localhost:6547/<DevAuthTool に登録した名前>` を入れる。入れなければ AccountPortal (Epic のサインイン画面) を出す。
+
+- 起動時は、前にサインインした Epic アカウントで画面を出さずに入り (PersistentAuth)、無ければ Device ID で入る。
+- Demo のプロフィール画面の「アカウント」から、Epic アカウントでのサインインとサインアウトができる。サインアウトすると覚えたサインインも消し、Device ID のユーザーに戻る。
+- サインインの状態は `GameSignals.Account` に、操作の口は `GameSignals.AccountControl` に出る。どちらも、EOS の認証情報があり、`EOS_ENCRYPTION_KEY` か `EOS_EPIC_ACCOUNT_LOGIN` があるときだけ出る。
+- `EOS_EPIC_ACCOUNT_LOGIN` を入れると、AccountPortal を出すために EOS のオーバーレイを切らずに作る。
+- 自分のサインインを使うなら、`IAccountBackend` を実装して `AccountBootstrap.Backend` に `SubsystemRegistration` の初期化で入れる。
 
 ## サンプル
 

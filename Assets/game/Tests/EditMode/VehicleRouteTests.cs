@@ -68,11 +68,40 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void CopyPointsGivesTheSameTransformsAsThePositions()
+        {
+            var first = Child(_route.transform, new Vector3(0f, 0f, 10f));
+            var second = Child(_route.transform, new Vector3(10f, 0f, 10f));
+            var points = new List<Transform> { _route.transform };
+
+            _route.CopyPoints(points);
+
+            Assert.That(points, Is.EqualTo(new[] { first, second }));
+        }
+
+        [Test]
+        public void CopyPointsPrefersListedPointsAndSkipsRemovedOnes()
+        {
+            Child(_route.transform, new Vector3(5f, 0f, 5f));
+            var a = Child(null, new Vector3(1f, 0f, 0f));
+            var b = Child(null, new Vector3(2f, 0f, 0f));
+            var c = Child(null, new Vector3(3f, 0f, 0f));
+            _route.SetPoints(a, b, c);
+            Object.DestroyImmediate(b.gameObject);
+            var points = new List<Transform>();
+
+            _route.CopyPoints(points);
+
+            Assert.That(points, Is.EqualTo(new[] { a, c }));
+        }
+
+        [Test]
         public void SetPointsRejectsMissingPoints()
         {
             Assert.Throws<ArgumentNullException>(() => _route.SetPoints(null));
             Assert.Throws<ArgumentException>(() => _route.SetPoints(_route.transform, null));
             Assert.Throws<ArgumentNullException>(() => _route.CopyPositions(null));
+            Assert.Throws<ArgumentNullException>(() => _route.CopyPoints(null));
         }
 
         private Transform Child(Transform parent, Vector3 position)

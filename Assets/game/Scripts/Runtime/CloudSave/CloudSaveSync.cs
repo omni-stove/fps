@@ -12,7 +12,7 @@ namespace Shooter.Runtime
     {
         public const string StampsSlot = "cloud-save-stamps";
 
-        // 同期するスロットの名前 (CampaignSaveSlots.Prefix で始まる) と重ならない名前にする。
+        // 同期するスロットの名前 (CloudSaveBootstrap.RegisterSlots で登録されるもの) と重ならない名前にする。
         public const string ReplacedPrefix = "cloud-replaced-";
 
         public const string FileExtension = ".json";

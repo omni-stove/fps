@@ -161,7 +161,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void BrokenJsonIsReturnedAsIsForTheCallerToReject()
         {
-            // 中身の解釈は CampaignSave.FromJson の役目。ストレージは書かれたとおりに返す。
+            // 中身の解釈は読む側 (CampaignSave.FromJson など) の役目。ストレージは書かれたとおりに返す。
             Directory.CreateDirectory(_root);
             File.WriteAllText(_storage.PathFor("campaign"), "{\"version\":1,");
 

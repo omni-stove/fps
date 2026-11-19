@@ -5,14 +5,16 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // プロフィールとキャンペーンが同じ保存先を使うよう、手元の既定の保存先はここからだけ作る。
+    // プロフィールと他のセーブ (キャンペーンなど) が同じ保存先を使うよう、手元の既定の保存先はここからだけ作る。
     public static class CloudSaveBootstrap
     {
         public const string ObjectName = "CloudSave";
 
-        private static readonly string[] _startupSlots = { ProfileStore.Slot, CampaignSaveSlots.Legacy };
+        // 登録はコードの配線なので Backend と同じく Play をまたいで残す。登録し直しても同じ判定は 1 つにまとめる。
+        private static readonly List<Registration> _registrations = new List<Registration>();
 
-        // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
+        // ドメインの再読み込みを切っているので、Play の終わりに EndPlay で、開始時に ResetOnPlay で戻す。
+        // 開始時だけで戻すと、同じ SubsystemRegistration で走る登録が前の Play の同期を見て、遅れたと誤って知らせる。
         private static CloudSaveSync _current;
 
         // Shooter.NetEos はプラグインがあるビルドでだけコンパイルされるので、起動時にそちらから入れてもらう。
@@ -22,13 +24,84 @@ namespace Shooter.Runtime
         public static CloudSaveSync Current => _current;
 
         // 同期を入れる前に書いたスロットは時刻の記録に無いので、起動時の同期では名前を挙げて見に行く。
-        public static IReadOnlyList<string> StartupSlots => _startupSlots;
+        public static IReadOnlyList<string> StartupSlots
+        {
+            get
+            {
+                var slots = new List<string> { ProfileStore.Slot };
+                foreach (var registration in _registrations)
+                {
+                    foreach (var slot in registration.StartupSlots)
+                    {
+                        if (!slots.Contains(slot))
+                        {
+                            slots.Add(slot);
+                        }
+                    }
+                }
+
+                return slots;
+            }
+        }
 
         public static ISaveStorage Storage => Acquire();
 
+        // 本体はプロフィールのスロットしか知らないので、他のセーブを同期する側 (キャンペーンなど) が、
+        // どのスロットが自分のものか・起動時に見に行くスロット・クラウドの中身を読めるかを渡す。
+        public static void RegisterSlots(Func<string, bool> owns, IEnumerable<string> startupSlots, Func<string, bool> canRead)
+        {
+            if (owns == null)
+            {
+                throw new ArgumentNullException(nameof(owns));
+            }
+
+            if (startupSlots == null)
+            {
+                throw new ArgumentNullException(nameof(startupSlots));
+            }
+
+            if (canRead == null)
+            {
+                throw new ArgumentNullException(nameof(canRead));
+            }
+
+            var slots = new List<string>();
+            foreach (var slot in startupSlots)
+            {
+                if (string.IsNullOrEmpty(slot))
+                {
+                    throw new ArgumentException("startup slots must not be empty", nameof(startupSlots));
+                }
+
+                if (!owns(slot))
+                {
+                    throw new ArgumentException($"startup slot '{slot}' is not one of the registered slots", nameof(startupSlots));
+                }
+
+                slots.Add(slot);
+            }
+
+            var registration = new Registration(owns, slots.ToArray(), canRead);
+            var index = _registrations.FindIndex(r => r.Owns.Equals(owns));
+            if (index >= 0)
+            {
+                _registrations[index] = registration;
+            }
+            else
+            {
+                _registrations.Add(registration);
+            }
+
+            // 動いている同期は起動時のスロットを作ったときに受け取っているので、遅れて足したものはここで知らせる。
+            if (_current != null && slots.Count > 0)
+            {
+                Debug.LogWarning(CloudSaveLog.RegisteredLate(slots.Count));
+            }
+        }
+
         public static bool Syncs(string slot)
         {
-            return string.Equals(slot, ProfileStore.Slot, StringComparison.Ordinal) || CampaignSaveSlots.IsSlot(slot);
+            return string.Equals(slot, ProfileStore.Slot, StringComparison.Ordinal) || OwnerOf(slot) != null;
         }
 
         public static long UnixMillisecondsNow()
@@ -38,7 +111,7 @@ namespace Shooter.Runtime
 
         public static CloudSaveSync Create(ISaveStorage local, ICloudSaveBackend backend)
         {
-            return new CloudSaveSync(local, backend, Syncs, _startupSlots, UnixMillisecondsNow) { CanRead = CanRead };
+            return new CloudSaveSync(local, backend, Syncs, StartupSlots, UnixMillisecondsNow) { CanRead = CanRead };
         }
 
         public static bool CanRead(string slot, string text)
@@ -48,18 +121,41 @@ namespace Shooter.Runtime
                 if (string.Equals(slot, ProfileStore.Slot, StringComparison.Ordinal))
                 {
                     PlayerProfile.FromJson(text);
-                }
-                else
-                {
-                    CampaignSave.FromJson(text);
+                    return true;
                 }
 
-                return true;
+                // 持ち主のいないスロットは中身の形を誰も知らないので、手元を書き換えないよう読めないものとして扱う。
+                var owner = OwnerOf(slot);
+                return owner != null && owner.CanRead(text);
             }
             catch (FormatException)
             {
                 return false;
             }
+        }
+
+        // テストが登録を空にしてから自分の判定を入れるために使う。
+        internal static void ClearRegisteredSlots()
+        {
+            _registrations.Clear();
+        }
+
+        private static Registration OwnerOf(string slot)
+        {
+            if (slot == null)
+            {
+                return null;
+            }
+
+            foreach (var registration in _registrations)
+            {
+                if (registration.Owns(slot))
+                {
+                    return registration;
+                }
+            }
+
+            return null;
         }
 
         private static CloudSaveSync Acquire()
@@ -79,6 +175,8 @@ namespace Shooter.Runtime
             }
 
             _current = sync;
+            Application.quitting -= EndPlay;
+            Application.quitting += EndPlay;
             if (backend == null)
             {
                 Debug.Log(CloudSaveLog.Off("no cloud save backend in this build"));
@@ -94,10 +192,39 @@ namespace Shooter.Runtime
             return sync;
         }
 
+        // テストが Play 中の同期を置き換えるために使う。
+        internal static void UseCurrent(CloudSaveSync sync)
+        {
+            _current = sync;
+        }
+
+        // エディタでは Play を止めたときにも Application.quitting が呼ばれる。
+        internal static void EndPlay()
+        {
+            Application.quitting -= EndPlay;
+            _current = null;
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetOnPlay()
         {
             _current = null;
+        }
+
+        private sealed class Registration
+        {
+            public Registration(Func<string, bool> owns, string[] startupSlots, Func<string, bool> canRead)
+            {
+                Owns = owns;
+                StartupSlots = startupSlots;
+                CanRead = canRead;
+            }
+
+            public Func<string, bool> Owns { get; }
+
+            public string[] StartupSlots { get; }
+
+            public Func<string, bool> CanRead { get; }
         }
     }
 }

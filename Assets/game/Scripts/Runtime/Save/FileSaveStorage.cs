@@ -9,7 +9,8 @@ namespace Shooter.Runtime
     // 書き込みを <slot>.json.tmp に書き切ってから置き換えるのは、途中で落ちても前の内容を残すため。
     public sealed class FileSaveStorage : ISaveStorage
     {
-        public const string LogTag = CampaignRunner.LogTag;
+        // 本体に移した後もログの行を変えないよう、キャンペーンにあった頃のタグのままにする。
+        public const string LogTag = "[Campaign]";
 
         public const string DefaultDirectoryName = "saves";
 

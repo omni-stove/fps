@@ -123,7 +123,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(zone.Size, Is.EqualTo(PlatformCallZone.DefaultSize));
             Assert.That(PlatformCallZone.DefaultSize.y, Is.GreaterThanOrEqualTo(GameBootstrap.PlayerHeight));
-            Assert.That(zone.PlayerTag, Is.EqualTo(ObjectiveAreaBase.DefaultPlayerTag));
+            Assert.That(zone.PlayerTag, Is.EqualTo(GameBootstrap.PlayerTag));
         }
 
         private MovingPlatform Elevator()

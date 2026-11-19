@@ -19,7 +19,7 @@ namespace Shooter.Runtime
         public const string FloorName = "Floor";
         public const string PlayerName = "Player";
 
-        public const string PlayerTag = ObjectiveAreaBase.DefaultPlayerTag;
+        public const string PlayerTag = "Player";
         public const string CameraName = "PlayerCamera";
 
         public const string EyeName = "PlayerEye";

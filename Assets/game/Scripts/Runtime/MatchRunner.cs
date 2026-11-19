@@ -395,10 +395,10 @@ namespace Shooter.Runtime
             }
 
             var actions = InputSystem.actions;
-            var device = TutorialPresenter.DetectDevice(
+            var device = InputKeyLabels.DetectDevice(
                 new[] { actions?.FindAction(InputActionPaths.Move), actions?.FindAction(InputActionPaths.Look), _restartAction },
                 InputDeviceKind.KeyboardMouse);
-            model.SetRestartKey(TutorialKeyLabels.For(_restartAction, device));
+            model.SetRestartKey(InputKeyLabels.For(_restartAction, device));
         }
 
         private void StopPlayer()

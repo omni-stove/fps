@@ -78,6 +78,8 @@ namespace Shooter.Runtime
             {
                 Debug.Log(raised ? RiotShieldLog.Raised(HolderId) : RiotShieldLog.Lowered(HolderId, SprintLowerCause), this);
             }
+
+            _heldShield.ReapplyIgnoredCollisions();
         }
 
         private void PutAwayShield()

@@ -68,6 +68,15 @@ namespace Shooter.Runtime
             return true;
         }
 
+        // 構えたままでも、置き直しや復活で持ち主の CharacterController が切られて戻ると IgnoreCollision の設定が消えるので、呼び手が毎回かけ直す。
+        public void ReapplyIgnoredCollisions()
+        {
+            if (IsRaised)
+            {
+                IgnoreHolder();
+            }
+        }
+
         // 使えないプレハブで盾の無い武器にすると撃てないうえ弾も止まらないので、誤りは出したうえで仮の板で続ける。
         private static BulletShield CreatePlate(Transform holder, RiotShieldSpec spec, GameObject prefab)
         {

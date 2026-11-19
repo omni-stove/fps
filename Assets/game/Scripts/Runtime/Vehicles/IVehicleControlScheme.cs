@@ -8,4 +8,10 @@ namespace Shooter.Runtime
     {
         VehicleMotorInput ToMotorInput(VehicleSeat seat, VehicleSeatInput input, float deltaSeconds);
     }
+
+    // 別の interface にしたのは、状態を持たない当て方 (車) に空の実装を強いないため。
+    public interface IVehicleControlSchemeReset
+    {
+        void ResetState();
+    }
 }

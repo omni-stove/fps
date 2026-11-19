@@ -33,7 +33,7 @@ namespace Shooter.Core
 
         public const int YawAxis = 3;
 
-        private const float _degreesToRadians =(float)(Math.PI / 180.0);
+        private const float _degreesToRadians  = (float)(Math.PI / 180.0);
 
         // 揚力を重さまでで止めるのは、迎え角を持たない作りで速いほど浮くと、操縦しなくても勝手に昇ってしまうため。
         public static float LiftRatio(AircraftSpec spec, float forwardSpeed)

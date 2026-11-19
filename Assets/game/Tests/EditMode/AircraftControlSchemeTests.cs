@@ -93,6 +93,18 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ResettingTheStateClosesTheThrottle()
+        {
+            _scheme.Throttle = 1f;
+
+            ((IVehicleControlSchemeReset)_scheme).ResetState();
+            var input = _scheme.ToMotorInput(null, Seat(Vector2.zero, Vector3.forward), 0.02f);
+
+            Assert.That(_scheme.Throttle, Is.EqualTo(0f));
+            Assert.That(input[AircraftFlight.ThrottleAxis], Is.EqualTo(0f));
+        }
+
+        [Test]
         public void TheThrottleRejectsLevelsOutsideZeroAndOne()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() => _scheme.Throttle = 1.5f);

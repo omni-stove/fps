@@ -300,6 +300,11 @@ namespace Shooter.NetV2
             {
                 var previous = _scene[_driving];
                 previous.Motor?.SetInput(VehicleMotorInput.Idle);
+                if (previous.Vehicle != null && VehicleControlSchemes.For(previous.Vehicle.gameObject) is IVehicleControlSchemeReset reset)
+                {
+                    reset.ResetState();
+                }
+
                 if (previous.Body != null)
                 {
                     previous.Body.isKinematic = true;

@@ -92,6 +92,10 @@ namespace Shooter.Runtime
             }
 
             _motor.SetInput(VehicleMotorInput.Idle);
+            if (VehicleControlSchemes.For(gameObject) is IVehicleControlSchemeReset reset)
+            {
+                reset.ResetState();
+            }
         }
     }
 }

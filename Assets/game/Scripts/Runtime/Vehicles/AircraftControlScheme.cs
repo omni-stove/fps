@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Shooter.Runtime
 {
     [DisallowMultipleComponent]
-    public sealed class AircraftControlScheme : MonoBehaviour, IVehicleControlScheme
+    public sealed class AircraftControlScheme : MonoBehaviour, IVehicleControlScheme, IVehicleControlSchemeReset
     {
         [SerializeField, Min(0f), Tooltip("視線が上下にずれたときに、ピッチを倒す強さ")]
         private float _pitchGain = AircraftAimSpec.DefaultPitchGain;
@@ -39,6 +39,11 @@ namespace Shooter.Runtime
 
                 _throttle = value;
             }
+        }
+
+        public void ResetState()
+        {
+            _throttle = 0f;
         }
 
         private void OnValidate()

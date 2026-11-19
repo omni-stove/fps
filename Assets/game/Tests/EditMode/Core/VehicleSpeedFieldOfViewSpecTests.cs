@@ -6,7 +6,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class VehicleSpeedFieldOfViewSpecTests
     {
-        private const float Tolerance = 1e-4f;
+        private const float _tolerance = 1e-4f;
 
         [Test]
         public void TheDefaultAddsNothing()
@@ -48,9 +48,9 @@ namespace Shooter.Core.Tests
         {
             var spec = new VehicleSpeedFieldOfViewSpec(10f, 30f, 15f);
 
-            Assert.That(spec.ExtraDegreesAt(15f), Is.EqualTo(3.75f).Within(Tolerance));
-            Assert.That(spec.ExtraDegreesAt(20f), Is.EqualTo(7.5f).Within(Tolerance));
-            Assert.That(spec.ExtraDegreesAt(25f), Is.EqualTo(11.25f).Within(Tolerance));
+            Assert.That(spec.ExtraDegreesAt(15f), Is.EqualTo(3.75f).Within(_tolerance));
+            Assert.That(spec.ExtraDegreesAt(20f), Is.EqualTo(7.5f).Within(_tolerance));
+            Assert.That(spec.ExtraDegreesAt(25f), Is.EqualTo(11.25f).Within(_tolerance));
         }
 
         [Test]
@@ -59,8 +59,8 @@ namespace Shooter.Core.Tests
             var spec = new VehicleSpeedFieldOfViewSpec(10f, 30f, 15f, 0.5f);
 
             Assert.That(spec.Blend(0f, 10f, 0f), Is.EqualTo(0f), "no time, no change");
-            Assert.That(spec.Blend(0f, 10f, 0.5f), Is.EqualTo(10f * (1f - (float)Math.Exp(-1d))).Within(Tolerance));
-            Assert.That(spec.Blend(10f, 0f, 0.5f), Is.EqualTo(10f * (float)Math.Exp(-1d)).Within(Tolerance));
+            Assert.That(spec.Blend(0f, 10f, 0.5f), Is.EqualTo(10f * (1f - (float)Math.Exp(-1d))).Within(_tolerance));
+            Assert.That(spec.Blend(10f, 0f, 0.5f), Is.EqualTo(10f * (float)Math.Exp(-1d)).Within(_tolerance));
             Assert.That(spec.Blend(0f, 10f, -1f), Is.EqualTo(0f), "negative time is treated as none");
             Assert.That(spec.Blend(float.NaN, 10f, 0.1f), Is.EqualTo(10f));
         }
@@ -73,7 +73,7 @@ namespace Shooter.Core.Tests
             var once = spec.Blend(0f, 10f, 0.2f);
             var twice = spec.Blend(spec.Blend(0f, 10f, 0.1f), 10f, 0.1f);
 
-            Assert.That(twice, Is.EqualTo(once).Within(Tolerance));
+            Assert.That(twice, Is.EqualTo(once).Within(_tolerance));
         }
 
         [Test]

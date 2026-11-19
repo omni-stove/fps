@@ -89,6 +89,9 @@ namespace Shooter.Net.Tests
                 Path.Combine(_directory, "knockback.json"),
                 Path.Combine(_directory, "bots.json"),
                 Path.Combine(_directory, "assist.json"),
+                Path.Combine(_directory, "loot.json"),
+                Path.Combine(_directory, "supply-drops.json"),
+                Path.Combine(_directory, "redeploy.json"),
             }));
             Assert.That(File.ReadAllText(Path.Combine(_directory, "knockback.json")), Is.EqualTo(knockback));
             Assert.That(File.ReadAllText(Path.Combine(_directory, "bots.json")), Is.EqualTo(bots));

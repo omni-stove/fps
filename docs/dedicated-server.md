@@ -70,6 +70,12 @@ make server-dotnet ARGS="-rules FreeForAll"
   箱の中身は試合の始まりに `server-data/tuning/loot.json` (クライアントの `Resources/Tuning/loot.json` と同じ中身) の表の `table` から引き、
   ログの `[Loot] seed=` の種が同じなら同じ中身になる。表に無い `table` の箱は空のまま開く (`[Loot] table=... is not in loot.json`)。
   箱を開けられるのは、届く距離 (`reach`) の内に立つ生きている人で、目的が開けることを許すときだけ。断った理由は `[Loot] open ... refused=` に出る。
+- 例のマップ `NetBattleRoyale` (160m 四方) は Battle Royale と Extraction のためのマップで、チームを決めない出現地点 8 つ、箱 12 個 (`net-br-box-01`〜`12`)、
+  脱出地点 4 つ (`net-br-exit-north`・`east`・`south`・`west`)、半径 75m のエリアを置いてある。シーンは `make build-scenes` (`NetSceneBuilder.BuildBattleRoyale`) が作る。
+  箱の `table` は Demo の Extraction のシーンと同じ `demo-supplies`・`demo-valuables` で、キットの `loot.json` には無いので、ゲームが `loot.json` に表を足すまで箱は空のまま開く。
+  箱と脱出地点の見た目はクライアントがスナップショットから出すので、シーンの部品は形も当たりも持たない書き出しの印にしてある。
+  `make export-server-rules` は `BattleRoyale`・`Extraction` のルール (`rules.objective` が `BattleRoyale`・`Extraction`) を NetMatch の並びに無くても書き出し、
+  `loot.json`・`supply-drops.json`・`redeploy.json` を `server-data/tuning` に写す。ルールのアセットの目的が違うと書き出しを止めるので、`make build-scenes` で作り直す。
 - `GunGame` の段の武器 (`tierWeaponIds`) は、同じ JSON の `loadout` か `catalog` にある武器の Id にする。無い Id があると起動しない。
   近接で倒した相手の段を下げるには、`meleeWeaponIds` の先頭に近接の Id を書く。サーバーの近接はその Id で倒したことにする。
 - 近接 (`rules.actions.melee`)・ストリーク (`rules.streaks`)・キルカム (`rules.deathCamera` が `KillCam`) はどのモードでも使え、

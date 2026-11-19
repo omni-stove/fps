@@ -11,6 +11,7 @@ namespace Shooter.Editor
         {
             NetSceneBuilder.Build();
             ArenaSceneBuilder.Build();
+            NetSceneBuilder.BuildBattleRoyale();
             MapCollisionExporter.Export();
         }
     }

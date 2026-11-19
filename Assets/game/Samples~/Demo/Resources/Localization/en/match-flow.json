@@ -5,6 +5,7 @@
   "mapVote.decided": "Next map: {0}",
   "map.NetTest": "Test Grounds",
   "map.NetArena01": "Arena",
+  "map.NetBattleRoyale": "Open Field",
   "party.title": "PARTY",
   "party.stage.none": "You are not in a party",
   "party.stage.inParty": "In a party: {0} members",

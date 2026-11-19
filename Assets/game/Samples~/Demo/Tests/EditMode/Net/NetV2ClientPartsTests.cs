@@ -14,7 +14,7 @@ namespace Shooter.Net.Tests
         // 本物の一覧 (BlockListStore.DefaultKey) を壊さないよう、テストだけのキーに保存する。
         private const string BlocksKey = "Shooter.Tests.NetV2ClientParts.Blocks";
 
-        private const int VoiceIndex = 14;
+        private const int VoiceIndex = 16;
 
         private readonly List<string> _logs = new List<string>();
         private readonly List<string> _decided = new List<string>();
@@ -78,6 +78,8 @@ namespace Shooter.Net.Tests
                 typeof(NetV2DeployInputPart),
                 typeof(NetV2KillCamPart),
                 typeof(NetV2WeatherPart),
+                typeof(NetV2LootPart),
+                typeof(NetV2ZonePart),
                 typeof(NetV2ReportPart),
                 typeof(NetV2VoteKickPart),
                 typeof(NetV2BuyPart),
@@ -104,6 +106,8 @@ namespace Shooter.Net.Tests
                 typeof(NetV2DeployInputPart),
                 typeof(NetV2KillCamPart),
                 typeof(NetV2WeatherPart),
+                typeof(NetV2LootPart),
+                typeof(NetV2ZonePart),
                 typeof(NetV2ReportPart),
                 typeof(NetV2VoteKickPart),
                 typeof(NetV2BuyPart),
@@ -134,6 +138,8 @@ namespace Shooter.Net.Tests
                 typeof(NetV2DeployInputPart),
                 typeof(NetV2KillCamPart),
                 typeof(NetV2WeatherPart),
+                typeof(NetV2LootPart),
+                typeof(NetV2ZonePart),
                 typeof(NetV2ReplayViewPart),
             }));
             Assert.That(_parts.OfType<NetV2ReportPart>(), Is.Empty, "a replay has no server to send a report to");
@@ -246,6 +252,84 @@ namespace Shooter.Net.Tests
             Assert.That(asked, Is.EqualTo(1));
             Assert.That(weather.AppliedTo, Is.Null);
             Assert.That(_logs.Count(line => line == WeatherLog.NoController(null, null)), Is.EqualTo(1), "a scene without a sky is logged once");
+        }
+
+        [Test]
+        public void TheLootPartShowsTheBoxesOfASnapshotWithTheVisualsOfTheContext()
+        {
+            var prefab = UnityEngine.GameObject.CreatePrimitive(UnityEngine.PrimitiveType.Cube);
+            try
+            {
+                var context = Context(null);
+                context.LootVisuals = new NetV2LootVisuals { BoxVisual = prefab };
+                _parts = NetV2ClientParts.Create(context);
+                var loot = _parts.OfType<NetV2LootPart>().Single();
+                var snapshot = new SnapshotMessage();
+                ref var row = ref snapshot.ObjectiveItems.Add();
+                row.ItemId = 5;
+                row.Present = ObjectiveItemFields.All;
+                row.Kind = ObjectiveItemKind.LootBox;
+                row.Position = new System.Numerics.Vector3(2f, 0f, 3f);
+                row.Radius = 1.6f;
+
+                loot.Apply(snapshot);
+
+                Assert.That(loot.ViewOf(5), Is.Not.Null);
+                Assert.That(loot.ViewOf(5).transform.position, Is.EqualTo(new UnityEngine.Vector3(2f, 0f, 3f)));
+                Assert.That(_logs, Does.Contain("[Loot] net look item=5 kind=LootBox prefab=True"), "the box takes the replaceable look of the context");
+
+                loot.Tick(0.016f);
+
+                Assert.That(loot.Loot.Boxes.Count, Is.EqualTo(1));
+                Assert.That(_logs.Where(line => line.StartsWith("[Loot] net open request", StringComparison.Ordinal)), Is.Empty,
+                    "nothing is asked to open before a match is playing");
+
+                loot.Dispose();
+
+                Assert.That(loot.ViewCount, Is.Zero);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(prefab);
+            }
+        }
+
+        [Test]
+        public void TheZonePartDrawsTheBattleRoyaleZoneAndLooksForItsLookThroughTheContext()
+        {
+            var asked = 0;
+            var context = Context(null);
+            context.ZoneLook = () =>
+            {
+                asked++;
+                return null;
+            };
+            _parts = NetV2ClientParts.Create(context);
+            var zone = _parts.OfType<NetV2ZonePart>().Single();
+
+            zone.Apply(new SnapshotMessage());
+
+            Assert.That(zone.State, Is.Null, "a match without a zone draws nothing");
+            Assert.That(zone.Root == null, Is.True);
+            Assert.That(asked, Is.Zero);
+
+            var snapshot = new SnapshotMessage();
+            snapshot.Match.Objective = MatchObjective.BattleRoyale;
+            snapshot.Match.State = GameModeState.Playing;
+            snapshot.Match.ZonePhase = 1;
+            snapshot.Match.ZoneCenter = new System.Numerics.Vector2(3f, 4f);
+            snapshot.Match.ZoneRadius = 40f;
+            snapshot.Match.NextZoneCenter = new System.Numerics.Vector2(3f, 4f);
+            snapshot.Match.NextZoneRadius = 20f;
+            zone.Apply(snapshot);
+
+            Assert.That(zone.State.HasValue, Is.True);
+            Assert.That(zone.Root != null, Is.True);
+            Assert.That(asked, Is.EqualTo(1));
+
+            zone.Dispose();
+
+            Assert.That(zone.Root == null, Is.True);
         }
 
         [Test]

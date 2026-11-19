@@ -10,7 +10,7 @@ namespace Shooter.Server.Tests
     // 通報・統計・テレメトリは起動の引数で頼んだときだけ、試合のモジュールとスナップショットの後に足す
     public sealed class ServerModulesRecordsTests
     {
-        public const int MatchModules = 12;
+        public const int MatchModules = 13;
 
         private TempDirectory _roots;
         private TempDirectory _library;

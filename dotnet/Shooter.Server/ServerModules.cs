@@ -78,14 +78,21 @@ namespace Shooter.Server
                 return false;
             }
 
+            if (!TryOpenStashes(launch, runtime, out var stashes, out error))
+            {
+                return false;
+            }
+
             // Hello は承認の直後に送り合うので、他のモジュールより先に接続を知らせる
             modules.Add(antiCheat);
 
             // スナップショットは移動が tick の入力を処理し、ルールと戦闘がその tick を進めた後の状態を載せるので、どれより後にも登録する。
             // 戦闘はルールが出現させた後の位置を当たり判定に残すので、ルールより後
             // 乗り物は乗っている人を座席へ置き直してから戦闘に当たり判定を残させるので、戦闘より先
+            // 目的 (BR・Extraction) は箱と戦闘を使うが、どちらもルールのモジュールから作るので、部品は後から渡す。目的を作るのはルールの Start の中なので、それまでに揃う
+            ServerObjectiveParts parts = null;
             var movement = new ServerMovement(motorSettings);
-            var rules = new MatchRulesModule();
+            var rules = new MatchRulesModule((objective, settings, host) => ServerObjectiveFactory.Create(objective, settings, host, parts));
             var vehicles = new ServerVehicles(rules, movement);
             var combat = new ServerCombat(rules, movement, vehicles);
             modules.Add(movement);
@@ -94,7 +101,13 @@ namespace Shooter.Server
             modules.Add(combat);
 
             // 持ち物は出現 (ルール) の後に持たせ直し、その tick のうちに持ち主へ送る
-            modules.Add(new ServerInventories(rules, combat));
+            var inventories = new ServerInventories(rules, combat);
+            modules.Add(inventories);
+
+            // 箱は開けた人の武器と持ち物に中身を入れるので、持ち物を持たせ直した後
+            var loot = new ServerLoot(rules, combat, inventories);
+            modules.Add(loot);
+            parts = new ServerObjectiveParts(rules, loot, new ServerBattleRoyaleWorld(movement, combat, inventories, loot), stashes);
 
             // 設置物は戦闘が当たり判定を作る (Start) より前につなぐ必要があるので、登録より先に作る。Bot は囮を見るので同じものを渡す
             var deployables = new ServerDeployables(rules, combat, tuning.Deployables, tuning.DeployablesPath);
@@ -109,8 +122,10 @@ namespace Shooter.Server
             modules.Add(streaks);
             modules.Add(deployables);
             modules.Add(new ServerKillCam(rules, combat));
+
+            // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足すので、ルールの直後
             modules.Add(new ServerSnapshots(
-                motorSettings.Rules, new ISnapshotContributor[] { movement, rules, combat, vehicles, streaks, deployables }));
+                motorSettings.Rules, new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables }));
 
             // 通報・統計・テレメトリは試合の状態を変えず、ルールが出したキルと試合の始まり・終わりを読むだけなので、スナップショットより後でよい
             if (!TryAddRecords(launch, runtime, libraryDirectory, rules, modules, out error))
@@ -136,6 +151,26 @@ namespace Shooter.Server
             }
 
             modules.Add(new ServerLobbyModule(createBackend, launch.Options.RegisterLobbyEndpoint) { Region = launch.Region });
+            return true;
+        }
+
+        // ServerProgram も待ち受ける前に同じ置き場所を開いて確かめるが、モジュールの一覧だけを組む口 (テスト・別の起動) でも Extraction を遊べるよう、ここでも開く
+        private static bool TryOpenStashes(ServerLaunch launch, ServerRuntime runtime, out ServerStashStore stashes, out string error)
+        {
+            stashes = null;
+            if (launch.StashDirectory == null)
+            {
+                error = null;
+                return true;
+            }
+
+            if (!ServerStashStore.TryOpen(launch.StashDirectory, runtime.Output, out stashes, out var problem))
+            {
+                error = ExtractionRulesLog.StashTag + " " + problem;
+                return false;
+            }
+
+            error = null;
             return true;
         }
 

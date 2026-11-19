@@ -50,7 +50,7 @@ namespace Shooter.Server.Tests
             _log = new StringWriter();
             _json = new StringWriter();
             _transport = new RecordingTransport();
-            _objective = new TestObjectiveRules { OnInteract = (_, _) => InteractVerdict.Accepted };
+            _objective = new TestObjectiveRules { OnInteract = (_, _) => InteractVerdict.Accepted, Loot = true };
         }
 
         [TearDown]
@@ -88,6 +88,30 @@ namespace Shooter.Server.Tests
             Assert.That(armoryItems, Is.Empty);
             Assert.That(_log.ToString(), Does.Contain("[Loot] seed=1416 tables=2 dropReach=1.6"));
             Assert.That(_log.ToString(), Does.Contain("[Loot] placed boxes=2 map=NetTest"));
+        }
+
+        [Test]
+        public void AnObjectiveThatOpensNoBoxesGetsNoBoxesFromTheMap()
+        {
+            _objective = new TestObjectiveRules { OnInteract = (_, _) => InteractVerdict.Accepted };
+            Start();
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            Assert.That(_loot.TryGetContents(_firstBox, out _, out _), Is.False, _log.ToString());
+            Assert.That(_loot.TryGetContents(_armoryBox, out _, out _), Is.False);
+            Assert.That(Contribute(1), Is.Empty, "no box reaches the snapshot");
+            Assert.That(_log.ToString(), Does.Contain("[Loot] placed boxes=0 map=NetTest (objective None opens no boxes)"));
+            Assert.That(_log.ToString(), Does.Not.Contain("[Loot] placed boxes=2"));
+
+            MoveTo(1, _armoryAt + new Vector3(0.5f, 1.6f, 0f));
+            Request(1, _armoryBox);
+
+            Assert.That(
+                _log.ToString(),
+                Does.Contain("[Loot] open item=16777217 by=1 refused=UnknownItem"),
+                "a request for a map box is refused like any unknown item");
         }
 
         [Test]

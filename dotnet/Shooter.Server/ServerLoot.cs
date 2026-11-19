@@ -412,6 +412,13 @@ namespace Shooter.Server
             _boxes.Clear();
             _nextRefusalLogTimes.Clear();
             var map = _context.Map;
+            var objective = _rules.Objective;
+            if (objective == null || !objective.UsesLoot)
+            {
+                _log.WriteLine(ServerLootLog.NotUsed(map.Name, objective?.Objective));
+                return;
+            }
+
             var points = map.Points;
             if (points == null)
             {

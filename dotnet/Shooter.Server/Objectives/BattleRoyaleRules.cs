@@ -65,6 +65,8 @@ namespace Shooter.Server
 
         public MatchObjective Objective => MatchObjective.BattleRoyale;
 
+        public bool UsesLoot => true;
+
         public BattleRoyaleSession BattleRoyale => _battleRoyale;
 
         public BattleRoyaleSpec Spec => _spec;

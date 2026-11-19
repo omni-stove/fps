@@ -131,7 +131,7 @@ namespace Shooter.Server.Tests
             Assert.That(e.Message, Does.StartWith("cannot start the Payload match on map NetTest: it has no payload route"));
         }
 
-        // BR は目的の工場にまだつないでいないので、ルールの例と調整値から直に作る。例のマップはエリアを書き出していないので断る
+        // 目的の工場から作るには試合の場 (ServerObjectiveParts) が要るので、ルールの例と調整値から直に作る。例のマップはエリアを書き出していないので断る
         [Test]
         public void TheBattleRoyaleExampleReadsItsRulesAndRefusesAMapWithoutAZone()
         {

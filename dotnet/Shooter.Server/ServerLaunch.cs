@@ -127,9 +127,12 @@ namespace Shooter.Server
                 return null;
             }
 
-            return "the " + MatchObjective.Extraction + " rules keep each account's stash on disk; pass " + StashDirectoryFlag
-                + " <directory> to say where (run " + RulesFlag + " with another objective to play without a stash)";
+            return NoStashDirectoryProblem;
         }
+
+        // 起動のときと、試合の途中で Extraction に替えようとしたとき (ServerObjectiveFactory) の両方で同じ理由を出す
+        public static string NoStashDirectoryProblem => "the " + MatchObjective.Extraction + " rules keep each account's stash on disk; pass " + StashDirectoryFlag
+            + " <directory> to say where (run " + RulesFlag + " with another objective to play without a stash)";
 
         private static bool Contains(IReadOnlyList<MatchObjective> objectives, MatchObjective objective)
         {

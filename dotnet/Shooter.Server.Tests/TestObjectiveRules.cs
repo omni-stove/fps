@@ -22,6 +22,9 @@ namespace Shooter.Server.Tests
 
         public ObjectiveRally? Rally { get; set; }
 
+        // null ならインターフェイスの既定 (箱を使わない) を通す
+        public bool? Loot { get; set; }
+
         public MatchObjective Objective => MatchObjective.None;
 
         public bool PlaysInRounds => false;
@@ -33,6 +36,8 @@ namespace Shooter.Server.Tests
         public float? RemainingSeconds => null;
 
         ObjectiveRally? IMatchObjectiveRules.BotRally => Rally;
+
+        bool IMatchObjectiveRules.UsesLoot => Loot ?? _default.UsesLoot;
 
         bool IMatchObjectiveRules.AreHostile(int a, Team aTeam, int b, Team bTeam)
         {

@@ -7,5 +7,7 @@ namespace Shooter.Protocol
         Bomb,
 
         Tag,
+
+        Cart,
     }
 }

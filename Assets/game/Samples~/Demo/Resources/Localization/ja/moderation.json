@@ -13,5 +13,12 @@
   "moderation.reason.abuse": "暴言・嫌がらせ",
   "moderation.reason.spam": "スパム",
   "moderation.reason.offensiveName": "不適切な名前",
-  "moderation.reason.other": "その他"
+  "moderation.reason.other": "その他",
+  "moderation.voteKick.start": "キックの投票",
+  "moderation.voteKick.called": "{0} が {1} のキックの投票を始めた",
+  "moderation.voteKick.yes": "賛成",
+  "moderation.voteKick.no": "反対",
+  "moderation.voteKick.remaining": "残り {0} 秒",
+  "moderation.voteKick.passed": "投票で {0} がキックされた",
+  "moderation.voteKick.failed": "{0} のキックの投票は不成立"
 }

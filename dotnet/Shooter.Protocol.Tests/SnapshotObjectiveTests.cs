@@ -14,9 +14,9 @@ namespace Shooter.Protocol.Tests
         private const int _headBytes = 2 + 1 + 4 + 4 + 1;
 
         [Test]
-        public void TheVersionIs19()
+        public void TheVersionIs20()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(19));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(20));
         }
 
         [Test]
@@ -238,6 +238,225 @@ namespace Shooter.Protocol.Tests
             {
                 Assert.That(got.ObjectiveItems[i].ChangedBits(sent.ObjectiveItems[i]), Is.Zero);
             }
+        }
+
+        [Test]
+        public void ACartItemRoundTrips()
+        {
+            var sent = Build(100);
+            AddItem(sent, 4, ObjectiveItemKind.Cart, Team.Alpha, PlayerIds.None, new Vector3(5f, 0f, -3f), ObjectiveItemState.Home, PlayerIds.None);
+
+            var got = Send(sent, null);
+
+            Assert.That((int)ObjectiveItemKind.Cart, Is.EqualTo(3));
+            Assert.That(got.ObjectiveItems[0].Kind, Is.EqualTo(ObjectiveItemKind.Cart));
+            Assert.That(got.ObjectiveItems[0].Position, Is.EqualTo(new Vector3(5f, 0f, -3f)));
+            Assert.That(got.ObjectiveItems[0].ChangedBits(sent.ObjectiveItems[0]), Is.Zero);
+        }
+
+        [Test]
+        public void ThePayloadRoundTrips()
+        {
+            var sent = Build(100);
+            sent.Match.PayloadProgress = 0.625f;
+            sent.Match.PayloadCheckpointsPassed = 2;
+            sent.Match.PayloadPushers = 3;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.IsComplete, Is.True);
+            Assert.That(got.Match.PayloadProgress, Is.EqualTo(0.625f));
+            Assert.That(got.Match.PayloadCheckpointsPassed, Is.EqualTo(2));
+            Assert.That(got.Match.PayloadPushers, Is.EqualTo(3));
+        }
+
+        [Test]
+        public void ADefaultPayloadRoundTripsAsZero()
+        {
+            var got = Send(Build(100), null);
+
+            Assert.That(got.Match.PayloadProgress, Is.Zero);
+            Assert.That(got.Match.PayloadCheckpointsPassed, Is.Zero);
+            Assert.That(got.Match.PayloadPushers, Is.Zero);
+        }
+
+        [TestCase(0f)]
+        [TestCase(1f)]
+        public void ThePayloadEndsRoundTrip(float progress)
+        {
+            var sent = Build(100);
+            sent.Match.PayloadProgress = progress;
+
+            Assert.That(Send(sent, null).Match.PayloadProgress, Is.EqualTo(progress));
+        }
+
+        [Test]
+        public void AMovingCartSendsOnlyThePayloadBytesAndResolves()
+        {
+            var baseline = Build(100);
+            baseline.Match.PayloadProgress = 0.25f;
+            baseline.Match.PayloadCheckpointsPassed = 1;
+            var unchanged = Clone(baseline, 101);
+            var current = Clone(baseline, 101);
+            current.Match.PayloadProgress = 0.5f;
+            current.Match.PayloadPushers = 2;
+
+            var got = Send(current, baseline);
+
+            // 進み (4)・通った中継点 (4)・押している人数 (4)
+            Assert.That(Size(current, baseline) - Size(unchanged, baseline), Is.EqualTo(4 + 4 + 4));
+            Assert.That(got.IsComplete, Is.False);
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Match.PayloadProgress, Is.EqualTo(0.5f));
+            Assert.That(got.Match.PayloadCheckpointsPassed, Is.EqualTo(1));
+            Assert.That(got.Match.PayloadPushers, Is.EqualTo(2));
+            Assert.That(got.Match.RemainingSeconds, Is.EqualTo(300));
+        }
+
+        [Test]
+        public void AnUnchangedPayloadIsTakenFromTheBaseline()
+        {
+            var baseline = Build(100);
+            baseline.Match.PayloadProgress = 0.75f;
+            baseline.Match.PayloadCheckpointsPassed = 3;
+            baseline.Match.PayloadPushers = 1;
+            var current = Clone(baseline, 101);
+            current.Match.AlphaScore = 2;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Match.PayloadProgress, Is.EqualTo(0.75f));
+            Assert.That(got.Match.PayloadCheckpointsPassed, Is.EqualTo(3));
+            Assert.That(got.Match.PayloadPushers, Is.EqualTo(1));
+            Assert.That(got.Match.AlphaScore, Is.EqualTo(2));
+        }
+
+        [TestCase(-0.1f, 0, 0)]
+        [TestCase(1.1f, 0, 0)]
+        [TestCase(float.NaN, 0, 0)]
+        [TestCase(0f, -1, 0)]
+        [TestCase(0f, 0, -1)]
+        public void AnImpossiblePayloadIsNotWritten(float progress, int checkpoints, int pushers)
+        {
+            var sent = Build(100);
+            sent.Match.PayloadProgress = progress;
+            sent.Match.PayloadCheckpointsPassed = checkpoints;
+            sent.Match.PayloadPushers = pushers;
+
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [TestCase(0)]
+        [TestCase(4)]
+        [TestCase(8)]
+        public void AnImpossiblePayloadIsUnreadable(int at)
+        {
+            var baseline = Build(100);
+            var current = Clone(baseline, 101);
+            current.Match.PayloadProgress = 0.5f;
+            var bytes = Bytes(current, baseline);
+
+            // 差分に載るのは試合の台車の部分だけなので、頭の直後が 進み・中継点・人数 の順に並ぶ
+            for (var i = 0; i < 4; i++)
+            {
+                bytes[_headBytes + at + i] = 0xFF;
+            }
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void TheOwnersMoneyRoundTrips()
+        {
+            var sent = Build(100);
+            sent.HasOwner = true;
+            sent.Owner.Money = 4200;
+
+            var got = Send(sent, null);
+
+            Assert.That(got.IsComplete, Is.True);
+            Assert.That(got.Owner.Money, Is.EqualTo(4200));
+        }
+
+        [Test]
+        public void NoMoneyRoundTripsAsZero()
+        {
+            var sent = Build(100);
+            sent.HasOwner = true;
+
+            Assert.That(Send(sent, null).Owner.Money, Is.Zero);
+        }
+
+        [Test]
+        public void ChangedMoneySendsOnlyItsBytesAndUnchangedMoneyIsTakenFromTheBaseline()
+        {
+            var baseline = Build(100);
+            baseline.HasOwner = true;
+            baseline.Owner.Money = 800;
+            var unchanged = Clone(baseline, 101);
+            var spent = Clone(baseline, 101);
+            spent.Owner.Money = 150;
+
+            var gotUnchanged = Send(unchanged, baseline);
+            var gotSpent = Send(spent, baseline);
+
+            Assert.That(Size(spent, baseline) - Size(unchanged, baseline), Is.EqualTo(4));
+            Assert.That(gotUnchanged.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(gotUnchanged.Owner.Money, Is.EqualTo(800));
+            Assert.That(gotSpent.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(gotSpent.Owner.Money, Is.EqualTo(150));
+        }
+
+        [Test]
+        public void NegativeMoneyIsNotWritten()
+        {
+            var sent = Build(100);
+            sent.HasOwner = true;
+            sent.Owner.Money = -1;
+
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [Test]
+        public void NegativeMoneyIsUnreadable()
+        {
+            var baseline = Build(100);
+            baseline.HasOwner = true;
+            var current = Clone(baseline, 101);
+            current.Owner.Money = 1;
+            var bytes = Bytes(current, baseline);
+
+            // 試合の部分が空の差分では、頭・持ち主の有無 (1)・持ち主の部分のビット (1)・最後に処理した入力の tick (4) の後にお金が並ぶ
+            for (var i = 0; i < 4; i++)
+            {
+                bytes[_headBytes + 1 + 1 + 4 + i] = 0xFF;
+            }
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void ClearingAndCopyingASnapshotHandleTheMoneyAndThePayload()
+        {
+            var sent = Build(100);
+            sent.HasOwner = true;
+            sent.Owner.Money = 300;
+            sent.Match.PayloadProgress = 0.5f;
+            sent.Match.PayloadCheckpointsPassed = 1;
+            sent.Match.PayloadPushers = 2;
+            var copy = new SnapshotMessage();
+
+            copy.CopyFrom(sent);
+            sent.Clear();
+
+            Assert.That(copy.Owner.Money, Is.EqualTo(300));
+            Assert.That(copy.Match.PayloadProgress, Is.EqualTo(0.5f));
+            Assert.That(copy.Match.PayloadCheckpointsPassed, Is.EqualTo(1));
+            Assert.That(copy.Match.PayloadPushers, Is.EqualTo(2));
+            Assert.That(sent.Owner.Money, Is.Zero);
+            Assert.That(sent.Match.PayloadProgress, Is.Zero);
+            Assert.That(sent.Match.PayloadPushers, Is.Zero);
         }
 
         [Test]

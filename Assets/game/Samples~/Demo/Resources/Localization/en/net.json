@@ -9,6 +9,7 @@
   "net.disconnect.idleKicked": "You were disconnected from the server for being idle too long.",
   "net.disconnect.banned": "You are banned from this server.",
   "net.disconnect.kicked": "You were removed from the server by its administrator.",
+  "net.disconnect.voteKicked": "You were removed from the match by a player vote. You cannot rejoin until the match ends.",
   "net.disconnect.versionMismatchAdvice": "{0} Connect with the same version of the game as the server.",
   "net.disconnect.versionMismatchDetail": "The game versions do not match (server {0} / this game {1}). Connect with the same version of the game as the server."
 }

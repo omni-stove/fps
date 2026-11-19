@@ -28,6 +28,8 @@ namespace Shooter.Protocol
                 new StreakUseRequestMessage(),
                 new DeployRequestMessage(),
                 new ReportRequestMessage(),
+                new VoteKickRequestMessage(),
+                new BuyRequestMessage(),
             };
         }
 
@@ -44,6 +46,7 @@ namespace Shooter.Protocol
                 new StructureStateMessage(),
                 new MapVoteStateMessage(),
                 new VoiceRosterMessage(),
+                new VoteKickStateMessage(),
                 new ShotMessage(),
                 new HitConfirmMessage(),
                 new DamageTakenMessage(),

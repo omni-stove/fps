@@ -551,8 +551,210 @@ namespace Shooter.Protocol.Tests
             writer.WriteInt32(0);
             writer.WriteSingle(1f);
             writer.WriteByte(2);
+            writer.WriteString("");
 
             Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void MapVoteStateCarriesTheNextPlaylistEntry()
+        {
+            var sent = new MapVoteStateMessage { RemainingSeconds = 3f, NextPlaylistEntryName = "playlist.hardpoint-night" };
+            sent.AddCandidate("NetArena01", 0);
+
+            var got = ToClient<MapVoteStateMessage>(sent);
+
+            Assert.That(MapVoteStateMessage.CurrentVersion, Is.EqualTo(2));
+            Assert.That(got.NextPlaylistEntryName, Is.EqualTo("playlist.hardpoint-night"));
+            Assert.That(got.MapId(0), Is.EqualTo("NetArena01"));
+        }
+
+        [Test]
+        public void MapVoteStateWithoutAPlaylistRoundTripsAnEmptyName()
+        {
+            ToClient<MapVoteStateMessage>(new MapVoteStateMessage { NextPlaylistEntryName = "playlist.old" });
+            var writer = new MessageWriter();
+            writer.WriteMessage(new MapVoteStateMessage { NextPlaylistEntryName = null });
+
+            var got = (MapVoteStateMessage)_client.Read(writer.AsSegment());
+
+            // Id・版 (2 + 1)、候補の数 (1)、残り秒 (4)、選ばれた番号 (1)、次の項目の名前 (2)
+            Assert.That(writer.Length, Is.EqualTo(3 + 1 + 4 + 1 + 2));
+            Assert.That(got.NextPlaylistEntryName, Is.Empty);
+            Assert.That(new MapVoteStateMessage().NextPlaylistEntryName, Is.Empty);
+        }
+
+        [Test]
+        public void ANextPlaylistEntryLongerThanAContentIdIsNotWritten()
+        {
+            var sent = new MapVoteStateMessage { NextPlaylistEntryName = new string('a', MatchProtocol.MaxContentIdBytes + 1) };
+
+            Assert.Throws<System.ArgumentException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [Test]
+        public void VoteKickRequest()
+        {
+            var yes = ToServer<VoteKickRequestMessage>(new VoteKickRequestMessage { TargetPlayerId = 7, InFavor = true });
+            Assert.That(yes.TargetPlayerId, Is.EqualTo(7));
+            Assert.That(yes.InFavor, Is.True);
+
+            var no = ToServer<VoteKickRequestMessage>(new VoteKickRequestMessage { TargetPlayerId = 0, InFavor = false });
+            Assert.That(no.TargetPlayerId, Is.Zero);
+            Assert.That(no.InFavor, Is.False);
+        }
+
+        [Test]
+        public void ADefaultVoteKickRequestRoundTrips()
+        {
+            var got = ToServer<VoteKickRequestMessage>(new VoteKickRequestMessage());
+
+            Assert.That(got.TargetPlayerId, Is.Zero);
+            Assert.That(got.InFavor, Is.False);
+        }
+
+        [Test]
+        public void AVoteKickRequestWithANegativeTargetIsNotWritten()
+        {
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new VoteKickRequestMessage { TargetPlayerId = -1 }));
+        }
+
+        [Test]
+        public void AVoteKickRequestWithANegativeTargetIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.VoteKickRequest);
+            writer.WriteByte(VoteKickRequestMessage.CurrentVersion);
+            writer.WriteInt32(-1);
+            writer.WriteBool(true);
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+        }
+
+        [TestCase(VoteKickOutcome.Undecided)]
+        [TestCase(VoteKickOutcome.Passed)]
+        [TestCase(VoteKickOutcome.Failed)]
+        public void VoteKickState(VoteKickOutcome outcome)
+        {
+            var sent = new VoteKickStateMessage
+            {
+                TargetPlayerId = 4,
+                CallerPlayerId = 2,
+                YesVotes = 3,
+                RequiredVotes = 5,
+                RemainingSeconds = 17.5f,
+                Outcome = outcome,
+            };
+
+            var got = ToClient<VoteKickStateMessage>(sent);
+
+            Assert.That(got.TargetPlayerId, Is.EqualTo(4));
+            Assert.That(got.CallerPlayerId, Is.EqualTo(2));
+            Assert.That(got.YesVotes, Is.EqualTo(3));
+            Assert.That(got.RequiredVotes, Is.EqualTo(5));
+            Assert.That(got.RemainingSeconds, Is.EqualTo(17.5f));
+            Assert.That(got.Outcome, Is.EqualTo(outcome));
+        }
+
+        [Test]
+        public void ADefaultVoteKickStateRoundTrips()
+        {
+            var got = ToClient<VoteKickStateMessage>(new VoteKickStateMessage());
+
+            Assert.That(got.TargetPlayerId, Is.Zero);
+            Assert.That(got.CallerPlayerId, Is.Zero);
+            Assert.That(got.YesVotes, Is.Zero);
+            Assert.That(got.RequiredVotes, Is.EqualTo(1));
+            Assert.That(got.RemainingSeconds, Is.Zero);
+            Assert.That(got.Outcome, Is.EqualTo(VoteKickOutcome.Undecided));
+        }
+
+        [TestCase(-1, 0, 0, 1, 0f)]
+        [TestCase(0, -1, 0, 1, 0f)]
+        [TestCase(0, 0, -1, 1, 0f)]
+        [TestCase(0, 0, 0, 0, 0f)]
+        [TestCase(0, 0, 0, 1, -1f)]
+        [TestCase(0, 0, 0, 1, float.NaN)]
+        public void AnImpossibleVoteKickStateIsNotWritten(int target, int caller, int yes, int required, float seconds)
+        {
+            var sent = new VoteKickStateMessage
+            {
+                TargetPlayerId = target,
+                CallerPlayerId = caller,
+                YesVotes = yes,
+                RequiredVotes = required,
+                RemainingSeconds = seconds,
+            };
+
+            Assert.Throws<System.InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [Test]
+        public void AVoteKickStateWithAnUnknownOutcomeIsNotWritten()
+        {
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new VoteKickStateMessage { Outcome = (VoteKickOutcome)3 }));
+        }
+
+        [TestCase(-1, 2, 0, 1, 1f, 0)]
+        [TestCase(1, -1, 0, 1, 1f, 0)]
+        [TestCase(1, 2, -1, 1, 1f, 0)]
+        [TestCase(1, 2, 0, 0, 1f, 0)]
+        [TestCase(1, 2, 0, 1, -1f, 0)]
+        [TestCase(1, 2, 0, 1, float.PositiveInfinity, 0)]
+        [TestCase(1, 2, 0, 1, 1f, 3)]
+        public void AnImpossibleVoteKickStateIsUnreadable(int target, int caller, int yes, int required, float seconds, int outcome)
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.VoteKickState);
+            writer.WriteByte(VoteKickStateMessage.CurrentVersion);
+            writer.WriteInt32(target);
+            writer.WriteInt32(caller);
+            writer.WriteInt32(yes);
+            writer.WriteInt32(required);
+            writer.WriteSingle(seconds);
+            writer.WriteByte((byte)outcome);
+
+            Assert.Throws<MessageReadException>(() => _client.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void BuyRequest()
+        {
+            var got = ToServer<BuyRequestMessage>(new BuyRequestMessage { ItemId = "armor-light" });
+
+            Assert.That(got.ItemId, Is.EqualTo("armor-light"));
+        }
+
+        [TestCase(null)]
+        [TestCase("")]
+        public void ABuyRequestWithoutAnItemIsNotWritten(string itemId)
+        {
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new BuyRequestMessage { ItemId = itemId }));
+        }
+
+        [Test]
+        public void ABuyRequestWithoutAnItemIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.BuyRequest);
+            writer.WriteByte(BuyRequestMessage.CurrentVersion);
+            writer.WriteString("");
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+        }
+
+        [Test]
+        public void ABuyRequestLongerThanAContentIdIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.BuyRequest);
+            writer.WriteByte(BuyRequestMessage.CurrentVersion);
+            writer.WriteString(new string('a', MatchProtocol.MaxContentIdBytes + 1));
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
         }
 
         [Test]

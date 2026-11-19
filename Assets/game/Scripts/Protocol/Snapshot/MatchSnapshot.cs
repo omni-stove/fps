@@ -68,6 +68,13 @@ namespace Shooter.Protocol
         // 0〜1
         public float DefuseFraction { get; set; }
 
+        // 0〜1
+        public float PayloadProgress { get; set; }
+
+        public int PayloadCheckpointsPassed { get; set; }
+
+        public int PayloadPushers { get; set; }
+
         internal MatchFields ChangedFields(in MatchSnapshot baseline)
         {
             var fields = MatchFields.None;
@@ -127,6 +134,13 @@ namespace Shooter.Protocol
                 || DefuseFraction != baseline.DefuseFraction)
             {
                 fields |= MatchFields.ObjectiveProgress;
+            }
+
+            if (PayloadProgress != baseline.PayloadProgress
+                || PayloadCheckpointsPassed != baseline.PayloadCheckpointsPassed
+                || PayloadPushers != baseline.PayloadPushers)
+            {
+                fields |= MatchFields.Payload;
             }
 
             return fields;
@@ -219,6 +233,19 @@ namespace Shooter.Protocol
                 writer.WriteInt32(HasDefuser ? DefuserId : PlayerIds.None);
                 writer.WriteSingle(DefuseFraction);
             }
+
+            if ((fields & MatchFields.Payload) != 0)
+            {
+                RequireFraction(PayloadProgress, "payload progress");
+                if (PayloadCheckpointsPassed < 0 || PayloadPushers < 0)
+                {
+                    throw new System.InvalidOperationException("the payload checkpoints and pushers must not be negative");
+                }
+
+                writer.WriteSingle(PayloadProgress);
+                writer.WriteInt32(PayloadCheckpointsPassed);
+                writer.WriteInt32(PayloadPushers);
+            }
         }
 
         private static void RequireFraction(float value, string what)
@@ -294,6 +321,13 @@ namespace Shooter.Protocol
                 DefuserId = HasDefuser ? defuser : 0;
                 DefuseFraction = reader.ReadFiniteSingleBetween(0f, 1f, "defuse fraction");
             }
+
+            if ((fields & MatchFields.Payload) != 0)
+            {
+                PayloadProgress = reader.ReadFiniteSingleBetween(0f, 1f, "payload progress");
+                PayloadCheckpointsPassed = reader.ReadInt32AtLeast(0, "payload checkpoints passed");
+                PayloadPushers = reader.ReadInt32AtLeast(0, "payload pushers");
+            }
         }
 
         internal void FillFrom(in MatchSnapshot baseline, MatchFields present)
@@ -356,6 +390,13 @@ namespace Shooter.Protocol
                 HasDefuser = baseline.HasDefuser;
                 DefuserId = baseline.DefuserId;
                 DefuseFraction = baseline.DefuseFraction;
+            }
+
+            if ((missing & MatchFields.Payload) != 0)
+            {
+                PayloadProgress = baseline.PayloadProgress;
+                PayloadCheckpointsPassed = baseline.PayloadCheckpointsPassed;
+                PayloadPushers = baseline.PayloadPushers;
             }
         }
     }

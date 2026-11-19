@@ -10,6 +10,8 @@
         <ui:VisualElement name="damage-vignette" class="damage-vignette" picking-mode="Ignore" style="display: none;" />
         <!-- スコープの縁と照準器の照準。被弾の赤の上、ほかの表示の後ろに描く。ScopeOverlayView が覗き込んでいる間だけ出す。 -->
         <ui:VisualElement name="scope-overlay" class="scope-overlay" picking-mode="Ignore" style="display: none;" />
+        <!-- 暗視・サーマルで画面を染める色。スコープの縁の上、ほかの表示の後ろに描く。GameSignals.Vision が効いている間だけ出す (出すビューはまだ無く、隠したままにする)。 -->
+        <ui:VisualElement name="vision-overlay" class="vision-overlay" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-time-panel" class="hud__panel hud__panel--top-center" picking-mode="Ignore">
             <ui:Label name="hud-time" text="--:--" class="hud__value hud__value--time" picking-mode="Ignore" />
         </ui:VisualElement>
@@ -36,6 +38,8 @@
         <ui:VisualElement name="ability-slots" class="ability-slots" picking-mode="Ignore" style="display: none;" />
         <!-- 自分のストリーク (今の数と、報酬ごとのアイコン・貯まり具合・使うキー)。StreakView が枠 (streak__card) を入れ、GameSignals.Streak に値があるときだけ出す。地点を選んでいる間 (GameSignals.StreakTargeting) は操作の案内に替える。 -->
         <ui:VisualElement name="streak" class="streak" picking-mode="Ignore" style="display: none;" />
+        <!-- 自分の所持金。GameSignals.Wallet に値があるときだけ出す (出すビューはまだ無く、隠したままにする)。 -->
+        <ui:VisualElement name="wallet" class="wallet" picking-mode="Ignore" style="display: none;" />
         <ui:VisualElement name="hud-ammo-panel" class="hud__panel hud__panel--bottom-right" picking-mode="Ignore">
             <ui:Label text="#hud.caption.ammo" class="hud__caption" picking-mode="Ignore" />
             <ui:Label name="hud-ammo" text="-- / --" class="hud__value" picking-mode="Ignore" />
@@ -98,6 +102,8 @@
         <ui:VisualElement name="compass" class="compass" picking-mode="Ignore" style="display: none;" />
         <!-- 自分が運転している飛行機の速さ・高度・スロットル・迎え角・G と失速の警告。AircraftHudView が、GameSignals.Aircraft に値がある間だけ行 (aircraft__row) と警告 (aircraft__warning) を入れて出す。 -->
         <ui:VisualElement name="aircraft" class="aircraft" picking-mode="Ignore" style="display: none;" />
+        <!-- 偵察ドローンを操縦している間の電池・範囲外の警告・戻す操作。GameSignals.Drone に値がある間だけ出す (出すビューはまだ無く、隠したままにする)。 -->
+        <ui:VisualElement name="drone-hud" class="drone-hud" picking-mode="Ignore" style="display: none;" />
         <!-- 画面下の中央のスタミナの残り。GameSignals.Stamina に値があり満タンでない (または尽きている) 間だけ StaminaView が出し、塗り (stamina-fill) の幅を % で入れ、尽きている間は stamina--depleted を付け、量の文を tooltip に置く。 -->
         <ui:VisualElement name="stamina" class="stamina" picking-mode="Ignore" style="display: none;">
             <ui:VisualElement name="stamina-fill" class="stamina__fill" picking-mode="Ignore" />
@@ -140,6 +146,8 @@
         <ui:VisualElement name="spectate" class="spectate" picking-mode="Ignore" style="display: none;" />
         <!-- ボイスチャットで、自分が声を送っている印と話している人の名前。VoiceIndicatorView が、出す行 (voice__row) がある間だけ出す。 -->
         <ui:VisualElement name="voice" class="voice" picking-mode="Ignore" style="display: none;" />
+        <!-- 投票キックの対象・残り秒・賛否。GameSignals.VoteKick に投票がある間だけ出す (出すビューはまだ無く、隠したままにする)。 -->
+        <ui:VisualElement name="vote-kick" class="vote-kick" picking-mode="Ignore" style="display: none;" />
         <!-- フラッシュの目くらまし。HUD の文字ごと白く覆うよう、ポーズ画面の前のいちばん上に置く。FlashOverlay がかかっている間だけ色と不透明度を入れて出す。 -->
         <ui:VisualElement name="flash-overlay" class="flash-overlay" picking-mode="Ignore" style="display: none;" />
         <!-- ポーズ画面。開いている間だけ PauseMenu が出す。画面全体を覆い、後ろへのクリックを止める。 -->

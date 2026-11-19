@@ -150,6 +150,11 @@ namespace Shooter.Runtime
                 Cancel();
             }
 
+            if (!_open && _suspended.Count > 0 && !IsBlockedByOtherScreen())
+            {
+                ResumeActions();
+            }
+
             if (!held)
             {
                 if (_open)
@@ -237,6 +242,7 @@ namespace Shooter.Runtime
         {
             ReleaseHoldAction();
             Close(null);
+            ResumeActions();
             _wasHeld = false;
             _awaitsRelease = false;
             _heldSeconds = 0f;
@@ -361,7 +367,12 @@ namespace Shooter.Runtime
             _selectedIndex = -1;
             _slots.Clear();
             _centerText = string.Empty;
-            ResumeActions();
+            // 他の画面が開いている間に戻すと、その画面が止めたつもりのアクションを有効にしてしまう (その画面は今有効なものだけを記録するため、この輪が止めた分は記録に無く戻らない)。閉じるまで持ち越す。
+            if (!IsBlockedByOtherScreen())
+            {
+                ResumeActions();
+            }
+
             Draw();
 
             if (emoteId == null)

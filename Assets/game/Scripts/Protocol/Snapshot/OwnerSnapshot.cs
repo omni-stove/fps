@@ -19,6 +19,10 @@ namespace Shooter.Protocol
         // 他の人には位置の補間で足りるが、持ち主の予測はこれが無いと飛んでいる間ずっと地上を歩いたつもりで巻き戻されるため、持ち主にだけ送る。
         public Shooter.Core.CharacterKnockbackState Knockback { get; set; }
 
+        // 端数の秒で送らないのは、倒れている間ずっと毎 tick 差分に載ってしまうため。表示も整数の秒 (HudFormat.DisplayedSeconds) で足りる。
+        // 人ごとの行 (PlayerSnapshot) に載せないのは、部分のビットに空きが無く、ほかの人の出直しの残りは要らないため。
+        public int? RespawnSeconds { get; set; }
+
         public GrenadePouchSync Grenades => _grenades;
 
         public ContentIdList EquippedWeaponIds => _equippedWeaponIds;
@@ -36,6 +40,7 @@ namespace Shooter.Protocol
             Weapon = other.Weapon;
             CarrySpeedMultiplier = other.CarrySpeedMultiplier;
             Knockback = other.Knockback;
+            RespawnSeconds = other.RespawnSeconds;
             _grenades.CopyFrom(other._grenades);
             _equippedWeaponIds.CopyFrom(other._equippedWeaponIds);
             Present = other.Present;
@@ -67,6 +72,11 @@ namespace Shooter.Protocol
             if (!Knockback.Equals(baseline.Knockback))
             {
                 fields |= OwnerFields.Knockback;
+            }
+
+            if (RespawnSeconds != baseline.RespawnSeconds)
+            {
+                fields |= OwnerFields.Respawn;
             }
 
             return fields;
@@ -105,6 +115,21 @@ namespace Shooter.Protocol
                     writer.WriteSingle(knockback.ElapsedSeconds);
                 }
             }
+
+            if ((fields & OwnerFields.Respawn) != 0)
+            {
+                var respawn = RespawnSeconds;
+                if (respawn < 0)
+                {
+                    throw new InvalidOperationException("respawn seconds must not be negative");
+                }
+
+                writer.WriteBool(respawn.HasValue);
+                if (respawn.HasValue)
+                {
+                    writer.WriteInt32(respawn.Value);
+                }
+            }
         }
 
         internal void Read(MessageReader reader, OwnerFields fields)
@@ -139,6 +164,11 @@ namespace Shooter.Protocol
                         reader.ReadFiniteSingleBetween(0f, float.MaxValue, "knockback seconds"))
                     : Shooter.Core.CharacterKnockbackState.None;
             }
+
+            if ((fields & OwnerFields.Respawn) != 0)
+            {
+                RespawnSeconds = reader.ReadBool() ? reader.ReadInt32AtLeast(0, "respawn seconds") : (int?)null;
+            }
         }
 
         internal void FillFrom(OwnerSnapshot baseline)
@@ -167,6 +197,11 @@ namespace Shooter.Protocol
             if ((missing & OwnerFields.Knockback) != 0)
             {
                 Knockback = baseline.Knockback;
+            }
+
+            if ((missing & OwnerFields.Respawn) != 0)
+            {
+                RespawnSeconds = baseline.RespawnSeconds;
             }
 
             Present = OwnerFields.All;

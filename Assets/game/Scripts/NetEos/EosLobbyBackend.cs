@@ -28,7 +28,7 @@ namespace Shooter.NetEos
         private EosConnect.ConnectInterface _connect;
         private ProductUserId _localUserId;
         private EosDeviceLogin _login;
-        private EosDeviceLogin _refresh;
+        private IEosLogin _refresh;
         private ulong _authExpirationNotification;
         private ulong _loginStatusNotification;
         private ulong _memberUpdateNotification;
@@ -421,7 +421,8 @@ namespace Shooter.NetEos
                 return;
             }
 
-            _refresh = new EosDeviceLogin(_connect, _displayName, SystemInfo.deviceModel);
+            // Epic アカウントで入ったユーザーを Device ID で入り直すと別のユーザーになるので、入れた手段で入り直す。
+            _refresh = EosPlatform.CreateRefresh(_connect, _localUserId, _displayName, SystemInfo.deviceModel);
             _refresh.Begin((userId, error) =>
             {
                 _refresh = null;

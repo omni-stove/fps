@@ -15,6 +15,8 @@ namespace Shooter.Server
     {
         public const string CatalogFileName = "deployables.json";
 
+        internal const string BeaconUnsupported = "a Beacon respawns players only offline; the dedicated server does not respawn at beacons yet";
+
         private const float _rejectWarningInterval = 1f;
 
         private readonly MatchRulesModule _rules;
@@ -42,6 +44,9 @@ namespace Shooter.Server
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
             _catalog = catalog ?? DeployCatalog.Empty;
             _catalogPath = catalogPath;
+
+            // 人の弾・爆発が置いた物に当たるよう、戦闘の当たり判定に置いた物を渡す (乗り物の ServerVehicles.Combat と同じつなぎ方)
+            combat.Deployables = this;
         }
 
         public string Name => "deployables";
@@ -323,25 +328,36 @@ namespace Shooter.Server
         // 戦闘の弾が置いた物で止まるかを見る口。撃った人の弾を通す物 (自分と味方の置いた物) は飛ばす
         internal bool Raycast(Vector3 origin, Vector3 unit, float maxDistance, int shooterId, out int deployableId, out float distance)
         {
-            return Raycast(origin, unit, maxDistance, shooterId, null, out deployableId, out distance);
+            return Raycast(origin, unit, maxDistance, shooterId, null, out deployableId, out distance, out _);
         }
 
-        private bool Raycast(Vector3 origin, Vector3 unit, float maxDistance, int shooterId, int? skipId, out int deployableId, out float distance)
+        internal bool Raycast(
+            Vector3 origin, Vector3 unit, float maxDistance, int shooterId, out int deployableId, out float distance, out Vector3 normal)
+        {
+            return Raycast(origin, unit, maxDistance, shooterId, null, out deployableId, out distance, out normal);
+        }
+
+        // shooterId が null なら、誰の弾かで通す物を選ばず、どの置いた物でも止まる (爆風の遮り)
+        private bool Raycast(
+            Vector3 origin, Vector3 unit, float maxDistance, int? shooterId, int? skipId, out int deployableId, out float distance, out Vector3 normal)
         {
             deployableId = 0;
             distance = maxDistance;
+            normal = -unit;
             var found = false;
             foreach (var placed in _placed.Values)
             {
-                if (placed.Id == skipId || LetsThrough(shooterId, placed))
+                if (placed.Id == skipId || (shooterId.HasValue && LetsThrough(shooterId.Value, placed)))
                 {
                     continue;
                 }
 
-                if (RayBox(origin, unit, distance, placed.Position, placed.Yaw, placed.Type.Deploy, out var hit) && (!found || hit < distance))
+                if (RayBox(origin, unit, distance, placed.Position, placed.Yaw, placed.Type.Deploy, out var hit, out var hitNormal)
+                    && (!found || hit < distance))
                 {
                     deployableId = placed.Id;
                     distance = hit;
+                    normal = hitNormal;
                     found = true;
                 }
             }
@@ -399,6 +415,13 @@ namespace Shooter.Server
             {
                 return "the id is longer than " + MatchProtocol.MaxContentIdBytes.ToString(System.Globalization.CultureInfo.InvariantCulture)
                     + " bytes and cannot be sent";
+            }
+
+            // 復活の場所はまだ専用サーバーの出現で選ばれず、スナップショットにも送る種類 (DeployableKind) が無い。置かせると使えない物が残るだけなので、
+            // 置く前に断る
+            if (type.Role == DeployRole.Beacon)
+            {
+                return BeaconUnsupported;
             }
 
             if (type.Role != DeployRole.Turret)

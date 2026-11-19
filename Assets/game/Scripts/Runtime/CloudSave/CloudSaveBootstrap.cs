@@ -85,6 +85,9 @@ namespace Shooter.Runtime
                 return sync;
             }
 
+            // クラウドの読み書きはサインインしたユーザーで行うので、起動時の同期に間に合うようここでサインインを始める。
+            AccountBootstrap.Ensure();
+
             var host = new GameObject(ObjectName);
             UnityEngine.Object.DontDestroyOnLoad(host);
             host.AddComponent<CloudSaveDriver>().Bind(sync);

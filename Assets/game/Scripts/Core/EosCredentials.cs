@@ -44,6 +44,8 @@ namespace Shooter.Core
 
         public bool HasEncryptionKey => IsValidEncryptionKey(EncryptionKey);
 
+        public EosAccountLoginSettings AccountLogin { get; }
+
         public EosCredentials(string productId, string sandboxId, string deploymentId, string clientId, string clientSecret)
             : this(productId, sandboxId, deploymentId, clientId, clientSecret, null)
         {
@@ -51,6 +53,18 @@ namespace Shooter.Core
 
         public EosCredentials(
             string productId, string sandboxId, string deploymentId, string clientId, string clientSecret, string encryptionKey)
+            : this(productId, sandboxId, deploymentId, clientId, clientSecret, encryptionKey, null)
+        {
+        }
+
+        public EosCredentials(
+            string productId,
+            string sandboxId,
+            string deploymentId,
+            string clientId,
+            string clientSecret,
+            string encryptionKey,
+            EosAccountLoginSettings accountLogin)
         {
             ProductId = Require(productId, nameof(productId));
             SandboxId = Require(sandboxId, nameof(sandboxId));
@@ -58,6 +72,7 @@ namespace Shooter.Core
             ClientId = Require(clientId, nameof(clientId));
             ClientSecret = Require(clientSecret, nameof(clientSecret));
             EncryptionKey = Normalize(encryptionKey);
+            AccountLogin = accountLogin ?? EosAccountLoginSettings.Disabled;
         }
 
         public static bool IsValidEncryptionKey(string key)
@@ -121,7 +136,10 @@ namespace Shooter.Core
                 found[DeploymentIdVariable],
                 found[ClientIdVariable],
                 found[ClientSecretVariable],
-                ResolveOptional(environment, localFile, EncryptionKeyVariable));
+                ResolveOptional(environment, localFile, EncryptionKeyVariable),
+                EosAccountLoginSettings.Parse(
+                    ResolveOptional(environment, localFile, EosAccountLoginSettings.EpicAccountLoginVariable),
+                    ResolveOptional(environment, localFile, EosAccountLoginSettings.EpicDevAuthVariable)));
         }
 
         // ログに出ても漏れないよう、値は書かない。

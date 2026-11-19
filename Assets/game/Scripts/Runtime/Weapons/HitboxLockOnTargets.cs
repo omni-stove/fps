@@ -19,6 +19,7 @@ namespace Shooter.Runtime
         // Unity 6.6 では Object の Id を int にできないので (ShotWorldCollision と同じ)、初めて見た相手に連番を振る。
         private readonly Dictionary<Damageable, int> _ids = new Dictionary<Damageable, int>();
         private readonly List<Damageable> _byId = new List<Damageable>();
+        private readonly List<OwnerDecoy> _decoys = new List<OwnerDecoy>();
 
         public HitboxLockOnTargets(Transform shooterRoot, int layerMask)
         {
@@ -47,9 +48,21 @@ namespace Shooter.Runtime
                 var point = owner.AimPoint;
                 if (Vector3.Distance(origin, point) <= range && IsVisible(origin, point, owner))
                 {
-                    into.Add(new LockOnCandidate(IdOf(owner), point.ToNumerics()));
+                    var id = IdOf(owner);
+                    into.Add(new LockOnCandidate(id, point.ToNumerics(), _decoys[id]));
                 }
             }
+        }
+
+        public Damageable Find(int id)
+        {
+            if (id < 0 || id >= _byId.Count)
+            {
+                return null;
+            }
+
+            var owner = _byId[id];
+            return owner != null ? owner : null;
         }
 
         public Func<NVector3?> Follow(int id)
@@ -61,6 +74,11 @@ namespace Shooter.Runtime
 
             var owner = _byId[id];
             return () => owner != null && !owner.IsDead ? owner.AimPoint.ToNumerics() : (NVector3?)null;
+        }
+
+        public ILockOnDecoy Decoy(int id)
+        {
+            return id >= 0 && id < _decoys.Count ? _decoys[id] : null;
         }
 
         private static Damageable OwnerOf(Collider collider)
@@ -82,6 +100,7 @@ namespace Shooter.Runtime
                 id = _byId.Count;
                 _ids.Add(owner, id);
                 _byId.Add(owner);
+                _decoys.Add(new OwnerDecoy(owner));
             }
 
             return id;
@@ -95,6 +114,48 @@ namespace Shooter.Runtime
             return distance < 1e-4f
                 || !ShotCast.TryFirst(origin, offset / distance, distance, _layerMask, _shooterRoot, out var hit)
                 || OwnerOf(hit.collider) == owner;
+        }
+
+        // 捉えた後に相手が乗り物へ乗り降りしてもその時のフレアで逸れるよう、フレアの持ち主は問い合わせのたびに引き直す。
+        private sealed class OwnerDecoy : ILockOnDecoy
+        {
+            private readonly Damageable _owner;
+
+            public OwnerDecoy(Damageable owner)
+            {
+                _owner = owner;
+            }
+
+            public bool TryLure(NVector3 seeker, NVector3 target, out int decoyId, out NVector3 decoyPoint)
+            {
+                var pod = Pod();
+                if (pod == null)
+                {
+                    decoyId = -1;
+                    decoyPoint = default;
+                    return false;
+                }
+
+                return pod.TryLure(seeker, target, out decoyId, out decoyPoint);
+            }
+
+            public bool TryLocate(int decoyId, out NVector3 decoyPoint)
+            {
+                var pod = Pod();
+                if (pod == null)
+                {
+                    decoyPoint = default;
+                    return false;
+                }
+
+                return pod.TryLocate(decoyId, out decoyPoint);
+            }
+
+            private CountermeasurePod Pod()
+            {
+                var countermeasures = VehicleCountermeasures.For(_owner);
+                return countermeasures != null ? countermeasures.Pod : null;
+            }
         }
     }
 }

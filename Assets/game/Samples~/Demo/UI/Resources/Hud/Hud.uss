@@ -1230,6 +1230,125 @@
     white-space: nowrap;
 }
 
+/* スタミナの残り。体力・弾の欄と重ならないよう画面下の中央に細い帯で出す。 */
+.stamina {
+    position: absolute;
+    left: 50%;
+    bottom: 40px;
+    width: 240px;
+    height: 8px;
+    translate: -50% 0;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.45);
+    overflow: hidden;
+}
+
+.stamina__fill {
+    width: 100%;
+    height: 100%;
+    background-color: rgb(140, 220, 255);
+}
+
+.stamina--depleted .stamina__fill {
+    background-color: rgb(230, 80, 60);
+}
+
+/* 乗り物が狙われている警告。時間の欄の下の中央に出し、ロック済みは赤で強める。 */
+.lock-warning {
+    position: absolute;
+    left: 50%;
+    top: 96px;
+    translate: -50% 0;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 4px;
+    background-color: rgba(220, 160, 30, 0.8);
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.lock-warning--locked {
+    background-color: rgba(200, 30, 30, 0.85);
+    border-width: 2px;
+    border-color: rgb(255, 255, 255);
+    font-size: 30px;
+}
+
+/* 捕捉中の点滅の消えている側。LockOnWarningView が一定の間隔で付け外しする。 */
+.lock-warning--dim {
+    opacity: 0.3;
+}
+
+/* 来る向きの矢印。上向きに描き、LockOnWarningView が向きの角度だけ回す。画像が無ければ文字の色で三角を描く。 */
+.lock-warning__arrow {
+    width: 28px;
+    height: 28px;
+    margin: 0 0 2px 0;
+    color: rgb(255, 255, 255);
+    background-size: 100% 100%;
+}
+
+.lock-warning__text {
+    padding: 0;
+    margin: 0;
+    -unity-text-align: middle-center;
+}
+
+/* エモートを選ぶ輪。画面の中央に置き、EmoteWheelView が枠を円周の left / top に置く。幅の半分は EmoteWheelView.WheelHalfSize と揃える。 */
+.emote-wheel {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 420px;
+    height: 420px;
+    translate: -50% -50%;
+    border-radius: 210px;
+    background-color: rgba(0, 0, 0, 0.35);
+}
+
+.emote-wheel__slot {
+    position: absolute;
+    width: 120px;
+    height: 56px;
+    translate: -50% -50%;
+    justify-content: center;
+    align-items: center;
+    border-width: 2px;
+    border-radius: 8px;
+    border-color: rgba(255, 255, 255, 0.35);
+    background-color: rgba(0, 0, 0, 0.6);
+}
+
+.emote-wheel__slot--selected {
+    border-color: rgb(255, 210, 60);
+    background-color: rgba(120, 90, 0, 0.8);
+    scale: 1.1 1.1;
+}
+
+.emote-wheel__slot-name {
+    font-size: 20px;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.emote-wheel__center {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    font-size: 24px;
+    -unity-font-style: bold;
+    color: rgb(255, 255, 255);
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 /* ボイスチャットの欄。左の中ほどに、自分の印を先頭にして話している人を積む。VoiceIndicatorView が行を入れる。 */
 .voice {
     position: absolute;

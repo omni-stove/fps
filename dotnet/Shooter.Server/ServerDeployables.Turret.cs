@@ -121,8 +121,8 @@ namespace Shooter.Server
             var unit = distance > 1e-4f ? toTarget / distance : Forward(placed.HeadYaw);
             var hitboxes = _combat.Hitboxes;
             var tick = hitboxes.HasHistory ? hitboxes.LastRecordedTick : 0;
-            var hasHit = hitboxes.Raycast(eye, unit, reach, tick, PlayerIds.None, _combat.IsHittable, out var hit);
-            if (Raycast(eye, unit, hasHit ? hit.Distance : reach, placed.OwnerId, placed.Id, out var blockerId, out var blockerDistance))
+            var hasHit = hitboxes.RaycastIgnoringDeployables(eye, unit, reach, tick, PlayerIds.None, _combat.IsHittable, out var hit);
+            if (Raycast(eye, unit, hasHit ? hit.Distance : reach, placed.OwnerId, placed.Id, out var blockerId, out var blockerDistance, out _))
             {
                 // 敵の置いた盾などが前にあれば、それを撃って壊しにかかる。撃たずに待つと盾の後ろの相手を狙ったまま動けなくなる
                 placed.HeldFor = null;

@@ -10,6 +10,8 @@ namespace Shooter.Runtime
     {
         public const string LogTag = "[Combat]";
 
+        private static readonly List<LockOnAim> _active = new List<LockOnAim>();
+
         private readonly LockOnTracker _tracker = new LockOnTracker();
         private readonly List<LockOnCandidate> _candidates = new List<LockOnCandidate>();
         private AudioSource _audio;
@@ -27,11 +29,34 @@ namespace Shooter.Runtime
 
         public ILockOnTargets Targets { get; set; }
 
+        // 敵の捕捉 (LockOnTurret) が、この画面のプレイヤーの照準の捕捉表示を書き換えないよう切れるようにする。
+        public bool PublishesToHud { get; set; } = true;
+
+        // Targets の Id は集め方ごとの番号で場の物を指さないので、狙われた側が自分かどうかを確かめるには Id を体に引き直す関数が要る。
+        public Func<int, Damageable> TargetLookup { get; set; }
+
+        // 狙われた側が毎フレーム場を探し直さずに済むよう、有効な LockOnAim をここに集めておく。
+        public static IReadOnlyList<LockOnAim> Active => _active;
+
         public LockOnTracker Tracker => _tracker;
 
         public float? Progress => _tracker.TargetId.HasValue ? _tracker.Progress : (float?)null;
 
+        public int? TargetId => _tracker.TargetId;
+
         public int? LockedTargetId => _tracker.LockedTargetId;
+
+        public LockOnWarningStage Stage =>
+            !_tracker.TargetId.HasValue ? LockOnWarningStage.None : _tracker.IsLocked ? LockOnWarningStage.Locked : LockOnWarningStage.Tracking;
+
+        public Damageable Target
+        {
+            get
+            {
+                var id = _tracker.TargetId;
+                return id.HasValue && TargetLookup != null ? TargetLookup(id.Value) : null;
+            }
+        }
 
         public static LockOnAim Attach(GameObject player, WeaponController weapon, AimDownSights ads)
         {
@@ -54,7 +79,9 @@ namespace Shooter.Runtime
                 weapon.ResolveShot(out var origin, out var direction);
                 return new Ray(origin, direction);
             };
-            lockOn.Targets = new HitboxLockOnTargets(player.transform, weapon.HitMask);
+            var targets = new HitboxLockOnTargets(player.transform, weapon.HitMask);
+            lockOn.Targets = targets;
+            lockOn.TargetLookup = targets.Find;
             weapon.LockOn = lockOn;
             return lockOn;
         }
@@ -64,6 +91,12 @@ namespace Shooter.Runtime
         {
             var id = LockedTargetId;
             return id.HasValue && Targets != null ? Targets.Follow(id.Value) : null;
+        }
+
+        public ILockOnDecoy DecoyOfLocked()
+        {
+            var id = LockedTargetId;
+            return id.HasValue && Targets != null ? Targets.Decoy(id.Value) : null;
         }
 
         public void ShowOn(HudModel model)
@@ -87,6 +120,11 @@ namespace Shooter.Runtime
         // 付けるのはこの画面のプレイヤーだけなので、出している HUD の値 (オフラインもネット対戦も GameSignals.HudModel) に書く。
         private void ShowOnHud()
         {
+            if (!PublishesToHud)
+            {
+                return;
+            }
+
             var model = GameSignals.HudModel.Value;
             if (model != null)
             {
@@ -122,8 +160,17 @@ namespace Shooter.Runtime
             Tick(Time.deltaTime);
         }
 
+        private void OnEnable()
+        {
+            if (!_active.Contains(this))
+            {
+                _active.Add(this);
+            }
+        }
+
         private void OnDisable()
         {
+            _active.Remove(this);
             _tracker.Clear();
             Report();
             ShowOnHud();

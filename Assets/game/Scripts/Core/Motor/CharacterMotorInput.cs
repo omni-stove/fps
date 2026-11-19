@@ -13,6 +13,8 @@ namespace Shooter.Core
 
         private readonly sbyte _lean;
 
+        private readonly PlatformMotion _platform;
+
         public CharacterMotorInput(
             Vector2 move, float yaw, bool sprint, bool jump, bool crouch, bool downed, bool cover, bool aim, bool dodge, bool vaultAllowed)
             : this(move, yaw, sprint, jump, crouch, downed, cover, aim, dodge, vaultAllowed, false, false, false)
@@ -35,7 +37,8 @@ namespace Shooter.Core
             bool ladderAllowed,
             float carrySpeedMultiplier = 1f,
             bool jumpAllowed = true,
-            int lean = 0)
+            int lean = 0,
+            PlatformMotion platform = default)
         {
             if (!(carrySpeedMultiplier >= 0f) || float.IsInfinity(carrySpeedMultiplier))
             {
@@ -64,6 +67,7 @@ namespace Shooter.Core
             _carrySpeedOffset = carrySpeedMultiplier - 1f;
             _jumpForbidden = !jumpAllowed;
             _lean = (sbyte)lean;
+            _platform = platform;
         }
 
         public Vector2 Move { get; }
@@ -98,10 +102,14 @@ namespace Shooter.Core
 
         public int Lean => _lean;
 
+        public PlatformMotion Platform => _platform;
+
         public CharacterMotorInput Restrained()
         {
             return Downed
-                ? new CharacterMotorInput(Vector2.Zero, Yaw, false, false, true, true, false, false, false, false, false, false, false, CarrySpeedMultiplier, JumpAllowed)
+                ? new CharacterMotorInput(
+                    Vector2.Zero, Yaw, false, false, true, true, false, false, false, false, false, false, false, CarrySpeedMultiplier, JumpAllowed,
+                    platform: Platform)
                 : this;
         }
 
@@ -123,6 +131,11 @@ namespace Shooter.Core
         public CharacterMotorInput WithVaultAllowed(bool allowed)
         {
             return VaultAllowed == allowed ? this : With(vaultAllowed: allowed);
+        }
+
+        public CharacterMotorInput WithPlatform(PlatformMotion platform)
+        {
+            return Platform.Equals(platform) ? this : With(platform: platform);
         }
 
         public CharacterMotorInput WithCarrySpeedMultiplier(float carrySpeedMultiplier)
@@ -148,7 +161,7 @@ namespace Shooter.Core
 
         public CharacterMotorInput With(
             bool? cover = null, bool? dodge = null, bool? vaultAllowed = null, bool? prone = null, bool? proneAllowed = null, bool? ladderAllowed = null,
-            float? carrySpeedMultiplier = null, bool? jumpAllowed = null, int? lean = null)
+            float? carrySpeedMultiplier = null, bool? jumpAllowed = null, int? lean = null, PlatformMotion? platform = null)
         {
             return new CharacterMotorInput(
                 Move,
@@ -166,7 +179,8 @@ namespace Shooter.Core
                 ladderAllowed ?? LadderAllowed,
                 carrySpeedMultiplier ?? CarrySpeedMultiplier,
                 jumpAllowed ?? JumpAllowed,
-                lean ?? Lean);
+                lean ?? Lean,
+                platform ?? Platform);
         }
 
         public static bool IsValid(Vector2 move, float yaw)

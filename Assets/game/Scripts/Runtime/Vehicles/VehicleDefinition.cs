@@ -60,6 +60,9 @@ namespace Shooter.Runtime
         [SerializeField, Min(0), Tooltip("爆発の中心で建造物に与える被害")]
         private int _explosionStructureDamage = VehicleDurabilitySpec.DefaultExplosionStructureDamage;
 
+        [SerializeField, Tooltip("空中で降りたとき・壊れたときの脱出")]
+        private BailOutSettings _bailOut = new BailOutSettings();
+
         public string Id
         {
             get => _id;
@@ -162,6 +165,8 @@ namespace Shooter.Runtime
             set => _explosionStructureDamage = value;
         }
 
+        public BailOutSettings BailOut => _bailOut ??= new BailOutSettings();
+
         public VehicleSpec ToSpec(IReadOnlyList<VehicleSeatSpec> seats)
         {
             return ToSpec(seats, null);
@@ -192,7 +197,8 @@ namespace Shooter.Runtime
                         _speedFieldOfViewStartSpeed,
                         _speedFieldOfViewFullSpeed,
                         _speedFieldOfViewExtraDegrees,
-                        _speedFieldOfViewBlendSeconds));
+                        _speedFieldOfViewBlendSeconds),
+                    BailOut.ToSpec());
             }
             catch (ArgumentException e)
             {
@@ -231,6 +237,7 @@ namespace Shooter.Runtime
             _explosionRadius = durability.Explosion.Damage.Radius;
             _explosionFullDamageRadius = durability.Explosion.Damage.FullDamageRadius;
             _explosionStructureDamage = durability.Explosion.StructureDamageAtCenter;
+            BailOut.CopyFrom(spec.BailOut);
         }
 
         private VehiclePartSpec[] PartSpecs()

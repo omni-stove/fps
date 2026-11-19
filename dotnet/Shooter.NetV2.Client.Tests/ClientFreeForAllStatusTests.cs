@@ -31,7 +31,7 @@ namespace Shooter.NetV2.Tests
                 new SideScore(new Side(7), 2d),
             }));
             Assert.That(status.OwnSide, Is.EqualTo(new Side(5)));
-            Assert.That(status.RespawnSeconds, Is.Null, "the snapshot carries no respawn countdown");
+            Assert.That(status.RespawnSeconds, Is.Null, "the snapshot carries no owner part");
             Assert.That(status.IsEnded, Is.False);
             Assert.That(status.Winner, Is.Null);
             Assert.That(status.Detail, Is.EqualTo(new FreeForAllStanding(3, 3, 0, -8)));
@@ -131,6 +131,58 @@ namespace Shooter.NetV2.Tests
             Assert.That(ClientFreeForAllStatus.ScoreOf(int.MaxValue, 3), Is.EqualTo(int.MaxValue));
             Assert.That(ClientFreeForAllStatus.ScoreOf(4, 3), Is.EqualTo(12));
             Assert.That(ClientFreeForAllStatus.ScoreOf(-1, 3), Is.Zero);
+        }
+
+        [Test]
+        public void TheOwnersRespawnCountdownIsTheRespawnSeconds()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll, pointsPerKill: 1, (1, 2), (2, 0));
+            snapshot.HasOwner = true;
+            snapshot.Owner.RespawnSeconds = 3;
+
+            var status = ClientFreeForAllStatus.From(snapshot, 2);
+
+            Assert.That(status.RespawnSeconds, Is.EqualTo(3f));
+        }
+
+        [Test]
+        public void AZeroCountdownIsStillShown()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll, pointsPerKill: 1, (1, 2));
+            snapshot.HasOwner = true;
+            snapshot.Owner.RespawnSeconds = 0;
+
+            Assert.That(ClientFreeForAllStatus.From(snapshot, 1).RespawnSeconds, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void ALivingPlayerHasNoRespawnSeconds()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll, pointsPerKill: 1, (1, 2));
+            snapshot.HasOwner = true;
+            snapshot.Owner.RespawnSeconds = null;
+
+            Assert.That(ClientFreeForAllStatus.From(snapshot, 1).RespawnSeconds, Is.Null);
+        }
+
+        [Test]
+        public void ASpectatorHasNoRespawnSeconds()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll, pointsPerKill: 1, (1, 2));
+            snapshot.HasOwner = true;
+            snapshot.Owner.RespawnSeconds = 4;
+
+            Assert.That(ClientFreeForAllStatus.From(snapshot, 9).RespawnSeconds, Is.Null);
+        }
+
+        [Test]
+        public void ANegativeCountdownIsShownAsZero()
+        {
+            var snapshot = Snapshot(MatchObjective.FreeForAll, pointsPerKill: 1, (1, 2));
+            snapshot.HasOwner = true;
+            snapshot.Owner.RespawnSeconds = -2;
+
+            Assert.That(ClientFreeForAllStatus.From(snapshot, 1).RespawnSeconds, Is.EqualTo(0f));
         }
 
         [Test]

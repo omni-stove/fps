@@ -14,11 +14,19 @@ namespace Shooter.Runtime
         // 降りる位置の候補を置かなくても降りられるよう座席の横・後ろを試すのは、仮の乗り物を手早く置けるようにするため。
         public const float FallbackExitDistance = 2f;
 
+        public const float HeightProbeDistance = 1000f;
+
         // 降りる場所のカプセルを床から浮かせる高さ。床そのものを塞がりと数えないため。
         private const float ExitGroundSkin = 0.05f;
 
+        // 地面に少しめり込んでいても Ray の始点が地面の中に入って地面を外さないよう、当たり判定の底より上から飛ばす。
+        private const float HeightProbeLift = 0.25f;
+
+        private const int MaxHeightProbeHits = 16;
+
         private static readonly List<Vehicle> _active = new List<Vehicle>();
         private static readonly Collider[] _overlapBuffer = new Collider[32];
+        private static readonly RaycastHit[] _heightProbeBuffer = new RaycastHit[MaxHeightProbeHits];
 
         [SerializeField, Tooltip("乗り物の値 (Id・耐久・乗り込める距離・追うカメラ)。空ならこの下の値を使う")]
         private VehicleDefinition _definition;
@@ -43,6 +51,12 @@ namespace Shooter.Runtime
 
         [SerializeField, Tooltip("降りる場所を塞いでいるとみなすレイヤー")]
         private LayerMask _exitBlockMask = Physics.DefaultRaycastLayers;
+
+        [SerializeField, Tooltip("空中で降りたとき・壊れたときの脱出。定義があればその値を使う")]
+        private BailOutSettings _bailOut = new BailOutSettings();
+
+        [SerializeField, Tooltip("脱出するかを決める高さを測るときに、地面として当たるレイヤー")]
+        private LayerMask _groundMask = Physics.DefaultRaycastLayers;
 
         private readonly List<IVehicleInputSink> _sinks = new List<IVehicleInputSink>();
         private readonly Dictionary<IVehicleRider, IgnoredCollisions> _ignored = new Dictionary<IVehicleRider, IgnoredCollisions>();
@@ -124,6 +138,21 @@ namespace Shooter.Runtime
         }
 
         public IReadOnlyList<Transform> ExitPoints => _exitPoints;
+
+        public LayerMask GroundMask
+        {
+            get => _groundMask;
+            set => _groundMask = value;
+        }
+
+        public Vector3 Velocity
+        {
+            get
+            {
+                var body = GetComponent<Rigidbody>();
+                return body != null ? body.linearVelocity : Vector3.zero;
+            }
+        }
 
         public Vector3 ChaseFocus => transform.position + (Vector3.up * Spec.ChaseHeight);
 
@@ -275,6 +304,7 @@ namespace Shooter.Runtime
             _enterRange = spec.EnterRange;
             _chaseDistance = spec.ChaseDistance;
             _chaseHeight = spec.ChaseHeight;
+            (_bailOut ??= new BailOutSettings()).CopyFrom(spec.BailOut);
             _spec = spec;
 
             ConfigureDurability(spec);
@@ -505,6 +535,65 @@ namespace Shooter.Runtime
 
             ForceLeave(rider, seat, reason);
             return true;
+        }
+
+        // 降りる場所が塞がっていても脱出は断らない。空中で降りられないと、壊れかけの機体から出られなくなるため。
+        public bool BailOut(IVehicleRider rider)
+        {
+            var seat = RequireRiding(rider);
+            if (seat == null)
+            {
+                return false;
+            }
+
+            LeaveByBailOut(rider, seat);
+            return true;
+        }
+
+        public BailOutVerdict EvaluateBailOut()
+        {
+            return EvaluateBailOut(out _);
+        }
+
+        public BailOutVerdict EvaluateBailOut(out float? heightAboveGround)
+        {
+            var spec = Spec.BailOut;
+            heightAboveGround = spec.Enabled ? MeasureHeightAboveGround() : null;
+            return spec.Evaluate(heightAboveGround);
+        }
+
+        public float? MeasureHeightAboveGround()
+        {
+            EnsureInitialized();
+            var bottom = transform.position;
+            if (TryGetColliderBounds(out var bounds))
+            {
+                bottom = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+            }
+
+            var origin = bottom + (Vector3.up * HeightProbeLift);
+            var count = Physics.RaycastNonAlloc(
+                origin, Vector3.down, _heightProbeBuffer, HeightProbeDistance + HeightProbeLift, _groundMask, QueryTriggerInteraction.Ignore);
+            var nearest = float.PositiveInfinity;
+            try
+            {
+                for (var i = 0; i < count; i++)
+                {
+                    var hit = _heightProbeBuffer[i];
+                    if (hit.collider == null || hit.collider.transform.IsChildOf(transform) || IsRiderCollider(hit.collider))
+                    {
+                        continue;
+                    }
+
+                    nearest = Mathf.Min(nearest, hit.distance);
+                }
+            }
+            finally
+            {
+                Array.Clear(_heightProbeBuffer, 0, count);
+            }
+
+            return float.IsPositiveInfinity(nearest) ? (float?)null : Mathf.Max(0f, nearest - HeightProbeLift);
         }
 
         public bool TrySwitchSeat(IVehicleRider rider, int direction)
@@ -788,6 +877,13 @@ namespace Shooter.Runtime
 
         private void ForceLeave(IVehicleRider rider, VehicleSeat seat, VehicleLeaveReason reason)
         {
+            if (reason == VehicleLeaveReason.BailOut
+                || (reason == VehicleLeaveReason.Wrecked && EvaluateBailOut() == BailOutVerdict.BailOut))
+            {
+                LeaveByBailOut(rider, seat);
+                return;
+            }
+
             if (TryFindExit(seat, rider, out var feet, out var rotation, out var exitIndex))
             {
                 Leave(rider, seat, reason, feet, rotation, exitIndex);
@@ -795,6 +891,22 @@ namespace Shooter.Runtime
             }
 
             Leave(rider, seat, reason, AboveVehicle(seat), YawOnly(transform.rotation), -1);
+        }
+
+        // 座席の降りる位置は地上で降りる前提で置かれているので使わず、乗り物の上から試す。上なら動いている機体の翼や胴にぶつからない。
+        private void LeaveByBailOut(IVehicleRider rider, VehicleSeat seat)
+        {
+            var candidates = BailOutCandidates(seat, rider, Spec.BailOut);
+            for (var i = 0; i < candidates.Count; i++)
+            {
+                if (!IsExitBlocked(candidates[i].Position, rider))
+                {
+                    Leave(rider, seat, VehicleLeaveReason.BailOut, candidates[i].Position, candidates[i].Rotation, i);
+                    return;
+                }
+            }
+
+            Leave(rider, seat, VehicleLeaveReason.BailOut, candidates[0].Position, candidates[0].Rotation, -1);
         }
 
         private void Leave(IVehicleRider rider, VehicleSeat seat, VehicleLeaveReason reason, Vector3 feet, Quaternion rotation, int exitIndex)
@@ -943,8 +1055,53 @@ namespace Shooter.Runtime
         // 降りる場所がすべて塞がっていても降ろすときの置き場所。乗り物の当たり判定の上に乗せる。
         private Vector3 AboveVehicle(VehicleSeat seat)
         {
+            var position = seat.SitPosition;
+            if (TryGetColliderBounds(out var bounds))
+            {
+                position.y = bounds.max.y + ExitGroundSkin;
+            }
+
+            return position;
+        }
+
+        // 上、座席の側の横、反対の横の順に試す。横は当たり判定の端から離すので、翼の長い機体でも翼の中に出さない。
+        private List<ExitCandidate> BailOutCandidates(VehicleSeat seat, IVehicleRider rider, BailOutSpec spec)
+        {
+            var yaw = YawOnly(transform.rotation);
+            var sit = seat.SitPosition;
+            var candidates = new List<ExitCandidate>();
+            if (!TryGetColliderBounds(out var bounds))
+            {
+                var right = yaw * Vector3.right;
+                var side = FallbackExitDistance + spec.ExitSideDistance;
+                candidates.Add(new ExitCandidate(sit + (Vector3.up * spec.ExitHeight), yaw));
+                candidates.Add(new ExitCandidate(sit + (right * side), yaw));
+                candidates.Add(new ExitCandidate(sit - (right * side), yaw));
+                return candidates;
+            }
+
+            var above = sit;
+            above.y = bounds.max.y + ExitGroundSkin + spec.ExitHeight;
+            candidates.Add(new ExitCandidate(above, yaw));
+
+            var toSeat = Vector3.Dot(sit - bounds.center, yaw * Vector3.right);
+            var near = toSeat >= 0f ? yaw * Vector3.right : yaw * Vector3.left;
+            foreach (var direction in new[] { near, -near })
+            {
+                var halfWidth = (Mathf.Abs(direction.x) * bounds.extents.x) + (Mathf.Abs(direction.z) * bounds.extents.z);
+                var fromCenter = halfWidth + Mathf.Max(0.01f, rider.ClearanceRadius) + spec.ExitSideDistance;
+                var position = bounds.center + (direction * fromCenter);
+                position.y = sit.y;
+                candidates.Add(new ExitCandidate(position, yaw));
+            }
+
+            return candidates;
+        }
+
+        private bool TryGetColliderBounds(out Bounds bounds)
+        {
             var found = false;
-            var bounds = default(Bounds);
+            bounds = default;
             foreach (var collider in GetComponentsInChildren<Collider>())
             {
                 if (collider.isTrigger || !collider.enabled)
@@ -963,13 +1120,23 @@ namespace Shooter.Runtime
                 }
             }
 
-            var position = seat.SitPosition;
-            if (found)
+            return found;
+        }
+
+        private bool IsRiderCollider(Collider collider)
+        {
+            foreach (var ignored in _ignored.Values)
             {
-                position.y = bounds.max.y + ExitGroundSkin;
+                foreach (var riderCollider in ignored.Rider)
+                {
+                    if (ReferenceEquals(riderCollider, collider))
+                    {
+                        return true;
+                    }
+                }
             }
 
-            return position;
+            return false;
         }
 
         private static Quaternion YawOnly(Quaternion rotation)
@@ -1141,7 +1308,9 @@ namespace Shooter.Runtime
                 }
             }
 
-            return new VehicleSpec(_vehicleId, _maxHealth, seats, WeaponSpecs(), null, _enterRange, _chaseDistance, _chaseHeight);
+            var bailOut = (_bailOut ??= new BailOutSettings()).ToSpec();
+            return new VehicleSpec(
+                _vehicleId, _maxHealth, seats, WeaponSpecs(), null, _enterRange, _chaseDistance, _chaseHeight, bailOut: bailOut);
         }
 
         private VehicleWeaponSpec[] WeaponSpecs()

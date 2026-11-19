@@ -53,6 +53,18 @@ namespace Shooter.Core
             return $"{Tag} '{vehicle}' leave rider={rider} seat={seat} reason={reason} exit={exit}";
         }
 
+        public static string BailOut(string vehicle, string rider, float inheritedSpeed, ParachuteOpenVerdict? parachute)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} '{1}' bail out rider={2} speed={3:0.0} parachute={4}",
+                Tag,
+                vehicle,
+                rider,
+                inheritedSpeed,
+                parachute.HasValue ? parachute.Value.ToString() : "-");
+        }
+
         public static string LeaveRefused(string vehicle, string rider, string reason)
         {
             return $"{Tag} '{vehicle}' leave refused rider={rider} reason={reason}";
@@ -150,6 +162,41 @@ namespace Shooter.Core
         public static string MissingMotor(string vehicle)
         {
             return $"{Tag} '{vehicle}' has no IVehicleMotor; the driver's input moves nothing";
+        }
+
+        public static string BotDriverMissingVehicle(string driver)
+        {
+            return $"{Tag} bot driver '{driver}' has no Vehicle; it drives nothing";
+        }
+
+        public static string BotDriverMissingDriverSeat(string vehicle)
+        {
+            return $"{Tag} '{vehicle}' has no driver seat; the bot driver drives nothing";
+        }
+
+        public static string BotDriverMissingRoute(string vehicle)
+        {
+            return $"{Tag} '{vehicle}' bot driver has no route with points; it stays put";
+        }
+
+        public static string BotDriverPhase(string vehicle, VehicleRoutePhase phase, int targetIndex)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} '{1}' bot driver phase={2} target={3}", Tag, vehicle, phase, targetIndex);
+        }
+
+        public static string BotTakesControls(string vehicle, string rider, bool flies, string route)
+        {
+            return $"{Tag} '{vehicle}' bot takes controls rider={rider} as={(flies ? "pilot" : "driver")} route={(string.IsNullOrEmpty(route) ? "none" : route)}";
+        }
+
+        public static string BotGivesUpControls(string vehicle, string rider)
+        {
+            return $"{Tag} '{vehicle}' bot gives up controls rider={rider}";
+        }
+
+        public static string BotRouteOrdered(string rider, string route)
+        {
+            return $"{Tag} bot route order rider={rider} route={(string.IsNullOrEmpty(route) ? "none" : route)}";
         }
 
         public static string EffectsMissingMotor(string vehicle)

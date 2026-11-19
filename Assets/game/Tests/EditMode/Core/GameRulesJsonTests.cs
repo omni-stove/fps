@@ -70,7 +70,9 @@ namespace Shooter.Core.Tests
     ""abilities"": ""On"",
     ""slowMotion"": ""On"",
     ""aimToFire"": ""On"",
-    ""jump"": ""Off""
+    ""jump"": ""Off"",
+    ""emote"": ""On"",
+    ""stamina"": ""On""
   },
   ""spawnProtectionSeconds"": 1.5,
   ""fallDamage"": ""On"",
@@ -80,7 +82,8 @@ namespace Shooter.Core.Tests
   ""idleKickSeconds"": 90,
   ""maxWeapons"": 2,
   ""reloadMode"": ""Manual"",
-  ""viewMode"": ""ThirdPerson""
+  ""viewMode"": ""ThirdPerson"",
+  ""respawnAnchor"": [""Beacon"", ""Squad"", ""Base""]
 }";
             var expected = new GameRules(
                 FriendlyFire.Reflect,
@@ -102,7 +105,8 @@ namespace Shooter.Core.Tests
                 90f,
                 2,
                 ReloadMode.Manual,
-                ViewMode.ThirdPerson);
+                ViewMode.ThirdPerson,
+                respawnAnchor: _everyAnchor);
 
             AssertSameRules(GameRulesJson.Parse(json, _source), expected);
         }
@@ -176,6 +180,101 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void OmittedEmoteStaminaAndRespawnAnchorKeepTheDefaults()
+        {
+            var omitted = GameRulesJson.Parse("{\"actions\": {\"cover\": \"On\"}}", _source);
+
+            Assert.That(omitted.Actions.Emote, Is.EqualTo(Emote.Off));
+            Assert.That(omitted.Actions.Stamina, Is.EqualTo(Stamina.Off));
+            Assert.That(omitted.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Base }));
+            Assert.That(GameRules.Default.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Base }));
+
+            var baseRules = GameRules.Default
+                .WithActions(ActionRules.Default.WithEmote(Emote.On).WithStamina(Stamina.On))
+                .WithRespawnAnchors(new[] { RespawnAnchor.Squad, RespawnAnchor.Base });
+            var overBase = GameRulesJson.Parse("{}", _source, baseRules);
+            Assert.That(overBase.Actions.Emote, Is.EqualTo(Emote.On), "omitted keeps the base");
+            Assert.That(overBase.Actions.Stamina, Is.EqualTo(Stamina.On), "omitted keeps the base");
+            Assert.That(overBase.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Squad, RespawnAnchor.Base }), "omitted keeps the base");
+        }
+
+        [Test]
+        public void WrittenEmoteStaminaAndRespawnAnchorAreRead()
+        {
+            var rules = GameRulesJson.Parse(
+                "{\"actions\": {\"emote\": \"On\", \"stamina\": \"On\"}, \"respawnAnchor\": [\"Squad\", \"Beacon\", \"Base\"]}", _source);
+
+            Assert.That(rules.Actions.Emote, Is.EqualTo(Emote.On));
+            Assert.That(rules.Actions.Stamina, Is.EqualTo(Stamina.On));
+            Assert.That(rules.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Squad, RespawnAnchor.Beacon, RespawnAnchor.Base }), "kept in the written order");
+            Assert.That(rules.Actions.Cover, Is.EqualTo(Cover.Off), "the other actions keep their defaults");
+        }
+
+        [Test]
+        public void WriteThenParseKeepsEmoteStaminaAndRespawnAnchor()
+        {
+            var defaults = GameRulesJson.Write(GameRules.Default);
+            Assert.That(defaults, Does.Contain("\"emote\": \"Off\""));
+            Assert.That(defaults, Does.Contain("\"stamina\": \"Off\""));
+            Assert.That(defaults, Does.Contain("\"respawnAnchor\": [\"Base\"]"));
+
+            var rules = GameRules.Default
+                .WithActions(ActionRules.Default.WithEmote(Emote.On).WithStamina(Stamina.On))
+                .WithRespawnAnchors(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base });
+            var written = GameRulesJson.Write(rules);
+            Assert.That(written, Does.Contain("\"emote\": \"On\""));
+            Assert.That(written, Does.Contain("\"stamina\": \"On\""));
+            Assert.That(written, Does.Contain("\"respawnAnchor\": [\"Beacon\", \"Base\"]"));
+
+            AssertSameRules(GameRulesJson.Parse(written, _source), rules);
+        }
+
+        [TestCase("{\"actions\": {\"emote\": \"Maybe\"}}", "actions.emote")]
+        [TestCase("{\"actions\": {\"stamina\": \"Maybe\"}}", "actions.stamina")]
+        [TestCase("{\"actions\": {\"emote\": true}}", "actions.emote")]
+        [TestCase("{\"emote\": \"On\"}", "emote")]
+        [TestCase("{\"respawnAnchor\": \"Base\"}", "respawnAnchor")]
+        [TestCase("{\"respawnAnchor\": [\"Home\"]}", "respawnAnchor")]
+        [TestCase("{\"respawnAnchor\": [\"base\"]}", "respawnAnchor")]
+        [TestCase("{\"respawnAnchor\": [0]}", "respawnAnchor")]
+        [TestCase("{\"respawnAnchor\": []}", "respawnAnchor")]
+        [TestCase("{\"respawnAnchor\": [\"Base\", \"Base\"]}", "respawnAnchor")]
+        [TestCase("{\"respawnAnchor\": null}", "respawnAnchor")]
+        public void BadEmoteStaminaOrRespawnAnchorIsRejectedWithItsName(string json, string item)
+        {
+            var e = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse(json, _source));
+
+            AssertNames(e, item);
+        }
+
+        [Test]
+        public void TheReadLogNamesEmoteStaminaAndTheAnchorsInOrder()
+        {
+            var rules = GameRulesJson.Parse("{\"actions\": {\"emote\": \"On\"}, \"respawnAnchor\": [\"Squad\", \"Base\"]}", _source);
+
+            Assert.That(
+                GameRulesLog.Read(_source, rules),
+                Is.EqualTo("[GameRules] read 'Rules/Test.json' emote=On stamina=Off respawnAnchor=Squad,Base"));
+            Assert.That(
+                GameRulesLog.Read(null, GameRules.Default),
+                Is.EqualTo("[GameRules] read '-' emote=Off stamina=Off respawnAnchor=Base"));
+            Assert.Throws<ArgumentNullException>(() => GameRulesLog.Read(_source, null));
+        }
+
+        [Test]
+        public void TheRespawnAnchorsCannotBeChangedThroughTheGivenArray()
+        {
+            var anchors = new[] { RespawnAnchor.Squad, RespawnAnchor.Base };
+            var rules = GameRules.Default.WithRespawnAnchors(anchors);
+
+            anchors[0] = RespawnAnchor.Beacon;
+
+            Assert.That(rules.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Squad, RespawnAnchor.Base }));
+            Assert.Throws<ArgumentNullException>(() => GameRules.Default.WithRespawnAnchors(null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => GameRules.Default.WithRespawnAnchors(new[] { (RespawnAnchor)99 }));
+        }
+
+        [Test]
         public void ParseOverBaseRulesChangesOnlyTheWrittenItems()
         {
             var baseRules = GameRules.Default
@@ -211,8 +310,8 @@ namespace Shooter.Core.Tests
         [Test]
         public void ItemNamesMatchTheRulesConstructors()
         {
-            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(25));
-            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(27));
+            Assert.That(GameRulesJson.ItemNames.Count, Is.EqualTo(26));
+            Assert.That(GameRulesJson.ActionItemNames.Count, Is.EqualTo(29));
             Assert.That(GameRulesJson.ItemNames, Does.Contain(GameRulesJson.ActionsItem));
         }
 
@@ -307,7 +406,8 @@ namespace Shooter.Core.Tests
                 0.1f,
                 2,
                 ReloadMode.Manual,
-                ViewMode.ThirdPerson);
+                ViewMode.ThirdPerson,
+                respawnAnchor: _everyAnchor);
 
             var written = GameRulesJson.Write(rules);
 
@@ -366,8 +466,12 @@ namespace Shooter.Core.Tests
                 SlowMotion.On,
                 AimToFire.On,
                 // 既定が On なので、既定と違う値を書き戻せるかを見るには Off にする
-                Jump.Off);
+                Jump.Off,
+                emote: Emote.On,
+                stamina: Stamina.On);
         }
+
+        private static readonly RespawnAnchor[] _everyAnchor = { RespawnAnchor.Beacon, RespawnAnchor.Squad, RespawnAnchor.Base };
 
         [Test]
         public void ReadsFloatsExactlyAsCSharpLiterals()
@@ -533,6 +637,7 @@ namespace Shooter.Core.Tests
             Assert.That(actual.Streaks, Is.EqualTo(expected.Streaks), "streaks");
             Assert.That(actual.TextChat, Is.EqualTo(expected.TextChat), "textChat");
             Assert.That(actual.Spectating, Is.EqualTo(expected.Spectating), "spectating");
+            Assert.That(actual.RespawnAnchors, Is.EqualTo(expected.RespawnAnchors), "respawnAnchor");
 
             var a = actual.Actions;
             var b = expected.Actions;
@@ -562,6 +667,8 @@ namespace Shooter.Core.Tests
             Assert.That(a.SlowMotion, Is.EqualTo(b.SlowMotion), "actions.slowMotion");
             Assert.That(a.AimToFire, Is.EqualTo(b.AimToFire), "actions.aimToFire");
             Assert.That(a.Jump, Is.EqualTo(b.Jump), "actions.jump");
+            Assert.That(a.Emote, Is.EqualTo(b.Emote), "actions.emote");
+            Assert.That(a.Stamina, Is.EqualTo(b.Stamina), "actions.stamina");
         }
     }
 }

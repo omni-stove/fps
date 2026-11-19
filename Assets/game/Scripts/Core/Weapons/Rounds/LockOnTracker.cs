@@ -66,7 +66,7 @@ namespace Shooter.Core
             {
                 var candidate = candidates[i];
                 var angle = AngleTo(eye, unit, candidate.Point);
-                if (angle > homing.LockOnConeDegrees)
+                if (angle > homing.LockOnConeDegrees || IsLured(eye, candidate))
                 {
                     continue;
                 }
@@ -117,6 +117,12 @@ namespace Shooter.Core
 
             return forward.LengthSquared() >= _minLength * _minLength
                 && AngleTo(eye, Vector3.Normalize(forward), point) <= homing.LockOnConeDegrees;
+        }
+
+        // 囮に誘われた相手は円錐の外にいるのと同じに扱い、捉えた時間を 0 に戻す。囮が消えたあとに残りの時間だけでロックし直させないため。
+        private static bool IsLured(Vector3 eye, LockOnCandidate candidate)
+        {
+            return candidate.Decoy != null && candidate.Decoy.TryLure(eye, candidate.Point, out _, out _);
         }
     }
 }

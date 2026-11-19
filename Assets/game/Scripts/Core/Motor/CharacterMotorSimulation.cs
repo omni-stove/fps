@@ -33,6 +33,9 @@ namespace Shooter.Core
 
         private IReadOnlyList<MapLadder> _ladders = Array.Empty<MapLadder>();
 
+        // この tick に床に運ばれた速さ。tick をまたいで持ち越さない
+        private Vector3 _rideVelocity;
+
         private IWaterVolumes _water = NoWaterVolumes.Instance;
         private SwimTuning _swim = SwimTuning.Default;
         private WallRunTuning _wallRun = WallRunTuning.Default;
@@ -135,6 +138,9 @@ namespace Shooter.Core
 
         public VaultProbeResult LastVaultProbe { get; private set; }
 
+        // 床を止めることも視点を回すこともシミュレーションからはできないので、床と視点を持つ呼び手が読んで行う。
+        public PlatformRide LastRide { get; private set; }
+
         public static Vector3 YawForward(float yaw)
         {
             return new Vector3(MathF.Sin(yaw), 0f, MathF.Cos(yaw));
@@ -150,6 +156,7 @@ namespace Shooter.Core
         {
             input = input.Restrained();
             Place(state);
+            Ride(state, input.Platform);
 
             _dodge.Restore(state.Dodge);
             RestoreProne(state.Prone);
@@ -439,6 +446,13 @@ namespace Shooter.Core
         {
             var position = Body.Position;
             var grounded = Body.IsGrounded;
+
+            // 床の上での速さは床に対するものなので、床を離れた tick に床の速さを足して世界の速さにする
+            if (!grounded && !ladder.IsClimbing && !traversal.Swim.IsSwimming && !knockback.IsFlying && _rideVelocity != Vector3.Zero)
+            {
+                velocity = new Vector3(velocity.X + _rideVelocity.X, velocity.Y + _rideVelocity.Y, velocity.Z + _rideVelocity.Z);
+            }
+
             if (position.Y < KillPlaneY)
             {
                 position = SpawnPosition;
@@ -485,6 +499,23 @@ namespace Shooter.Core
                 traversal.WallRun,
                 traversal.AirJumpsUsed,
                 traversal.JumpGraceLeft);
+        }
+
+        // 前の tick を床に立って終えたときだけ運ぶ。はしご・泳ぎ・吹き飛ばしの間は床に立っていない。
+        // 運ぶのを他の動きと別の Move にするのは、上がる床で頭上に塞がれたことを他の動きの当たりと分けて知るため。
+        private void Ride(CharacterMotorState state, PlatformMotion platform)
+        {
+            LastRide = PlatformRide.None;
+            _rideVelocity = Vector3.Zero;
+            if (!state.IsGrounded || state.IsClimbing || state.IsSwimming || state.IsKnockedBack || platform.IsStill)
+            {
+                return;
+            }
+
+            var intended = platform.Displacement(Body.Position);
+            var contacts = Body.Move(intended);
+            LastRide = new PlatformRide(platform, intended, (contacts & CapsuleContacts.Above) != 0);
+            _rideVelocity = LastRide.Velocity(TickSeconds);
         }
 
         public void Place(CharacterMotorState state)

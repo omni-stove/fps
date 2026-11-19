@@ -36,11 +36,24 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 2. ほかの認証情報と同じく、環境変数か `eos.local.json` に `EOS_ENCRYPTION_KEY` (16 進 64 文字) を入れる。どの端末でも同じ鍵にする。鍵が違う端末からは読めない。
 
 - 保存はいつも手元に書き、同期はその後で行う。EOS が無いビルド・認証情報か鍵が無いとき・ログインできないとき (オフライン) は手元だけで動き、次にログインしたときに合わせる。
-- 起動時に Device ID で EOS にログインし、ログインできたらクラウドの一覧と手元を突き合わせる。保存するたびにそのスロットを送る。
+- 起動時に EOS にログインし (下の「アカウント」)、ログインできたらクラウドの一覧と手元を突き合わせる。保存するたびにそのスロットを送る。
 - 手元とクラウドが食い違ったら、書いた時刻 (UTC) の新しい方を採る。消したことも時刻付きで送るので、他の端末で消したセーブは戻ってこない。
 - クラウドの方で手元を書き換えたときは、前の手元の中身を `cloud-replaced-<スロット>` に残す。
-- Device ID は端末ごとの Id なので、別の端末と同じアカウントで同期するには、Epic アカウントなどで同じ EOS のユーザーにログインさせる必要がある。
 - 自分の保存先で同期するなら、`ICloudSaveBackend` を実装して `CloudSaveBootstrap.Backend` に `SubsystemRegistration` の初期化で入れる。
+
+### アカウント
+
+Device ID は端末ごとの Id なので、それだけでは端末ごとに別の EOS ユーザーになる。端末をまたいで同じユーザーとしてクラウドセーブを同期するには、Epic アカウントでのサインインを使う。
+
+1. EOS の開発者ポータルで、Epic Account Services のアプリケーションを作り、製品のクライアントにつなぐ。権限 (Permissions) には Basic Profile を入れる。Identity Providers に Epic Games を足し、サンドボックスの Connect でも有効にする。
+2. 環境変数か `eos.local.json` に `EOS_EPIC_ACCOUNT_LOGIN=true` を入れる。
+3. 開発中に DevAuthTool で入るなら、`EOS_EPIC_DEV_AUTH` に `localhost:6547/<DevAuthTool に登録した名前>` を入れる。入れなければ AccountPortal (Epic のサインイン画面) を出す。
+
+- 起動時は、前にサインインした Epic アカウントで画面を出さずに入り (PersistentAuth)、無ければ Device ID で入る。
+- Demo のプロフィール画面の「アカウント」から、Epic アカウントでのサインインとサインアウトができる。サインアウトすると覚えたサインインも消し、Device ID のユーザーに戻る。
+- サインインの状態は `GameSignals.Account` に、操作の口は `GameSignals.AccountControl` に出る。どちらも、EOS の認証情報があり、`EOS_ENCRYPTION_KEY` か `EOS_EPIC_ACCOUNT_LOGIN` があるときだけ出る。
+- `EOS_EPIC_ACCOUNT_LOGIN` を入れると、AccountPortal を出すために EOS のオーバーレイを切らずに作る。
+- 自分のサインインを使うなら、`IAccountBackend` を実装して `AccountBootstrap.Backend` に `SubsystemRegistration` の初期化で入れる。
 
 ## サンプル
 
@@ -65,7 +78,7 @@ EOS (`Shooter.NetEos`) は `com.playeveryware.eos` を入れたときだけコ�
 1. 見た目の一覧の JSON (`Tuning/cosmetics.json` と同じ形) を入口の `CosmeticsTuning` に入れる。キットの既定は空で、何も差し替えない。
 2. **Create > Shooter > Cosmetic Visual Catalog** を作り、JSON の `visualId` ごとに、スキンなら体のプレハブ、迷彩なら武器に塗る材質を入れて、入口の `CosmeticVisuals` に入れる。
    - スキンの体は `NetV2/RemotePlayerBody` と同じく、根の原点を体の中心に合わせ、立った高さで作る。当たりは付けても捨てる。
-   - 迷彩は一人称の武器のモデルの材質をすべて替える (粒子と線は替えない)。
+   - 迷彩は一人称の武器のモデルの材質をすべて替える (粒子と線は替えない)。オフラインの試合でもネット対戦でも、自分の画面の武器にだけ出る。
 3. 着けた見た目はプロフィールに残る。ネット対戦ではスキンだけをロードアウトと一緒に送り、相手の画面の体が替わる。カタログか絵が無い Id は既定の見た目のまま出る。
 
 ### UI
@@ -256,6 +269,7 @@ public sealed class HealthOnlyHud : MonoBehaviour
    - 座席の武器は、乗り物の子に `VehicleWeaponMount` を置き、操作する座席の番号をその欄に入れる。
    - 助手席から自分の武器で撃たせるなら、その座席の撃てる向きの範囲 (`OwnWeaponArcDegrees`) を 0 より大きくする。
 3. 座席ごとに乗る位置 (`SetEnterPoints`) と降りる位置 (`SetExitPoints`、並びの順に試す) を置く。どの座席からでも使う降りる位置は `Vehicle.SetExitPoints`。
+4. 空中での降り方は `VehicleDefinition` (定義が無ければ `Vehicle`) の脱出 (`BailOutSettings` / `BailOutSpec`) で決める。乗り物の当たり判定の底から地面 (`Vehicle.GroundMask`) までが最低の高さ以上のときにプレイヤーが降りるか、空中で乗り物が壊れると、降りる位置は使わず乗り物の上 (塞がっていれば横) へ `VehicleLeaveReason.BailOut` で出し、乗り物の速さの一部を引き継いでパラシュート (`ParachuteMovement.DeployForBailOut`) を開く。脱出のパラシュートはモードのパラシュートのルール (`ActionRules.Parachute`) が Off でも開く。地上の乗り物でも、何かに載っている間は高さが 0 なので今までどおり降りる。脱出させない乗り物は `Enabled` を切る。
 
 ### 動き方を差し込む (`IVehicleMotor`)
 

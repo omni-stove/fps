@@ -6,8 +6,8 @@ using Shooter.Protocol;
 namespace Shooter.NetV2
 {
     // オフラインの KillConfirmedRunner と同じく、Detail に KillConfirmed を持つ ModeStatus にして、同じ HUD の書式役で文にできるようにする。
-    // KillConfirmed はサーバーが数えた確定の数と場のタグを写すだけで、ここでは点数も勝敗も決めない。
-    // 阻止の数はスナップショットに欄が無いので 0 のまま写す。出直しの残り秒も届かないので出さない
+    // KillConfirmed はサーバーが数えた確定・阻止の数と場のタグを写すだけで、ここでは点数も勝敗も決めない。
+    // 出直しの残り秒はスナップショットに欄が無いので出さない
     public sealed class ClientKillConfirmedStatus
     {
         private readonly int _localPlayerId;
@@ -49,8 +49,8 @@ namespace Shooter.NetV2
             }
 
             var tagsChanged = CopyTags(snapshot.ObjectiveItems);
-            _detail.SetCounts(Side.Alpha, match.AlphaPoints, 0);
-            _detail.SetCounts(Side.Bravo, match.BravoPoints, 0);
+            _detail.SetCounts(Side.Alpha, match.AlphaPoints, match.AlphaDenied);
+            _detail.SetCounts(Side.Bravo, match.BravoPoints, match.BravoDenied);
 
             var ended = match.State == GameModeState.Ended;
             var shown = new Shown(
@@ -59,6 +59,8 @@ namespace Shooter.NetV2
                 match.BravoScore,
                 match.AlphaPoints,
                 match.BravoPoints,
+                match.AlphaDenied,
+                match.BravoDenied,
                 OwnSideOf(snapshot),
                 ended,
                 ended && match.HasWinner ? Side.FromTeam(match.Winner) : (Side?)null);
@@ -166,13 +168,25 @@ namespace Shooter.NetV2
 
         private readonly struct Shown : IEquatable<Shown>
         {
-            public Shown(int remainingSeconds, int alphaScore, int bravoScore, int alphaConfirmed, int bravoConfirmed, Side? ownSide, bool ended, Side? winner)
+            public Shown(
+                int remainingSeconds,
+                int alphaScore,
+                int bravoScore,
+                int alphaConfirmed,
+                int bravoConfirmed,
+                int alphaDenied,
+                int bravoDenied,
+                Side? ownSide,
+                bool ended,
+                Side? winner)
             {
                 RemainingSeconds = remainingSeconds;
                 AlphaScore = alphaScore;
                 BravoScore = bravoScore;
                 AlphaConfirmed = alphaConfirmed;
                 BravoConfirmed = bravoConfirmed;
+                AlphaDenied = alphaDenied;
+                BravoDenied = bravoDenied;
                 OwnSide = ownSide;
                 Ended = ended;
                 Winner = winner;
@@ -188,6 +202,10 @@ namespace Shooter.NetV2
 
             public int BravoConfirmed { get; }
 
+            public int AlphaDenied { get; }
+
+            public int BravoDenied { get; }
+
             public Side? OwnSide { get; }
 
             public bool Ended { get; }
@@ -201,6 +219,8 @@ namespace Shooter.NetV2
                     && BravoScore == other.BravoScore
                     && AlphaConfirmed == other.AlphaConfirmed
                     && BravoConfirmed == other.BravoConfirmed
+                    && AlphaDenied == other.AlphaDenied
+                    && BravoDenied == other.BravoDenied
                     && OwnSide == other.OwnSide
                     && Ended == other.Ended
                     && Winner == other.Winner;
@@ -208,7 +228,13 @@ namespace Shooter.NetV2
 
             public override bool Equals(object obj) => obj is Shown other && Equals(other);
 
-            public override int GetHashCode() => HashCode.Combine(RemainingSeconds, AlphaScore, BravoScore, AlphaConfirmed, BravoConfirmed, OwnSide, Ended, Winner);
+            // HashCode.Combine は 8 個までしか取らないので、数の欄を先にまとめる
+            public override int GetHashCode() => HashCode.Combine(
+                RemainingSeconds,
+                HashCode.Combine(AlphaScore, BravoScore, AlphaConfirmed, BravoConfirmed, AlphaDenied, BravoDenied),
+                OwnSide,
+                Ended,
+                Winner);
         }
     }
 }

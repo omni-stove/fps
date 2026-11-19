@@ -38,5 +38,7 @@ namespace Shooter.Runtime
         public const string Chat = "Player/Chat";
         public const string TeamChat = "Player/TeamChat";
         public const string PushToTalk = "Player/PushToTalk";
+        public const string Emote = "Player/Emote";
+        public const string Countermeasure = "Player/Countermeasure";
     }
 }

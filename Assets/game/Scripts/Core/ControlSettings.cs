@@ -9,7 +9,7 @@ namespace Shooter.Core
     // 画面の言語は持たない。何をどの言語で出すかは game 側の UI が決め、自分で保存する。
     public sealed class ControlSettings : IEquatable<ControlSettings>
     {
-        public const int CurrentVersion = 11;
+        public const int CurrentVersion = 12;
 
         // 保存した文字列を見て地域を決めていないと分かるよう、空文字や null でなく名前で持つ。
         public const string AutoRegion = "auto";
@@ -45,6 +45,10 @@ namespace Shooter.Core
         private const string _rumbleStrengthKey = "rumbleStrength";
         private const string _quickMatchRegionKey = "quickMatchRegion";
         private const string _telemetryConsentKey = "telemetryConsent";
+        private const string _gyroKey = "gyro";
+        private const string _gyroSensitivityKey = "gyroSensitivity";
+        private const string _gyroAimOnlyKey = "gyroAimOnly";
+        private const string _invertGyroYKey = "invertGyroY";
         private const string _standardPaletteName = "standard";
         private const string _redGreenPaletteName = "redGreen";
         private const string _blueYellowPaletteName = "blueYellow";
@@ -83,6 +87,9 @@ namespace Shooter.Core
             new ControlValueRange(0, 500, 125),
             new ControlValueRange(0, 100, 100),
         };
+
+        // ControlValue に入れないのは、ジャイロの感度は On/Off などと GyroFields にまとめて持ち、設定画面でもジャイロの無い機器では一緒に触れなくするため。
+        public static ControlValueRange GyroSensitivityRange { get; } = new ControlValueRange(10, 500, 100);
 
         // 古い形式に無い値を、欠けた値として警告しないために、その値を書き始めた形式のバージョンを持つ。
         private static readonly int[] _valueSinceVersions = { 2, 2, 2, 2, 2, 2, 7, 7, 10, 10 };
@@ -165,6 +172,17 @@ namespace Shooter.Core
             _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
         };
 
+        private static readonly string[] _versionElevenRootKeys =
+        {
+            _versionKey, _keyboardMouseKey, _gamepadKey,
+            _mouseSensitivityKey, _gamepadSensitivityKey, _adsSensitivityKey,
+            _fieldOfViewKey, _masterVolumeKey, _effectsVolumeKey,
+            _cameraShakeKey, _viewmodelMotionKey, _showBloodKey,
+            _invertLookYKey, _stickDeadzoneKey, _rumbleKey, _rumbleStrengthKey,
+            _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
+            _quickMatchRegionKey, _telemetryConsentKey,
+        };
+
         private static readonly string[] _rootKeys =
         {
             _versionKey, _keyboardMouseKey, _gamepadKey,
@@ -174,6 +192,7 @@ namespace Shooter.Core
             _invertLookYKey, _stickDeadzoneKey, _rumbleKey, _rumbleStrengthKey,
             _showNetStatsKey, _paletteKey, _showSubtitlesKey, _aimAssistKey,
             _quickMatchRegionKey, _telemetryConsentKey,
+            _gyroKey, _gyroSensitivityKey, _gyroAimOnlyKey, _invertGyroYKey,
         };
 
         private static readonly string[] _actionKeys = { _sprintKey, _crouchKey, _aimKey };
@@ -194,7 +213,8 @@ namespace Shooter.Core
             false,
             true,
             AutoRegion,
-            false);
+            false,
+            GyroFields.Default);
 
         private readonly HoldMode[] _modes;
 
@@ -218,6 +238,8 @@ namespace Shooter.Core
 
         private readonly bool _telemetryConsent;
 
+        private readonly GyroFields _gyro;
+
         private ControlSettings(
             HoldMode[] modes,
             int[] amounts,
@@ -229,10 +251,12 @@ namespace Shooter.Core
             bool invertLookY,
             bool rumbleEnabled,
             string quickMatchRegion,
-            bool telemetryConsent)
+            bool telemetryConsent,
+            GyroFields gyro)
         {
             _quickMatchRegion = quickMatchRegion;
             _telemetryConsent = telemetryConsent;
+            _gyro = gyro;
             _modes = modes;
             _amounts = amounts;
             _showNetStats = showNetStats;
@@ -315,6 +339,27 @@ namespace Shooter.Core
 
         public bool TelemetryConsent => _telemetryConsent;
 
+        public bool GyroEnabled => _gyro.Enabled;
+
+        public int GyroSensitivityPercent => _gyro.SensitivityPercent;
+
+        public float GyroSensitivity => _gyro.SensitivityPercent / 100f;
+
+        public bool GyroAimOnly => _gyro.AimOnly;
+
+        public bool InvertGyroY => _gyro.InvertY;
+
+        public bool IsGyroActive(bool aiming)
+        {
+            return _gyro.Enabled && (!_gyro.AimOnly || aiming);
+        }
+
+        // 視点の上下反転 (InvertLookY) と別に持つのは、スティックは反転して遊ぶ人でも、パッドを傾ける向きはそのままの方が自然なことが多いため。
+        public float ApplyInvertGyroY(float lookUp)
+        {
+            return _gyro.InvertY ? -lookUp : lookUp;
+        }
+
         // サーバーが --region で載せる名前と突き合わせるので、大文字小文字や空白の揺れで別の地域にならないよう、書ける文字を絞る。
         public static bool IsValidRegion(string region)
         {
@@ -353,7 +398,7 @@ namespace Shooter.Core
             modes[index] = mode;
             return new ControlSettings(
                 modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
-                _quickMatchRegion, _telemetryConsent);
+                _quickMatchRegion, _telemetryConsent, _gyro);
         }
 
         public ControlSettings With(ControlValue value, int amount)
@@ -377,7 +422,7 @@ namespace Shooter.Core
             amounts[index] = amount;
             return new ControlSettings(
                 _modes, amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
-                _quickMatchRegion, _telemetryConsent);
+                _quickMatchRegion, _telemetryConsent, _gyro);
         }
 
         public ControlSettings WithShowNetStats(bool show)
@@ -386,7 +431,7 @@ namespace Shooter.Core
                 ? this
                 : new ControlSettings(
                     _modes, _amounts, show, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
-                    _quickMatchRegion, _telemetryConsent);
+                    _quickMatchRegion, _telemetryConsent, _gyro);
         }
 
         public ControlSettings WithPalette(ColorPalette palette)
@@ -396,7 +441,7 @@ namespace Shooter.Core
                 ? this
                 : new ControlSettings(
                     _modes, _amounts, _showNetStats, palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
-                    _quickMatchRegion, _telemetryConsent);
+                    _quickMatchRegion, _telemetryConsent, _gyro);
         }
 
         public ControlSettings WithShowSubtitles(bool show)
@@ -405,7 +450,7 @@ namespace Shooter.Core
                 ? this
                 : new ControlSettings(
                     _modes, _amounts, _showNetStats, _palette, show, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
-                    _quickMatchRegion, _telemetryConsent);
+                    _quickMatchRegion, _telemetryConsent, _gyro);
         }
 
         public ControlSettings WithShowBlood(bool show)
@@ -414,7 +459,7 @@ namespace Shooter.Core
                 ? this
                 : new ControlSettings(
                     _modes, _amounts, _showNetStats, _palette, _showSubtitles, show, _aimAssist, _invertLookY, _rumbleEnabled,
-                    _quickMatchRegion, _telemetryConsent);
+                    _quickMatchRegion, _telemetryConsent, _gyro);
         }
 
         public ControlSettings WithAimAssist(bool enabled)
@@ -423,7 +468,7 @@ namespace Shooter.Core
                 ? this
                 : new ControlSettings(
                     _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, enabled, _invertLookY, _rumbleEnabled,
-                    _quickMatchRegion, _telemetryConsent);
+                    _quickMatchRegion, _telemetryConsent, _gyro);
         }
 
         public ControlSettings WithInvertLookY(bool invert)
@@ -432,7 +477,7 @@ namespace Shooter.Core
                 ? this
                 : new ControlSettings(
                     _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, invert, _rumbleEnabled,
-                    _quickMatchRegion, _telemetryConsent);
+                    _quickMatchRegion, _telemetryConsent, _gyro);
         }
 
         public ControlSettings WithStickDeadzone(int permille)
@@ -446,7 +491,7 @@ namespace Shooter.Core
                 ? this
                 : new ControlSettings(
                     _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, enabled,
-                    _quickMatchRegion, _telemetryConsent);
+                    _quickMatchRegion, _telemetryConsent, _gyro);
         }
 
         public ControlSettings WithRumbleStrength(int percent)
@@ -472,7 +517,7 @@ namespace Shooter.Core
                 ? this
                 : new ControlSettings(
                     _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
-                    region, _telemetryConsent);
+                    region, _telemetryConsent, _gyro);
         }
 
         public ControlSettings WithTelemetryConsent(bool consent)
@@ -481,7 +526,44 @@ namespace Shooter.Core
                 ? this
                 : new ControlSettings(
                     _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
-                    _quickMatchRegion, consent);
+                    _quickMatchRegion, consent, _gyro);
+        }
+
+        public ControlSettings WithGyroEnabled(bool enabled)
+        {
+            return WithGyro(new GyroFields(enabled, _gyro.SensitivityPercent, _gyro.AimOnly, _gyro.InvertY));
+        }
+
+        public ControlSettings WithGyroSensitivity(int percent)
+        {
+            if (!GyroSensitivityRange.Contains(percent))
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(percent),
+                    percent,
+                    $"{_gyroSensitivityKey} must be between {Format(GyroSensitivityRange.Min)} and {Format(GyroSensitivityRange.Max)}");
+            }
+
+            return WithGyro(new GyroFields(_gyro.Enabled, percent, _gyro.AimOnly, _gyro.InvertY));
+        }
+
+        public ControlSettings WithGyroAimOnly(bool aimOnly)
+        {
+            return WithGyro(new GyroFields(_gyro.Enabled, _gyro.SensitivityPercent, aimOnly, _gyro.InvertY));
+        }
+
+        public ControlSettings WithInvertGyroY(bool invert)
+        {
+            return WithGyro(new GyroFields(_gyro.Enabled, _gyro.SensitivityPercent, _gyro.AimOnly, invert));
+        }
+
+        private ControlSettings WithGyro(GyroFields gyro)
+        {
+            return gyro.Equals(_gyro)
+                ? this
+                : new ControlSettings(
+                    _modes, _amounts, _showNetStats, _palette, _showSubtitles, _showBlood, _aimAssist, _invertLookY, _rumbleEnabled,
+                    _quickMatchRegion, _telemetryConsent, gyro);
         }
 
         public string ToJson()
@@ -543,6 +625,14 @@ namespace Shooter.Core
             SaveJson.AppendString(builder, _quickMatchRegion);
             builder.Append(',');
             AppendKey(builder, _telemetryConsentKey).Append(_telemetryConsent ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _gyroKey).Append(_gyro.Enabled ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _gyroSensitivityKey).Append(Format(_gyro.SensitivityPercent));
+            builder.Append(',');
+            AppendKey(builder, _gyroAimOnlyKey).Append(_gyro.AimOnly ? "true" : "false");
+            builder.Append(',');
+            AppendKey(builder, _invertGyroYKey).Append(_gyro.InvertY ? "true" : "false");
             builder.Append('}');
             return builder.ToString();
         }
@@ -597,7 +687,9 @@ namespace Shooter.Core
             var hasAimAssist = version >= 9;
             var hasGamepadFeel = version >= 10;
             var hasOnline = version >= 11;
-            var knownKeys = hasOnline ? _rootKeys
+            var hasGyro = version >= 12;
+            var knownKeys = hasGyro ? _rootKeys
+                : hasOnline ? _versionElevenRootKeys
                 : hasGamepadFeel ? _versionTenRootKeys
                 : hasAimAssist ? _versionNineRootKeys
                 : version >= 8 ? _versionEightRootKeys
@@ -630,9 +722,10 @@ namespace Shooter.Core
             var telemetryConsent = hasOnline
                 ? ReadFlag(root, _telemetryConsentKey, Default._telemetryConsent, found)
                 : Default._telemetryConsent;
+            var gyro = hasGyro ? ReadGyro(root, found) : Default._gyro;
             return new ControlSettings(
                 modes, amounts, showNetStats, palette, showSubtitles, showBlood, aimAssist, invertLookY, rumbleEnabled,
-                region, telemetryConsent);
+                region, telemetryConsent, gyro);
         }
 
         public bool Equals(ControlSettings other)
@@ -666,7 +759,8 @@ namespace Shooter.Core
                 && _invertLookY == other._invertLookY
                 && _rumbleEnabled == other._rumbleEnabled
                 && string.Equals(_quickMatchRegion, other._quickMatchRegion, StringComparison.Ordinal)
-                && _telemetryConsent == other._telemetryConsent;
+                && _telemetryConsent == other._telemetryConsent
+                && _gyro.Equals(other._gyro);
         }
 
         public override bool Equals(object obj)
@@ -695,7 +789,8 @@ namespace Shooter.Core
             hash = unchecked((hash * 31) + (_invertLookY ? 1 : 0));
             hash = unchecked((hash * 31) + (_rumbleEnabled ? 1 : 0));
             hash = unchecked((hash * 31) + StringComparer.Ordinal.GetHashCode(_quickMatchRegion));
-            return unchecked((hash * 31) + (_telemetryConsent ? 1 : 0));
+            hash = unchecked((hash * 31) + (_telemetryConsent ? 1 : 0));
+            return unchecked((hash * 31) + _gyro.GetHashCode());
         }
 
         public override string ToString()
@@ -825,6 +920,36 @@ namespace Shooter.Core
             }
 
             return region;
+        }
+
+        private static GyroFields ReadGyro(Dictionary<string, object> root, List<string> problems)
+        {
+            var fallback = Default._gyro;
+            var enabled = ReadFlag(root, _gyroKey, fallback.Enabled, problems);
+            var sensitivity = fallback.SensitivityPercent;
+            var range = GyroSensitivityRange;
+            if (!root.TryGetValue(_gyroSensitivityKey, out var raw))
+            {
+                problems.Add($"missing '{_gyroSensitivityKey}'");
+            }
+            else if (!(raw is long number))
+            {
+                problems.Add($"'{_gyroSensitivityKey}' must be an integer but was {Describe(raw)}");
+            }
+            else if (!range.Contains(number))
+            {
+                sensitivity = range.Clamp(number);
+                problems.Add(
+                    $"'{_gyroSensitivityKey}' {Format(number)} is outside {Format(range.Min)} to {Format(range.Max)}; using {Format(sensitivity)}");
+            }
+            else
+            {
+                sensitivity = (int)number;
+            }
+
+            var aimOnly = ReadFlag(root, _gyroAimOnlyKey, fallback.AimOnly, problems);
+            var invertY = ReadFlag(root, _invertGyroYKey, fallback.InvertY, problems);
+            return new GyroFields(enabled, sensitivity, aimOnly, invertY);
         }
 
         private static string RegionRule()
@@ -1041,6 +1166,50 @@ namespace Shooter.Core
                     return "an array";
                 default:
                     return "an object";
+            }
+        }
+
+        // 構築子の引数をジャイロの欄の数だけ増やさないよう、まとめて持つ。
+        private readonly struct GyroFields : IEquatable<GyroFields>
+        {
+            // 傾けただけで視点が動くと驚くので、初期は切っておく。
+            public static readonly GyroFields Default = new GyroFields(false, GyroSensitivityRange.Default, false, false);
+
+            public GyroFields(bool enabled, int sensitivityPercent, bool aimOnly, bool invertY)
+            {
+                Enabled = enabled;
+                SensitivityPercent = sensitivityPercent;
+                AimOnly = aimOnly;
+                InvertY = invertY;
+            }
+
+            public bool Enabled { get; }
+
+            public int SensitivityPercent { get; }
+
+            public bool AimOnly { get; }
+
+            public bool InvertY { get; }
+
+            public bool Equals(GyroFields other)
+            {
+                return Enabled == other.Enabled
+                    && SensitivityPercent == other.SensitivityPercent
+                    && AimOnly == other.AimOnly
+                    && InvertY == other.InvertY;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is GyroFields other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                var hash = Enabled ? 1 : 0;
+                hash = unchecked((hash * 31) + SensitivityPercent);
+                hash = unchecked((hash * 31) + (AimOnly ? 1 : 0));
+                return unchecked((hash * 31) + (InvertY ? 1 : 0));
             }
         }
     }

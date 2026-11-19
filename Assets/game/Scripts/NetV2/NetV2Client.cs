@@ -595,6 +595,7 @@ namespace Shooter.NetV2
                 _pingDisplay.ShowShared(_pings.Markers);
                 _lockOn = AttachLockOn(_local);
                 AttachAimAssist(_local);
+                AttachViewmodel(_local);
             }
 
             for (var i = 0; i < ticks; i++)
@@ -653,6 +654,20 @@ namespace Shooter.NetV2
                 _world.Collision,
                 _client.Motor.Stance,
                 (eye, point) => EnemySenses.IsVisionBlocked(eye.ToUnity(), point.ToUnity()));
+        }
+
+        // 持っている武器と付けた物はサーバーのスナップショットと在庫で決まるので、オフラインの WeaponController の代わりにそれを渡す。迷彩は ViewmodelPresenter が着けている見た目から引く。
+        private void AttachViewmodel(NetV2LocalPlayer local)
+        {
+            var presenter = local.AttachViewmodel();
+            presenter.WeaponIdSource = () => ClientFire.CurrentWeaponId(CurrentOwner());
+            presenter.AttachmentsSource = weaponId => _inventory.Inventory?.AttachmentsOf(weaponId);
+
+            // 地図を替えるときは _match を外したフレームの終わりまで体が残る (Destroy) ので、その間は試合が無いものとして隠す。
+            presenter.HiddenReasonSource = () => _match == null || _client == null
+                ? ViewmodelPresenter.ReasonDisabled
+                : NetV2Viewmodel.HiddenReason(_client.LatestSnapshot, _client.PlayerId, _match.LocalState, _vehicles.HidesOwnWeapon());
+            presenter.Motion.HorizontalSpeedSource = () => _match != null ? NetV2Viewmodel.HorizontalSpeed(_match.LocalState) : 0f;
         }
 
         private OwnerSnapshot CurrentOwner()

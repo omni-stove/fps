@@ -291,7 +291,12 @@ public sealed class HealthOnlyHud : MonoBehaviour
    - `AircraftWheels` が返す `AircraftGroundContact` は、どれかの車輪が接地しているかと、地面からの高さ (`HeightAboveGround`、m) を持つ。高さは浮いているときに一番低い車輪の底から真下へ `HeightProbeDistance` まで測り、地面が無ければ null。機体自身の当たり判定は数えない。
 4. `AircraftControlScheme` は、視線の方へ機首を向け、移動の前後でスロットルを開け閉めし (閉じ切ってさらに下げるとエアブレーキ)、左右でロールを足す。強さはアセットの Aim の欄か `Configure(AircraftAimSpec)` で入れる。
    - 乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれは、そのまま曲がり続ける速さになる。上下は視線の高さへ機首が合う。
-5. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。
+5. 見た目と音は `AircraftEffects` を機体に付けると、`SimpleAircraftMotor` の入力と `State` から毎フレーム動く。サーバー専用ビルドでは止まる。
+   - 舵面は `AircraftControlSurface` (Transform・役割 Elevator / Aileron / Rudder・蝶番の軸・逆向き) を並べる。回す角度は入力 × アセットの Effects の欄の角度。左右の補助翼は片方を逆向きにする。
+   - エンジン音は AudioClip を入れると繰り返し鳴り、高さと大きさはスロットルと速さ (`MaxSpeed` に対する割合) を `EngineSpeedShare` で混ぜた値で Min から Max の間を動く。空なら鳴らさない。
+   - ベイパーは荷重倍数の大きさが `VaporLoadFactor` を超えている間だけ、翼端 (`VaporAnchors`) に置いたプレハブの TrailRenderer・ParticleSystem を出す。プレハブが空なら白い線をコードで作り、翼端が空なら機体の見た目を包む箱の左右の端から出す。地上では出さない。
+   - 値はその部品の Definition、空なら `SimpleAircraftMotor` の Definition の Effects の欄から読む。コードからは `Configure(AircraftEffectsSpec)`、Edit Mode では `Bind(SimpleAircraftMotor)` と `Show(入力, State)` で動かせる。
+6. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。
 
 プレイヤーの座席の入力を AI・チュートリアル・自動の確認から書き換えるときは、`PlayerVehicleRider.SeatInputFilter` に `IVehicleSeatInputFilter` を入れる。
 

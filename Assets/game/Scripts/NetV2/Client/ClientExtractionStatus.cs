@@ -83,7 +83,7 @@ namespace Shooter.NetV2
 
             var outcome = ToRaidOutcome(message.Outcome);
             var carried = ToItems(message.Carried);
-            var changed = outcome != Outcome || !Same(outcome == RaidOutcome.Raiding ? carried : _none, Carried);
+            var changed = outcome != Outcome || !Shown.Same(outcome == RaidOutcome.Raiding ? carried : _none, Carried);
             if (outcome == RaidOutcome.Raiding)
             {
                 // 終わった後の次の出撃なら、前の結果を捨てる
@@ -314,24 +314,6 @@ namespace Shooter.NetV2
             return (x * x) + (z * z) <= radius * radius;
         }
 
-        private static bool Same(IReadOnlyList<ItemCount> a, IReadOnlyList<ItemCount> b)
-        {
-            if (a.Count != b.Count)
-            {
-                return false;
-            }
-
-            for (var i = 0; i < a.Count; i++)
-            {
-                if (!string.Equals(a[i].ItemId, b[i].ItemId, StringComparison.Ordinal) || a[i].Count != b[i].Count)
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
         private sealed class Shown : IEquatable<Shown>
         {
             public Shown(
@@ -441,6 +423,25 @@ namespace Shooter.NetV2
             public override bool Equals(object obj) => obj is Shown other && Equals(other);
 
             public override int GetHashCode() => HashCode.Combine(Outcome, RemainingSeconds, OpenPointCount, HoldProgress.HasValue);
+
+            // 外のクラスに置くと、Shown からの呼び出しが CA1859 に数えられず配列にせよと言われるため、ここに置く
+            internal static bool Same(IReadOnlyList<ItemCount> a, IReadOnlyList<ItemCount> b)
+            {
+                if (a.Count != b.Count)
+                {
+                    return false;
+                }
+
+                for (var i = 0; i < a.Count; i++)
+                {
+                    if (!string.Equals(a[i].ItemId, b[i].ItemId, StringComparison.Ordinal) || a[i].Count != b[i].Count)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
+            }
         }
     }
 }

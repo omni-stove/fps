@@ -47,6 +47,125 @@ namespace Shooter.Core.Tests
             Assert.That(standard.Highlight, Is.EqualTo(PaletteColor.FromBytes(255, 70, 60)));
         }
 
+        // 今までの爆弾の設置場所 (橙と赤)・拠点の競合 (黄)・解除された爆弾 (緑) の色を変えない
+        [Test]
+        public void TheStandardPaletteKeepsTheObjectiveColorsUsedSoFar()
+        {
+            var standard = TeamPalette.Standard;
+
+            Assert.That(standard.Objective, Is.EqualTo(new PaletteColor(1f, 0.65f, 0.1f)));
+            Assert.That(standard.Danger, Is.EqualTo(new PaletteColor(1f, 0.15f, 0.1f)));
+            Assert.That(standard.Contested, Is.EqualTo(new PaletteColor(1f, 0.82f, 0.31f)));
+            Assert.That(standard.Safe, Is.EqualTo(new PaletteColor(0.2f, 0.8f, 0.3f)));
+        }
+
+        // 同じ画面に並ぶ色の組。爆弾と設置場所 (目的の物・危険・解除済み) と、拠点の輪 (競合とチームと中立)
+        private static readonly string[][] _sideBySide =
+        {
+            new[] { "Objective", "Danger" },
+            new[] { "Objective", "Safe" },
+            new[] { "Danger", "Safe" },
+            new[] { "Contested", "Friendly" },
+            new[] { "Contested", "Enemy" },
+            new[] { "Contested", "Neutral" },
+        };
+
+        private const float MinimumDifference = 0.15f;
+
+        // 1 型・2 型色覚では赤と緑の差が見えないので、明るさか青と黄の軸で離れていないと区別できない
+        [TestCase(ColorPalette.Standard)]
+        [TestCase(ColorPalette.RedGreen)]
+        [TestCase(ColorPalette.BlueYellow)]
+        public void TheNewColorsAreNotToldApartByRedAndGreenAlone(ColorPalette kind)
+        {
+            var palette = TeamPalette.For(kind);
+
+            foreach (var pair in _sideBySide)
+            {
+                var a = RoleColor(palette, pair[0]);
+                var b = RoleColor(palette, pair[1]);
+                var lightness = Math.Abs(Luminance(a) - Luminance(b));
+                var blueYellow = Math.Abs(BlueYellowAxis(a) - BlueYellowAxis(b));
+
+                Assert.That(
+                    lightness >= MinimumDifference || blueYellow >= MinimumDifference,
+                    Is.True,
+                    kind + ": " + pair[0] + " and " + pair[1] + " differ only in red and green (lightness " + lightness + ", blue-yellow " + blueYellow + ")");
+            }
+        }
+
+        // 3 型色覚では青と黄の差が見えないので、明るさか赤と緑の軸で離れていないと区別できない
+        [Test]
+        public void BlueYellowDoesNotTellTheNewColorsApartByBlueAndYellowAlone()
+        {
+            var palette = TeamPalette.BlueYellow;
+
+            foreach (var pair in _sideBySide)
+            {
+                var a = RoleColor(palette, pair[0]);
+                var b = RoleColor(palette, pair[1]);
+                var lightness = Math.Abs(Luminance(a) - Luminance(b));
+                var redGreen = Math.Abs(RedGreenAxis(a) - RedGreenAxis(b));
+
+                Assert.That(
+                    lightness >= MinimumDifference || redGreen >= MinimumDifference,
+                    Is.True,
+                    pair[0] + " and " + pair[1] + " differ only in blue and yellow (lightness " + lightness + ", red-green " + redGreen + ")");
+            }
+        }
+
+        [TestCase(ColorPalette.RedGreen)]
+        [TestCase(ColorPalette.BlueYellow)]
+        public void AccessiblePalettesChangeTheNewColorsFromStandard(ColorPalette kind)
+        {
+            var palette = TeamPalette.For(kind);
+            var standard = TeamPalette.Standard;
+
+            Assert.That(palette.Objective, Is.Not.EqualTo(standard.Objective));
+            Assert.That(palette.Danger, Is.Not.EqualTo(standard.Danger));
+            Assert.That(palette.Contested, Is.Not.EqualTo(standard.Contested));
+            Assert.That(palette.Safe, Is.Not.EqualTo(standard.Safe));
+        }
+
+        private static PaletteColor RoleColor(TeamPalette palette, string role)
+        {
+            switch (role)
+            {
+                case "Objective":
+                    return palette.Objective;
+                case "Danger":
+                    return palette.Danger;
+                case "Safe":
+                    return palette.Safe;
+                case "Contested":
+                    return palette.Contested;
+                case "Friendly":
+                    return palette.Friendly;
+                case "Enemy":
+                    return palette.Enemy;
+                case "Neutral":
+                    return palette.Neutral;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(role), role, "unknown role");
+            }
+        }
+
+        // Rec. 709 の重み。ガンマを外さずに近似する
+        private static float Luminance(PaletteColor color)
+        {
+            return (0.2126f * color.R) + (0.7152f * color.G) + (0.0722f * color.B);
+        }
+
+        private static float BlueYellowAxis(PaletteColor color)
+        {
+            return color.B - ((color.R + color.G) * 0.5f);
+        }
+
+        private static float RedGreenAxis(PaletteColor color)
+        {
+            return color.R - color.G;
+        }
+
         [Test]
         public void RedGreenMakesTheTeamsBlueAndOrange()
         {
@@ -68,6 +187,12 @@ namespace Shooter.Core.Tests
             Assert.That(palette.Friendly, Is.Not.EqualTo(palette.Neutral));
             Assert.That(palette.Enemy, Is.Not.EqualTo(palette.Neutral));
             Assert.That(palette.Highlight, Is.Not.EqualTo(palette.Neutral));
+            Assert.That(palette.Objective, Is.Not.EqualTo(palette.Danger));
+            Assert.That(palette.Objective, Is.Not.EqualTo(palette.Safe));
+            Assert.That(palette.Danger, Is.Not.EqualTo(palette.Safe));
+            Assert.That(palette.Contested, Is.Not.EqualTo(palette.Friendly));
+            Assert.That(palette.Contested, Is.Not.EqualTo(palette.Enemy));
+            Assert.That(palette.Contested, Is.Not.EqualTo(palette.Neutral));
         }
 
         [TestCase(Team.Alpha, Team.Alpha, TeamRelation.Friendly)]

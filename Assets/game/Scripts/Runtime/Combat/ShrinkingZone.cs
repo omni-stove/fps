@@ -91,8 +91,11 @@ namespace Shooter.Runtime
         [SerializeField, Min(0.1f), Tooltip("境界の筒の高さ (m)。この GameObject の高さから上下に半分ずつ")]
         private float _boundaryHeight = DefaultBoundaryHeight;
 
-        [SerializeField, Tooltip("境界の筒の色。アルファで透け具合を決める")]
+        [SerializeField, Tooltip("境界の筒の色。アルファで透け具合を決める。色をパレットから取るときは、アルファだけを使う")]
         private Color _boundaryColor = DefaultBoundaryColor;
+
+        [SerializeField, Tooltip("境界の筒の色を、設定の色覚のパレットの危険の色にするか (変えると塗り直す)。外すと境界の筒の色をそのまま使う")]
+        private bool _boundaryColorFromPalette = true;
 
         [SerializeField, Tooltip("境界の筒に使う材質。空なら既定の材質を半透明にして使う")]
         private Material _boundaryMaterial;
@@ -115,6 +118,7 @@ namespace Shooter.Runtime
         private GameObject _boundary;
         private Mesh _boundaryMesh;
         private Material _boundaryMaterialInstance;
+        private bool _followsSettings;
 
         public event Action<ZoneState> StageChanged;
 
@@ -192,6 +196,42 @@ namespace Shooter.Runtime
         {
             get => _showBoundary;
             set => _showBoundary = value;
+        }
+
+        public Color BoundaryColor
+        {
+            get => _boundaryColor;
+            set
+            {
+                _boundaryColor = value;
+                ApplyBoundaryColor();
+            }
+        }
+
+        public bool BoundaryColorFromPalette
+        {
+            get => _boundaryColorFromPalette;
+            set
+            {
+                _boundaryColorFromPalette = value;
+                ApplyBoundaryColor();
+            }
+        }
+
+        public Color BoundaryColorFor(TeamPalette palette)
+        {
+            if (!_boundaryColorFromPalette)
+            {
+                return _boundaryColor;
+            }
+
+            if (palette == null)
+            {
+                throw new ArgumentNullException(nameof(palette));
+            }
+
+            var danger = TeamColors.ToColor(palette.Danger);
+            return new Color(danger.r, danger.g, danger.b, _boundaryColor.a);
         }
 
         public IReadOnlyList<PhaseSettings> PhaseSettingsList => _phases ?? Array.Empty<PhaseSettings>();
@@ -361,6 +401,12 @@ namespace Shooter.Runtime
 
         private void OnDestroy()
         {
+            if (_followsSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _followsSettings = false;
+            }
+
             DestroySafely(_boundaryMaterialInstance);
             _boundaryMaterialInstance = null;
             DestroySafely(_boundaryMesh);
@@ -513,8 +559,35 @@ namespace Shooter.Runtime
             // 共有の既定の材質を書き換えると他のプリミティブまで透けるので、このエリア用に複製する。
             _boundaryMaterialInstance = new Material(renderer.sharedMaterial) { name = BoundaryName };
             MakeTranslucentAndDoubleSided(_boundaryMaterialInstance);
-            _boundaryMaterialInstance.color = _boundaryColor;
             renderer.sharedMaterial = _boundaryMaterialInstance;
+            if (!_followsSettings)
+            {
+                AppliedControlSettings.Changed += HandleSettingsChanged;
+                _followsSettings = true;
+            }
+
+            ApplyBoundaryColor();
+        }
+
+        // 差し替えた材質とプレハブの材質は、ゲームが決めた見た目なので塗らない。
+        private void ApplyBoundaryColor()
+        {
+            if (_boundaryMaterialInstance != null)
+            {
+                _boundaryMaterialInstance.color = BoundaryColorFor(TeamColors.Current);
+            }
+        }
+
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                return;
+            }
+
+            ApplyBoundaryColor();
         }
 
         // 内側の面を足さず両面描画で内側からも見せるので、法線は外向きだけにする。

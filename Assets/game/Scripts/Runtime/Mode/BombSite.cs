@@ -13,9 +13,6 @@ namespace Shooter.Runtime
 
         public const string MarkerName = "BombSiteMarker";
 
-        public static readonly Color IdleColor = new Color(1f, 0.65f, 0.1f);
-        public static readonly Color PlantedColor = new Color(1f, 0.15f, 0.1f);
-
         private const int GizmoSegments = 32;
 
         [SerializeField, Min(0), Tooltip("地点の番号。シーンの地点で 0 から抜けなく 1 つずつ振る。HUD とログでは 0 = A, 1 = B")]
@@ -37,6 +34,17 @@ namespace Shooter.Runtime
         private GameObject _marker;
         private bool _markerFromPrefab;
         private bool _planted;
+        private bool _followsSettings;
+
+        public static Color MarkerColorOf(bool planted, TeamPalette palette)
+        {
+            if (palette == null)
+            {
+                throw new ArgumentNullException(nameof(palette));
+            }
+
+            return TeamColors.ToColor(planted ? palette.Danger : palette.Objective);
+        }
 
         public int Index
         {
@@ -120,6 +128,12 @@ namespace Shooter.Runtime
             {
                 _markerFromPrefab = _markerPrefab != null;
                 _marker = ControlPointZone.CreateMarkerObject(_markerPrefab, transform, MarkerName, _markerMaterials);
+                if (!_followsSettings)
+                {
+                    AppliedControlSettings.Changed += HandleSettingsChanged;
+                    _followsSettings = true;
+                }
+
                 ApplyMarkerColor();
             }
 
@@ -128,13 +142,31 @@ namespace Shooter.Runtime
 
         private void ApplyMarkerColor()
         {
+            if (_markerMaterials.Count == 0)
+            {
+                return;
+            }
+
+            var color = MarkerColorOf(_planted, TeamColors.Current);
             foreach (var material in _markerMaterials)
             {
                 if (material != null)
                 {
-                    material.color = _planted ? PlantedColor : IdleColor;
+                    material.color = color;
                 }
             }
+        }
+
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                return;
+            }
+
+            ApplyMarkerColor();
         }
 
         private void Start()
@@ -149,6 +181,12 @@ namespace Shooter.Runtime
 
         private void OnDestroy()
         {
+            if (_followsSettings)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                _followsSettings = false;
+            }
+
             ControlPointZone.DestroyMaterials(_markerMaterials);
         }
 
@@ -159,7 +197,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            Gizmos.color = _planted ? PlantedColor : IdleColor;
+            Gizmos.color = MarkerColorOf(_planted, TeamPalette.Standard);
             var center = transform.position;
             var half = Vector3.up * (_height * 0.5f);
             var previous = center + new Vector3(_radius, 0f, 0f);

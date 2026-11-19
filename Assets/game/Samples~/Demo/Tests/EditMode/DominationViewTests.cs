@@ -193,6 +193,54 @@ namespace Shooter.Tests.EditMode
             Assert.That(_points.ColorOf(null), Is.EqualTo(TeamColors.Neutral));
         }
 
+        [Test]
+        public void ContestedPointsTakeThePalettesContestedColorAndFollowItsChanges()
+        {
+            var before = AppliedControlSettings.Current;
+            var volume = AudioListener.volume;
+            try
+            {
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.Standard));
+                _points.Bind(_root);
+                ShowTeamScores();
+                GameSignals.Domination.Publish(Status(0f, 0f, 60f, false, null, new ControlPointStatus(Team.Bravo, -40, true)));
+
+                Assert.That(_points.ContestedColor, Is.EqualTo(ControlPointsView.ContestedColorOf(TeamPalette.Standard)));
+
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.RedGreen));
+
+                Assert.That(_points.ContestedColor, Is.EqualTo(ControlPointsView.ContestedColorOf(TeamPalette.RedGreen)));
+
+                // Hud の色を決め打ちにしても、競合の色はパレットに従う
+                _owner.GetComponent<Hud>().SetTeamColors(Color.red, Color.blue);
+                AppliedControlSettings.Apply(before.WithPalette(ColorPalette.BlueYellow));
+
+                Assert.That(_points.ContestedColor, Is.EqualTo(ControlPointsView.ContestedColorOf(TeamPalette.BlueYellow)));
+                Assert.That(_points.ColorOf(Team.Alpha), Is.EqualTo(Color.red));
+            }
+            finally
+            {
+                AppliedControlSettings.Apply(before);
+                AudioListener.volume = volume;
+            }
+        }
+
+        [Test]
+        public void TheContestedColorIsThePalettesWithTheRingAlpha()
+        {
+            foreach (var palette in TeamPalette.All)
+            {
+                var color = ControlPointsView.ContestedColorOf(palette);
+                Assert.That(color.r, Is.EqualTo(palette.Contested.R));
+                Assert.That(color.g, Is.EqualTo(palette.Contested.G));
+                Assert.That(color.b, Is.EqualTo(palette.Contested.B));
+                Assert.That(color.a, Is.EqualTo(ControlPointsView.ContestedAlpha));
+            }
+
+            Assert.That(ControlPointsView.ContestedColorOf(TeamPalette.RedGreen), Is.Not.EqualTo(ControlPointsView.ContestedColorOf(TeamPalette.Standard)));
+            Assert.Throws<System.ArgumentNullException>(() => ControlPointsView.ContestedColorOf(null));
+        }
+
         private void ShowTeamScores()
         {
             _owner.GetComponent<Hud>().Model.SetScores(Team.Alpha, 0, 0);

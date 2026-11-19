@@ -20,7 +20,7 @@ namespace Shooter.Runtime
 
         public static readonly Color TrackColor = new Color(0f, 0f, 0f, 0.45f);
 
-        public static readonly Color ContestedColor = new Color(1f, 0.82f, 0.31f, 0.9f);
+        public const float ContestedAlpha = 0.9f;
 
         private readonly List<ControlPointStatus> _states = new List<ControlPointStatus>();
         private readonly List<string> _names = new List<string>();
@@ -28,10 +28,23 @@ namespace Shooter.Runtime
         // 設定の色の組は PlayerPrefs から読むので、フィールドの初期化子では引けない (HUD が Hud の色で塗り直す)
         private Color _alphaColor = TeamColors.Of(TeamPalette.Standard, Team.Alpha, TeamColors.OfflineViewer);
         private Color _bravoColor = TeamColors.Of(TeamPalette.Standard, Team.Bravo, TeamColors.OfflineViewer);
+        private Color _contestedColor = ContestedColorOf(TeamPalette.Standard);
         private bool _subscribed;
 
+        public static Color ContestedColorOf(TeamPalette palette)
+        {
+            if (palette == null)
+            {
+                throw new ArgumentNullException(nameof(palette));
+            }
+
+            var color = TeamColors.ToColor(palette.Contested);
+            return new Color(color.r, color.g, color.b, ContestedAlpha);
+        }
 
         public override string ElementName => UxmlName;
+
+        public Color ContestedColor => _contestedColor;
 
         public IReadOnlyList<ControlPointStatus> Statuses => _states;
 
@@ -105,6 +118,7 @@ namespace Shooter.Runtime
         protected override void OnBound(VisualElement element)
         {
             Subscribe();
+            _contestedColor = ContestedColorOf(TeamColors.Current);
             // 拠点の数が同じだと Write は描き直さないので、今の木の要素を先に作る
             Rebuild();
             HandleStatusChanged(GameSignals.Domination.Value);
@@ -120,6 +134,7 @@ namespace Shooter.Runtime
             if (!_subscribed)
             {
                 GameSignals.Domination.Changed += HandleStatusChanged;
+                AppliedControlSettings.Changed += HandleSettingsChanged;
                 _subscribed = true;
             }
         }
@@ -129,7 +144,31 @@ namespace Shooter.Runtime
             if (_subscribed)
             {
                 GameSignals.Domination.Changed -= HandleStatusChanged;
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
                 _subscribed = false;
+            }
+        }
+
+        // チームの色は Hud が塗り直すが、Hud の色を決め打ちにしていても競合の色はパレットに従わせる
+        private void HandleSettingsChanged(ControlSettings settings)
+        {
+            // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
+            if (this == null)
+            {
+                AppliedControlSettings.Changed -= HandleSettingsChanged;
+                return;
+            }
+
+            var contested = ContestedColorOf(TeamPalette.For(settings.Palette));
+            if (contested == _contestedColor)
+            {
+                return;
+            }
+
+            _contestedColor = contested;
+            for (var i = 0; i < _elements.Count; i++)
+            {
+                Apply(i);
             }
         }
 
@@ -196,7 +235,7 @@ namespace Shooter.Runtime
             }
 
             var state = _states[index];
-            _elements[index].Show(state, ColorOf(state.Owner), ColorOf(state.LeaningTeam));
+            _elements[index].Show(state, ColorOf(state.Owner), ColorOf(state.LeaningTeam), _contestedColor);
         }
 
         private sealed class PointElement : VisualElement
@@ -204,6 +243,7 @@ namespace Shooter.Runtime
             private readonly Label _label;
             private float _fill;
             private Color _ringColor;
+            private Color _contestedColor;
             private bool _contested;
 
             public PointElement(string pointName)
@@ -216,11 +256,12 @@ namespace Shooter.Runtime
                 generateVisualContent += Draw;
             }
 
-            public void Show(ControlPointStatus state, Color ownerColor, Color ringColor)
+            public void Show(ControlPointStatus state, Color ownerColor, Color ringColor, Color contestedColor)
             {
                 _label.style.color = ownerColor;
                 _fill = state.Fill;
                 _ringColor = ringColor;
+                _contestedColor = contestedColor;
                 _contested = state.Contested;
                 EnableInClassList(ContestedClass, _contested);
                 MarkDirtyRepaint();
@@ -239,7 +280,7 @@ namespace Shooter.Runtime
                 painter.lineWidth = RingWidth;
                 painter.lineCap = LineCap.Butt;
 
-                painter.strokeColor = _contested ? ContestedColor : TrackColor;
+                painter.strokeColor = _contested ? _contestedColor : TrackColor;
                 painter.BeginPath();
                 painter.Arc(rect.center, radius, Angle.Degrees(0f), Angle.Degrees(360f));
                 painter.Stroke();

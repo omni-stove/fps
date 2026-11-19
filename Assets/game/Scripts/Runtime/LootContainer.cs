@@ -125,6 +125,19 @@ namespace Shooter.Runtime
             return _contents.AsReadOnly();
         }
 
+        // 中身を引いたのが専用サーバーのときに、開いた見た目だけを出す。中身を知らないので Contents は空にする。
+        public void ShowOpened()
+        {
+            if (IsOpened)
+            {
+                return;
+            }
+
+            IsOpened = true;
+            _contents.Clear();
+            ShowState();
+        }
+
         // Awake でも呼ぶが、Edit Mode で置いたときにシーンへ見た目を残すには置いた側が呼ぶので公開する。
         public void Build()
         {

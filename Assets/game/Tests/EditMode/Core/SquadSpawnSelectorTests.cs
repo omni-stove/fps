@@ -7,7 +7,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class SquadSpawnSelectorTests
     {
-        private const float _tolerance =1e-4f;
+        private const float _tolerance = 1e-4f;
 
         private static readonly Side _mine = new Side(0);
         private static readonly Side _theirs = new Side(1);

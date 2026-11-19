@@ -14,7 +14,7 @@ namespace Shooter.Editor
 
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(GameRulesAssetBuilder.KillConfirmedName);
 
-        public const string MenuPath = "Shooter/Build Kill Confirmed Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         // プレイヤーを合わせて EnemySideBots と同じ人数にする。
         public const int PlayerSideBots = 2;
@@ -28,7 +28,6 @@ namespace Shooter.Editor
 
         protected override IReadOnlyList<ModeSideLayout> Sides => TwoSides(PlayerSideBots, EnemySideBots);
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new KillConfirmedSceneBuilder().BuildSceneFromMenu();

@@ -22,7 +22,7 @@ namespace Shooter.Editor
         // Unity の慣習どおり、焼いた NavMesh はシーン名のフォルダに置く。
         public static string NavMeshDataPath => ShooterKitRoot.OutputPath("Scenes/" + MissionId + "/" + NavMeshDataFileName);
 
-        public const string MenuPath = "Shooter/Build Campaign Scenes";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
         public const string LogTag = "[CampaignSceneBuilder]";
 
         public const string MissionId = "Campaign01";
@@ -314,7 +314,6 @@ namespace Shooter.Editor
             return new[] { Campaign01(), Campaign02Mission.Spec() };
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             // メニューから呼ばれたとき、開いているシーンの未保存の変更を黙って捨てない。

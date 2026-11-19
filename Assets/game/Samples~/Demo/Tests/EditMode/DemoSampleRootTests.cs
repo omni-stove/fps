@@ -86,9 +86,9 @@ namespace Shooter.Tests.EditMode
             Assert.That(CampaignSceneBuilder.DefinitionPath, Is.EqualTo(Root + "/Missions/Campaign01.asset"));
             Assert.That(Campaign02Mission.DefinitionPath, Is.EqualTo(Root + "/Missions/Campaign02.asset"));
 
-            Assert.That(TraversalFeatureSceneBuilder.RulesPath(TraversalFeature.Swim), Is.EqualTo(Root + "/Rules/Features/Swim.asset"));
-            Assert.That(TraversalFeatureSceneBuilder.MotorSettingsPath, Is.EqualTo(Root + "/Movement/Feature_DoubleJump.asset"));
-            Assert.That(TraversalFeatureSceneBuilder.TraversalTuningPath, Is.EqualTo(Root + "/Tuning/Feature_WallRun.json"));
+            Assert.That(GameRulesAssetBuilder.FeatureRulesPath(FeatureSceneBuilder.PlaygroundName), Is.EqualTo(Root + "/Rules/Features/Playground.asset"));
+            Assert.That(TraversalFeatureSceneBuilder.MotorSettingsPath, Is.EqualTo(Root + "/Movement/Playground.asset"));
+            Assert.That(TraversalFeatureSceneBuilder.TraversalTuningPath, Is.EqualTo(Root + "/Tuning/Playground.json"));
         }
 
         [Test]
@@ -116,10 +116,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(BuildSceneList.ExtractionScene, Is.EqualTo(Root + "/Scenes/Extraction.unity"));
             Assert.That(BuildSceneList.ModeTestScene, Is.EqualTo(Root + "/Scenes/ModeTest.unity"));
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo(Root + "/Scenes/NetTest.unity"));
-            Assert.That(BuildSceneList.TraversalFeatureScene(TraversalFeature.Lean), Is.EqualTo(Root + "/Scenes/Feature_Lean.unity"));
-            Assert.That(BuildSceneList.TraversalFeatureScene(TraversalFeature.Swim), Is.EqualTo(Root + "/Scenes/Feature_Swim.unity"));
-            Assert.That(BuildSceneList.TraversalFeatureScene(TraversalFeature.WallRun), Is.EqualTo(Root + "/Scenes/Feature_WallRun.unity"));
-            Assert.That(BuildSceneList.TraversalFeatureScene(TraversalFeature.DoubleJump), Is.EqualTo(Root + "/Scenes/Feature_DoubleJump.unity"));
+            Assert.That(BuildSceneList.PlaygroundScene, Is.EqualTo(Root + "/Scenes/Playground.unity"));
+            Assert.That(BuildSceneList.HighDropScene, Is.EqualTo(Root + "/Scenes/HighDrop.unity"));
             Assert.That(BuildSceneList.ServerScenes, Is.EqualTo(new[] { Root + "/Scenes/NetTest.unity", Root + "/Scenes/NetArena01.unity" }));
         }
 
@@ -144,8 +142,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(BuildSceneList.MainMenuScene, Is.EqualTo("Assets/ShooterKit/Scenes/MainMenu.unity"));
             Assert.That(CampaignSceneBuilder.NavMeshDataPath, Is.EqualTo("Assets/ShooterKit/Scenes/Campaign01/NavMesh-Level.asset"));
             Assert.That(BuildSceneList.NetTestScene, Is.EqualTo("Assets/ShooterKit/Scenes/NetTest.unity"));
-            Assert.That(BuildSceneList.TraversalFeatureScene(TraversalFeature.WallRun), Is.EqualTo("Assets/ShooterKit/Scenes/Feature_WallRun.unity"));
-            Assert.That(TraversalFeatureSceneBuilder.TraversalTuningPath, Is.EqualTo("Assets/ShooterKit/Tuning/Feature_WallRun.json"));
+            Assert.That(BuildSceneList.PlaygroundScene, Is.EqualTo("Assets/ShooterKit/Scenes/Playground.unity"));
+            Assert.That(TraversalFeatureSceneBuilder.TraversalTuningPath, Is.EqualTo("Assets/ShooterKit/Tuning/Playground.json"));
 
             ShooterKitRoot.ClearPreferredOutput();
 

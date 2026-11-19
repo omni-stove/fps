@@ -20,17 +20,6 @@ namespace Shooter.Tests.EditMode
         // 出現位置の周り (プレイヤーの直径の倍ほど) には何も置かない。
         private const float SpawnClearance = 1.5f;
 
-        private static readonly GameRulesDebugField[] _openFloorFields =
-        {
-            GameRulesDebugField.InfiniteReserve,
-            GameRulesDebugField.ActiveReload,
-            GameRulesDebugField.Dodge,
-            GameRulesDebugField.Grenade,
-            GameRulesDebugField.SlowMotion,
-            GameRulesDebugField.AimToFire,
-            GameRulesDebugField.Jump,
-        };
-
         private Scene _scene;
         private readonly List<UnityEngine.Object> _assets = new List<UnityEngine.Object>();
 
@@ -60,155 +49,299 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ThereIsOneSceneForEachOnOffRuleInPanelOrder()
+        public void ThereAreOnlyThePlaygroundAndTheHighDropScenes()
         {
-            var expected = GameRulesDebugDraft.Fields.Where(GameRulesDebugDraft.IsToggle).ToArray();
-
-            Assert.That(FeatureSceneBuilder.All().Select(f => f.Field), Is.EqualTo(expected));
-            Assert.That(FeatureSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build Feature Scenes"));
+            Assert.That(FeatureSceneBuilder.All().Select(f => f.Name), Is.EqualTo(new[] { "Playground", "HighDrop" }));
+            Assert.That(FeatureSceneBuilder.MenuPath, Is.EqualTo("Shooter/Build All Scenes"));
         }
 
         [Test]
-        public void StationsRejectFieldsThatAreNotOnOff()
-        {
-            Assert.Throws<ArgumentException>(() => FeatureSceneBuilder.Stations(GameRulesDebugField.HudDensity));
-            Assert.Throws<ArgumentException>(() => FeatureSceneBuilder.Stations(GameRulesDebugField.ViewMode));
-        }
-
-        [Test]
-        public void FeaturesTriedOnTheOpenFloorHaveNoStation()
-        {
-            foreach (var field in _openFloorFields)
-            {
-                Assert.That(FeatureSceneBuilder.Stations(field), Is.Empty, field.ToString());
-            }
-
-            foreach (var feature in FeatureSceneBuilder.All().Where(f => !_openFloorFields.Contains(f.Field)))
-            {
-                Assert.That(feature.Stations, Has.Count.EqualTo(1), feature.Field.ToString());
-            }
-        }
-
-        [Test]
-        public void EachFeatureUsesItsOwnPlace()
-        {
-            Assert.That(FixtureOf(GameRulesDebugField.Zipline), Is.TypeOf<ZiplineRangeFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Mantle), Is.TypeOf<MantleLedgesFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Prone), Is.TypeOf<ProneCrawlwayFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Slide), Is.TypeOf<SlideSlopeFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Stealth), Is.TypeOf<StealthRangeFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Stagger), Is.TypeOf<StaggerRangeFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Suppression), Is.TypeOf<SuppressionRangeFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Ping), Is.TypeOf<PingRangeFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Melee), Is.TypeOf<MeleeRangeFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Abilities), Is.TypeOf<GrappleWallFixture>());
-            Assert.That(FixtureOf(GameRulesDebugField.Cover).Name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
-            Assert.That(FixtureOf(GameRulesDebugField.BlindFire).Name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
-            Assert.That(FixtureOf(GameRulesDebugField.Vault).Name, Is.EqualTo(TpsRangeSceneBuilder.VaultWallName));
-            Assert.That(FixtureOf(GameRulesDebugField.Destruction).Name, Is.EqualTo("HutYard"));
-            Assert.That(FixtureOf(GameRulesDebugField.Ladder).Name, Is.EqualTo("LadderTower"));
-            Assert.That(FixtureOf(GameRulesDebugField.Parachute).Name, Is.EqualTo("LadderTower"));
-            Assert.That(FixtureOf(GameRulesDebugField.FallDamage).Name, Is.EqualTo("LadderTower"));
-            Assert.That(FixtureOf(GameRulesDebugField.Downed).Name, Is.EqualTo("LadderTower"));
-        }
-
-        [Test]
-        public void TheFeatureFixturesAreNotPickedUpByTheTpsRange()
-        {
-            var names = TpsRangeSceneBuilder.Fixtures().Select(f => f.GetType().Name).ToArray();
-
-            Assert.That(names, Has.No.Member("FeatureLadderTowerFixture"));
-            Assert.That(names, Has.No.Member("FeatureHutFixture"));
-            Assert.That(names, Has.No.Member("FeatureCoversFixture"));
-            Assert.That(names, Has.No.Member("FeatureVaultWallFixture"));
-        }
-
-        [Test]
-        public void SceneHasOnlyTheBootstrapTheFloorAndTheFeatureStation()
-        {
-            var stations = FeatureSceneBuilder.Stations(GameRulesDebugField.Zipline);
-            var rules = NewRules(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Zipline));
-
-            var bootstrap = FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), rules, stations);
-
-            var names = _scene.GetRootGameObjects().Select(o => o.name).ToArray();
-            Assert.That(names, Is.EquivalentTo(new[] { FeatureSceneBuilder.BootstrapObjectName, FeatureSceneBuilder.FloorName, ZiplineRangeFixture.FixtureName }));
-            Assert.That(bootstrap.CreatesFloor, Is.False);
-            Assert.That(bootstrap.RulesDefinition, Is.SameAs(rules));
-            Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null);
-        }
-
-        [Test]
-        public void OpenFloorSceneHasOnlyTheBootstrapAndTheSmallestFloor()
-        {
-            FeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Dodge)), Array.Empty<FeatureStation>());
-
-            Assert.That(_scene.rootCount, Is.EqualTo(2));
-            Assert.That(Find(FeatureSceneBuilder.FloorName).transform.localScale, Is.EqualTo(new Vector3(3f, 1f, 3f)));
-        }
-
-        [Test]
-        public void FloorIsTheMinimumOrCoversTheStationWithAMarginInStepsOfFive()
-        {
-            Assert.That(FeatureSceneBuilder.FloorHalfExtent(Array.Empty<FeatureStation>()), Is.EqualTo(15f));
-
-            foreach (var feature in FeatureSceneBuilder.All())
-            {
-                var half = FeatureSceneBuilder.FloorHalfExtent(feature.Stations);
-                Assert.That(half % FeatureSceneBuilder.FloorStep, Is.EqualTo(0f), feature.Field.ToString());
-                foreach (var station in feature.Stations)
-                {
-                    var footprint = station.Footprint;
-                    Assert.That(Mathf.Max(Mathf.Abs(footprint.min.x), Mathf.Abs(footprint.max.x)) + FeatureSceneBuilder.FloorMargin, Is.LessThanOrEqualTo(half), feature.Field.ToString());
-                    Assert.That(Mathf.Max(Mathf.Abs(footprint.min.z), Mathf.Abs(footprint.max.z)) + FeatureSceneBuilder.FloorMargin, Is.LessThanOrEqualTo(half), feature.Field.ToString());
-                }
-            }
-
-            // ジップラインの線は 22m ほどあり、手前の端 (z = 3) から 25m あまりまで伸びる。
-            Assert.That(FeatureSceneBuilder.FloorHalfExtent(FeatureSceneBuilder.Stations(GameRulesDebugField.Zipline)), Is.EqualTo(35f));
-        }
-
-        [Test]
-        public void BesideSpawnStationsStartRightOfTheDummiesAndAheadOfTheSpawn()
+        public void SceneNamesAreShortEnoughNotToBeCutOff()
         {
             foreach (var feature in FeatureSceneBuilder.All())
             {
-                foreach (var station in feature.Stations.Where(s => s.Placement == FeaturePlacement.BesideSpawn))
-                {
-                    Assert.That(station.Footprint.min.x, Is.EqualTo(FeatureSceneBuilder.BesideSpawnMinX).Within(Epsilon), feature.Field.ToString());
-                    Assert.That(station.Footprint.min.z, Is.EqualTo(FeatureSceneBuilder.BesideSpawnMinZ).Within(Epsilon), feature.Field.ToString());
-                    Assert.That(station.Offset.y, Is.EqualTo(0f));
-                }
+                Assert.That(feature.Name.Length, Is.LessThanOrEqualTo(10), feature.Name);
             }
         }
 
         [Test]
-        public void StationsKeepClearOfTheSpawnAndTheTargetDummies()
+        public void EveryOnOffRuleIsTriedInOneOfTheScenesExceptTheOnesThatNeedAMode()
         {
+            var tried = FeatureSceneBuilder.All()
+                .SelectMany(f => GameRulesDebugDraft.Fields.Where(GameRulesDebugDraft.IsToggle).Where(field => GameRulesDebugDraft.Read(f.Rules, field) == 1))
+                .Distinct()
+                .ToArray();
+            var untried = GameRulesDebugDraft.Fields.Where(GameRulesDebugDraft.IsToggle).Except(tried).ToArray();
+
+            Assert.That(untried, Is.EquivalentTo(new[] { GameRulesDebugField.Downed, GameRulesDebugField.AimToFire }));
+        }
+
+        [Test]
+        public void OnlyThePlaygroundCarriesTheWallRunAndDoubleJumpTuning()
+        {
+            Assert.That(FeatureSceneBuilder.Playground().UsesTraversalTuning, Is.True);
+            Assert.That(FeatureSceneBuilder.HighDrop().UsesTraversalTuning, Is.False);
+        }
+
+        [Test]
+        public void PlaygroundPlacesEveryStationOfTheOldFeatureScenes()
+        {
+            var names = FeatureSceneBuilder.PlaygroundStations().Select(s => s.Fixture.Name).ToArray();
+
+            Assert.That(names, Is.EquivalentTo(new[]
+            {
+                BootstrapSceneBuilder.CoversName,
+                TpsRangeSceneBuilder.VaultWallName,
+                "HutYard",
+                LadderRangeFixture.FixtureName,
+                new MeleeRangeFixture().Name,
+                new StaggerRangeFixture().Name,
+                new SlideSlopeFixture().Name,
+                new MantleLedgesFixture().Name,
+                new ProneCrawlwayFixture().Name,
+                ZiplineRangeFixture.FixtureName,
+                StealthRangeFixture.AreaName,
+                new SuppressionRangeFixture().Name,
+                new PingRangeFixture().Name,
+                new GrappleWallFixture().Name,
+                TraversalFeatureSceneBuilder.LeanCornerName,
+                TraversalFeatureSceneBuilder.SwimPoolsName,
+                TraversalFeatureSceneBuilder.WallRunCorridorName,
+                TraversalFeatureSceneBuilder.DoubleJumpStepsName,
+            }));
+        }
+
+        [Test]
+        public void PlaygroundStationsDoNotOverlapEachOtherTheSpawnOrTheDummies()
+        {
+            var stations = FeatureSceneBuilder.PlaygroundStations();
             var spawn = new Bounds(Vector3.zero, new Vector3(SpawnClearance * 2f, 1f, SpawnClearance * 2f));
             var dummies = GameBootstrap.TargetDummyPositions(Vector3.zero, Quaternion.identity);
 
-            foreach (var feature in FeatureSceneBuilder.All())
+            for (var i = 0; i < stations.Count; i++)
             {
-                foreach (var station in feature.Stations)
+                var name = stations[i].Fixture.Name;
+                var footprint = stations[i].Footprint;
+                Assert.That(Flat(footprint).Intersects(spawn), Is.False, name + " is on the spawn");
+                foreach (var dummy in dummies)
                 {
-                    var footprint = Flat(station.Footprint);
-                    Assert.That(footprint.Intersects(spawn), Is.False, feature.Field + " is on the spawn");
-                    foreach (var dummy in dummies)
-                    {
-                        Assert.That(footprint.Intersects(new Bounds(dummy, new Vector3(1f, 1f, 1f))), Is.False, $"{feature.Field} is on the dummy at {dummy}");
-                    }
+                    Assert.That(Flat(footprint).Intersects(new Bounds(dummy, Vector3.one)), Is.False, $"{name} is on the dummy at {dummy}");
+                }
+
+                for (var j = i + 1; j < stations.Count; j++)
+                {
+                    Assert.That(footprint.Intersects(stations[j].Footprint), Is.False, $"{name} overlaps {stations[j].Fixture.Name}");
                 }
             }
+        }
+
+        [Test]
+        public void TpsRangeStationsStayWhereTheTpsRangePutsThem()
+        {
+            var stations = FeatureSceneBuilder.PlaygroundStations();
+            var hut = stations.Single(s => s.Fixture.Name == "HutYard");
+
+            Assert.That(hut.Offset, Is.EqualTo(TpsRangeSceneBuilder.HutCenter));
+            foreach (var station in stations.Take(14).Where(s => s.Fixture.Name != "HutYard"))
+            {
+                Assert.That(station.Offset, Is.EqualTo(Vector3.zero), station.Fixture.Name);
+            }
+
+            Assert.That(stations.Single(s => s.Fixture.Name == TpsRangeSceneBuilder.VaultWallName).Footprint.center, Is.EqualTo(TpsRangeSceneBuilder.VaultWall.Center));
+        }
+
+        [Test]
+        public void TraversalStationsLineUpBehindTheSpawnOutOfTheEnemiesSight()
+        {
+            var stations = FeatureSceneBuilder.PlaygroundStations();
+            var names = new[]
+            {
+                TraversalFeatureSceneBuilder.LeanCornerName,
+                TraversalFeatureSceneBuilder.SwimPoolsName,
+                TraversalFeatureSceneBuilder.WallRunCorridorName,
+                TraversalFeatureSceneBuilder.DoubleJumpStepsName,
+            };
+            var rest = stations.Where(s => !names.Contains(s.Fixture.Name)).ToArray();
+            var row = names.Select(n => stations.Single(s => s.Fixture.Name == n)).ToArray();
+            var backZ = rest.Min(s => s.Footprint.min.z) - FeatureSceneBuilder.StationGap;
+
+            Assert.That(row[0].Footprint.min.x, Is.EqualTo(FeatureSceneBuilder.TraversalRowStartX).Within(Epsilon));
+            for (var i = 0; i < row.Length; i++)
+            {
+                Assert.That(row[i].Footprint.max.z, Is.EqualTo(backZ).Within(Epsilon), names[i]);
+                Assert.That(row[i].Footprint.min.y, Is.EqualTo(0f).Within(Epsilon), names[i] + " stands on the floor");
+                if (i > 0)
+                {
+                    Assert.That(row[i].Footprint.min.x - row[i - 1].Footprint.max.x, Is.EqualTo(FeatureSceneBuilder.StationGap).Within(Epsilon), names[i]);
+                }
+            }
+        }
+
+        [Test]
+        public void RowPutsTheBackEdgesOnOneLineFromTheStart()
+        {
+            var fixtures = new ITpsRangeFixture[] { new ProneCrawlwayFixture(), new SuppressionRangeFixture() };
+            var row = FeatureSceneBuilder.Row(fixtures, 10f, -20f);
+
+            Assert.That(row[0].Footprint.min.x, Is.EqualTo(10f).Within(Epsilon));
+            Assert.That(row[0].Footprint.max.z, Is.EqualTo(-20f).Within(Epsilon));
+            Assert.That(row[1].Footprint.min.x, Is.EqualTo(row[0].Footprint.max.x + 4f).Within(Epsilon));
+            Assert.That(row[1].Footprint.max.z, Is.EqualTo(-20f).Within(Epsilon));
+            Assert.That(row[1].Footprint.size.x, Is.EqualTo(1f).Within(Epsilon));
+        }
+
+        [Test]
+        public void FloorAreaCoversEveryStationWithAMarginInStepsOfFive()
+        {
+            var stations = FeatureSceneBuilder.PlaygroundStations();
+            var area = FeatureSceneBuilder.FloorArea(stations, FeatureSceneBuilder.MinFloorHalfExtent);
+
+            foreach (var value in new[] { area.xMin, area.xMax, area.yMin, area.yMax })
+            {
+                Assert.That(value % FeatureSceneBuilder.FloorStep, Is.EqualTo(0f).Within(Epsilon));
+            }
+
+            foreach (var station in stations)
+            {
+                var footprint = station.Footprint;
+                Assert.That(footprint.min.x - FeatureSceneBuilder.FloorMargin, Is.GreaterThanOrEqualTo(area.xMin), station.Fixture.Name);
+                Assert.That(footprint.max.x + FeatureSceneBuilder.FloorMargin, Is.LessThanOrEqualTo(area.xMax), station.Fixture.Name);
+                Assert.That(footprint.min.z - FeatureSceneBuilder.FloorMargin, Is.GreaterThanOrEqualTo(area.yMin), station.Fixture.Name);
+                Assert.That(footprint.max.z + FeatureSceneBuilder.FloorMargin, Is.LessThanOrEqualTo(area.yMax), station.Fixture.Name);
+            }
+        }
+
+        [Test]
+        public void FloorAreaWithoutStationsIsTheMinimumSquare()
+        {
+            var area = FeatureSceneBuilder.FloorArea(Array.Empty<FeatureStation>(), 15f);
+
+            Assert.That(area, Is.EqualTo(Rect.MinMaxRect(-15f, -15f, 15f, 15f)));
+        }
+
+        [Test]
+        public void PlaygroundIsWalledInAlongTheFloorEdges()
+        {
+            var feature = FeatureSceneBuilder.Playground();
+            FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(feature.Rules), feature);
+
+            var area = FeatureSceneBuilder.FloorArea(feature.Stations, FeatureSceneBuilder.MinFloorHalfExtent);
+            var floor = Find(FeatureSceneBuilder.FloorName);
+            Assert.That(floor.transform.position, Is.EqualTo(new Vector3(area.center.x, 0f, area.center.y)));
+            Assert.That(floor.transform.localScale, Is.EqualTo(new Vector3(area.width / 10f, 1f, area.height / 10f)));
+
+            var north = Find(SceneBuildHelpers.PerimeterName).transform.Find("Perimeter_North");
+            var west = Find(SceneBuildHelpers.PerimeterName).transform.Find("Perimeter_West");
+            Assert.That(north.position.z - (north.localScale.z / 2f), Is.EqualTo(area.yMax).Within(Epsilon));
+            Assert.That(west.position.x + (west.localScale.x / 2f), Is.EqualTo(area.xMin).Within(Epsilon));
+            Assert.That(north.localScale.y, Is.EqualTo(FeatureSceneBuilder.PerimeterHeight(feature.Stations, 0f)).Within(Epsilon));
+            Assert.That(north.localScale.y, Is.GreaterThanOrEqualTo(SceneBuildHelpers.DefaultPerimeterHeight + TraversalFeatureSceneBuilder.StepRise * TraversalFeatureSceneBuilder.StepCount));
+        }
+
+        [Test]
+        public void PlaygroundHasTheBootstrapTheFloorTheWallsAndEveryStation()
+        {
+            var feature = FeatureSceneBuilder.Playground();
+            var bootstrap = FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(feature.Rules), feature);
+
+            Assert.That(bootstrap.CreatesFloor, Is.False);
+            Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null);
+            Assert.That(_scene.rootCount, Is.EqualTo(3 + feature.Stations.Count));
+            foreach (var station in feature.Stations)
+            {
+                Assert.That(Vector3.Distance(Find(station.Fixture.Name).transform.position, station.Offset), Is.LessThan(Epsilon), station.Fixture.Name);
+            }
+        }
+
+        [Test]
+        public void HighDropSpawnsOnTopOfATowerTwentyMetresAboveTheFloor()
+        {
+            var feature = FeatureSceneBuilder.HighDrop();
+            FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(feature.Rules), feature);
+
+            Assert.That(feature.FloorY, Is.EqualTo(-20f));
+            var floor = Find(FeatureSceneBuilder.FloorName);
+            Assert.That(floor.transform.position, Is.EqualTo(new Vector3(0f, -20f, 0f)));
+            Assert.That(floor.transform.localScale, Is.EqualTo(new Vector3(6f, 1f, 6f)));
+
+            var tower = Find("DropTower").transform.Find("SpawnTower");
+            var platform = tower.Find(LadderTowerBuilder.PlatformName);
+            Assert.That(platform.position, Is.EqualTo(new Vector3(0f, -10f, 4.5f)));
+            Assert.That(platform.localScale, Is.EqualTo(new Vector3(12f, 20f, 17f)));
+
+            // 出現位置とダミーの列が台の上面 (y = 0) に載る。
+            var top = new Bounds(new Vector3(0f, 0f, 4.5f), new Vector3(12f, 0.01f, 17f));
+            Assert.That(top.Contains(new Vector3(0f, 0f, 0f)), Is.True);
+            foreach (var dummy in GameBootstrap.TargetDummyPositions(Vector3.zero, Quaternion.identity))
+            {
+                Assert.That(top.Contains(dummy), Is.True, dummy.ToString());
+            }
+
+            var ladder = tower.GetComponentInChildren<LadderComponent>();
+            Assert.That(ladder.Height, Is.EqualTo(20f));
+            Assert.That(ladder.transform.position, Is.EqualTo(new Vector3(6f, -20f, 4.5f)));
+        }
+
+        [Test]
+        public void HighDropLedgesGiveASafeAHurtingAndALethalDrop()
+        {
+            var feature = FeatureSceneBuilder.HighDrop();
+            FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(feature.Rules), feature);
+            var root = Find("DropTower").transform;
+
+            var safe = root.Find("Ledge_Safe");
+            var hurt = root.Find("Ledge_Hurt");
+            Assert.That(safe.position, Is.EqualTo(new Vector3(-8f, -11.5f, -1f)));
+            Assert.That(safe.localScale, Is.EqualTo(new Vector3(4f, 17f, 6f)));
+            Assert.That(hurt.position, Is.EqualTo(new Vector3(-8f, -14f, 10f)));
+            Assert.That(hurt.localScale, Is.EqualTo(new Vector3(4f, 12f, 6f)));
+
+            // 重力 20 で落ちて着く速さ (v = √(2gh)) を、安全・致死の速さと比べる。
+            Assert.That(Mathf.Sqrt(2f * MotorSpec.DefaultGravity * 3f), Is.LessThan(MotorSpec.DefaultSafeFallSpeed));
+            Assert.That(Mathf.Sqrt(2f * MotorSpec.DefaultGravity * 8f), Is.InRange(MotorSpec.DefaultSafeFallSpeed, MotorSpec.DefaultLethalFallSpeed));
+            Assert.That(Mathf.Sqrt(2f * MotorSpec.DefaultGravity * 20f), Is.GreaterThan(MotorSpec.DefaultLethalFallSpeed));
+            Assert.That(20f, Is.GreaterThan(ParachuteMotion.DefaultMinOpenHeight * 2f));
+        }
+
+        [Test]
+        public void HighDropWallsRiseAboveTheTowerTop()
+        {
+            var feature = FeatureSceneBuilder.HighDrop();
+            FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(feature.Rules), feature);
+
+            var north = Find(SceneBuildHelpers.PerimeterName).transform.Find("Perimeter_North");
+            Assert.That(north.position, Is.EqualTo(new Vector3(0f, -6f, 30.5f)));
+            Assert.That(north.localScale, Is.EqualTo(new Vector3(62f, 28f, 1f)));
+        }
+
+        [Test]
+        public void HutIsCenteredOnItsYardAndBreaksWithTheRules()
+        {
+            var feature = FeatureSceneBuilder.Playground();
+            FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(feature.Rules), feature);
+
+            var yard = Find("HutYard");
+            var hut = yard.GetComponentInChildren<DestructibleStructure>();
+            Assert.That(hut, Is.Not.Null);
+            Assert.That(hut.transform.position, Is.EqualTo(TpsRangeSceneBuilder.HutCenter));
+            Assert.That(hut.DebrisPool, Is.SameAs(yard.GetComponentInChildren<DebrisPool>()));
+        }
+
+        [Test]
+        public void PlaygroundArmsTheStealthEnemiesWithTheBootstrapWeapon()
+        {
+            var feature = FeatureSceneBuilder.Playground();
+            FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(feature.Rules), feature);
+
+            Assert.That(Find(StealthRangeFixture.AreaName).GetComponentsInChildren<EnemyAgent>(true), Is.Not.Empty);
         }
 
         [Test]
         public void MovedZiplineKeepsItsShape()
         {
-            var station = FeatureSceneBuilder.Stations(GameRulesDebugField.Zipline)[0];
-            FeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Zipline)), new[] { station });
+            var station = new FeatureStation(new ZiplineRangeFixture(), new Vector3(5f, 0f, -3f));
+            var feature = new FeatureScene("Test", GameRulesAssetBuilder.PlaygroundRules(), new[] { station }, 0f, 15f, false);
+            FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(feature.Rules), feature);
 
             var line = Find(ZiplineRangeFixture.FixtureName).GetComponent<ZiplineComponent>();
 
@@ -217,93 +350,53 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void InPlaceStationsStayWhereTheTpsRangePutsThem()
-        {
-            var station = FeatureSceneBuilder.Stations(GameRulesDebugField.Cover)[0];
-            FeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Cover)), new[] { station });
-
-            Assert.That(station.Offset, Is.EqualTo(Vector3.zero));
-            var low = Find(BootstrapSceneBuilder.CoversName).transform.Find(BootstrapSceneBuilder.LowCoverName);
-            Assert.That(low.position, Is.EqualTo(BootstrapSceneBuilder.LowCover.Center));
-        }
-
-        [Test]
-        public void DropTowerIsTallEnoughToOpenAParachuteAndTheLadderFacesTheSpawn()
-        {
-            var station = FeatureSceneBuilder.Stations(GameRulesDebugField.Parachute)[0];
-            FeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Parachute)), new[] { station });
-
-            var tower = Find("LadderTower");
-            var ladder = tower.GetComponentInChildren<LadderComponent>();
-
-            Assert.That(ladder.Height, Is.EqualTo(ParachuteTowerFixture.TowerHeight));
-            Assert.That(ladder.Height, Is.GreaterThan(ParachuteMotion.DefaultMinOpenHeight));
-            Assert.That(ladder.transform.position.x, Is.LessThan(tower.transform.position.x), "the ladder is on the spawn side (-X)");
-        }
-
-        [Test]
-        public void LadderSceneUsesTheLowTowerOfTheTpsRange()
-        {
-            var station = FeatureSceneBuilder.Stations(GameRulesDebugField.Ladder)[0];
-            FeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Ladder)), new[] { station });
-
-            Assert.That(Find("LadderTower").GetComponentInChildren<LadderComponent>().Height, Is.EqualTo(LadderRangeFixture.TowerSize.y));
-        }
-
-        [Test]
-        public void HutBreaksOnlyWhenTheRulesTurnDestructionOn()
-        {
-            var station = FeatureSceneBuilder.Stations(GameRulesDebugField.Destruction)[0];
-            FeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Destruction)), new[] { station });
-
-            var yard = Find("HutYard");
-            var hut = yard.GetComponentInChildren<DestructibleStructure>();
-
-            Assert.That(hut, Is.Not.Null);
-            Assert.That(hut.DebrisPool, Is.SameAs(yard.GetComponentInChildren<DebrisPool>()));
-            Assert.That(yard.transform.position, Is.EqualTo(station.Offset));
-        }
-
-        [Test]
-        public void StealthSceneArmsItsEnemiesWithTheBootstrapWeapon()
-        {
-            var weapons = NewWeapons();
-            FeatureSceneBuilder.PopulateScene(
-                _scene,
-                weapons,
-                NewRules(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Stealth)),
-                FeatureSceneBuilder.Stations(GameRulesDebugField.Stealth));
-
-            Assert.That(Find(StealthRangeFixture.AreaName).GetComponentsInChildren<EnemyAgent>(true), Is.Not.Empty);
-        }
-
-        [Test]
         public void RejectsADuplicateStationNameAndLeavesTheSceneEmpty()
         {
             var stations = new[]
             {
-                new FeatureStation(new ProneCrawlwayFixture(), FeaturePlacement.BesideSpawn),
-                new FeatureStation(new ProneCrawlwayFixture(), FeaturePlacement.InPlace),
+                FeatureStation.InPlace(new ProneCrawlwayFixture()),
+                new FeatureStation(new ProneCrawlwayFixture(), new Vector3(10f, 0f, 0f)),
             };
+            var feature = new FeatureScene("Test", GameRulesAssetBuilder.PlaygroundRules(), stations, 0f, 15f, false);
 
-            Assert.Throws<ArgumentException>(() => FeatureSceneBuilder.PopulateScene(
-                _scene, NewWeapons(), NewRules(GameRulesAssetBuilder.FeatureRules(GameRulesDebugField.Prone)), stations));
+            Assert.Throws<ArgumentException>(() => FeatureSceneBuilder.PopulateScene(_scene, NewWeapons(), NewRules(feature.Rules), feature));
             Assert.That(_scene.rootCount, Is.EqualTo(0));
         }
 
         [Test]
-        public void StationRejectsANullFixture()
+        public void StationRejectsANullFixtureAndTheDropTowerALowHeight()
         {
-            Assert.Throws<ArgumentNullException>(() => new FeatureStation(null, FeaturePlacement.InPlace));
+            Assert.Throws<ArgumentNullException>(() => FeatureStation.InPlace(null));
+            Assert.Throws<ArgumentException>(() => new FeatureScene(" ", GameRulesAssetBuilder.PlaygroundRules(), Array.Empty<FeatureStation>(), 0f, 15f, false));
         }
 
-        private static ITpsRangeFixture FixtureOf(GameRulesDebugField field)
+        [Test]
+        public void LegacyAssetsAreEveryOldPerFeatureSceneAndRule()
         {
-            return FeatureSceneBuilder.Stations(field).Single().Fixture;
+            var paths = FeatureSceneBuilder.LegacyAssetPaths();
+
+            Assert.That(paths, Has.Member(DemoSample.Root + "/Scenes/Feature_Zipline.unity"));
+            Assert.That(paths, Has.Member(DemoSample.Root + "/Scenes/Feature_Downed.unity"));
+            Assert.That(paths, Has.Member(DemoSample.Root + "/Scenes/Feature_WallRun.unity"));
+            Assert.That(paths, Has.Member(DemoSample.Root + "/Rules/Features/Zipline.asset"));
+            Assert.That(paths, Has.Member(DemoSample.Root + "/Rules/Features/Swim.asset"));
+            Assert.That(paths, Has.Member(DemoSample.Root + "/Movement/Feature_DoubleJump.asset"));
+            Assert.That(paths, Has.Member(DemoSample.Root + "/Tuning/Feature_WallRun.json"));
+            Assert.That(paths.Count(p => p.EndsWith(".unity", StringComparison.Ordinal)), Is.EqualTo(25 + 4), "one per on/off rule and per move");
+            Assert.That(paths, Has.No.Member(BuildSceneList.PlaygroundScene));
+            Assert.That(paths, Has.No.Member(GameRulesAssetBuilder.FeatureRulesPath("Playground")));
+        }
+
+        [Test]
+        public void TheFeatureFixturesAreNotPickedUpByTheTpsRange()
+        {
+            var names = TpsRangeSceneBuilder.Fixtures().Select(f => f.GetType().Name).ToArray();
+
+            Assert.That(names, Has.No.Member("FeatureDropTowerFixture"));
+            Assert.That(names, Has.No.Member("FeatureHutFixture"));
+            Assert.That(names, Has.No.Member("FeatureCoversFixture"));
+            Assert.That(names, Has.No.Member("FeatureVaultWallFixture"));
+            Assert.That(names, Has.No.Member("TraversalFeatureFixture"));
         }
 
         private static Bounds Flat(Bounds bounds)

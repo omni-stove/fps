@@ -211,6 +211,71 @@ namespace Shooter.Editor
             return box;
         }
 
+        public const string PerimeterName = "Perimeter";
+
+        public static readonly IReadOnlyList<string> PerimeterWallNames = new[]
+        {
+            "Perimeter_North",
+            "Perimeter_South",
+            "Perimeter_East",
+            "Perimeter_West",
+        };
+
+        // 二段ジャンプ・壁走り・グラップルでも越えられない高さにする。
+        public const float DefaultPerimeterHeight = 8f;
+
+        public const float DefaultPerimeterThickness = 1f;
+
+        // 床の縁の内側に壁の内面を合わせ、角は東西の壁を南北の壁の厚み分伸ばして隙間なく塞ぐ。
+        public static GameObject CreatePerimeterWalls(Scene scene, Transform parent, Vector3 center, Vector2 halfExtents)
+        {
+            return CreatePerimeterWalls(scene, parent, center, halfExtents, DefaultPerimeterHeight, DefaultPerimeterThickness);
+        }
+
+        public static GameObject CreatePerimeterWalls(
+            Scene scene, Transform parent, Vector3 center, Vector2 halfExtents, float height, float thickness)
+        {
+            if (halfExtents.x <= 0f || halfExtents.y <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(halfExtents), halfExtents, "the walled area must have a positive size");
+            }
+
+            if (height <= 0f || thickness <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(height), $"height {height} and thickness {thickness} must be positive");
+            }
+
+            var root = new GameObject(PerimeterName);
+            root.isStatic = true;
+            Place(scene, parent, root);
+            root.transform.position = center;
+
+            var y = height / 2f;
+            var spanX = (halfExtents.x + thickness) * 2f;
+            var spanZ = halfExtents.y * 2f;
+            var boxes = new[]
+            {
+                (Center: new Vector3(0f, y, halfExtents.y + thickness / 2f), Size: new Vector3(spanX, height, thickness)),
+                (Center: new Vector3(0f, y, -halfExtents.y - thickness / 2f), Size: new Vector3(spanX, height, thickness)),
+                (Center: new Vector3(halfExtents.x + thickness / 2f, y, 0f), Size: new Vector3(thickness, height, spanZ)),
+                (Center: new Vector3(-halfExtents.x - thickness / 2f, y, 0f), Size: new Vector3(thickness, height, spanZ)),
+            };
+
+            for (var i = 0; i < boxes.Length; i++)
+            {
+                var wall = CreateStaticBox(scene, root.transform, PerimeterWallNames[i], center + boxes[i].Center, boxes[i].Size);
+                SetSurfaceMaterial(wall, SurfaceMaterial.DefaultId);
+            }
+
+            return root;
+        }
+
+        // Unity の Plane は拡大 1 で 10m 四方。
+        public static Vector2 PlaneHalfExtents(Vector3 planeScale)
+        {
+            return new Vector2(planeScale.x * 5f, planeScale.z * 5f);
+        }
+
         public static SurfaceMaterial SetSurfaceMaterial(GameObject target, string materialId)
         {
             if (target == null)

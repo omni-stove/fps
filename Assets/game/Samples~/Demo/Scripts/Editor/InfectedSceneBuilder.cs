@@ -11,7 +11,7 @@ namespace Shooter.Editor
     {
         public const string ModeName = GameRulesAssetBuilder.InfectedName;
 
-        public const string MenuPath = "Shooter/Build Infected Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         // プレイヤーを合わせて 5 人の生存者から始める。
         public const int SurvivorBots = 4;
@@ -32,7 +32,6 @@ namespace Shooter.Editor
 
         protected override IReadOnlyList<ModeSideLayout> Sides => TwoSides(SurvivorBots, 0);
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             GameRulesAssetBuilder.LoadOrBuildModeRules(ModeName);

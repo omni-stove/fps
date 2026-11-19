@@ -22,7 +22,7 @@ namespace Shooter.Editor
         public static string DefinitionPath => ModeDefinitionAssets.PathOf(ModeName);
         public static string LootTuningPath => ShooterKitRoot.OutputPath("Modes/" + ModeName + "Loot.json");
 
-        public const string MenuPath = "Shooter/Build Extraction Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const string LootRootName = "Loot";
         public const string ExitsRootName = "Exits";
@@ -75,7 +75,6 @@ namespace Shooter.Editor
 
         protected override IReadOnlyList<ModeSideLayout> Sides => TwoSides(0, HostileBots);
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             GameRulesAssetBuilder.LoadOrBuildModeRules(ModeName);

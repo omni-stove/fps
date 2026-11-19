@@ -19,7 +19,7 @@ namespace Shooter.Editor
         public static string DefinitionPath => ShooterKitRoot.OutputPath("Missions/" + MissionId + ".asset");
 
         public static string MissionNameKey => MissionDefinition.NameKeyOf(MissionId);
-        public const string MenuPath = "Shooter/Build Mission Test Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
         public const string LogTag = "[MissionTestSceneBuilder]";
 
         public const string ReachAreaId = "reach_area";
@@ -56,7 +56,6 @@ namespace Shooter.Editor
             };
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             // メニューから呼ばれたとき、開いているシーンの未保存の変更を黙って捨てない。
@@ -173,6 +172,9 @@ namespace Shooter.Editor
                 {
                     SceneManager.MoveGameObjectToScene(root, scene);
                 }
+
+                // 床は GameBootstrap が実行時に作るので、床の物でなく、実行時の床 (原点に置く GameBootstrap.FloorScale の Plane) の縁から囲む。
+                created.Add(SceneBuildHelpers.CreatePerimeterWalls(scene, null, Vector3.zero, SceneBuildHelpers.PlaneHalfExtents(GameBootstrap.FloorScale)));
 
                 EditorSceneManager.MarkSceneDirty(scene);
                 return new MissionTestLayout(bootstrap, runner, reachTrigger, kill, targets, extractionTrigger);

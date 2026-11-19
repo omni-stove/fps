@@ -12,7 +12,7 @@ namespace Shooter.Editor
     {
         public static string ScenePathValue => BuildSceneList.FreeForAllScene;
         public static string RulesPathValue => GameRulesAssetBuilder.FreeForAllPath;
-        public const string MenuPath = "Shooter/Build Free For All Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const int BotCount = 5;
 
@@ -33,7 +33,6 @@ namespace Shooter.Editor
         {
         }
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new FreeForAllSceneBuilder().BuildSceneFromMenu();

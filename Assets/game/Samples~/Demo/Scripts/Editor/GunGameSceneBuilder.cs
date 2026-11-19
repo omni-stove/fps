@@ -12,7 +12,7 @@ namespace Shooter.Editor
         public static string ScenePathValue => BuildSceneList.GunGameScene;
         public static string RulesPathValue => GameRulesAssetBuilder.GunGamePath;
         public static string LadderPath => ShooterKitRoot.OutputPath("Weapons/GunGameLadder.asset");
-        public const string MenuPath = "Shooter/Build Gun Game Scene";
+        public const string MenuPath = SceneBuildSteps.MenuPath;
 
         public const int BotCount = 5;
 
@@ -50,7 +50,6 @@ namespace Shooter.Editor
 
         protected override IReadOnlyList<ModeSideLayout> Sides => FreeForAllSides(BotCount);
 
-        [MenuItem(MenuPath)]
         public static void Build()
         {
             new GunGameSceneBuilder().BuildSceneFromMenu();

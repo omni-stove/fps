@@ -4,12 +4,17 @@ run = "scripts/install.sh"
 quiet = true
 
 [setup]
-description = "Install dependencies and skill-kit, then sync (run by make setup)"
+description = "Install dependencies and skill-kit, sync, then build every demo scene with build-scenes (run by make setup; close the Editor first)"
 depends = ["install"]
 run = [
   "curl -fsSL https://raw.githubusercontent.com/omni-stove/skill-kit/main/install.sh | sh",
   "skill-kit game sync",
+  "mise run build-scenes",
 ]
+
+[build-scenes]
+description = "Rebuild every demo scene (and write the net maps' server data, as export-server-data does) with the Unity editor in batch mode via Shooter.Editor.SceneBuildSteps.BuildAll, the Shooter/Build All Scenes menu (close the Editor first). Commit the result"
+run = "unity --non-interactive run . -- -executeMethod Shooter.Editor.SceneBuildSteps.BuildAll"
 
 [update]
 description = "Pull skill-kit and re-sync this repo"

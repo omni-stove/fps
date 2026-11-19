@@ -180,32 +180,79 @@ namespace Shooter.Editor
                 .WithMaxWeapons(DemoMaxWeapons);
         }
 
-        // GameRulesDebugDraft と同じく、ブラインドファイアはカバーも、グレネードは数も一緒に入れる。
-        // ダウンは倒れる手段が要るので落下ダメージも入れる。
-        // カバーとブラインドファイアは、一人称では張り付くと視界が壁で埋まるだけなので三人称で見せる。
-        public static GameRules FeatureRules(GameRulesDebugField field)
+        // ボタンを押せばすぐ試せるものは、まとめて Playground で入れる。
+        // 照準しないと撃てない (AimToFire) は他の撃つ操作を縛るので入れず、F1 のパネルで入れて試す。
+        // ダウンは一人用の試合 (MatchRunner) では起きず、ExecutionRunner・BattleRoyaleRunner だけが倒すので、エクスキューションの上に組む Downed シーン (DownedSceneBuilder) で試す。
+        // パラシュートと落下ダメージは高い所が要るので HighDrop で入れる。
+        public static readonly IReadOnlyList<GameRulesDebugField> PlaygroundToggles = new[]
         {
-            if (!GameRulesDebugDraft.IsToggle(field))
-            {
-                throw new ArgumentException($"{field} is not an on/off rule", nameof(field));
-            }
+            GameRulesDebugField.InfiniteReserve,
+            GameRulesDebugField.Destruction,
+            GameRulesDebugField.Cover,
+            GameRulesDebugField.BlindFire,
+            GameRulesDebugField.ActiveReload,
+            GameRulesDebugField.Dodge,
+            GameRulesDebugField.Vault,
+            GameRulesDebugField.Grenade,
+            GameRulesDebugField.Melee,
+            GameRulesDebugField.Stagger,
+            GameRulesDebugField.Slide,
+            GameRulesDebugField.Mantle,
+            GameRulesDebugField.Prone,
+            GameRulesDebugField.Ladder,
+            GameRulesDebugField.Zipline,
+            GameRulesDebugField.Stealth,
+            GameRulesDebugField.Suppression,
+            GameRulesDebugField.Ping,
+            GameRulesDebugField.Abilities,
+            GameRulesDebugField.SlowMotion,
+            GameRulesDebugField.Jump,
+        };
 
-            var draft = new GameRulesDebugDraft(FeatureBaseRules());
-            draft.Set(field, 1);
-            if (field == GameRulesDebugField.Downed)
-            {
-                draft.Set(GameRulesDebugField.FallDamage, (int)FallDamage.On);
-            }
+        public static readonly IReadOnlyList<GameRulesDebugField> HighDropToggles = new[]
+        {
+            GameRulesDebugField.Parachute,
+            GameRulesDebugField.FallDamage,
+            GameRulesDebugField.Ladder,
+            GameRulesDebugField.Jump,
+        };
 
-            var rules = draft.Build();
-            return field == GameRulesDebugField.Cover || field == GameRulesDebugField.BlindFire
-                ? rules.WithViewMode(ViewMode.ThirdPerson)
-                : rules;
+        // GameRulesDebugDraft を通すのは、ブラインドファイアはカバーも、グレネードは数も一緒に入れるため。
+        // カバーは一人称では張り付くと視界が壁で埋まるだけなので、三人称で始める (F2 で一人称に切り替えられる)。
+        public static GameRules PlaygroundRules()
+        {
+            return WithToggles(PlaygroundToggles).WithViewMode(ViewMode.ThirdPerson);
         }
 
-        public static string FeatureRulesPath(GameRulesDebugField field)
+        public static GameRules HighDropRules()
         {
-            return FeatureFolder + "/" + field + ".asset";
+            return WithToggles(HighDropToggles);
+        }
+
+        public static string FeatureRulesPath(string sceneName)
+        {
+            if (string.IsNullOrWhiteSpace(sceneName))
+            {
+                throw new ArgumentException("scene name must not be empty", nameof(sceneName));
+            }
+
+            return FeatureFolder + "/" + sceneName + ".asset";
+        }
+
+        private static GameRules WithToggles(IReadOnlyList<GameRulesDebugField> toggles)
+        {
+            var draft = new GameRulesDebugDraft(FeatureBaseRules());
+            foreach (var field in toggles)
+            {
+                if (!GameRulesDebugDraft.IsToggle(field))
+                {
+                    throw new ArgumentException($"{field} is not an on/off rule", nameof(toggles));
+                }
+
+                draft.Set(field, 1);
+            }
+
+            return draft.Build();
         }
 
         // チームデスマッチの値を後で変えてもドミネーションが付いて変わるよう、値を写さずに呼び出して作る。
@@ -428,15 +475,19 @@ namespace Shooter.Editor
         }
 
         // ゲーム側で調整した値を残すよう、既にあれば値は変えない。
-        public static GameRulesDefinition LoadOrBuildFeatureRules(GameRulesDebugField field, string path)
+        public static GameRulesDefinition LoadOrBuildFeatureRules(string path, GameRules rules)
         {
             path = SceneBuildHelpers.ValidateAssetPath(path);
+            if (rules == null)
+            {
+                throw new ArgumentNullException(nameof(rules));
+            }
+
             if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path) != null)
             {
                 return LoadRules(path);
             }
 
-            var rules = FeatureRules(field);
             var built = SceneBuildHelpers.CreateOrUpdateAsset<GameRulesDefinition>(path, d => Configure(d, rules));
             Debug.Log($"{LogTag} saved '{path}'");
             return built;

@@ -93,6 +93,58 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ANewDefinitionDoesNotWidenTheFieldOfView()
+        {
+            var definition = NewDefinition("Fresh");
+
+            Assert.That(definition.SpeedFieldOfViewStartSpeed, Is.EqualTo(VehicleSpeedFieldOfViewSpec.DefaultStartSpeed));
+            Assert.That(definition.SpeedFieldOfViewFullSpeed, Is.EqualTo(VehicleSpeedFieldOfViewSpec.DefaultFullSpeed));
+            Assert.That(definition.SpeedFieldOfViewExtraDegrees, Is.EqualTo(0f));
+            Assert.That(definition.SpeedFieldOfViewBlendSeconds, Is.EqualTo(VehicleSpeedFieldOfViewSpec.DefaultBlendSeconds));
+            Assert.That(definition.ToSpec(_twoSeats).SpeedFieldOfView.IsEnabled, Is.False);
+        }
+
+        [Test]
+        public void TheSpeedFieldOfViewSurvivesToSpecAndCopyFrom()
+        {
+            var definition = Jeep();
+            definition.SpeedFieldOfViewStartSpeed = 8f;
+            definition.SpeedFieldOfViewFullSpeed = 32f;
+            definition.SpeedFieldOfViewExtraDegrees = 15f;
+            definition.SpeedFieldOfViewBlendSeconds = 0.25f;
+
+            var spec = definition.ToSpec(_twoSeats);
+
+            Assert.That(spec.SpeedFieldOfView.StartSpeed, Is.EqualTo(8f));
+            Assert.That(spec.SpeedFieldOfView.FullSpeed, Is.EqualTo(32f));
+            Assert.That(spec.SpeedFieldOfView.ExtraDegrees, Is.EqualTo(15f));
+            Assert.That(spec.SpeedFieldOfView.BlendSeconds, Is.EqualTo(0.25f));
+
+            var copy = NewDefinition("Copy");
+            copy.CopyFrom(spec);
+
+            Assert.That(copy.SpeedFieldOfViewStartSpeed, Is.EqualTo(8f));
+            Assert.That(copy.SpeedFieldOfViewFullSpeed, Is.EqualTo(32f));
+            Assert.That(copy.SpeedFieldOfViewExtraDegrees, Is.EqualTo(15f));
+            Assert.That(copy.SpeedFieldOfViewBlendSeconds, Is.EqualTo(0.25f));
+            var again = copy.ToSpec(_twoSeats).SpeedFieldOfView;
+            Assert.That(again.ExtraDegreesAt(20f), Is.EqualTo(spec.SpeedFieldOfView.ExtraDegreesAt(20f)));
+        }
+
+        [Test]
+        public void AnInvalidSpeedFieldOfViewNamesTheAsset()
+        {
+            var definition = Jeep();
+            definition.SpeedFieldOfViewStartSpeed = 30f;
+            definition.SpeedFieldOfViewFullSpeed = 20f;
+
+            var error = Assert.Throws<VehicleDefinitionException>(() => definition.ToSpec(_twoSeats));
+
+            Assert.That(error.Message, Does.StartWith("vehicle 'Jeep' is invalid: "));
+            Assert.That(error.InnerException, Is.InstanceOf<ArgumentOutOfRangeException>());
+        }
+
+        [Test]
         public void ANewDefinitionHasNoPartsAndTheDefaultDurability()
         {
             var definition = NewDefinition("Fresh");

@@ -218,6 +218,7 @@ namespace Shooter.Runtime
             if (_seat != null && !DeathCamView.IsBorrowed(_camera.Camera))
             {
                 _camera.Place(_seat);
+                _camera.StepFieldOfView(_seat.Vehicle, Time.deltaTime);
             }
         }
 

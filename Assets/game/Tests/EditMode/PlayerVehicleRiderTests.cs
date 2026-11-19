@@ -257,6 +257,92 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheVehicleCameraWidensWithSpeedAndGivesTheFieldOfViewBack()
+        {
+            var camera = NewRigCamera(out var rig);
+            camera.fieldOfView = 60f;
+            var vehicleCamera = new VehicleCamera(rig);
+            var spec = new VehicleSpeedFieldOfViewSpec(10f, 30f, 15f, 0f);
+
+            vehicleCamera.Begin(VehicleCameraView.Chase);
+            vehicleCamera.StepFieldOfView(spec, 5f, StepSeconds);
+            Assert.That(camera.fieldOfView, Is.EqualTo(60f), "slower than the start speed");
+
+            vehicleCamera.StepFieldOfView(spec, 20f, StepSeconds);
+            Assert.That(camera.fieldOfView, Is.EqualTo(67.5f).Within(1e-3f));
+
+            vehicleCamera.StepFieldOfView(spec, 50f, StepSeconds);
+            Assert.That(camera.fieldOfView, Is.EqualTo(75f).Within(1e-3f));
+
+            vehicleCamera.StepFieldOfView(spec, 0f, StepSeconds);
+            Assert.That(camera.fieldOfView, Is.EqualTo(60f), "stopping gives back the field of view");
+
+            vehicleCamera.StepFieldOfView(spec, 50f, StepSeconds);
+            vehicleCamera.Restore();
+            Assert.That(camera.fieldOfView, Is.EqualTo(60f), "leaving gives back the field of view");
+        }
+
+        [Test]
+        public void TheVehicleCameraEasesTheFieldOfViewInsteadOfJumping()
+        {
+            var camera = NewRigCamera(out var rig);
+            camera.fieldOfView = 60f;
+            var vehicleCamera = new VehicleCamera(rig);
+            var spec = new VehicleSpeedFieldOfViewSpec(10f, 30f, 15f, 0.5f);
+
+            vehicleCamera.Begin(VehicleCameraView.Chase);
+            vehicleCamera.StepFieldOfView(spec, 30f, 0.5f);
+
+            var expected = 60f + (15f * (1f - Mathf.Exp(-1f)));
+            Assert.That(camera.fieldOfView, Is.EqualTo(expected).Within(1e-3f));
+            Assert.That(vehicleCamera.ExtraFieldOfView, Is.EqualTo(expected - 60f).Within(1e-3f));
+
+            for (var i = 0; i < 200; i++)
+            {
+                vehicleCamera.StepFieldOfView(spec, 0f, 0.1f);
+            }
+
+            Assert.That(camera.fieldOfView, Is.EqualTo(60f), "settles back on the original");
+            Assert.That(vehicleCamera.ExtraFieldOfView, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void TheVehicleCameraDoesNotTouchTheFieldOfViewWhenNothingIsAdded()
+        {
+            var camera = NewRigCamera(out var rig);
+            camera.fieldOfView = 70f;
+            var vehicleCamera = new VehicleCamera(rig);
+
+            vehicleCamera.Begin(VehicleCameraView.Chase);
+            vehicleCamera.StepFieldOfView(VehicleSpeedFieldOfViewSpec.Default, 100f, StepSeconds);
+            Assert.That(camera.fieldOfView, Is.EqualTo(70f));
+
+            camera.fieldOfView = 80f;
+            vehicleCamera.Restore();
+            Assert.That(camera.fieldOfView, Is.EqualTo(80f), "another component's field of view is left alone");
+        }
+
+        [Test]
+        public void TheVehicleCameraTakesAnotherComponentsFieldOfViewAsTheNewBase()
+        {
+            var camera = NewRigCamera(out var rig);
+            camera.fieldOfView = 60f;
+            var vehicleCamera = new VehicleCamera(rig);
+            var spec = new VehicleSpeedFieldOfViewSpec(10f, 30f, 10f, 0f);
+
+            vehicleCamera.Begin(VehicleCameraView.Chase);
+            vehicleCamera.StepFieldOfView(spec, 30f, StepSeconds);
+            Assert.That(camera.fieldOfView, Is.EqualTo(70f).Within(1e-3f));
+
+            camera.fieldOfView = 90f;
+            vehicleCamera.StepFieldOfView(spec, 30f, StepSeconds);
+            Assert.That(camera.fieldOfView, Is.EqualTo(100f).Within(1e-3f));
+
+            vehicleCamera.Restore();
+            Assert.That(camera.fieldOfView, Is.EqualTo(90f));
+        }
+
+        [Test]
         public void ThePassengerSeatUsesItsOwnViewPoint()
         {
             var eye = new GameObject("Eye").transform;
@@ -330,6 +416,17 @@ namespace Shooter.Tests.EditMode
         private static void AssertNear(Vector3 actual, Vector3 expected, string message)
         {
             Assert.That(Vector3.Distance(actual, expected), Is.LessThan(1e-3f), $"{message}: expected {expected} but was {actual}");
+        }
+
+        private Camera NewRigCamera(out ViewRig rig)
+        {
+            var eye = new GameObject("Eye").transform;
+            eye.SetParent(_body.transform, false);
+            var camera = new GameObject("Camera").AddComponent<Camera>();
+            camera.transform.SetParent(eye, false);
+            rig = _body.AddComponent<ViewRig>();
+            rig.Initialize(eye, camera);
+            return camera;
         }
 
         private VehicleSeat CreateSeat(Transform parent, string name, Vector3 localPosition)

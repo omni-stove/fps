@@ -5,6 +5,8 @@ namespace Shooter.Core
 {
     public static class AircraftAim
     {
+        private const float _radiansToDegrees = (float)(180.0 / Math.PI);
+
         public static float StepThrottle(AircraftAimSpec spec, float level, float push, float deltaSeconds)
         {
             RequireSpec(spec);
@@ -32,7 +34,13 @@ namespace Shooter.Core
             return level > 0f ? level : Math.Min(0f, Clamp(push));
         }
 
-        public static VehicleMotorInput Compute(AircraftAimSpec spec, Vector3 localAim, float rightWingUp, float rollPush, float throttleAxis)
+        public static VehicleMotorInput Compute(
+            AircraftAimSpec spec,
+            Vector3 localAim,
+            float rightWingUp,
+            float rollPush,
+            float throttleAxis,
+            AircraftAimSituation situation = default)
         {
             RequireSpec(spec);
             if (!float.IsFinite(localAim.X) || !float.IsFinite(localAim.Y) || !float.IsFinite(localAim.Z))
@@ -45,17 +53,64 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(rightWingUp), rightWingUp, "rightWingUp must be between -1 and 1");
             }
 
-            var off = Off(localAim);
+            // 引き起こすときに視線の代わりに真上を狙うのは、背面で突っ込んでいても、機体から見た真上へ向かう当て方なら回って起き上がれるため。
+            // ロールのキーを捨てるのは、引き起こしの最中に傾けると、機首の上がる向きが地面から逸れるため。
+            var pullUp = ShouldPullUp(spec, situation);
+            var off = Off(pullUp ? situation.LocalUp : localAim);
+            var push = pullUp ? 0f : rollPush;
 
             // 傾きを戻す分を足すのは、曲がりたい向きの分と釣り合う傾きで止まり、視線を正面へ戻せば水平へ戻るようにするため。
-            var roll = Clamp((off.X * spec.RollGain) + (rightWingUp * spec.LevelGain) + rollPush);
-            var pitch = Clamp(off.Y * spec.PitchGain);
+            var roll = Clamp((off.X * spec.RollGain) + (rightWingUp * spec.LevelGain) + push);
+            var pitch = LimitPitch(spec, Clamp(off.Y * spec.PitchGain), situation.State);
             var yaw = Clamp(off.X * spec.YawGain);
             return VehicleMotorInput.Idle
                 .With(AircraftFlight.ThrottleAxis, Clamp(throttleAxis))
                 .With(AircraftFlight.PitchAxis, pitch)
                 .With(AircraftFlight.RollAxis, roll)
                 .With(AircraftFlight.YawAxis, yaw);
+        }
+
+        // 接地中は引き起こさないのは、滑走や着陸の接地で地面までの距離が 0 になり、毎回機首を上げてしまうため。
+        public static bool ShouldPullUp(AircraftAimSpec spec, AircraftAimSituation situation)
+        {
+            RequireSpec(spec);
+            return !situation.State.Grounded
+                && situation.SinkRate > spec.MinSinkRate
+                && situation.SecondsToGround < spec.GroundWarningSeconds;
+        }
+
+        // 絞る量を、上限の手前の余裕の中で 1 から 0 へ下げるのは、上限で急に舵を抜くと、機首が跳ねて G と迎え角が上限を行き来するため。
+        // 機首を上げるときは正の G と迎え角を、下げるときは負の G と迎え角を見るのは、限界から離れる向きの操作まで止めると、失速から抜けられないため。
+        // 接地中に絞らないのは、車輪が受ける力が G に入り、着地の弾みで離陸の引き起こしまで止まるため。
+        public static float LimitPitch(AircraftAimSpec spec, float pitch, AircraftFlightState state)
+        {
+            RequireSpec(spec);
+            if (!(Math.Abs(pitch) <= 1f))
+            {
+                throw new ArgumentOutOfRangeException(nameof(pitch), pitch, "pitch must be between -1 and 1");
+            }
+
+            if (state.Grounded || pitch == 0f)
+            {
+                return pitch;
+            }
+
+            var sign = pitch > 0f ? 1f : -1f;
+            var loadRoom = Room(spec.MaxLoadFactor, spec.LoadFactorMargin, state.LoadFactor * sign);
+            var angleRoom = Room(spec.CriticalAngleOfAttack, spec.AngleOfAttackMargin, state.AngleOfAttackRadians * sign * _radiansToDegrees);
+            return pitch * Math.Min(loadRoom, angleRoom);
+        }
+
+        // 数でない値を上限に達した扱いにするのは、壊れた状態のまま舵を通すと、機体が何をするか分からないため。
+        private static float Room(float limit, float margin, float value)
+        {
+            if (!(value < limit))
+            {
+                return 0f;
+            }
+
+            var start = limit - margin;
+            return value <= start ? 1f : (limit - value) / margin;
         }
 
         // 後ろを見たときに横と上下の成分を伸ばすのは、真後ろ近くでは成分が小さく、振り向くのが遅くなるため。真後ろなら機首を上げて回る。

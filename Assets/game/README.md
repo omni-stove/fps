@@ -288,6 +288,8 @@ public sealed class HealthOnlyHud : MonoBehaviour
    - `SimpleAircraftMotor.State` (`AircraftFlightState`) で、対気速度・迎え角・横滑り角 (ラジアン)・荷重倍数 (G)・接地を読める。
 4. `AircraftControlScheme` は、視線の方へ機首を向け、移動の前後でスロットルを開け閉めし (閉じ切ってさらに下げるとエアブレーキ)、左右でロールを足す。強さはアセットの Aim の欄か `Configure(AircraftAimSpec)` で入れる。
    - 乗っている間は視点が機体の向きに付いて回るので、左右の視線のずれは、そのまま曲がり続ける速さになる。上下は視線の高さへ機首が合う。
+   - 同じ GameObject の `SimpleAircraftMotor.State` を読み、G が `MaxLoadFactor` の `LoadFactorMargin` 手前を越えるか、迎え角が `CriticalAngleOfAttack` (度) の `AngleOfAttackMargin` 手前を越えると、機首を上げる舵を上限で 0 になるまで絞る (下げる向きは負の G・迎え角で同じく絞る)。接地中は絞らない。
+   - `MinSinkRate` (m/s) より速く降りていて、真下へのレイ (`GroundMask` のレイヤー、機体自身の当たり判定は除く) で測った地面まで `GroundWarningSeconds` を切ると、視線の代わりに真上へ機首を向け、ロールのキーを無視して引き起こす。0 秒にすると引き起こさない。判定は `AircraftAim.ShouldPullUp`・`AircraftAim.LimitPitch` で引ける。
 5. オンラインでは、運転手が降りると機体はサーバーにある最後の姿のまま止まる (車と同じ)。空中で降りると、その場に浮いたまま残る。
 
 プレイヤーの座席の入力を AI・チュートリアル・自動の確認から書き換えるときは、`PlayerVehicleRider.SeatInputFilter` に `IVehicleSeatInputFilter` を入れる。

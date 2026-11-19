@@ -335,27 +335,26 @@ namespace Shooter.Core
         }
 
         // 呼んだ側が後から配列を書き換えてもルールが変わらないよう、検査した写しを持つ。
-        private static IReadOnlyList<RespawnAnchor> CopyAnchors(IReadOnlyList<RespawnAnchor> anchors)
+        // 引数名をコンストラクターと同じ respawnAnchor にして、例外の ParamName が項目名になるようにする (GameRulesJson が返す)。
+        private static ReadOnlyCollection<RespawnAnchor> CopyAnchors(IReadOnlyList<RespawnAnchor> respawnAnchor)
         {
-            // 例外の ParamName はコンストラクターの引数名に揃える (GameRulesJson が項目名として返す)。
-            const string paramName = "respawnAnchor";
-            if (anchors.Count == 0)
+            if (respawnAnchor.Count == 0)
             {
-                throw new ArgumentException("respawnAnchor must list at least one anchor", paramName);
+                throw new ArgumentException("respawnAnchor must list at least one anchor", nameof(respawnAnchor));
             }
 
-            var copy = new RespawnAnchor[anchors.Count];
-            for (var i = 0; i < anchors.Count; i++)
+            var copy = new RespawnAnchor[respawnAnchor.Count];
+            for (var i = 0; i < respawnAnchor.Count; i++)
             {
-                var anchor = anchors[i];
+                var anchor = respawnAnchor[i];
                 if (!Enum.IsDefined(typeof(RespawnAnchor), anchor))
                 {
-                    throw new ArgumentOutOfRangeException(paramName, anchor, "respawnAnchor has an anchor that is not a defined RespawnAnchor");
+                    throw new ArgumentOutOfRangeException(nameof(respawnAnchor), anchor, "respawnAnchor has an anchor that is not a defined RespawnAnchor");
                 }
 
                 if (Array.IndexOf(copy, anchor, 0, i) >= 0)
                 {
-                    throw new ArgumentException($"respawnAnchor lists {anchor} more than once", paramName);
+                    throw new ArgumentException($"respawnAnchor lists {anchor} more than once", nameof(respawnAnchor));
                 }
 
                 copy[i] = anchor;

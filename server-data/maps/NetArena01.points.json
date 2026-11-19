@@ -84,15 +84,5 @@
       "radius": 5,
       "height": 6
     }
-  ],
-  "flagBases": [
-    {
-      "team": "Alpha",
-      "position": [0, -1, -27]
-    },
-    {
-      "team": "Bravo",
-      "position": [0, -1, 27]
-    }
   ]
 }

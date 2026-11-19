@@ -70,7 +70,10 @@ namespace Shooter.Tests.EditMode
         {
             var range = WeaponAssetBuilder.LoadRangeWeapons();
             var optics = RangeWeaponRackFixture.OpticItemIds(KitTuning.Items);
-            Assert.That(optics, Is.EqualTo(new[] { "2451a5a1-24e5-45ed-bbc1-8b23276152f8", "a2c5e73b-69fa-4402-b0ef-3c4297973226", "79fb2f9e-fc61-425a-b651-8baa8d1a6b2b" }), "the red dot, the 4x scope and the holographic sight");
+            Assert.That(
+                optics,
+                Is.EqualTo(new[] { "2451a5a1-24e5-45ed-bbc1-8b23276152f8", "a2c5e73b-69fa-4402-b0ef-3c4297973226", "79fb2f9e-fc61-425a-b651-8baa8d1a6b2b", "c8e4f2a1-7b3d-4e95-a6c0-1d2f3b4a5e67" }),
+                "the red dot, the 4x scope, the holographic sight and the thermal scope");
             Assert.That(range.Weapons.Count + optics.Count, Is.LessThanOrEqualTo(RangeWeaponRackFixture.Columns * RangeWeaponRackFixture.Rows));
 
             var scene = TestScenes.NewAdditive();
@@ -92,6 +95,22 @@ namespace Shooter.Tests.EditMode
             {
                 EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        [Test]
+        public void TheRackHoldsTheRiotShieldAndTheThermalScope()
+        {
+            var range = WeaponAssetBuilder.LoadRangeWeapons();
+            var optics = RangeWeaponRackFixture.OpticItemIds(KitTuning.Items);
+
+            Assert.That(range.TryFind(WeaponAssetBuilder.RiotShieldId, out var shield), Is.True, $"rerun {nameof(WeaponAssetBuilder)}.Build");
+            Assert.That(shield.ToSpec().IsShield, Is.True);
+            Assert.That(optics, Does.Contain(AttachmentModelCatalogAssetStep.ThermalScopeId));
+            Assert.That(range.Weapons.Count + optics.Count, Is.LessThanOrEqualTo(RangeWeaponRackFixture.Columns * RangeWeaponRackFixture.Rows));
+
+            var footprint = new RangeWeaponRackFixture().Footprint;
+            Assert.That(footprint.max.x, Is.LessThan(TpsRangeSceneBuilder.FloorHalfExtent), "the wider rack still fits on the floor");
+            Assert.That(footprint.max.z, Is.LessThan(TpsRangeSceneBuilder.FloorHalfExtent));
         }
 
         [Test]

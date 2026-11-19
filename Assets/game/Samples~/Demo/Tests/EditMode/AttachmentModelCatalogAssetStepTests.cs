@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using Shooter.Core;
 using Shooter.Editor;
 using Shooter.Runtime;
 using NUnit.Framework;
@@ -55,7 +56,7 @@ namespace Shooter.Tests.EditMode
         {
             var entries = AttachmentModelCatalogAssetStep.Entries();
 
-            Assert.That(entries, Has.Count.EqualTo(7));
+            Assert.That(entries, Has.Count.EqualTo(8));
             Assert.That(entries.Select(e => e.ItemId), Is.Unique);
             foreach (var entry in entries)
             {
@@ -101,6 +102,27 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(AttachmentModelCatalogAssetStep.ShapeFor(AttachmentModelCatalogAssetStep.SuppressorId).SocketPosition, Is.EqualTo(new Vector3(0f, 0f, 0.16f)));
             Assert.That(AttachmentModelCatalogAssetStep.ShapeFor(AttachmentModelCatalogAssetStep.CompensatorId).SocketPosition, Is.EqualTo(new Vector3(0f, 0f, 0.05f)));
+        }
+
+        [Test]
+        public void TheThermalScopeIsABoxHousingWithItsEyePointBehindTheEyepiece()
+        {
+            var shape = AttachmentModelCatalogAssetStep.ShapeFor(AttachmentModelCatalogAssetStep.ThermalScopeId);
+
+            Assert.That(AttachmentModelCatalogAssetStep.PrefabName(AttachmentModelCatalogAssetStep.ThermalScopeId), Is.EqualTo("Attachment_ThermalScope"));
+            Assert.That(shape.HasPart("ThermalHousing"), Is.True);
+            Assert.That(shape.HasPart("ThermalLens"), Is.True);
+            Assert.That(shape.HasPart("ScopeTube"), Is.False, "the 4x scope is the round tube");
+            Assert.That(shape.Parts.Single(p => p.Name == "ThermalHousing").Shape, Is.EqualTo(WeaponPartShape.Box));
+            foreach (var part in shape.Parts)
+            {
+                Assert.That(shape.SocketPosition.z, Is.LessThanOrEqualTo(part.Center.z - (part.Size.z * 0.5f) + 1e-5f), part.Name);
+            }
+
+            var entry = AttachmentModelCatalogAssetStep.Entries().Single(e => e.ItemId == AttachmentModelCatalogAssetStep.ThermalScopeId);
+            Assert.That(entry.Anchor, Is.EqualTo(AttachmentAnchor.Top));
+            Assert.That(KitTuning.Items.TryFindAttachment(entry.ItemId, out var item), Is.True);
+            Assert.That(item.Attachment.Sight.VisionMode, Is.EqualTo(VisionMode.Thermal));
         }
 
         [TestCase(AttachmentModelCatalogAssetStep.RedDotId)]

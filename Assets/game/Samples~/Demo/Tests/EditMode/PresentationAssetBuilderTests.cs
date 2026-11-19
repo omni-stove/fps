@@ -244,8 +244,8 @@ namespace Shooter.Tests.EditMode
 
             foreach (var (name, spec) in WeaponAssetBuilder.AllWeaponSources())
             {
-                var beamOrSpray = spec.Round.Delivery == Shooter.Core.RoundDelivery.Beam || spec.Round.Delivery == Shooter.Core.RoundDelivery.Spray;
-                Assert.That(ids.Contains(spec.Id), Is.EqualTo(!beamOrSpray), name);
+                var silent = spec.IsShield || spec.Round.Delivery == Shooter.Core.RoundDelivery.Beam || spec.Round.Delivery == Shooter.Core.RoundDelivery.Spray;
+                Assert.That(ids.Contains(spec.Id), Is.EqualTo(!silent), name);
             }
 
             foreach (var id in BootstrapSceneBuilder.PlayerWeaponIds.Concat(BootstrapSceneBuilder.FeaturedWeaponIds))
@@ -270,6 +270,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(PresentationAssetBuilder.AssetsFor(specs["PumpShotgun"]).Value.MuzzleFlash, Is.EqualTo(PresentationAssetBuilder.RifleMuzzleFlashEffect));
             Assert.That(PresentationAssetBuilder.AssetsFor(specs["Laser"]), Is.Null);
             Assert.That(PresentationAssetBuilder.AssetsFor(specs["Flamethrower"]), Is.Null);
+            Assert.That(PresentationAssetBuilder.AssetsFor(specs["RiotShield"]), Is.Null, "a shield never fires");
             Assert.Throws<ArgumentNullException>(() => PresentationAssetBuilder.AssetsFor(null));
         }
 

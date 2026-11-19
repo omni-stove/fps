@@ -69,9 +69,32 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheInstallerIsNotRegisteredWithPlayerActions()
+        public void TheInstallerIsBuiltIntoPlayerActionsWithTheDefaultSpec()
         {
-            Assert.That(PlayerActions.Installers.Any(i => i is StaminaActionInstaller), Is.False);
+            var installers = PlayerActions.Installers.OfType<StaminaActionInstaller>().ToArray();
+
+            Assert.That(installers, Has.Length.EqualTo(1));
+            Assert.That(installers[0].Spec, Is.SameAs(StaminaSpec.Default));
+        }
+
+        [Test]
+        public void AttachingThePlayerActionsWithStaminaOffAddsNoMeter()
+        {
+            PlayerActions.Attach(_body, Rules(Stamina.Off));
+
+            Assert.That(_body.GetComponent<PlayerStamina>(), Is.Null);
+            Assert.That(GameSignals.Stamina.HasValue, Is.False);
+        }
+
+        [Test]
+        public void AttachingThePlayerActionsWithStaminaOnGatesThePlayer()
+        {
+            PlayerActions.Attach(_body, Rules(Stamina.On));
+
+            var stamina = _body.GetComponent<PlayerStamina>();
+            Assert.That(stamina, Is.Not.Null);
+            Assert.That(_player.StaminaGate, Is.SameAs(stamina));
+            Assert.That(GameSignals.Stamina.HasValue, Is.True);
         }
 
         [Test]

@@ -17,8 +17,10 @@ namespace Shooter.Runtime
             new SuppressionActionInstaller(),
             new ProneActionInstaller(),
             new SlowMotionActionInstaller(),
+            new StaminaActionInstaller(),
             new AbilityActionInstaller(),
             new GrenadeActionInstaller(),
+            new EmoteActionInstaller(),
         };
 
         public static IReadOnlyList<IPlayerActionInstaller> Installers

@@ -399,7 +399,9 @@ namespace Shooter.Editor
         // 一人称なのでカバーを使わない (CampaignActions と同じ理由)。
         public static ActionRules RangeActions()
         {
-            return WithDefaultDownedTimings(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On);
+            return WithDefaultDownedTimings(Downed.Off, Cover.Off, BlindFire.Off, ActiveReload.On)
+                .WithEmote(Emote.On)
+                .WithStamina(Stamina.On);
         }
 
         public static GameRulesDefinition LoadRules(string path)

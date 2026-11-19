@@ -92,7 +92,7 @@ Device ID は端末ごとの Id なので、それだけでは端末ごとに別
    - `loops` が true のものは止めるまで続ける。false のものは `durationSeconds` で終わる。
    - 撃つ・倒される・ダウンすると、`stopsOnMove` にかかわらず止まる。
 2. **Create > Shooter > Emote Catalog** を作り、JSON の `id` ごとにリグに流すクリップを入れて、入口の `EmoteAnimations` に入れる。クリップの無い Id は体を動かさずに出る。
-3. ルールの `actions.emote` を `On` にし、`EmoteActionInstaller` を `PlayerActions.Register` で入れる。キットは自分では登録しない。
+3. ルールの `actions.emote` を `On` にする。`EmoteActionInstaller` は `PlayerActions` の組み込みの一覧に入っているので、`Register` で足す必要はない。ルールが Off なら何も付かない。
 4. 再生中は一人称から三人称のカメラになり、止まると一人称に戻る。
 
 ### UI

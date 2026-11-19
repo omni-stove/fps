@@ -160,11 +160,15 @@ namespace Shooter.Tests.EditMode
             try
             {
                 var roots = scene.GetRootGameObjects();
-                Assert.That(roots, Has.Length.EqualTo(3), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers and the weapon table");
+                Assert.That(roots, Has.Length.EqualTo(4), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the covers, the weapon table and the platforms");
                 Assert.That(roots[0].GetComponent<GameBootstrap>(), Is.Not.Null);
                 Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
                 AssertCovers(roots[1]);
                 Assert.That(roots[2].name, Is.EqualTo(BootstrapSceneBuilder.WeaponTableName));
+                Assert.That(roots[3].name, Is.EqualTo(BootstrapSceneBuilder.PlatformsName), $"rerun {nameof(BootstrapSceneBuilder)}.Build to add the platforms");
+                var elevatorSettings = AssetDatabase.LoadAssetAtPath<MovingPlatformSettings>(BootstrapSceneBuilder.ElevatorSettingsPath);
+                Assert.That(elevatorSettings, Is.Not.Null, $"rerun {nameof(BootstrapSceneBuilder)}.Build");
+                AssertPlatforms(roots[3], elevatorSettings);
                 Assert.That(
                     roots[2].GetComponentsInChildren<PickupSpawnPoint>().Select(p => p.Contents.Weapon.Id),
                     Is.EqualTo(BootstrapSceneBuilder.FeaturedWeaponIds),
@@ -193,6 +197,134 @@ namespace Shooter.Tests.EditMode
             {
                 EditorSceneManager.CloseScene(scene, true);
             }
+        }
+
+        [Test]
+        public void PopulatingWithTheElevatorSettingsAddsTheShuttleAndTheElevator()
+        {
+            var scene = TestScenes.NewAdditive();
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var range = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            var elevator = ElevatorSettings();
+            try
+            {
+                var bootstrap = BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle }, range, Array.Empty<WeaponDefinition>(), elevator);
+
+                var roots = scene.GetRootGameObjects();
+                Assert.That(roots, Has.Length.EqualTo(3));
+                Assert.That(roots[0], Is.SameAs(bootstrap));
+                Assert.That(roots[1].name, Is.EqualTo(BootstrapSceneBuilder.CoversName));
+                Assert.That(roots[2].name, Is.EqualTo(BootstrapSceneBuilder.PlatformsName));
+                AssertPlatforms(roots[2], elevator);
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+                UnityEngine.Object.DestroyImmediate(rifle);
+                UnityEngine.Object.DestroyImmediate(range);
+                UnityEngine.Object.DestroyImmediate(elevator);
+            }
+        }
+
+        [Test]
+        public void ThePlatformsNeedOnCallElevatorSettings()
+        {
+            var scene = TestScenes.NewAdditive();
+            var rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var range = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            var pingPong = ScriptableObject.CreateInstance<MovingPlatformSettings>();
+            var elevator = ElevatorSettings();
+            try
+            {
+                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.CreatePlatforms(scene, null));
+                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreatePlatforms(scene, pingPong));
+                Assert.Throws<ArgumentException>(
+                    () => BootstrapSceneBuilder.PopulateScene(scene, new[] { rifle }, range, Array.Empty<WeaponDefinition>(), pingPong));
+                Assert.That(scene.rootCount, Is.Zero, "nothing is placed with settings that do not wait for a call");
+                Assert.Throws<ArgumentException>(() => BootstrapSceneBuilder.CreatePlatforms(default, elevator));
+                Assert.Throws<ArgumentNullException>(() => BootstrapSceneBuilder.ConfigureElevatorSettings(null));
+            }
+            finally
+            {
+                EditorSceneManager.CloseScene(scene, true);
+                UnityEngine.Object.DestroyImmediate(rifle);
+                UnityEngine.Object.DestroyImmediate(range);
+                UnityEngine.Object.DestroyImmediate(pingPong);
+                UnityEngine.Object.DestroyImmediate(elevator);
+            }
+        }
+
+        [Test]
+        public void TheElevatorSettingsWaitForACallAndLeaveWhenBoarded()
+        {
+            var settings = ElevatorSettings();
+            try
+            {
+                var spec = settings.ToSpec();
+                Assert.That(spec.Kind, Is.EqualTo(PlatformRouteKind.OnCall));
+                Assert.That(spec.Speed, Is.EqualTo(BootstrapSceneBuilder.ElevatorSpeed));
+                Assert.That(spec.Speed, Is.GreaterThan(0f));
+                Assert.That(spec.WaitSeconds, Is.EqualTo(BootstrapSceneBuilder.ElevatorWaitSeconds));
+                Assert.That(spec.SpinDegreesPerSecond, Is.EqualTo(0f));
+                Assert.That(spec.DepartWhenBoarded, Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(settings);
+            }
+        }
+
+        [Test]
+        public void ThePlatformsStandAsideFromTheShootingLanesAndCanBeWalkedOnto()
+        {
+            Assert.That(BootstrapSceneBuilder.PlatformTopHeight, Is.LessThan(0.3f), "below the CharacterController's default step offset");
+            Assert.That(BootstrapSceneBuilder.ShuttleOrigin.y + (BootstrapSceneBuilder.PlatformSlabSize.y / 2f), Is.EqualTo(BootstrapSceneBuilder.PlatformTopHeight).Within(1e-5f));
+            Assert.That(BootstrapSceneBuilder.ElevatorOrigin.y + (BootstrapSceneBuilder.PlatformSlabSize.y / 2f), Is.EqualTo(BootstrapSceneBuilder.PlatformTopHeight).Within(1e-5f));
+
+            var tower = BootstrapSceneBuilder.ElevatorTower;
+            var towerTop = tower.Center.y + (tower.Size.y / 2f);
+            var raisedTop = BootstrapSceneBuilder.PlatformTopHeight + BootstrapSceneBuilder.ElevatorStops[BootstrapSceneBuilder.ElevatorTopStop].y;
+            Assert.That(towerTop, Is.EqualTo(raisedTop).Within(1e-5f), "the raised elevator is level with the tower top");
+            Assert.That(tower.Center.y - (tower.Size.y / 2f), Is.EqualTo(0f).Within(1e-5f), "the tower stands on the floor");
+            var slabEdge = BootstrapSceneBuilder.ElevatorOrigin.x + (BootstrapSceneBuilder.PlatformSlabSize.x / 2f);
+            Assert.That(tower.Center.x - (tower.Size.x / 2f), Is.EqualTo(slabEdge).Within(1e-5f), "the tower meets the elevator without a gap");
+
+            var elevatorBounds = new Bounds(
+                new Vector3(BootstrapSceneBuilder.ElevatorOrigin.x, raisedTop / 2f, BootstrapSceneBuilder.ElevatorOrigin.z),
+                new Vector3(BootstrapSceneBuilder.PlatformSlabSize.x, raisedTop + 2f, BootstrapSceneBuilder.PlatformSlabSize.z));
+            var bottom = BootstrapSceneBuilder.ElevatorCallBottom;
+            var top = BootstrapSceneBuilder.ElevatorCallTop;
+            Assert.That(new Bounds(bottom.Center, bottom.Size).Intersects(elevatorBounds), Is.False, "the ground landing is beside the shaft");
+            Assert.That(new Bounds(top.Center, top.Size).Intersects(elevatorBounds), Is.False, "the top landing is on the tower");
+            Assert.That(bottom.Center.y - (bottom.Size.y / 2f), Is.EqualTo(0f).Within(1e-5f), "the ground landing starts at the floor");
+            Assert.That(top.Center.y - (top.Size.y / 2f), Is.EqualTo(towerTop).Within(1e-5f), "the top landing starts at the tower top");
+
+            var feet = GameBootstrap.PlayerSpawn + (Vector3.down * (GameBootstrap.PlayerHeight / 2f));
+            var targets = GameBootstrap.TargetDummyPositions(feet, Quaternion.identity);
+            var tablePositions = BootstrapSceneBuilder.WeaponTablePositions(16);
+            var lanesHalfWidth = 0f;
+            foreach (var point in targets.Concat(tablePositions))
+            {
+                lanesHalfWidth = Mathf.Max(lanesHalfWidth, Mathf.Abs(point.x));
+            }
+
+            foreach (var cover in BootstrapSceneBuilder.Covers)
+            {
+                lanesHalfWidth = Mathf.Max(lanesHalfWidth, Mathf.Abs(cover.Center.x) + (cover.Size.x / 2f));
+            }
+
+            var half = BootstrapSceneBuilder.PlatformSlabSize.x / 2f;
+            Assert.That(BootstrapSceneBuilder.ShuttleOrigin.x + half, Is.LessThan(-lanesHalfWidth), "the shuttle runs left of the lanes");
+            Assert.That(BootstrapSceneBuilder.ElevatorOrigin.x - half, Is.GreaterThan(lanesHalfWidth), "the elevator stands right of the lanes");
+            Assert.That(bottom.Center.x - (bottom.Size.x / 2f), Is.GreaterThan(lanesHalfWidth), "the ground landing is right of the lanes");
+
+            var floorHalf = GameBootstrap.FloorScale.x * 5f;
+            foreach (var stop in BootstrapSceneBuilder.ShuttleStops)
+            {
+                Assert.That(Mathf.Abs(BootstrapSceneBuilder.ShuttleOrigin.z + stop.z) + half, Is.LessThan(floorHalf), "the shuttle stays over the floor");
+            }
+
+            Assert.That(tower.Center.x + (tower.Size.x / 2f), Is.LessThan(floorHalf), "the tower stands on the floor");
         }
 
         [Test]
@@ -391,6 +523,72 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(SurfaceMaterial.IdOf(low.GetComponent<Collider>()), Is.EqualTo(SurfaceImpactAssetStep.ConcreteId));
             Assert.That(SurfaceMaterial.IdOf(high.GetComponent<Collider>()), Is.EqualTo(SurfaceImpactAssetStep.MetalId));
+        }
+
+        private static MovingPlatformSettings ElevatorSettings()
+        {
+            var settings = ScriptableObject.CreateInstance<MovingPlatformSettings>();
+            settings.name = "TestElevator";
+            BootstrapSceneBuilder.ConfigureElevatorSettings(settings);
+            return settings;
+        }
+
+        private static void AssertPlatforms(GameObject root, MovingPlatformSettings elevatorSettings)
+        {
+            var platforms = root.GetComponentsInChildren<MovingPlatform>();
+            Assert.That(platforms, Has.Length.EqualTo(2), "one shuttle and one elevator");
+
+            var shuttle = root.transform.Find(BootstrapSceneBuilder.ShuttleName).GetComponent<MovingPlatform>();
+            Assert.That(shuttle, Is.Not.Null);
+            Assert.That(Vector3.Distance(shuttle.transform.position, BootstrapSceneBuilder.ShuttleOrigin), Is.LessThan(1e-4f));
+            Assert.That(shuttle.Settings, Is.Null, "the shuttle uses the kit's default motion");
+            Assert.That(MovingPlatformSettings.Resolve(shuttle.Settings).Kind, Is.EqualTo(PlatformRouteKind.PingPong), "the shuttle goes back and forth");
+            Assert.That(shuttle.Stops, Is.EqualTo(BootstrapSceneBuilder.ShuttleStops));
+
+            var elevator = root.transform.Find(BootstrapSceneBuilder.ElevatorName).GetComponent<MovingPlatform>();
+            Assert.That(elevator, Is.Not.Null);
+            Assert.That(Vector3.Distance(elevator.transform.position, BootstrapSceneBuilder.ElevatorOrigin), Is.LessThan(1e-4f));
+            Assert.That(elevator.Settings, Is.SameAs(elevatorSettings));
+            Assert.That(elevator.Settings.ToSpec().Kind, Is.EqualTo(PlatformRouteKind.OnCall), "the elevator waits for a call");
+            Assert.That(elevator.Stops, Is.EqualTo(BootstrapSceneBuilder.ElevatorStops));
+
+            foreach (var platform in platforms)
+            {
+                var slab = platform.transform.Find(MovingPlatform.SlabName);
+                Assert.That(slab, Is.Not.Null, $"{platform.name} carries its slab so it builds no default shape at play");
+                Assert.That(slab.GetComponent<BoxCollider>(), Is.Not.Null, $"{platform.name} can be stood on");
+                Assert.That(slab.GetComponent<BoxCollider>().isTrigger, Is.False);
+                Assert.That(Vector3.Distance(slab.lossyScale, BootstrapSceneBuilder.PlatformSlabSize), Is.LessThan(1e-4f));
+                Assert.That(slab.gameObject.isStatic, Is.False, $"{platform.name} moves");
+                var body = platform.GetComponent<Rigidbody>();
+                Assert.That(body, Is.Not.Null);
+                Assert.That(body.isKinematic, Is.True);
+            }
+
+            var tower = root.transform.Find(BootstrapSceneBuilder.ElevatorTowerName);
+            Assert.That(tower, Is.Not.Null);
+            Assert.That(Vector3.Distance(tower.position, BootstrapSceneBuilder.ElevatorTower.Center), Is.LessThan(1e-4f));
+            Assert.That(Vector3.Distance(tower.lossyScale, BootstrapSceneBuilder.ElevatorTower.Size), Is.LessThan(1e-4f));
+            Assert.That(tower.GetComponent<BoxCollider>().isTrigger, Is.False);
+
+            var zones = root.GetComponentsInChildren<PlatformCallZone>();
+            Assert.That(zones, Has.Length.EqualTo(2), "one call zone at the ground and one at the top");
+            foreach (var (name, expected, stop) in new[]
+                     {
+                         (BootstrapSceneBuilder.ElevatorCallBottomName, BootstrapSceneBuilder.ElevatorCallBottom, BootstrapSceneBuilder.ElevatorBottomStop),
+                         (BootstrapSceneBuilder.ElevatorCallTopName, BootstrapSceneBuilder.ElevatorCallTop, BootstrapSceneBuilder.ElevatorTopStop),
+                     })
+            {
+                var zone = root.transform.Find(name).GetComponent<PlatformCallZone>();
+                Assert.That(zone, Is.Not.Null, name);
+                Assert.That(zone.Platform, Is.SameAs(elevator), name);
+                Assert.That(zone.Stop, Is.EqualTo(stop), name);
+                Assert.That(Vector3.Distance(zone.transform.position, expected.Center), Is.LessThan(1e-4f), name);
+                var box = zone.GetComponent<BoxCollider>();
+                Assert.That(box, Is.Not.Null, name);
+                Assert.That(box.isTrigger, Is.True, $"{name} is walked through");
+                Assert.That(Vector3.Distance(box.size, expected.Size), Is.LessThan(1e-4f), name);
+            }
         }
 
         private static WeaponDefinition[] LoadFeatured()

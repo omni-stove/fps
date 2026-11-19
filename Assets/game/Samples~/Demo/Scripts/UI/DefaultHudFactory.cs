@@ -23,6 +23,7 @@ namespace Shooter.Runtime
                 if (value)
                 {
                     AttachActionDebug(GameSignals.LocalPlayer.Value);
+                    AttachLockOnWarning(GameSignals.LocalPlayer.Value);
                 }
             }
         }
@@ -38,6 +39,7 @@ namespace Shooter.Runtime
             GameSignals.HudModel.Changed += HandleHudModelChanged;
             Sync();
             AttachActionDebug(GameSignals.LocalPlayer.Value);
+            AttachLockOnWarning(GameSignals.LocalPlayer.Value);
         }
 
         public static void Unregister()
@@ -67,6 +69,7 @@ namespace Shooter.Runtime
         {
             Sync(player != null);
             AttachActionDebug(player);
+            AttachLockOnWarning(player);
         }
 
         private static void HandleHudModelChanged(HudModel model)
@@ -92,20 +95,53 @@ namespace Shooter.Runtime
             // 足す前に Current へ入れるのは、足すのに失敗しても、作った HUD を Unregister や次の片付けで消せるようにするため。
             Current = Hud.Create(HudObjectName);
             AddAircraftView(Current);
+            AddActionViews(Current);
         }
 
         // Hud.AddViews に入れないのは、既定の HUD にだけ足し、Hud.Create で組むほかの HUD (オンラインの HUD など) の表示を変えずに済ませるため。
         public static AircraftHudView AddAircraftView(Hud hud)
+        {
+            return AddView<AircraftHudView>(hud);
+        }
+
+        // AddAircraftView と同じく既定の HUD にだけ足す。エモートとスタミナはオフラインのプレイヤーにしか付かないため。
+        public static void AddActionViews(Hud hud)
+        {
+            AddView<StaminaView>(hud);
+            AddView<LockOnWarningView>(hud);
+            AddView<EmoteWheelView>(hud);
+        }
+
+        // 警告の元を HUD でなくプレイヤーに付けるのは、HUD を作り直しても、同じプレイヤーが狙われている間は値を出し続けるため。
+        public static LockOnWarningPublisher AttachLockOnWarning(LocalPlayerSignal player)
+        {
+            if (!_enabled || player == null || player.Player == null)
+            {
+                return null;
+            }
+
+            var publisher = player.Player.GetComponent<LockOnWarningPublisher>();
+            if (publisher == null)
+            {
+                publisher = player.Player.AddComponent<LockOnWarningPublisher>();
+            }
+
+            publisher.Self = player.Player.transform;
+            return publisher;
+        }
+
+        private static T AddView<T>(Hud hud)
+            where T : HudElementView
         {
             if (hud == null)
             {
                 throw new System.ArgumentNullException(nameof(hud));
             }
 
-            var view = hud.GetComponent<AircraftHudView>();
+            var view = hud.GetComponent<T>();
             if (view == null)
             {
-                view = hud.gameObject.AddComponent<AircraftHudView>();
+                view = hud.gameObject.AddComponent<T>();
             }
 
             // HUD はもう木を結び終えているので、後から足した表示は自分で結ぶ。Edit Mode では Start が走らないため、ここで結ぶ。

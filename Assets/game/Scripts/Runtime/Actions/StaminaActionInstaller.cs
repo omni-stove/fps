@@ -4,8 +4,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // PlayerActions の組み込みの並びに入れず、読み込み時にも Register しないのは、使うゲームが自分で Register するまで今の動きを変えないため。
-    // 調整値をコンストラクターで受けるのは、ゲームが別の値で作ったものを Register すれば、そのまま使えるようにするため。
+    // 調整値をコンストラクターで受けるのは、ゲームが別の値で作ったものを Register すれば、組み込みの既定の値のものと置き換わるようにするため。
     public sealed class StaminaActionInstaller : IPlayerActionInstaller
     {
         // ほかのアクションの部品は読まないので、組み込みの間に置く (後ろに足された取り付けより先に終える)。

@@ -154,6 +154,55 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheDefaultHudCarriesTheStaminaLockOnWarningAndEmoteWheelViews()
+        {
+            var hud = DefaultHud;
+
+            Assert.That(hud.GetComponents<StaminaView>(), Has.Length.EqualTo(1));
+            Assert.That(hud.GetComponents<LockOnWarningView>(), Has.Length.EqualTo(1));
+            Assert.That(hud.GetComponents<EmoteWheelView>(), Has.Length.EqualTo(1));
+
+            DefaultHudFactory.AddActionViews(hud);
+            Assert.That(hud.GetComponents<StaminaView>(), Has.Length.EqualTo(1), "adding them again keeps one of each");
+            Assert.That(hud.GetComponents<LockOnWarningView>(), Has.Length.EqualTo(1));
+            Assert.That(hud.GetComponents<EmoteWheelView>(), Has.Length.EqualTo(1));
+            Assert.Throws<System.ArgumentNullException>(() => DefaultHudFactory.AddActionViews(null));
+
+            // Edit Mode では UIDocument が木を作らないことがあり、そのときは表示が結ばれない。
+            Assume.That(hud.View, Is.Not.Null, "the UIDocument built no visual tree in Edit Mode");
+            HudElementView[] views = { hud.GetComponent<StaminaView>(), hud.GetComponent<LockOnWarningView>(), hud.GetComponent<EmoteWheelView>() };
+            foreach (var view in views)
+            {
+                Assert.That(view.Element, Is.Not.Null, view.ElementName);
+                Assert.That(view.Element.name, Is.EqualTo(view.ElementName));
+            }
+
+            Assert.That(hud.GetComponent<StaminaView>().IsShown, Is.False, "the default test rules keep stamina off");
+            Assert.That(hud.GetComponent<LockOnWarningView>().IsShown, Is.False, "nothing aims at the player yet");
+            Assert.That(hud.GetComponent<EmoteWheelView>().IsOpen, Is.False, "the wheel opens only while the emote key is held");
+
+            GameSignals.Stamina.Publish(new StaminaStatus(5f, 10f, false));
+            Assert.That(hud.GetComponent<StaminaView>().IsShown, Is.True, "a part-used meter is shown");
+
+            GameSignals.LockOnWarning.Publish(new LockOnWarningStatus(LockOnWarningStage.Locked, 90f));
+            Assert.That(hud.GetComponent<LockOnWarningView>().IsShown, Is.True);
+        }
+
+        [Test]
+        public void ThePublishedPlayerCarriesTheLockOnWarningPublisherForItself()
+        {
+            var publisher = _world.Player.GetComponent<LockOnWarningPublisher>();
+
+            Assert.That(publisher, Is.Not.Null, "the warning goes out with the player");
+            Assert.That(publisher.Self, Is.SameAs(_world.Player.transform));
+            Assert.That(_world.Player.GetComponents<LockOnWarningPublisher>(), Has.Length.EqualTo(1));
+
+            Assert.That(DefaultHudFactory.AttachLockOnWarning(GameSignals.LocalPlayer.Value), Is.SameAs(publisher), "attaching again keeps the one publisher");
+            Assert.That(_world.Player.GetComponents<LockOnWarningPublisher>(), Has.Length.EqualTo(1));
+            Assert.That(DefaultHudFactory.AttachLockOnWarning(null), Is.Null);
+        }
+
+        [Test]
         public void HudUsesAUIDocumentWithCodeBuiltPanelSettings()
         {
             var hud = DefaultHud;

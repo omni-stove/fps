@@ -21,10 +21,24 @@ namespace Shooter.Core
         public const string AttackersItem = "attackers";
         public const string RouteItem = "route";
         public const string CheckpointItem = "checkpoint";
+        public const string LootContainersItem = "lootContainers";
+        public const string ExtractionPointsItem = "extractionPoints";
+        public const string ZoneItem = "zone";
+        public const string DropHeightItem = "dropHeight";
+        public const string IdItem = "id";
+        public const string TableItem = "table";
+        public const string ReachItem = "reach";
 
         private const string _kind = "map points JSON";
 
-        private static readonly string[] _topItems = { SpawnPointsItem, ControlPointsItem, FlagBasesItem, PayloadItem };
+        private static readonly string[] _topItems =
+        {
+            SpawnPointsItem, ControlPointsItem, FlagBasesItem, PayloadItem, LootContainersItem, ExtractionPointsItem, ZoneItem, DropHeightItem,
+        };
+
+        private static readonly string[] _lootContainerItems = { IdItem, TableItem, PositionItem, ReachItem };
+        private static readonly string[] _extractionPointItems = { IdItem, CenterItem, RadiusItem };
+        private static readonly string[] _zoneItems = { CenterItem, RadiusItem };
         private static readonly string[] _spawnItems = { PositionItem, TeamItem };
         private static readonly string[] _controlItems = { IndexItem, CenterItem, RadiusItem, HeightItem };
         private static readonly string[] _flagBaseItems = { TeamItem, PositionItem };
@@ -35,7 +49,11 @@ namespace Shooter.Core
             IReadOnlyList<SpawnPoint> spawnPoints,
             IReadOnlyList<ControlPointArea> controlPoints,
             IReadOnlyList<FlagBasePoint> flagBases = null,
-            NetMapPayload payload = null)
+            NetMapPayload payload = null,
+            IReadOnlyList<NetMapLootContainer> lootContainers = null,
+            IReadOnlyList<NetMapExtractionPoint> extractionPoints = null,
+            NetMapZoneCircle zone = null,
+            float? dropHeight = null)
         {
             SpawnPoints = Copy(spawnPoints, nameof(spawnPoints));
             ControlPoints = new List<ControlPointArea>(controlPoints ?? throw new ArgumentNullException(nameof(controlPoints))).AsReadOnly();
@@ -43,6 +61,15 @@ namespace Shooter.Core
                 ? (IReadOnlyList<FlagBasePoint>)Array.Empty<FlagBasePoint>()
                 : new List<FlagBasePoint>(flagBases).AsReadOnly();
             Payload = payload;
+            LootContainers = CopyUnique(lootContainers, c => c.Id, nameof(lootContainers));
+            ExtractionPoints = CopyUnique(extractionPoints, p => p.Id, nameof(extractionPoints));
+            Zone = zone;
+            if (dropHeight.HasValue && (!(dropHeight.Value >= 0f) || float.IsInfinity(dropHeight.Value)))
+            {
+                throw new ArgumentOutOfRangeException(nameof(dropHeight), dropHeight.Value, "dropHeight must be finite and not negative");
+            }
+
+            DropHeight = dropHeight;
         }
 
         // 並びはシーンの階層順。SpawnSelector の同点の決め手になるので並べ替えない。
@@ -55,6 +82,17 @@ namespace Shooter.Core
 
         // 台車を置いていないマップでは null。道筋があるかは Payload の目的が始めるときに確かめる
         public NetMapPayload Payload { get; }
+
+        // 箱を開ける要求と開けた記録はこの Id で引くので、シーンの中で重ならない
+        public IReadOnlyList<NetMapLootContainer> LootContainers { get; }
+
+        public IReadOnlyList<NetMapExtractionPoint> ExtractionPoints { get; }
+
+        // 縮むエリアを置いていないマップでは null。要るかは BR の目的が始めるときに確かめる
+        public NetMapZoneCircle Zone { get; }
+
+        // 降ろさない (地面から始める) マップでは null
+        public float? DropHeight { get; }
 
         public static NetMapPoints Parse(string text, string sourceName)
         {
@@ -116,7 +154,24 @@ namespace Shooter.Core
                 }
             }
 
-            return new NetMapPoints(spawns, controls, flagBases, ReadPayload(top));
+            var payload = ReadPayload(top);
+            var lootContainers = ReadLootContainers(top);
+            var extractionPoints = ReadExtractionPoints(top);
+            var zone = ReadZone(top);
+            float? dropHeight = null;
+            var dropNode = top.Find(DropHeightItem);
+            if (dropNode != null)
+            {
+                var value = top.ToFloat(top.ItemPath(DropHeightItem), dropNode);
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw top.Invalid(top.ItemPath(DropHeightItem), dropNode, "must be finite and not negative");
+                }
+
+                dropHeight = value;
+            }
+
+            return new NetMapPoints(spawns, controls, flagBases, payload, lootContainers, extractionPoints, zone, dropHeight);
         }
 
         public static string Write(NetMapPoints points)
@@ -175,7 +230,186 @@ namespace Shooter.Core
                 WritePayload(writer, points.Payload);
             }
 
+            // 箱・脱出地点・エリア・降ろす高さも、置いていないマップは知らなかったころと同じ中身に保つ
+            if (points.LootContainers.Count > 0)
+            {
+                writer.BeginArray(LootContainersItem);
+                foreach (var container in points.LootContainers)
+                {
+                    writer.BeginElement();
+                    writer.String(IdItem, container.Id);
+                    writer.String(TableItem, container.TableId);
+                    writer.Vector3(PositionItem, container.Position);
+                    writer.Float(ReachItem, container.Reach);
+                    writer.EndObject();
+                }
+
+                writer.EndArray();
+            }
+
+            if (points.ExtractionPoints.Count > 0)
+            {
+                writer.BeginArray(ExtractionPointsItem);
+                foreach (var point in points.ExtractionPoints)
+                {
+                    writer.BeginElement();
+                    writer.String(IdItem, point.Id);
+                    writer.Vector3(CenterItem, point.Center);
+                    writer.Float(RadiusItem, point.Radius);
+                    writer.EndObject();
+                }
+
+                writer.EndArray();
+            }
+
+            if (points.Zone != null)
+            {
+                writer.BeginObject(ZoneItem);
+                writer.Vector3(CenterItem, points.Zone.Center);
+                writer.Float(RadiusItem, points.Zone.Radius);
+                writer.EndObject();
+            }
+
+            if (points.DropHeight.HasValue)
+            {
+                writer.Float(DropHeightItem, points.DropHeight.Value);
+            }
+
             return writer.Finish();
+        }
+
+        private static List<NetMapLootContainer> ReadLootContainers(ServerDataJson.Fields top)
+        {
+            var containers = new List<NetMapLootContainer>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var nodes = top.Array(LootContainersItem);
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                var fields = top.Element(nodes[i], LootContainersItem, i, _lootContainerItems);
+                var id = ReadId(fields, seen);
+                var table = fields.ToText(fields.ItemPath(TableItem), fields.Require(TableItem));
+                var position = fields.ReadVector3(PositionItem);
+                var reach = fields.ToFloat(fields.ItemPath(ReachItem), fields.Require(ReachItem));
+                try
+                {
+                    containers.Add(new NetMapLootContainer(id, table, position, reach));
+                }
+                catch (ArgumentException e)
+                {
+                    throw fields.Rejected(fields.ItemPath(ItemOf(e.ParamName)), e.Message, e);
+                }
+            }
+
+            return containers;
+        }
+
+        private static List<NetMapExtractionPoint> ReadExtractionPoints(ServerDataJson.Fields top)
+        {
+            var points = new List<NetMapExtractionPoint>();
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var nodes = top.Array(ExtractionPointsItem);
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                var fields = top.Element(nodes[i], ExtractionPointsItem, i, _extractionPointItems);
+                var id = ReadId(fields, seen);
+                var center = fields.ReadVector3(CenterItem);
+                var radius = fields.ToFloat(fields.ItemPath(RadiusItem), fields.Require(RadiusItem));
+                try
+                {
+                    points.Add(new NetMapExtractionPoint(id, center, radius));
+                }
+                catch (ArgumentException e)
+                {
+                    throw fields.Rejected(fields.ItemPath(ItemOf(e.ParamName)), e.Message, e);
+                }
+            }
+
+            return points;
+        }
+
+        private static NetMapZoneCircle ReadZone(ServerDataJson.Fields top)
+        {
+            var fields = top.Object(ZoneItem, _zoneItems);
+            if (fields == null)
+            {
+                return null;
+            }
+
+            var center = fields.ReadVector3(CenterItem);
+            var radius = fields.ToFloat(fields.ItemPath(RadiusItem), fields.Require(RadiusItem));
+            try
+            {
+                return new NetMapZoneCircle(center, radius);
+            }
+            catch (ArgumentException e)
+            {
+                throw fields.Rejected(fields.ItemPath(ItemOf(e.ParamName)), e.Message, e);
+            }
+        }
+
+        // 重なりを並びの中で断るのは、どちらの要素を直せばよいかを項目の場所で示すため
+        private static string ReadId(ServerDataJson.Fields fields, HashSet<string> seen)
+        {
+            var node = fields.Require(IdItem);
+            var id = fields.ToText(fields.ItemPath(IdItem), node);
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                throw fields.Invalid(fields.ItemPath(IdItem), node, "must not be empty");
+            }
+
+            if (!seen.Add(id))
+            {
+                throw fields.Invalid(fields.ItemPath(IdItem), node, "\"" + id + "\" is used twice");
+            }
+
+            return id;
+        }
+
+        private static string ItemOf(string paramName)
+        {
+            switch (paramName)
+            {
+                case "id":
+                    return IdItem;
+                case "tableId":
+                    return TableItem;
+                case "position":
+                    return PositionItem;
+                case "reach":
+                    return ReachItem;
+                case "center":
+                    return CenterItem;
+                default:
+                    return RadiusItem;
+            }
+        }
+
+        private static System.Collections.ObjectModel.ReadOnlyCollection<T> CopyUnique<T>(IReadOnlyList<T> items, Func<T, string> idOf, string name)
+            where T : class
+        {
+            var copy = new List<T>(items?.Count ?? 0);
+            if (items == null)
+            {
+                return copy.AsReadOnly();
+            }
+
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var item in items)
+            {
+                if (item == null)
+                {
+                    throw new ArgumentException(name + " must not contain null", name);
+                }
+
+                if (!seen.Add(idOf(item)))
+                {
+                    throw new ArgumentException(name + " uses the id \"" + idOf(item) + "\" twice", name);
+                }
+
+                copy.Add(item);
+            }
+
+            return copy.AsReadOnly();
         }
 
         // 中継点を点の番号でなく点ごとの印で書くのは、手で点を足し引きしたときに番号を数え直さずに済むようにするため

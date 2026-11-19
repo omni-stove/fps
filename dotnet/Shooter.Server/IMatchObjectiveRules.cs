@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Numerics;
 using Shooter.Core;
 using Shooter.Protocol;
 
@@ -62,6 +63,22 @@ namespace Shooter.Server
 
         // Bot に巡らせる場所。null なら ServerBots はマップの出現地点を巡らせる。動く目的 (台車) は Tick ごとに今の場所を返す
         ObjectiveRally? BotRally => null;
+
+        // 敵味方を目的が決める (分隊で戦う BR など) ための口。陣営を引数で渡すのは、目的が Session を持たずに既定のチームの判定を返せるようにするため
+        bool AreHostile(int a, Team aTeam, int b, Team bTeam)
+        {
+            return a != b && aTeam != bTeam;
+        }
+
+        // 場に置いた物 (箱など) を開ける要求。開ける物を持たない目的は断る
+        InteractVerdict Interact(int playerId, int itemId)
+        {
+            return InteractVerdict.Refused(InteractRefusal.NotInteractable);
+        }
+
+        // この Bot を向かわせる先。null なら ServerBots は BotRally か出現地点を巡らせる。
+        // 先を少しずつ動かすと Bot の巡る路を毎回作り直すので、同じ先の間は同じ値を返す
+        Vector3? BotGoal(int playerId) => null;
 
         void FillMatch(ref MatchSnapshot snapshot);
 

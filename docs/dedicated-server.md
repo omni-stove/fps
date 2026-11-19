@@ -63,6 +63,10 @@ make server-dotnet ARGS="-rules FreeForAll"
   例のマップでは `NetArena01` にだけ台車を置いてあり、置く前に作ったシーンには旗の台と同じく書き出す前に足して保存する。
   道筋の無いマップ (`NetTest` など) を `-rules Payload` で選ぶと起動しないので、`make server-dotnet ARGS="-rules Payload -map NetArena01"` で立てる。
   Bot は台車のまわりを巡って押し・止め、`[Payload] cart=pushing`・`checkpoint=`・`state=Ended ... winner=` がログに出る。
+- `make export-server-rules` は、シーンの箱 (`LootContainer`) を `<map>.points.json` の `lootContainers` (`id`・`table`・`position`・`reach`) に、
+  脱出地点 (`ExtractionZone`) を `extractionPoints` (`id`・`center`・`radius`) に、縮むエリア (`ShrinkingZone`) の最初の円を `zone` (`center`・`radius`) に、
+  パラシュートで降ろす `BattleRoyaleRunner` の高さを `dropHeight` に書き出す。どれも置いていないマップでは項目ごと書かない。
+  `id` は部品の `Container Id`・`Point Id` から取り (オブジェクトの名前は使わない)、空や重なりがあると書き出しを止める。エリアが 2 つ以上でも止める。
 - `GunGame` の段の武器 (`tierWeaponIds`) は、同じ JSON の `loadout` か `catalog` にある武器の Id にする。無い Id があると起動しない。
   近接で倒した相手の段を下げるには、`meleeWeaponIds` の先頭に近接の Id を書く。サーバーの近接はその Id で倒したことにする。
 - 近接 (`rules.actions.melee`)・ストリーク (`rules.streaks`)・キルカム (`rules.deathCamera` が `KillCam`) はどのモードでも使え、

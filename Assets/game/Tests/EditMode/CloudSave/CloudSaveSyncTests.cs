@@ -36,6 +36,28 @@ namespace Shooter.Tests.EditMode
         public void TearDown()
         {
             CloudSaveBootstrap.ClearRegisteredSlots();
+            CloudSaveBootstrap.EndPlay();
+        }
+
+        [Test]
+        public void RegisteringStartupSlotsWhileASyncRunsWarnsThatTheyAreCheckedNextStart()
+        {
+            CloudSaveBootstrap.UseCurrent(CloudSaveBootstrap.Create(new MemorySaveStorage(), null));
+
+            LogAssert.Expect(LogType.Warning, CloudSaveLog.RegisteredLate(1));
+            CloudSaveBootstrap.RegisterSlots(OwnsNotes, new[] { "notes" }, text => true);
+        }
+
+        [Test]
+        public void TheSyncOfAnEndedPlayDoesNotMakeTheNextRegistrationLate()
+        {
+            CloudSaveBootstrap.UseCurrent(CloudSaveBootstrap.Create(new MemorySaveStorage(), null));
+            CloudSaveBootstrap.EndPlay();
+
+            CloudSaveBootstrap.RegisterSlots(OwnsNotes, new[] { "notes" }, text => true);
+
+            Assert.That(CloudSaveBootstrap.Current, Is.Null);
+            LogAssert.NoUnexpectedReceived();
         }
 
         [Test]

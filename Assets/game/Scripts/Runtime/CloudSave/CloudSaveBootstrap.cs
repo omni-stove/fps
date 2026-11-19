@@ -13,7 +13,8 @@ namespace Shooter.Runtime
         // 登録はコードの配線なので Backend と同じく Play をまたいで残す。登録し直しても同じ判定は 1 つにまとめる。
         private static readonly List<Registration> _registrations = new List<Registration>();
 
-        // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
+        // ドメインの再読み込みを切っているので、Play の終わりに EndPlay で、開始時に ResetOnPlay で戻す。
+        // 開始時だけで戻すと、同じ SubsystemRegistration で走る登録が前の Play の同期を見て、遅れたと誤って知らせる。
         private static CloudSaveSync _current;
 
         // Shooter.NetEos はプラグインがあるビルドでだけコンパイルされるので、起動時にそちらから入れてもらう。
@@ -174,6 +175,8 @@ namespace Shooter.Runtime
             }
 
             _current = sync;
+            Application.quitting -= EndPlay;
+            Application.quitting += EndPlay;
             if (backend == null)
             {
                 Debug.Log(CloudSaveLog.Off("no cloud save backend in this build"));
@@ -187,6 +190,19 @@ namespace Shooter.Runtime
             UnityEngine.Object.DontDestroyOnLoad(host);
             host.AddComponent<CloudSaveDriver>().Bind(sync);
             return sync;
+        }
+
+        // テストが Play 中の同期を置き換えるために使う。
+        internal static void UseCurrent(CloudSaveSync sync)
+        {
+            _current = sync;
+        }
+
+        // エディタでは Play を止めたときにも Application.quitting が呼ばれる。
+        internal static void EndPlay()
+        {
+            Application.quitting -= EndPlay;
+            _current = null;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

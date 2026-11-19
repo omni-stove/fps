@@ -83,6 +83,30 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ShowingOpenedSwapsToTheOpenedLookWithoutContents()
+        {
+            var opened = new GameObject("OpenedLook");
+            try
+            {
+                _container.OpenedVisualPrefab = opened;
+                _container.Build();
+
+                _container.ShowOpened();
+                _container.ShowOpened();
+
+                Assert.That(_container.IsOpened, Is.True);
+                Assert.That(_container.Contents, Is.Empty);
+                Assert.That(_go.transform.Find(LootContainer.VisualName).gameObject.activeSelf, Is.False);
+                Assert.That(_go.transform.Find(LootContainer.VisualName + "-Opened").gameObject.activeSelf, Is.True);
+                Assert.Throws<InvalidOperationException>(() => _container.Open(null, new System.Random(1)), "the box was already opened elsewhere");
+            }
+            finally
+            {
+                Object.DestroyImmediate(opened);
+            }
+        }
+
+        [Test]
         public void TheTableIdIsNeverNull()
         {
             Assert.That(_container.TableId, Is.Empty);

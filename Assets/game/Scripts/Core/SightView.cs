@@ -38,16 +38,21 @@ namespace Shooter.Core
 
         public VisionMode VisionMode { get; }
 
-        public static SightView Of(SightSpec sight, ViewMode view, float adsProgress)
+        public static SightView Of(SightSpec sight, ViewMode view, float adsProgress, AdsEyeView eyeViewRule = AdsEyeView.PerWeapon)
         {
             if (view != ViewMode.FirstPerson && view != ViewMode.ThirdPerson)
             {
                 throw new ArgumentOutOfRangeException(nameof(view), view, "unknown view mode");
             }
 
+            if (!Enum.IsDefined(typeof(AdsEyeView), eyeViewRule))
+            {
+                throw new ArgumentOutOfRangeException(nameof(eyeViewRule), eyeViewRule, "eyeViewRule is not a defined AdsEyeView");
+            }
+
             sight = sight ?? SightSpec.Default;
             var progress = float.IsNaN(adsProgress) ? 0f : Math.Max(0f, Math.Min(1f, adsProgress));
-            var eyeView = view == ViewMode.ThirdPerson && sight.EyeViewInThirdPerson;
+            var eyeView = view == ViewMode.ThirdPerson && EyeViewInThirdPerson(sight, eyeViewRule);
             var throughSight = view == ViewMode.FirstPerson || eyeView;
             var aimedIn = throughSight && progress >= sight.AimedInProgress;
             return new SightView(
@@ -57,6 +62,16 @@ namespace Shooter.Core
                 aimedIn ? sight.ReticleId : string.Empty,
                 eyeView ? progress : 0f,
                 aimedIn ? sight.VisionMode : VisionMode.None);
+        }
+
+        private static bool EyeViewInThirdPerson(SightSpec sight, AdsEyeView rule)
+        {
+            switch (rule)
+            {
+                case AdsEyeView.Always: return true;
+                case AdsEyeView.Never: return false;
+                default: return sight.EyeViewInThirdPerson;
+            }
         }
 
         public bool Equals(SightView other)

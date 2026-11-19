@@ -894,6 +894,48 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheAdsEyeViewRuleDecidesWhetherAnIronSightTakesTheEyeInThirdPerson()
+        {
+            Initialize();
+            _ads.WeaponSource = () => new WeaponSpec(_rifleId, "Iron", WeaponCategory.MarksmanRifle, aim: new AimSpec());
+            _ads.ViewModeSource = () => ViewMode.ThirdPerson;
+
+            _ads.Tick(true, true, 1f);
+            Assert.That(_ads.SightView.EyeBlend, Is.Zero, "per weapon, a sight without eyeViewInThirdPerson stays over the shoulder");
+            Assert.That(_ads.SightView.ThroughSight, Is.False);
+
+            _ads.AdsEyeViewSource = () => AdsEyeView.Always;
+            LogAssert.Expect(LogType.Log, "[View] sight aimedIn=true overlay=false reticle=- eye=true vision=None");
+            _ads.Tick(true, false, 0f);
+            Assert.That(_ads.SightView.EyeBlend, Is.EqualTo(1f));
+            Assert.That(_ads.SightView.AimedIn, Is.True);
+            Assert.That(_ads.SightView.HidesBody, Is.True);
+
+            _ads.WeaponSource = () => new WeaponSpec(_rifleId, "Scoped", WeaponCategory.MarksmanRifle, aim: new AimSpec(sight: new SightSpec("mildot", scopeOverlay: true, eyeViewInThirdPerson: true)));
+            _ads.AdsEyeViewSource = () => AdsEyeView.Never;
+            LogAssert.Expect(LogType.Log, "[View] sight aimedIn=false overlay=false reticle=- eye=false vision=None");
+            _ads.Tick(true, false, 0f);
+            Assert.That(_ads.SightView.EyeBlend, Is.Zero, "Never keeps even a scope over the shoulder");
+            Assert.That(_ads.SightView.ScopeOverlay, Is.False);
+        }
+
+        [Test]
+        public void WithoutASourceTheAdsEyeViewComesFromTheViewRig()
+        {
+            Initialize();
+            var rig = _ads.gameObject.AddComponent<ViewRig>();
+            rig.Mode = ViewMode.ThirdPerson;
+            rig.AdsEyeView = AdsEyeView.Always;
+            _ads.WeaponSource = () => new WeaponSpec(_rifleId, "Iron", WeaponCategory.MarksmanRifle, aim: new AimSpec());
+
+            _ads.Tick(true, true, 1f);
+
+            Assert.That(_ads.SightView.EyeBlend, Is.EqualTo(1f));
+            Assert.Throws<ArgumentOutOfRangeException>(() => rig.AdsEyeView = (AdsEyeView)99);
+            Assert.That(rig.AdsEyeView, Is.EqualTo(AdsEyeView.Always), "a rejected value leaves the rule as it was");
+        }
+
+        [Test]
         public void SightLogNamesTheShownReticle()
         {
             var scope = SightView.Of(new SightSpec("mildot", scopeOverlay: true, eyeViewInThirdPerson: true), ViewMode.ThirdPerson, 1f);

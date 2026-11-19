@@ -77,6 +77,8 @@ namespace Shooter.Core
 
         public ViewMode ViewMode { get; }
 
+        public AdsEyeView AdsEyeView { get; }
+
         public int PlayerMaxHealth { get; }
 
         public ZoneDamageMultipliers ZoneDamage { get; }
@@ -117,7 +119,8 @@ namespace Shooter.Core
             TextChat textChat = TextChat.On,
             Spectating spectating = Spectating.On,
             IReadOnlyList<RespawnAnchor> respawnAnchor = null,
-            float idleWarningSeconds = DefaultIdleWarningSeconds)
+            float idleWarningSeconds = DefaultIdleWarningSeconds,
+            AdsEyeView adsEyeView = AdsEyeView.PerWeapon)
         {
             if (!Enum.IsDefined(typeof(FriendlyFire), friendlyFire))
             {
@@ -216,6 +219,11 @@ namespace Shooter.Core
                 throw new ArgumentOutOfRangeException(nameof(viewMode), viewMode, "viewMode is not a defined ViewMode");
             }
 
+            if (!Enum.IsDefined(typeof(AdsEyeView), adsEyeView))
+            {
+                throw new ArgumentOutOfRangeException(nameof(adsEyeView), adsEyeView, "adsEyeView is not a defined AdsEyeView");
+            }
+
             if (playerMaxHealth < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(playerMaxHealth), playerMaxHealth, "playerMaxHealth must be at least 1");
@@ -259,6 +267,7 @@ namespace Shooter.Core
             MaxWeapons = maxWeapons;
             ReloadMode = reloadMode;
             ViewMode = viewMode;
+            AdsEyeView = adsEyeView;
             PlayerMaxHealth = playerMaxHealth;
             ZoneDamage = zoneDamage ?? ZoneDamageMultipliers.Default;
             Streaks = streaks;
@@ -317,6 +326,8 @@ namespace Shooter.Core
         public GameRules WithReloadMode(ReloadMode value) => Copy(reloadMode: value);
 
         public GameRules WithViewMode(ViewMode value) => Copy(viewMode: value);
+
+        public GameRules WithAdsEyeView(AdsEyeView value) => Copy(adsEyeView: value);
 
         public GameRules WithPlayerMaxHealth(int value) => Copy(playerMaxHealth: value);
 
@@ -404,7 +415,8 @@ namespace Shooter.Core
             TextChat? textChat = null,
             Spectating? spectating = null,
             IReadOnlyList<RespawnAnchor> respawnAnchor = null,
-            float? idleWarningSeconds = null)
+            float? idleWarningSeconds = null,
+            AdsEyeView? adsEyeView = null)
         {
             return new GameRules(
                 friendlyFire ?? FriendlyFire,
@@ -433,7 +445,8 @@ namespace Shooter.Core
                 textChat ?? TextChat,
                 spectating ?? Spectating,
                 respawnAnchor ?? RespawnAnchors,
-                idleWarningSeconds ?? IdleWarningSeconds);
+                idleWarningSeconds ?? IdleWarningSeconds,
+                adsEyeView ?? AdsEyeView);
         }
     }
 }

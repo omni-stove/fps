@@ -195,6 +195,63 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheRiotShieldSampleCarriesAShieldThatBlocksAndBashesAndItsCommittedAssetIsTheJson()
+        {
+            var json = System.IO.File.ReadAllText(ShooterKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/RiotShield.json"));
+            var spec = WeaponJsonImporter.ParseSpec(json, "RiotShield.json");
+
+            Assert.That(spec.Id, Is.EqualTo(WeaponAssetBuilder.RiotShieldId));
+            Assert.That(spec.NameKey, Is.EqualTo("weapon.riotShield"));
+            Assert.That(spec.IsShield, Is.True);
+            Assert.That(spec.Shield.BlockArcDegrees, Is.EqualTo(120f));
+            Assert.That(spec.Shield.Width, Is.EqualTo(0.6f));
+            Assert.That(spec.Shield.Height, Is.EqualTo(1.2f));
+            Assert.That(spec.Shield.MoveSpeedMultiplier, Is.EqualTo(0.8f));
+            Assert.That(spec.Shield.Bash.Damage, Is.EqualTo(40));
+            Assert.That(spec.Shield.Bash.Reach, Is.EqualTo(1.6f));
+            Assert.That(spec.Shield.Bash.SwingSeconds, Is.EqualTo(0.6f));
+            Assert.That(spec.MagazineSize, Is.EqualTo(1), "the HUD shows no magazine of rounds for a shield");
+            Assert.That(spec.ShotNoiseRadius, Is.Zero);
+            foreach (var language in GameLanguages.All)
+            {
+                Assert.That(Localizer.TableOf(language).Contains(spec.NameKey), Is.True, $"{GameLanguages.Code(language)}: {spec.NameKey}");
+            }
+
+            var committed = WeaponAssetBuilder.LoadRiotShield();
+            Assert.That(AssetDatabase.GetAssetPath(committed), Is.EqualTo(WeaponAssetBuilder.RiotShieldPath), $"rerun {nameof(WeaponAssetBuilder)}.Build");
+            Assert.That(WeaponSpecJson.Write(committed.ToSpec()), Is.EqualTo(WeaponSpecJson.Write(spec)), "the committed asset is the JSON");
+            Assert.That(committed.Shield.Prefab, Is.Null, "the held shield is built in code until a game sets its look");
+            Assert.That(WeaponAssetBuilder.LoadCatalog().TryFind(spec.Id, out _), Is.False, "the shield stays out of the default catalog and loadout");
+        }
+
+        [Test]
+        public void BuildingTheRiotShieldJsonKeepsItsShieldOnTheAsset()
+        {
+            var jsonFolder = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "WeaponAssetBuilderTests_" + Guid.NewGuid().ToString("N"));
+            System.IO.Directory.CreateDirectory(jsonFolder);
+            try
+            {
+                System.IO.File.Copy(
+                    ShooterKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/RiotShield.json"), System.IO.Path.Combine(jsonFolder, "RiotShield.json"));
+                var rangePath = _folder + "/RangeWeapons.asset";
+
+                var built = WeaponAssetBuilder.BuildFromJsonAt(jsonFolder, _folder, rangePath);
+
+                Assert.That(built.Select(d => d.name), Is.EqualTo(new[] { "RiotShield" }));
+                Assert.That(built[0].Shield.Enabled, Is.True);
+                Assert.That(built[0].ToSpec().IsShield, Is.True);
+                Assert.That(built[0].ToSpec().Shield.Bash.Damage, Is.EqualTo(40));
+
+                var range = AssetDatabase.LoadAssetAtPath<WeaponCatalogAsset>(rangePath);
+                Assert.That(WeaponAssetBuilder.FindInCatalog(range, "test", WeaponAssetBuilder.RiotShieldId), Is.SameAs(built[0]));
+            }
+            finally
+            {
+                System.IO.Directory.Delete(jsonFolder, true);
+            }
+        }
+
+        [Test]
         public void TheScopedRifleSampleHasSeveralZoomLevelsAndItsCommittedAssetMatchesTheJson()
         {
             var json = System.IO.File.ReadAllText(ShooterKitRoot.PhysicalPath(WeaponAssetBuilder.JsonFolder + "/ScopedRifle.json"));

@@ -1087,9 +1087,11 @@ namespace Shooter.Tests.EditMode
             Assert.That(bootstrap.PlayerMaxHealth, Is.EqualTo(Damageable.DefaultMaxHealth));
             Assert.That(bootstrap.ThirdPersonOffset, Is.EqualTo(ViewRig.DefaultThirdPersonOffset));
             Assert.That(bootstrap.MinBoomLength, Is.EqualTo(CameraBoom.DefaultMinLength));
+            Assert.That(bootstrap.AimHoldMinDistance, Is.EqualTo(AimHold.DefaultMinDistance));
             Assert.That(bootstrap.AdsTransitionSeconds, Is.EqualTo(AdsZoom.DefaultTransitionSeconds));
             Assert.That(_world.Rig.ThirdPersonOffset, Is.EqualTo(ViewRig.DefaultThirdPersonOffset));
             Assert.That(_world.Rig.MinBoomLength, Is.EqualTo(CameraBoom.DefaultMinLength));
+            Assert.That(_world.Rig.AimHoldMinDistance, Is.EqualTo(AimHold.DefaultMinDistance));
             Assert.That(_world.Ads.TransitionSeconds, Is.EqualTo(AdsZoom.DefaultTransitionSeconds));
         }
 
@@ -1111,6 +1113,7 @@ namespace Shooter.Tests.EditMode
                 _rules.PlayerMaxHealth = 150;
                 bootstrap.ThirdPersonOffset = new Vector3(0.4f, 0.1f, -4f);
                 bootstrap.MinBoomLength = 0.5f;
+                bootstrap.AimHoldMinDistance = 5f;
                 bootstrap.AdsTransitionSeconds = 0.4f;
                 LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
 
@@ -1121,6 +1124,7 @@ namespace Shooter.Tests.EditMode
                 Assert.That(world.PlayerDamageable.Health.Current, Is.EqualTo(150));
                 Assert.That(world.Rig.ThirdPersonOffset, Is.EqualTo(new Vector3(0.4f, 0.1f, -4f)));
                 Assert.That(world.Rig.MinBoomLength, Is.EqualTo(0.5f));
+                Assert.That(world.Rig.AimHoldMinDistance, Is.EqualTo(5f));
                 Assert.That(world.Camera.transform.localPosition.z, Is.LessThan(-3.5f), "the camera sits at the configured distance");
                 Assert.That(world.Ads.TransitionSeconds, Is.EqualTo(0.4f));
             }
@@ -1140,10 +1144,13 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.ThirdPersonOffset = new Vector3(0f, float.NaN, -2f));
             Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.MinBoomLength = -0.1f);
             Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.MinBoomLength = float.PositiveInfinity);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.AimHoldMinDistance = -1f);
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.AimHoldMinDistance = float.NaN);
             Assert.Throws<System.ArgumentOutOfRangeException>(() => bootstrap.AdsTransitionSeconds = float.NaN);
 
             Assert.That(bootstrap.PlayerMaxHealth, Is.EqualTo(Damageable.DefaultMaxHealth), "a rejected value leaves the old one");
             Assert.That(bootstrap.MinBoomLength, Is.EqualTo(CameraBoom.DefaultMinLength));
+            Assert.That(bootstrap.AimHoldMinDistance, Is.EqualTo(AimHold.DefaultMinDistance));
         }
 
         [Test]

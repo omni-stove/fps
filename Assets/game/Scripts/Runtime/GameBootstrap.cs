@@ -93,6 +93,9 @@ namespace Shooter.Runtime
         [SerializeField, Min(0f), Tooltip("三人称のカメラが壁に寄ったときも、目からこれ以上は近づけない距離 (m)")]
         private float _minBoomLength = CameraBoom.DefaultMinLength;
 
+        [SerializeField, Min(0f), Tooltip("三人称の覗き込みでカメラが目へ寄る間、照準の下に保つ点の、目から最も近い距離 (m)。これより近い点はこの距離にあるものとして保つ")]
+        private float _aimHoldMinDistance = AimHold.DefaultMinDistance;
+
         [SerializeField, Min(0f), Tooltip("腰だめから覗き込み切るまで (と戻るまで) の秒数")]
         private float _adsTransitionSeconds = AdsZoom.DefaultTransitionSeconds;
 
@@ -268,6 +271,12 @@ namespace Shooter.Runtime
         {
             get => _minBoomLength;
             set => _minBoomLength = ValidateNonNegativeFinite(value, nameof(value));
+        }
+
+        public float AimHoldMinDistance
+        {
+            get => _aimHoldMinDistance;
+            set => _aimHoldMinDistance = ValidateNonNegativeFinite(value, nameof(value));
         }
 
         public float AdsTransitionSeconds
@@ -478,6 +487,7 @@ namespace Shooter.Runtime
                 configuredRules != null ? configuredRules.PlayerMaxHealth : inspectorMaxHealth,
                 ValidateThirdPersonOffset(_thirdPersonOffset, nameof(ThirdPersonOffset)),
                 ValidateNonNegativeFinite(_minBoomLength, nameof(MinBoomLength)),
+                ValidateNonNegativeFinite(_aimHoldMinDistance, nameof(AimHoldMinDistance)),
                 AdsZoom.ValidateTransitionSeconds(_adsTransitionSeconds, nameof(AdsTransitionSeconds)),
                 _motorSettings,
                 ResolveTraversal());

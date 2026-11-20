@@ -181,7 +181,7 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(points));
             }
 
-            var writer = new ServerDataJson.Writer();
+            var writer = new JsonWriter();
             writer.BeginArray(SpawnPointsItem);
             foreach (var point in points.SpawnPoints)
             {
@@ -413,7 +413,7 @@ namespace Shooter.Core
         }
 
         // 中継点を点の番号でなく点ごとの印で書くのは、手で点を足し引きしたときに番号を数え直さずに済むようにするため
-        private static void WritePayload(ServerDataJson.Writer writer, NetMapPayload payload)
+        private static void WritePayload(JsonWriter writer, NetMapPayload payload)
         {
             writer.BeginObject(PayloadItem);
             writer.Enum(AttackersItem, payload.Attackers);

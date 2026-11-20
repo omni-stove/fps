@@ -770,6 +770,14 @@ namespace Shooter.Core.Tests
             Assert.That(e.Message, Does.Contain("line 3, column 3"));
         }
 
+        [Test]
+        public void SyntaxErrorMessageKeepsItsWording()
+        {
+            var e = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\n  \"minPlayers\": 1\n  \"objective\": \"None\"\n}", _source));
+
+            Assert.That(e.Message, Is.EqualTo("game rules JSON 'Rules/Test.json' is not valid JSON: expected ',' at line 3, column 3"));
+        }
+
         [TestCase("[]")]
         [TestCase("\"rules\"")]
         [TestCase("null")]

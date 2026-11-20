@@ -11,3 +11,6 @@ using System.Runtime.CompilerServices;
 
 // 進行の JSON (Shooter.Progression.Core の ProgressionJson・AchievementJson・PlayerProfile) がサーバーデータとセーブと同じ JSON の読み書き (ServerDataJson・SpecJsonReader・SaveJson) と値の確かめ (SpecLists・SpecGuard) を、公開の API にせずに使うため
 [assembly: InternalsVisibleTo("Shooter.Progression.Core")]
+
+// 読み手と書き手 (JsonParser・JsonNode・JsonWriter) を公開の API にせずに、それだけを Core のテスト (Unity の EditMode と dotnet の両方で同じ名前) から直接確かめるため
+[assembly: InternalsVisibleTo("Shooter.Core.Tests")]

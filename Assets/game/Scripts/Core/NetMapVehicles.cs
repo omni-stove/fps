@@ -134,7 +134,7 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(vehicles));
             }
 
-            var writer = new ServerDataJson.Writer();
+            var writer = new JsonWriter();
             writer.BeginArray(VehiclesItem);
             foreach (var vehicle in vehicles.Vehicles)
             {
@@ -297,9 +297,9 @@ namespace Shooter.Core
             return Quaternion.Normalize(rotation);
         }
 
-        private static float[] ReadNumbers(ServerDataJson.Fields fields, string item, GameRulesJson.Node node, int count)
+        private static float[] ReadNumbers(ServerDataJson.Fields fields, string item, JsonNode node, int count)
         {
-            if (node.Kind != GameRulesJson.NodeKind.Array || node.Elements.Count != count)
+            if (node.Kind != JsonNodeKind.Array || node.Elements.Count != count)
             {
                 throw fields.Invalid(
                     item, node, "must be an array of " + count.ToString(CultureInfo.InvariantCulture) + " numbers, but is " + node.Describe());
@@ -314,7 +314,7 @@ namespace Shooter.Core
             return values;
         }
 
-        private static void WriteVehicle(ServerDataJson.Writer writer, MapVehicle vehicle)
+        private static void WriteVehicle(JsonWriter writer, MapVehicle vehicle)
         {
             var spec = vehicle.Spec;
             writer.BeginElement();
@@ -412,12 +412,12 @@ namespace Shooter.Core
             writer.EndObject();
         }
 
-        private static void WriteRotation(ServerDataJson.Writer writer, string name, Quaternion rotation)
+        private static void WriteRotation(JsonWriter writer, string name, Quaternion rotation)
         {
             writer.FloatArray(name, new[] { rotation.X, rotation.Y, rotation.Z, rotation.W });
         }
 
-        private static void WritePoints(ServerDataJson.Writer writer, string name, IReadOnlyList<Vector3> points)
+        private static void WritePoints(JsonWriter writer, string name, IReadOnlyList<Vector3> points)
         {
             var text = new StringBuilder("[");
             for (var i = 0; i < points.Count; i++)
@@ -429,9 +429,9 @@ namespace Shooter.Core
 
                 var point = points[i];
                 text.Append('[')
-                    .Append(ServerDataJson.Writer.FloatText(point.X)).Append(", ")
-                    .Append(ServerDataJson.Writer.FloatText(point.Y)).Append(", ")
-                    .Append(ServerDataJson.Writer.FloatText(point.Z)).Append(']');
+                    .Append(JsonWriter.FloatText(point.X)).Append(", ")
+                    .Append(JsonWriter.FloatText(point.Y)).Append(", ")
+                    .Append(JsonWriter.FloatText(point.Z)).Append(']');
             }
 
             writer.Embed(name, text.Append(']').ToString());

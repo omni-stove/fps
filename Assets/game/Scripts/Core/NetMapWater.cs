@@ -97,7 +97,7 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(water));
             }
 
-            var writer = new ServerDataJson.Writer();
+            var writer = new JsonWriter();
             writer.BeginArray(WaterItem);
             foreach (var volume in water.Water)
             {

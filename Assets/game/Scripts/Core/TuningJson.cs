@@ -201,7 +201,7 @@ namespace Shooter.Core
             return Translated(() =>
             {
                 var root = ServerDataJson.ParseDocument(text, source, _grenadeKind);
-                if (root.Kind == GameRulesJson.NodeKind.Object && !HasMember(root, GrenadeTypesItem) && !HasMember(root, CarriedItem))
+                if (root.Kind == JsonNodeKind.Object && !HasMember(root, GrenadeTypesItem) && !HasMember(root, CarriedItem))
                 {
                     return GrenadeCatalog.Of(ReadGrenade(new ServerDataJson.Fields(source, _grenadeKind, root, string.Empty, GrenadeItemNames)));
                 }
@@ -459,7 +459,7 @@ namespace Shooter.Core
             }
         }
 
-        private static bool HasMember(GameRulesJson.Node node, string name)
+        private static bool HasMember(JsonNode node, string name)
         {
             foreach (var member in node.Members)
             {
@@ -554,8 +554,8 @@ namespace Shooter.Core
 
             private readonly string _source;
             private readonly string _kind;
-            private readonly Dictionary<string, GameRulesJson.Node> _values =
-                new Dictionary<string, GameRulesJson.Node>(StringComparer.Ordinal);
+            private readonly Dictionary<string, JsonNode> _values =
+                new Dictionary<string, JsonNode>(StringComparer.Ordinal);
 
             private Fields(string source, string kind)
             {
@@ -570,17 +570,17 @@ namespace Shooter.Core
                     throw new ArgumentNullException(nameof(text));
                 }
 
-                GameRulesJson.Node root;
+                JsonNode root;
                 try
                 {
-                    root = new GameRulesJson.Parser(text).ParseDocument();
+                    root = new JsonParser(text).ParseDocument();
                 }
                 catch (FormatException e)
                 {
                     throw new TuningJsonException(source, null, $"{kind} '{source}' is not valid JSON: {e.Message}", e);
                 }
 
-                if (root.Kind != GameRulesJson.NodeKind.Object)
+                if (root.Kind != JsonNodeKind.Object)
                 {
                     throw new TuningJsonException(
                         source, null, $"{kind} '{source}': the top level must be an object, but is {root.Describe()} ({root.Position})");
@@ -662,7 +662,7 @@ namespace Shooter.Core
                     return fallback;
                 }
 
-                if (node.Kind != GameRulesJson.NodeKind.String)
+                if (node.Kind != JsonNodeKind.String)
                 {
                     throw Invalid(name, node, $"must be a string, but is {node.Describe()}");
                 }
@@ -687,22 +687,22 @@ namespace Shooter.Core
                     return fallback;
                 }
 
-                if (node.Kind != GameRulesJson.NodeKind.True && node.Kind != GameRulesJson.NodeKind.False)
+                if (node.Kind != JsonNodeKind.True && node.Kind != JsonNodeKind.False)
                 {
                     throw Invalid(name, node, $"must be true or false, but is {node.Describe()}");
                 }
 
-                return node.Kind == GameRulesJson.NodeKind.True;
+                return node.Kind == JsonNodeKind.True;
             }
 
-            private GameRulesJson.Node Find(string name)
+            private JsonNode Find(string name)
             {
                 if (!_values.TryGetValue(name, out var node))
                 {
                     return null;
                 }
 
-                if (node.Kind == GameRulesJson.NodeKind.Null)
+                if (node.Kind == JsonNodeKind.Null)
                 {
                     throw Invalid(name, node, "must not be null; leave the item out to use the default");
                 }
@@ -710,15 +710,15 @@ namespace Shooter.Core
                 return node;
             }
 
-            private void Require(GameRulesJson.Node node, string name, string expected)
+            private void Require(JsonNode node, string name, string expected)
             {
-                if (node.Kind != GameRulesJson.NodeKind.Number)
+                if (node.Kind != JsonNodeKind.Number)
                 {
                     throw Invalid(name, node, $"must be {expected}, but is {node.Describe()}");
                 }
             }
 
-            private TuningJsonException Invalid(string name, GameRulesJson.Node node, string problem, Exception inner = null)
+            private TuningJsonException Invalid(string name, JsonNode node, string problem, Exception inner = null)
             {
                 return new TuningJsonException(_source, name, $"{_kind} '{_source}' item '{name}' {problem} ({node.Position})", inner);
             }

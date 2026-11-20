@@ -73,11 +73,6 @@ namespace Shooter.Core
         public const string ReloadInterruptedByItem = "reloadInterruptedBy";
         public const string AimWhileReloadingItem = "aimWhileReloading";
 
-        // 項目は 2 段までなので、それより深く入れ子にしたものは読む前に断る。
-        private const int _maxDepth = 8;
-
-        private const char _byteOrderMark = (char)0xFEFF;
-
         public static IReadOnlyList<string> ItemNames { get; } = new[]
         {
             FriendlyFireItem,
@@ -172,10 +167,10 @@ namespace Shooter.Core
 
             var source = string.IsNullOrWhiteSpace(sourceName) ? "(unnamed game rules JSON)" : sourceName;
 
-            Node root;
+            JsonNode root;
             try
             {
-                root = new Parser(text).ParseDocument();
+                root = new JsonParser(text).ParseDocument();
             }
             catch (FormatException e)
             {
@@ -185,12 +180,12 @@ namespace Shooter.Core
             return FromNode(root, source, string.Empty, baseRules);
         }
 
-        internal static GameRules FromNode(Node root, string source, string prefix)
+        internal static GameRules FromNode(JsonNode root, string source, string prefix)
         {
             return FromNode(root, source, prefix, GameRules.Default);
         }
 
-        private static GameRules FromNode(Node root, string source, string prefix, GameRules defaults)
+        private static GameRules FromNode(JsonNode root, string source, string prefix, GameRules defaults)
         {
             var top = new Fields(source, root, prefix, ItemNames);
 
@@ -312,7 +307,7 @@ namespace Shooter.Core
         }
 
         // 一覧の JSON (MutatorJson) の中に書いたルールの一部を、Parse に渡せる 1 つの文書として取り出すために、読んだ木を字句のまま書き戻す。
-        internal static string WriteNode(Node node)
+        internal static string WriteNode(JsonNode node)
         {
             if (node == null)
             {
@@ -324,11 +319,11 @@ namespace Shooter.Core
             return builder.ToString();
         }
 
-        private static void AppendNode(StringBuilder builder, Node node)
+        private static void AppendNode(StringBuilder builder, JsonNode node)
         {
             switch (node.Kind)
             {
-                case NodeKind.Object:
+                case JsonNodeKind.Object:
                     builder.Append('{');
                     for (var i = 0; i < node.Members.Count; i++)
                     {
@@ -337,13 +332,13 @@ namespace Shooter.Core
                             builder.Append(", ");
                         }
 
-                        builder.Append(ServerDataJson.Writer.Quote(node.Members[i].Key)).Append(": ");
+                        builder.Append(JsonWriter.Quote(node.Members[i].Key)).Append(": ");
                         AppendNode(builder, node.Members[i].Value);
                     }
 
                     builder.Append('}');
                     return;
-                case NodeKind.Array:
+                case JsonNodeKind.Array:
                     builder.Append('[');
                     for (var i = 0; i < node.Elements.Count; i++)
                     {
@@ -357,16 +352,16 @@ namespace Shooter.Core
 
                     builder.Append(']');
                     return;
-                case NodeKind.String:
-                    builder.Append(ServerDataJson.Writer.Quote(node.Text));
+                case JsonNodeKind.String:
+                    builder.Append(JsonWriter.Quote(node.Text));
                     return;
-                case NodeKind.Number:
+                case JsonNodeKind.Number:
                     builder.Append(node.Text);
                     return;
-                case NodeKind.True:
+                case JsonNodeKind.True:
                     builder.Append("true");
                     return;
-                case NodeKind.False:
+                case JsonNodeKind.False:
                     builder.Append("false");
                     return;
                 default:
@@ -458,79 +453,20 @@ namespace Shooter.Core
             return new GameRulesJsonException(source, item, $"game rules JSON '{source}'{where} is invalid: {e.Message}", e);
         }
 
-        // グレネードと印の調整値の JSON (TuningJson) も同じ文法・同じ位置の示し方で読むので、Node と Parser はアセンブリの中に開く。
-        internal enum NodeKind
-        {
-            Object,
-            Array,
-            String,
-            Number,
-            True,
-            False,
-            Null,
-        }
-
-        internal sealed class Node
-        {
-            public Node(NodeKind kind, string text, int line, int column)
-            {
-                Kind = kind;
-                Text = text;
-                Line = line;
-                Column = column;
-            }
-
-            public NodeKind Kind { get; }
-
-            // 数を字句のまま持つのは、読む側の型 (float / int) で解釈し直すため。
-            public string Text { get; }
-
-            public int Line { get; }
-
-            public int Column { get; }
-
-            public List<KeyValuePair<string, Node>> Members { get; } = new List<KeyValuePair<string, Node>>();
-
-            public List<Node> Elements { get; } = new List<Node>();
-
-            public string Position => $"line {Line.ToString(CultureInfo.InvariantCulture)}, column {Column.ToString(CultureInfo.InvariantCulture)}";
-
-            public string Describe()
-            {
-                switch (Kind)
-                {
-                    case NodeKind.Object:
-                        return "an object";
-                    case NodeKind.Array:
-                        return "an array";
-                    case NodeKind.String:
-                        return $"the string \"{Text}\"";
-                    case NodeKind.Number:
-                        return $"the number {Text}";
-                    case NodeKind.True:
-                        return "true";
-                    case NodeKind.False:
-                        return "false";
-                    default:
-                        return "null";
-                }
-            }
-        }
-
         private sealed class Fields
         {
             private static readonly char[] _nonIntegerMarks = { '.', 'e', 'E' };
 
             private readonly string _source;
             private readonly string _prefix;
-            private readonly Dictionary<string, Node> _values = new Dictionary<string, Node>(StringComparer.Ordinal);
+            private readonly Dictionary<string, JsonNode> _values = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
 
-            public Fields(string source, Node node, string prefix, IReadOnlyList<string> known)
+            public Fields(string source, JsonNode node, string prefix, IReadOnlyList<string> known)
             {
                 _source = source;
                 _prefix = prefix;
 
-                if (node.Kind != NodeKind.Object)
+                if (node.Kind != JsonNodeKind.Object)
                 {
                     var what = prefix.Length == 0 ? "the top level" : $"item '{prefix.TrimEnd('.')}'";
                     throw new GameRulesJsonException(
@@ -555,7 +491,7 @@ namespace Shooter.Core
                 }
             }
 
-            public Node ReadNested(string name)
+            public JsonNode ReadNested(string name)
             {
                 return Find(name);
             }
@@ -568,7 +504,7 @@ namespace Shooter.Core
                     return fallback;
                 }
 
-                Require(node, name, NodeKind.Number, "a number");
+                Require(node, name, JsonNodeKind.Number, "a number");
 
                 // 2 進の float の最も近い値を直接選ぶ (double を経ると丸めが 2 度起きて C# の float リテラルと 1 ビットずれうる)。
                 // 大きすぎる値は無限大になる環境と例外になる環境があり、無限大なら GameRules の検査が項目名付きで断る。
@@ -590,7 +526,7 @@ namespace Shooter.Core
                     return fallback;
                 }
 
-                Require(node, name, NodeKind.Number, "a number");
+                Require(node, name, JsonNodeKind.Number, "a number");
 
                 // 大きすぎる値は無限大になる環境と例外になる環境があり、無限大なら ZoneDamageMultipliers の検査が項目名付きで断る。
                 try
@@ -611,7 +547,7 @@ namespace Shooter.Core
                     return fallback;
                 }
 
-                Require(node, name, NodeKind.Number, "a whole number");
+                Require(node, name, JsonNodeKind.Number, "a whole number");
                 if (node.Text.IndexOfAny(_nonIntegerMarks) >= 0)
                 {
                     throw Invalid(name, node, "must be a whole number without a fraction or exponent");
@@ -633,12 +569,12 @@ namespace Shooter.Core
                     return fallback;
                 }
 
-                if (node.Kind == NodeKind.True)
+                if (node.Kind == JsonNodeKind.True)
                 {
                     return true;
                 }
 
-                if (node.Kind == NodeKind.False)
+                if (node.Kind == JsonNodeKind.False)
                 {
                     return false;
                 }
@@ -668,7 +604,7 @@ namespace Shooter.Core
                     return fallback;
                 }
 
-                Require(node, name, NodeKind.Array, "an array of the names " + string.Join(", ", System.Enum.GetNames(typeof(T))));
+                Require(node, name, JsonNodeKind.Array, "an array of the names " + string.Join(", ", System.Enum.GetNames(typeof(T))));
                 var values = new T[node.Elements.Count];
                 for (var i = 0; i < values.Length; i++)
                 {
@@ -678,11 +614,11 @@ namespace Shooter.Core
                 return values;
             }
 
-            private T MatchEnum<T>(string name, Node node)
+            private T MatchEnum<T>(string name, JsonNode node)
                 where T : struct, Enum
             {
                 var names = System.Enum.GetNames(typeof(T));
-                Require(node, name, NodeKind.String, "one of the names " + string.Join(", ", names));
+                Require(node, name, JsonNodeKind.String, "one of the names " + string.Join(", ", names));
 
                 // 数字の文字列や大文字小文字違いも Enum.TryParse は通してしまうので、定義済みの名前と完全に一致するものだけを受け付ける。
                 foreach (var candidate in names)
@@ -696,14 +632,14 @@ namespace Shooter.Core
                 throw Invalid(name, node, $"\"{node.Text}\" is not one of {string.Join(", ", names)}");
             }
 
-            private Node Find(string name)
+            private JsonNode Find(string name)
             {
                 if (!_values.TryGetValue(name, out var node))
                 {
                     return null;
                 }
 
-                if (node.Kind == NodeKind.Null)
+                if (node.Kind == JsonNodeKind.Null)
                 {
                     throw Invalid(name, node, "must not be null; leave the item out to use the default");
                 }
@@ -711,7 +647,7 @@ namespace Shooter.Core
                 return node;
             }
 
-            private void Require(Node node, string name, NodeKind kind, string expected)
+            private void Require(JsonNode node, string name, JsonNodeKind kind, string expected)
             {
                 if (node.Kind != kind)
                 {
@@ -719,7 +655,7 @@ namespace Shooter.Core
                 }
             }
 
-            private GameRulesJsonException Invalid(string name, Node node, string problem, Exception inner = null)
+            private GameRulesJsonException Invalid(string name, JsonNode node, string problem, Exception inner = null)
             {
                 var item = _prefix + name;
                 return new GameRulesJsonException(
@@ -829,380 +765,6 @@ namespace Shooter.Core
             private void NewLine()
             {
                 _builder.Append('\n').Append(' ', _depth * 2);
-            }
-        }
-
-        internal sealed class Parser
-        {
-            private readonly string _text;
-            private int _position;
-            private int _line = 1;
-            private int _lineStart;
-
-            public Parser(string text)
-            {
-                _text = text;
-            }
-
-            public Node ParseDocument()
-            {
-                if (_position < _text.Length && _text[_position] == _byteOrderMark)
-                {
-                    _position++;
-                    _lineStart = _position;
-                }
-
-                SkipWhitespace();
-                var value = ParseValue(0);
-                SkipWhitespace();
-                if (_position != _text.Length)
-                {
-                    throw Error("unexpected text after the value");
-                }
-
-                return value;
-            }
-
-            private Node ParseValue(int depth)
-            {
-                if (_position >= _text.Length)
-                {
-                    throw Error("unexpected end of input");
-                }
-
-                var line = _line;
-                var column = Column;
-                var c = _text[_position];
-                switch (c)
-                {
-                    case '{':
-                        return ParseObject(depth + 1, line, column);
-                    case '[':
-                        return ParseArray(depth + 1, line, column);
-                    case '"':
-                        return new Node(NodeKind.String, ParseString(), line, column);
-                    case 't':
-                        ExpectLiteral("true");
-                        return new Node(NodeKind.True, null, line, column);
-                    case 'f':
-                        ExpectLiteral("false");
-                        return new Node(NodeKind.False, null, line, column);
-                    case 'n':
-                        ExpectLiteral("null");
-                        return new Node(NodeKind.Null, null, line, column);
-                    default:
-                        if (c == '-' || IsDigit(c))
-                        {
-                            return new Node(NodeKind.Number, ParseNumber(), line, column);
-                        }
-
-                        throw Error($"unexpected character '{c}'");
-                }
-            }
-
-            private Node ParseObject(int depth, int line, int column)
-            {
-                CheckDepth(depth);
-                _position++;
-                var node = new Node(NodeKind.Object, null, line, column);
-                var keys = new HashSet<string>(StringComparer.Ordinal);
-                SkipWhitespace();
-                if (TryConsume('}'))
-                {
-                    return node;
-                }
-
-                while (true)
-                {
-                    SkipWhitespace();
-                    if (_position >= _text.Length || _text[_position] != '"')
-                    {
-                        throw Error("expected a string key");
-                    }
-
-                    var keyLine = _line;
-                    var keyColumn = Column;
-                    var key = ParseString();
-                    if (!keys.Add(key))
-                    {
-                        throw new FormatException(
-                            $"duplicate key \"{key}\" at line {keyLine.ToString(CultureInfo.InvariantCulture)}, "
-                            + $"column {keyColumn.ToString(CultureInfo.InvariantCulture)}");
-                    }
-
-                    SkipWhitespace();
-                    Expect(':');
-                    SkipWhitespace();
-                    node.Members.Add(new KeyValuePair<string, Node>(key, ParseValue(depth)));
-                    SkipWhitespace();
-                    if (TryConsume('}'))
-                    {
-                        return node;
-                    }
-
-                    Expect(',');
-                }
-            }
-
-            private Node ParseArray(int depth, int line, int column)
-            {
-                CheckDepth(depth);
-                _position++;
-                var node = new Node(NodeKind.Array, null, line, column);
-                SkipWhitespace();
-                if (TryConsume(']'))
-                {
-                    return node;
-                }
-
-                while (true)
-                {
-                    SkipWhitespace();
-                    node.Elements.Add(ParseValue(depth));
-                    SkipWhitespace();
-                    if (TryConsume(']'))
-                    {
-                        return node;
-                    }
-
-                    Expect(',');
-                }
-            }
-
-            private string ParseString()
-            {
-                _position++;
-                var builder = new StringBuilder();
-                while (true)
-                {
-                    if (_position >= _text.Length)
-                    {
-                        throw Error("unterminated string");
-                    }
-
-                    var c = _text[_position];
-                    if (c == '"')
-                    {
-                        _position++;
-                        return builder.ToString();
-                    }
-
-                    if (c < ' ')
-                    {
-                        throw Error("control character in string");
-                    }
-
-                    _position++;
-                    if (c != '\\')
-                    {
-                        builder.Append(c);
-                        continue;
-                    }
-
-                    if (_position >= _text.Length)
-                    {
-                        throw Error("unterminated string");
-                    }
-
-                    var escape = _text[_position];
-                    switch (escape)
-                    {
-                        case '"':
-                        case '\\':
-                        case '/':
-                            builder.Append(escape);
-                            break;
-                        case 'b':
-                            builder.Append('\b');
-                            break;
-                        case 'f':
-                            builder.Append('\f');
-                            break;
-                        case 'n':
-                            builder.Append('\n');
-                            break;
-                        case 'r':
-                            builder.Append('\r');
-                            break;
-                        case 't':
-                            builder.Append('\t');
-                            break;
-                        case 'u':
-                            _position++;
-                            builder.Append(ParseHex4());
-                            continue;
-                        default:
-                            throw Error($"invalid escape '\\{escape}'");
-                    }
-
-                    _position++;
-                }
-            }
-
-            private char ParseHex4()
-            {
-                if (_position + 4 > _text.Length)
-                {
-                    throw Error("incomplete unicode escape");
-                }
-
-                var value = 0;
-                for (var i = 0; i < 4; i++)
-                {
-                    var c = _text[_position];
-                    int digit;
-                    if (IsDigit(c))
-                    {
-                        digit = c - '0';
-                    }
-                    else if (c >= 'a' && c <= 'f')
-                    {
-                        digit = c - 'a' + 10;
-                    }
-                    else if (c >= 'A' && c <= 'F')
-                    {
-                        digit = c - 'A' + 10;
-                    }
-                    else
-                    {
-                        throw Error("invalid unicode escape");
-                    }
-
-                    value = (value * 16) + digit;
-                    _position++;
-                }
-
-                return (char)value;
-            }
-
-            private string ParseNumber()
-            {
-                var start = _position;
-                TryConsume('-');
-                if (_position >= _text.Length || !IsDigit(_text[_position]))
-                {
-                    throw Error("expected a digit");
-                }
-
-                if (_text[_position] == '0')
-                {
-                    _position++;
-                    if (_position < _text.Length && IsDigit(_text[_position]))
-                    {
-                        throw Error("numbers must not have leading zeros");
-                    }
-                }
-                else
-                {
-                    SkipDigits();
-                }
-
-                if (TryConsume('.'))
-                {
-                    RequireDigits();
-                }
-
-                if (TryConsume('e') || TryConsume('E'))
-                {
-                    if (!TryConsume('+'))
-                    {
-                        TryConsume('-');
-                    }
-
-                    RequireDigits();
-                }
-
-                return _text.Substring(start, _position - start);
-            }
-
-            private void RequireDigits()
-            {
-                if (_position >= _text.Length || !IsDigit(_text[_position]))
-                {
-                    throw Error("expected a digit");
-                }
-
-                SkipDigits();
-            }
-
-            private void SkipDigits()
-            {
-                while (_position < _text.Length && IsDigit(_text[_position]))
-                {
-                    _position++;
-                }
-            }
-
-            private void ExpectLiteral(string literal)
-            {
-                if (_position + literal.Length > _text.Length
-                    || string.CompareOrdinal(_text, _position, literal, 0, literal.Length) != 0)
-                {
-                    throw Error("invalid literal");
-                }
-
-                _position += literal.Length;
-            }
-
-            private void Expect(char expected)
-            {
-                if (!TryConsume(expected))
-                {
-                    throw Error($"expected '{expected}'");
-                }
-            }
-
-            private bool TryConsume(char expected)
-            {
-                if (_position < _text.Length && _text[_position] == expected)
-                {
-                    _position++;
-                    return true;
-                }
-
-                return false;
-            }
-
-            private void SkipWhitespace()
-            {
-                while (_position < _text.Length)
-                {
-                    var c = _text[_position];
-                    if (c == '\n')
-                    {
-                        _line++;
-                        _lineStart = _position + 1;
-                    }
-                    else if (c != ' ' && c != '\t' && c != '\r')
-                    {
-                        return;
-                    }
-
-                    _position++;
-                }
-            }
-
-            private void CheckDepth(int depth)
-            {
-                if (depth > _maxDepth)
-                {
-                    throw Error("nesting is too deep");
-                }
-            }
-
-            private int Column => _position - _lineStart + 1;
-
-            private FormatException Error(string message)
-            {
-                var at = _position >= _text.Length
-                    ? "end of input"
-                    : $"line {_line.ToString(CultureInfo.InvariantCulture)}, column {Column.ToString(CultureInfo.InvariantCulture)}";
-                return new FormatException(message + " at " + at);
-            }
-
-            private static bool IsDigit(char c)
-            {
-                return c >= '0' && c <= '9';
             }
         }
     }

@@ -157,6 +157,7 @@ make server-dotnet ARGS="-rules FreeForAll"
   - 持っていない種類を置く要求は `[Deploy] owner=<id> kind=<id> net refused reason=NotEquipped` で断る。
   - 選んだ能力は次の試合でも残り、抜けると消える。マップやルールを替えると持たせた能力を捨てて次の出現で持たせ直し、
     替えた先のルールの候補に無い選択は既定に戻す (`[Deploy] owner=<id> kind=- net abilities reset to default: ...`)。
+  - `make export-server-rules` は、ロードアウトの既定の能力を先に、GameContent の能力のカタログ (`AbilityCatalog`、無ければロードアウトの能力) の残りを後に並べ、`deployables.json` にあってドローンでない Id だけを `loadout.abilities` に書く。`deployables.json` の Id を変えたら書き出し直す。
   - `loadout.abilities` に `deployables.json` に無い Id を書くと、`[Deploy] net kind=<id> is in loadout.abilities of rules <name> but not in the deployable tuning; it is not offered` と出して候補から外す。
 - 箱を開ける要求は、水平の届く距離に加えて足元と箱の高さの差が 2 m 以内で、体から箱までの線が壁に遮られないときだけ受ける
   (`[Loot] open ... refused=OutOfReach`・`refused=OutOfSight`)。ストリークの要求は `streaks.json` の報酬の表に無い Id を `reason=UnknownReward` で断る。

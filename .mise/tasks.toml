@@ -16,6 +16,10 @@ run = [
 description = "Rebuild every demo scene (and write the net maps' server data, as export-server-data does) with the Unity editor in batch mode via Shooter.Editor.SceneBuildSteps.BuildAll, the Shooter/Build All Scenes menu (close the Editor first). Commit the result"
 run = "unity --non-interactive run . -- -executeMethod Shooter.Editor.SceneBuildSteps.BuildAll"
 
+[build-abilities]
+description = "Rebuild the Demo ability assets and the ability catalog (Abilities/AbilityCatalog.asset) with the Unity editor in batch mode via Shooter.Editor.AbilityAssetBuilder.Build, the Shooter/Build Ability Assets menu; it needs the Demo weapons and loadout, and game-content puts the catalog in GameContent (close the Editor first). Commit the result"
+run = "unity --non-interactive run . -- -executeMethod Shooter.Editor.AbilityAssetBuilder.Build"
+
 [update]
 description = "Pull skill-kit and re-sync this repo"
 run = "skill-kit game update"

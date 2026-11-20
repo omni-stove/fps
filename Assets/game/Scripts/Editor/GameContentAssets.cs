@@ -27,6 +27,7 @@ namespace Shooter.Editor
             new Slot("Motor", typeof(MotorSettings), c => c.Motor, (c, v) => c.Motor = (MotorSettings)v),
             new Slot("WeaponCatalog", typeof(WeaponCatalogAsset), c => c.WeaponCatalog, (c, v) => c.WeaponCatalog = (WeaponCatalogAsset)v),
             new Slot("Loadout", typeof(LoadoutDefinition), c => c.Loadout, (c, v) => c.Loadout = (LoadoutDefinition)v),
+            new Slot("AbilityCatalog", typeof(AbilityCatalogAsset), c => c.AbilityCatalog, (c, v) => c.AbilityCatalog = (AbilityCatalogAsset)v),
             new Slot("TeamDeathmatch", typeof(TeamDeathmatchDefinition), c => c.TeamDeathmatch, (c, v) => c.TeamDeathmatch = (TeamDeathmatchDefinition)v),
             new Slot("Domination", typeof(DominationDefinition), c => c.Domination, (c, v) => c.Domination = (DominationDefinition)v),
             new Slot("Hardpoint", typeof(HardpointDefinition), c => c.Hardpoint, (c, v) => c.Hardpoint = (HardpointDefinition)v),

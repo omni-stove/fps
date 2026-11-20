@@ -70,14 +70,15 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void ConfirmIsPassedOnAndTheAnswerIsShown()
         {
-            var received = new List<IReadOnlyList<string>>();
-            _view.Confirmed += ids => received.Add(ids);
+            var received = new List<LoadoutChoice>();
+            _view.Confirmed += choice => received.Add(choice);
             _view.Open(LoadoutSelectPanelTests.Selection());
 
             _view.Panel.Select(1, 1);
             Assert.That(_view.Panel.Confirm(), Is.True);
             Assert.That(received.Count(), Is.EqualTo(1));
-            Assert.That(received[0], Is.EqualTo(_view.Selection.WeaponIds));
+            Assert.That(received[0].WeaponIds, Is.EqualTo(_view.Selection.WeaponIds));
+            Assert.That(received[0].AbilityIds, Is.Null);
 
             _view.ShowSending();
             Assert.That(_view.Panel.IsBusy, Is.True);
@@ -161,21 +162,25 @@ namespace Shooter.Tests.EditMode
         public void TheDefaultLoadoutSelectDrivesTheActiveView()
         {
             var screen = GameUi.LoadoutSelect;
-            var received = new List<IReadOnlyList<string>>();
-            Action<IReadOnlyList<string>> receive = ids => received.Add(ids);
+            var received = new List<LoadoutChoice>();
+            Action<LoadoutChoice> receive = choice => received.Add(choice);
+            var abilities = new AbilitySelection(new[] { "beacon" }, new[] { "beacon", AbilitySelection.None }, null);
             screen.Confirmed += receive;
             try
             {
                 Assert.That(screen.IsOpen, Is.False);
 
-                screen.Open(LoadoutSelectPanelTests.Selection());
+                screen.Open(LoadoutSelectPanelTests.Selection(), abilities);
                 Assert.That(_view.IsOpen, Is.True);
                 Assert.That(screen.IsOpen, Is.True);
+                Assert.That(_view.Abilities, Is.SameAs(abilities));
+                Assert.That(_view.Panel.Abilities, Is.SameAs(abilities));
 
                 _view.Panel.Select(1, 1);
                 Assert.That(_view.Panel.Confirm(), Is.True);
                 Assert.That(received.Count, Is.EqualTo(1));
-                Assert.That(received[0], Is.EqualTo(_view.Selection.WeaponIds));
+                Assert.That(received[0].WeaponIds, Is.EqualTo(_view.Selection.WeaponIds));
+                Assert.That(received[0].AbilityIds, Is.EqualTo(new[] { "beacon", AbilitySelection.None }));
 
                 screen.ShowSending();
                 Assert.That(_view.Panel.Status, Is.EqualTo(LoadoutFormat.Sending));
@@ -185,6 +190,7 @@ namespace Shooter.Tests.EditMode
                 screen.Close();
                 Assert.That(_view.IsOpen, Is.False);
                 Assert.That(screen.IsOpen, Is.False);
+                Assert.That(_view.Abilities, Is.Null, "closing forgets the abilities with the weapons");
             }
             finally
             {
@@ -198,7 +204,7 @@ namespace Shooter.Tests.EditMode
             _view.Unbind();
             var screen = GameUi.LoadoutSelect;
 
-            screen.Open(LoadoutSelectPanelTests.Selection());
+            screen.Open(LoadoutSelectPanelTests.Selection(), null);
 
             Assert.That(_view.IsOpen, Is.False);
             Assert.DoesNotThrow(() => screen.ShowAnswer(true, null));

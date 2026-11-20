@@ -151,6 +151,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("最初に持つ武器")]
         private LoadoutDefinition _loadout;
 
+        [SerializeField, Tooltip("装備画面で選べる能力の一覧。空なら能力は選ばせず、ロードアウトの能力のまま")]
+        private AbilityCatalogAsset _abilityCatalog;
+
         // キャンペーンを本体の外から足せるように、型は ScriptableObject にとどめる。入れる型は GameContentSlots に登録した枠が決める。
         [SerializeField, Tooltip("メニューに出すキャンペーンのミッションの一覧。入れられる型はキャンペーンが登録した枠が決める")]
         private ScriptableObject _missions;
@@ -527,6 +530,12 @@ namespace Shooter.Runtime
         {
             get => _loadout;
             set => _loadout = value;
+        }
+
+        public AbilityCatalogAsset AbilityCatalog
+        {
+            get => _abilityCatalog;
+            set => _abilityCatalog = value;
         }
 
         public ScriptableObject Missions

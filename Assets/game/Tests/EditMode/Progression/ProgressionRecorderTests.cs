@@ -206,7 +206,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheRatingOfAVersion5ProfileIsHandedToTheSkillRecorderAndLeftOutOfTheNextSave()
+        public void TheRatingOfAVersion5ProfileIsDroppedAndNotGivenToTheSkillRecorder()
         {
             _storage.Write(
                 ProfileStore.Slot,
@@ -214,11 +214,11 @@ namespace Shooter.Tests.EditMode
                 + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[],\"cosmetics\":{}}");
             var skill = SkillBootstrap.Install(new SkillRecorder(_storage, SkillSpec.Default));
 
-            LogAssert.Expect(LogType.Log, "[Skill] took the profile rating 1234 as rating=1234");
             _recorder.Install();
 
-            Assert.That(skill.Rating, Is.EqualTo(1234));
-            Assert.That(_storage.Text(SkillRecorder.Slot), Is.EqualTo("{\"version\":1,\"rating\":1234}"), "the rating is saved before the profile drops it");
+            Assert.That(_recorder.Profile, Is.EqualTo(new PlayerProfile(400, 4, 1, 1, 0)));
+            Assert.That(skill.Rating, Is.EqualTo(1000));
+            Assert.That(_storage.Has(SkillRecorder.Slot), Is.False);
 
             CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Lost, 0, 0, 0));
 
@@ -227,33 +227,6 @@ namespace Shooter.Tests.EditMode
                 Is.EqualTo(
                     "{\"version\":6,\"xp\":650,\"kills\":4,\"assists\":0,\"deaths\":1,\"matches\":2,\"wins\":0,"
                     + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[],\"cosmetics\":{}}"));
-            Assert.That(SkillSave.FromJson(_storage.Text(SkillRecorder.Slot)).Rating, Is.EqualTo(1234), "the next play reads the rating from the skill slot");
-        }
-
-        [Test]
-        public void TheProfileRatingDoesNotReplaceAnExistingSkillSave()
-        {
-            _storage.Write(ProfileStore.Slot, "{\"version\":3,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1234}");
-            _storage.Write(SkillRecorder.Slot, new SkillSave(1176).ToJson());
-            var skill = SkillBootstrap.Install(new SkillRecorder(_storage, SkillSpec.Default));
-            var writes = _storage.WriteCount;
-
-            _recorder.Install();
-
-            Assert.That(skill.Rating, Is.EqualTo(1176));
-            Assert.That(_storage.Text(SkillRecorder.Slot), Is.EqualTo("{\"version\":1,\"rating\":1176}"));
-            Assert.That(_storage.WriteCount, Is.EqualTo(writes));
-        }
-
-        [Test]
-        public void AProfileRatingWithoutAnInstalledSkillRecorderIsOnlyRead()
-        {
-            _storage.Write(ProfileStore.Slot, "{\"version\":3,\"xp\":0,\"kills\":0,\"assists\":0,\"deaths\":0,\"matches\":0,\"wins\":0,\"rating\":1234}");
-
-            _recorder.Install();
-
-            Assert.That(_recorder.Profile, Is.EqualTo(PlayerProfile.Empty));
-            Assert.That(_storage.Has(SkillRecorder.Slot), Is.False);
         }
 
         [Test]

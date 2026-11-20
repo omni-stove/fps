@@ -46,14 +46,9 @@ namespace Shooter.Runtime
             recorder?.Uninstall();
         }
 
-        // Unity は同じ RuntimeInitializeLoadType の間の順を決めないので、レートを渡す側 (ProgressionBootstrap) からも呼び、先に入っていることを保つ。
-        internal static void EnsureInstalledOnPlay()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        private static void InstallOnPlay()
         {
-            if (_current != null)
-            {
-                return;
-            }
-
             Install(CloudSaveBootstrap.Storage);
             var sync = CloudSaveBootstrap.Current;
             if (sync != null)
@@ -80,12 +75,6 @@ namespace Shooter.Runtime
         {
             // CombatEvents も同じ時点で購読を空にするので、前の Play の記録係は外すだけで手放せる。
             Uninstall();
-        }
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void InstallOnPlay()
-        {
-            EnsureInstalledOnPlay();
         }
     }
 }

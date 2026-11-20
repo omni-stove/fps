@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Shooter.Core;
 using UnityEngine;
 
@@ -29,7 +28,8 @@ namespace Shooter.Runtime
 
         public string Key { get; }
 
-        public IReadOnlyList<string> Load()
+        // 能力を保存していない (前の版の) 選択は AbilityIds が null で返る
+        public LoadoutChoice Load()
         {
             if (!PlayerPrefs.HasKey(Key))
             {
@@ -42,12 +42,12 @@ namespace Shooter.Runtime
                 Debug.LogWarning($"{LogTag} saved loadout '{Key}': {problem}; choosing from the match's loadout instead");
             }
 
-            return choice?.WeaponIds;
+            return choice;
         }
 
-        public void Save(IReadOnlyList<string> weaponIds)
+        public void Save(LoadoutChoice choice)
         {
-            PlayerPrefs.SetString(Key, LoadoutPreference.ToJson(new LoadoutChoice(weaponIds)));
+            PlayerPrefs.SetString(Key, LoadoutPreference.ToJson(choice));
             PlayerPrefs.Save();
         }
 

@@ -177,7 +177,7 @@ namespace Shooter.Server.Tests
             Join(1);
             Join(2);
             Step(0.2f);
-            // 届く距離は水平に 1.6m。高さは数えない
+            // 届く距離は水平に 1.6m
             MoveTo(1, _armoryAt + new Vector3(1.7f, 0f, 0f));
 
             var verdict = _loot.Open(1, _armoryBox);
@@ -187,8 +187,75 @@ namespace Shooter.Server.Tests
             Assert.That(_combat.WeaponsOf(1).Specs, Has.Count.EqualTo(2));
             Assert.That(_log.ToString(), Does.Contain("[Loot] open item=" + _armoryBox + " by=1 refused=OutOfReach"));
 
-            MoveTo(1, _armoryAt + new Vector3(1.5f, 5f, 0f));
+            MoveTo(1, _armoryAt + new Vector3(1.5f, 1.6f, 0f));
             Assert.That(_loot.Open(1, _armoryBox).IsAccepted, Is.True, _log.ToString());
+        }
+
+        // 体の原点は足元の 1 m 上なので、原点を 5 m 上げると足元は箱より 4 m 上になり、上下の幅 (2 m) を超える
+        [Test]
+        public void ABoxOnAnotherFloorIsOutOfReachEvenWhenItIsCloseFromAbove()
+        {
+            Start();
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            Assert.That(ServerLoot.MaxVerticalReach, Is.EqualTo(2f));
+
+            MoveTo(1, _armoryAt + new Vector3(0.5f, 5f, 0f));
+            Assert.That(_loot.Open(1, _armoryBox), Is.EqualTo(InteractVerdict.Refused(InteractRefusal.OutOfReach)));
+            Assert.That(_loot.IsInReach(_armoryBox, 1), Is.False);
+            Assert.That(_loot.IsOpened(_armoryBox), Is.False);
+
+            MoveTo(1, _armoryAt + new Vector3(0.5f, -2f, 0f));
+            Assert.That(_loot.Open(1, _armoryBox), Is.EqualTo(InteractVerdict.Refused(InteractRefusal.OutOfReach)), "from the floor below too");
+
+            MoveTo(1, _armoryAt + new Vector3(0.5f, 2.5f, 0f));
+            Assert.That(_loot.IsInReach(_armoryBox, 1), Is.True, "feet 1.5 m above the box are still in reach");
+            Assert.That(_loot.Open(1, _armoryBox).IsAccepted, Is.True, _log.ToString());
+        }
+
+        [Test]
+        public void ABoxBehindAWallIsRefusedAndOpensFromTheOpenSide()
+        {
+            Start(wall: true);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            // 壁 (z 10.5〜10.7) の向こうから、水平には届く 1.2 m の所に立つ
+            MoveTo(1, _armoryAt + new Vector3(0f, 1.6f, 1.2f));
+            var verdict = _loot.Open(1, _armoryBox);
+
+            Assert.That(verdict, Is.EqualTo(InteractVerdict.Refused(InteractRefusal.OutOfSight)));
+            Assert.That(_loot.IsInReach(_armoryBox, 1), Is.True, "the reach alone does not see the wall");
+            Assert.That(_loot.IsOpened(_armoryBox), Is.False);
+            Assert.That(_combat.WeaponsOf(1).Specs, Has.Count.EqualTo(2));
+            Assert.That(_log.ToString(), Does.Contain("[Loot] open item=" + _armoryBox + " by=1 refused=OutOfSight"));
+
+            // 同じ 1.2 m でも壁の手前からなら、箱の載る床に当たる線は箱に届いたと数える
+            MoveTo(1, _armoryAt + new Vector3(0f, 1.6f, -1.2f));
+            Assert.That(_loot.Open(1, _armoryBox).IsAccepted, Is.True, _log.ToString());
+        }
+
+        [Test]
+        public void TheObjectiveIsNotAskedAboutABoxBehindAWall()
+        {
+            var asked = 0;
+            _objective.OnInteract = (_, _) =>
+            {
+                asked++;
+                return InteractVerdict.Accepted;
+            };
+            Start(wall: true);
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            MoveTo(1, _armoryAt + new Vector3(0f, 1.6f, 1.2f));
+
+            Request(1, _armoryBox);
+
+            Assert.That(asked, Is.Zero);
+            Assert.That(_loot.IsOpened(_armoryBox), Is.False);
         }
 
         [Test]
@@ -563,12 +630,18 @@ namespace Shooter.Server.Tests
                 null);
         }
 
-        private void Start()
+        // 床の上面は y=0.5 で、箱 (y=0) は床に埋まって置かれる。wall は武器庫の箱の 0.5 m 奥 (z 10.5〜10.7) に床から 2 m 立てた壁
+        private void Start(bool wall = false)
         {
             var colliders = new List<WorldCollider>
             {
                 WorldCollider.Box(1, 0, WorldCollider.StaticGroup, Vector3.Zero, new Vector3(60f, 0.5f, 60f), Quaternion.Identity),
             };
+            if (wall)
+            {
+                colliders.Add(WorldCollider.Box(2, 0, WorldCollider.StaticGroup, _armoryAt + new Vector3(0f, 1.5f, 0.6f), new Vector3(2f, 1f, 0.1f), Quaternion.Identity));
+            }
+
             var containers = new[]
             {
                 new NetMapLootContainer("crate-supplies", _supplies, _suppliesAt, 1.6f),

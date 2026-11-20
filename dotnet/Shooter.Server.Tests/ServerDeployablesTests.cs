@@ -17,6 +17,7 @@ namespace Shooter.Server.Tests
         private const string _decoyId = "deploy-decoy";
         private const string _beaconId = "deploy-beacon";
         private const string _droneId = "deploy-drone";
+        private const string _otherMapName = "NetTest2";
         private static readonly DateTime _time = new DateTime(2026, 11, 18, 9, 0, 0, DateTimeKind.Utc);
 
         // 床の上面は y=0.5。Alpha (1 と 3) は x=-5、Bravo (2) は x=5 に出る
@@ -229,7 +230,7 @@ namespace Shooter.Server.Tests
         [Test]
         public void ADecoyCallsAndExpires()
         {
-            Start(Catalog(decoy: new DecoySpec(1f, 0.4f, 10f)));
+            Start(Catalog(decoy: new DecoySpec(1f, 0.4f, 10f)), loadoutAbilities: Ids(_decoyId));
             Join(1);
             Join(2);
             Step(0.2f);
@@ -287,7 +288,7 @@ namespace Shooter.Server.Tests
         {
             // 足元 0.1 m 角の小さな盾を 0.3 m おきに 8x8 並べ、全員分の合計を SnapshotMessage.MaxDeployables (64) にする
             var shield = new DeploySpec(SnapshotMessage.MaxDeployables, DeployOverflow.ReplaceOldest, 300, 4f, 30f, 0.25f, 0.1f, 0.5f, 0.1f);
-            Start(Catalog(shield: shield));
+            Start(Catalog(shield: shield), loadoutAbilities: Ids(_shieldId, _decoyId));
             Join(1);
             Join(2);
             Step(0.2f);
@@ -488,13 +489,16 @@ namespace Shooter.Server.Tests
             Assert.That(error, Does.StartWith("cannot read deployable tuning: ").And.Contain("types[0].role"));
         }
 
-        private static DeployCatalog Catalog(TurretSpec turret = null, DecoySpec decoy = null, DeploySpec shield = null)
+        // 回数と間隔を確かめるテストのほかは、続けて置いても回数で断られないよう、送れる数より多い回数と間隔 0 の枠にする
+        private static DeployCatalog Catalog(TurretSpec turret = null, DecoySpec decoy = null, DeploySpec shield = null, AbilitySpec shieldAbility = null)
         {
+            var free = new AbilitySpec(SnapshotMessage.MaxDeployables + 1, 0f, 0f, 0f);
             return new DeployCatalog(new[]
             {
-                new DeployType(_turretId, DeployRole.Turret, DeployType.DefaultDeploy(DeployRole.Turret), turret ?? TurretSpec.Default, TestRules.RifleId),
-                new DeployType(_shieldId, DeployRole.Shield, shield ?? DeployType.DefaultDeploy(DeployRole.Shield)),
-                new DeployType(_decoyId, DeployRole.Decoy, DeployType.DefaultDeploy(DeployRole.Decoy), decoy: decoy ?? DecoySpec.Default),
+                new DeployType(
+                    _turretId, DeployRole.Turret, DeployType.DefaultDeploy(DeployRole.Turret), turret ?? TurretSpec.Default, TestRules.RifleId, ability: free),
+                new DeployType(_shieldId, DeployRole.Shield, shield ?? DeployType.DefaultDeploy(DeployRole.Shield), ability: shieldAbility ?? free),
+                new DeployType(_decoyId, DeployRole.Decoy, DeployType.DefaultDeploy(DeployRole.Decoy), decoy: decoy ?? DecoySpec.Default, ability: free),
             });
         }
 
@@ -506,8 +510,14 @@ namespace Shooter.Server.Tests
         }
 
         // wall は Alpha の前 (x=-2) で床から浮いた梁 (y 1.0〜1.4) と、x=-3・z 0〜1 に置いた上面 2.5 の 1 m 角の段
+        // loadoutAbilities はルールのファイルの loadout.abilities。null なら一覧の全部が候補になり、選んでいない人は先頭の 2 つを持つ
         private void Start(
-            DeployCatalog catalog, bool wall = false, Abilities abilities = Abilities.On, IReadOnlyList<RespawnAnchor> respawnAnchors = null)
+            DeployCatalog catalog,
+            bool wall = false,
+            Abilities abilities = Abilities.On,
+            IReadOnlyList<RespawnAnchor> respawnAnchors = null,
+            IReadOnlyList<string> loadoutAbilities = null,
+            bool otherMap = false)
         {
             var colliders = new List<WorldCollider>
             {
@@ -521,8 +531,16 @@ namespace Shooter.Server.Tests
 
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(Rules(abilities, respawnAnchors)), PingSpec.Default, "memory", null);
+            var data = new ServerRulesData(
+                "TeamDeathmatch", TestRules.File(Rules(abilities, respawnAnchors), abilities: loadoutAbilities), PingSpec.Default, "memory", null);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(false, TextWriter.Null, _log), () => _time);
+            if (otherMap)
+            {
+                // 替えた先も同じ床と出現地点にし、マップを替えたことだけを確かめる
+                var other = new ServerMapData(_otherMapName, new WorldMap(colliders), TestMaps.NavMesh(), "memory", points);
+                _match.UseMaps(map, new[] { map, other });
+            }
+
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),
                 "1.0.0",

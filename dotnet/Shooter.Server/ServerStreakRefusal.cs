@@ -10,6 +10,8 @@ namespace Shooter.Server
 
         CannotAct,
 
+        UnknownReward,
+
         NothingReady,
 
         NotReady,

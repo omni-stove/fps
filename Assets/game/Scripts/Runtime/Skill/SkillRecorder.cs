@@ -73,35 +73,6 @@ namespace Shooter.Runtime
             Rating = loaded;
         }
 
-        // 版 5 までのプロフィールに入っていたレートを引き継ぐ。skill のスロットがすでにあれば、そちらが新しいので何もしない。
-        public bool AdoptLegacy(int rating)
-        {
-            if (rating < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(rating), rating, "rating must not be negative");
-            }
-
-            if (!IsInstalled)
-            {
-                // 読み込む前に引き継ぐと、Install で読んだレートに上書きされて消えるので断る。
-                throw new InvalidOperationException("a legacy rating can only be adopted while the skill recorder is installed");
-            }
-
-            if (Storage.TryRead(Slot, out var text) && text != null)
-            {
-                return false;
-            }
-
-            // 調整で上限・下限を狭めたゲームでも範囲の外のレートを持ち込まないよう、今の範囲に収める。
-            var adopted = Skill.Clamp(rating);
-            Debug.Log(SkillLog.AdoptedLegacy(rating, adopted));
-            Rating = adopted;
-
-            // プロフィールは次の保存でレートを書かなくなるので、ここで書いておかないと引き継いだ値を失う。
-            Save();
-            return true;
-        }
-
         public void Uninstall()
         {
             if (!IsInstalled)

@@ -41,6 +41,17 @@ namespace Shooter.Core.Tests
             Assert.That(beacon.Beacon.SpawnDistance, Is.EqualTo(BeaconSpec.DefaultSpawnDistance));
         }
 
+        // 回数と間隔はキットの既定ではなく、ビルダーの AbilityAssetBuilder.BeaconAbility* の値。Editor のアセンブリは dotnet から引けないので値で比べる
+        [Test]
+        public void TheBeaconHasTheChargesOfTheDemoBeacon()
+        {
+            var beacon = Read(RepositoryRoot()).All.Single(t => t.Role == DeployRole.Beacon);
+
+            Assert.That(beacon.Ability.MaxCharges, Is.EqualTo(1));
+            Assert.That(beacon.Ability.RechargeSeconds, Is.EqualTo(45f));
+            Assert.That(beacon.Ability.CooldownSeconds, Is.EqualTo(1f));
+        }
+
         [Test]
         public void TheTurretFiresASampleWeapon()
         {
@@ -69,6 +80,9 @@ namespace Shooter.Core.Tests
                 Assert.That(asset, Does.Contain("  _maxActive: " + Text(deploy.MaxActive) + "\n"), _assetNames[i]);
                 Assert.That(asset, Does.Contain("  _maxHealth: " + Text(deploy.MaxHealth) + "\n"), _assetNames[i]);
                 Assert.That(asset, Does.Contain("  _maxRange: " + Text(deploy.MaxRange) + "\n"), _assetNames[i]);
+                Assert.That(asset, Does.Contain("  _maxCharges: " + Text(type.Ability.MaxCharges) + "\n"), _assetNames[i]);
+                Assert.That(asset, Does.Contain("  _rechargeSeconds: " + Text(type.Ability.RechargeSeconds) + "\n"), _assetNames[i]);
+                Assert.That(asset, Does.Contain("  _cooldownSeconds: " + Text(type.Ability.CooldownSeconds) + "\n"), _assetNames[i]);
                 Assert.That(
                     asset,
                     Does.Contain("  _size: {x: " + Text(deploy.Width) + ", y: " + Text(deploy.Height) + ", z: " + Text(deploy.Depth) + "}"),

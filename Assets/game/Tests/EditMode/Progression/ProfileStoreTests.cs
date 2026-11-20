@@ -37,7 +37,6 @@ namespace Shooter.Tests.EditMode
                     "{\"version\":6,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,"
                     + "\"headshots\":0,\"meleeKills\":0,\"playSeconds\":0,\"achievements\":[],\"cosmetics\":{}}"));
             Assert.That(new ProfileStore(storage).Load(), Is.EqualTo(profile));
-            Assert.That(new ProfileStore(storage).Load().LegacyRating, Is.Null);
         }
 
         [Test]
@@ -57,7 +56,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void AVersion3ProfileKeepsItsRecordAndItsRatingAsTheLegacyRating()
+        public void AVersion3ProfileKeepsItsRecordAndDropsItsRating()
         {
             var storage = new MemorySaveStorage();
             const string version3 = "{\"version\":3,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1234}";
@@ -67,7 +66,6 @@ namespace Shooter.Tests.EditMode
             var profile = new ProfileStore(storage).Load();
 
             Assert.That(profile, Is.EqualTo(new PlayerProfile(900, 3, 2, 2, 1, 4)));
-            Assert.That(profile.LegacyRating, Is.EqualTo(1234));
             Assert.That(profile.Achievements, Is.Empty);
             Assert.That(profile.PlaySeconds, Is.Zero);
             Assert.That(storage.Has(ProfileStore.RejectedSlot), Is.False);
@@ -76,7 +74,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void AVersion2ProfileKeepsItsRecordAndHasNoLegacyRating()
+        public void AVersion2ProfileKeepsItsRecord()
         {
             var storage = new MemorySaveStorage();
             const string version2 = "{\"version\":2,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1}";
@@ -86,7 +84,6 @@ namespace Shooter.Tests.EditMode
             var profile = new ProfileStore(storage).Load();
 
             Assert.That(profile, Is.EqualTo(new PlayerProfile(900, 3, 2, 2, 1, 4)));
-            Assert.That(profile.LegacyRating, Is.Null);
             Assert.That(storage.Has(ProfileStore.RejectedSlot), Is.False);
             Assert.That(storage.WriteCount, Is.EqualTo(writes), "the old save is rewritten by the next save, not by reading");
             LogAssert.NoUnexpectedReceived();

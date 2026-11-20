@@ -18,6 +18,9 @@ namespace Shooter.Core
         public const string WidthItem = "width";
         public const string HeightItem = "height";
         public const string DepthItem = "depth";
+        public const string MaxChargesItem = "maxCharges";
+        public const string RechargeSecondsItem = "rechargeSeconds";
+        public const string CooldownSecondsItem = "cooldownSeconds";
         public const string TurretItem = "turret";
         public const string DecoyItem = "decoy";
         public const string BeaconItem = "beacon";
@@ -61,6 +64,9 @@ namespace Shooter.Core
             WidthItem,
             HeightItem,
             DepthItem,
+            MaxChargesItem,
+            RechargeSecondsItem,
+            CooldownSecondsItem,
             TurretItem,
             DecoyItem,
             BeaconItem,
@@ -127,6 +133,7 @@ namespace Shooter.Core
             var id = entry.ToText(entry.ItemPath(IdItem), entry.Require(IdItem));
             var role = entry.ToEnum<DeployRole>(entry.ItemPath(RoleItem), entry.Require(RoleItem));
             var deploy = ReadDeploy(entry, DeployType.DefaultDeploy(role));
+            var ability = ReadAbility(entry);
 
             var turretFields = entry.Object(TurretItem, TurretItemNames);
             var decoyFields = entry.Object(DecoyItem, DecoyItemNames);
@@ -180,7 +187,7 @@ namespace Shooter.Core
 
             try
             {
-                return new DeployType(id, role, deploy, turret, weaponId, decoy, beacon, drone);
+                return new DeployType(id, role, deploy, turret, weaponId, decoy, beacon, drone, ability);
             }
             catch (ArgumentException e)
             {
@@ -202,6 +209,22 @@ namespace Shooter.Core
             try
             {
                 return new DeploySpec(maxActive, overflow, maxHealth, maxRange, maxSlopeDegrees, maxStepHeight, width, height, depth);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(entry, TypeItemNames, e);
+            }
+        }
+
+        // 置くまでの溜め (windupSeconds) は読まない。置く地点はクライアントが溜めの後に送るので、サーバーが受けるかには効かない
+        private static AbilitySpec ReadAbility(ServerDataJson.Fields entry)
+        {
+            var maxCharges = entry.ReadInt(MaxChargesItem, AbilitySpec.DefaultMaxCharges);
+            var rechargeSeconds = entry.ReadFloat(RechargeSecondsItem, AbilitySpec.DefaultRechargeSeconds);
+            var cooldownSeconds = entry.ReadFloat(CooldownSecondsItem, AbilitySpec.DefaultCooldownSeconds);
+            try
+            {
+                return new AbilitySpec(maxCharges, rechargeSeconds, cooldownSeconds, AbilitySpec.DefaultWindupSeconds);
             }
             catch (ArgumentException e)
             {

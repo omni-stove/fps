@@ -17,9 +17,9 @@ namespace Shooter.Protocol.Tests
         private const int _battleRoyaleBytes = 8 + 4 + 8 + 4 + 4 + 4 + 4;
 
         [Test]
-        public void TheVersionIs22()
+        public void TheVersionIs24()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(23));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(24));
         }
 
         [Test]
@@ -810,6 +810,113 @@ namespace Shooter.Protocol.Tests
             Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
             Assert.That(got.Players[0].SquadId, Is.EqualTo(5));
             Assert.That(got.Players[0].WeaponId, Is.EqualTo("rifle"));
+        }
+
+        [Test]
+        public void ConcealedAndBotRoundTripTogether()
+        {
+            var sent = Build(100);
+            ref var concealedBot = ref AddPlayer(sent, 1);
+            concealedBot.IsBot = true;
+            concealedBot.Concealed = true;
+            AddPlayer(sent, 2).Concealed = true;
+            AddPlayer(sent, 3).IsBot = true;
+            AddPlayer(sent, 4);
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Players[0].IsBot, Is.True);
+            Assert.That(got.Players[0].Concealed, Is.True);
+            Assert.That(got.Players[1].IsBot, Is.False);
+            Assert.That(got.Players[1].Concealed, Is.True);
+            Assert.That(got.Players[2].IsBot, Is.True);
+            Assert.That(got.Players[2].Concealed, Is.False);
+            Assert.That(got.Players[3].IsBot, Is.False);
+            Assert.That(got.Players[3].Concealed, Is.False);
+            Assert.That(got.Players[0].ChangedBits(sent.Players[0]), Is.Zero);
+        }
+
+        [Test]
+        public void ConcealingDoesNotGrowTheRow()
+        {
+            var plain = Build(100);
+            AddPlayer(plain, 1);
+            var concealed = Build(100);
+            AddPlayer(concealed, 1).Concealed = true;
+
+            Assert.That(Size(concealed, null), Is.EqualTo(Size(plain, null)));
+        }
+
+        [Test]
+        public void ConcealingIsSentWithTheIdentityAndResolves()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1).SquadId = 4;
+            var current = Build(101);
+            ref var player = ref AddPlayer(current, 1);
+            player.SquadId = 4;
+            player.Concealed = true;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Identity));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].Concealed, Is.True);
+            Assert.That(got.Players[0].SquadId, Is.EqualTo(4));
+            Assert.That(got.Players[0].WeaponId, Is.EqualTo("rifle"));
+        }
+
+        [Test]
+        public void ShowingAgainIsSentWithTheIdentityAndResolves()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1).Concealed = true;
+            var current = Build(101);
+            AddPlayer(current, 1);
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Identity));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].Concealed, Is.False);
+        }
+
+        [Test]
+        public void AnUnchangedConcealedRowIsNotResent()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1).Concealed = true;
+            var current = Build(101);
+            AddPlayer(current, 1).Concealed = true;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.None));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].Concealed, Is.True);
+        }
+
+        [Test]
+        public void AnUnknownIdentityFlagIsRejected()
+        {
+            var sent = Build(100);
+            AddPlayer(sent, 1).IsBot = true;
+            var plain = Build(100);
+            AddPlayer(plain, 1);
+            var bytes = Bytes(sent, null);
+            var other = Bytes(plain, null);
+
+            // 旗のバイトは Bot の有無だけで変わるので、Bot でない行と比べて場所を見つける
+            var at = 0;
+            while (bytes[at] == other[at])
+            {
+                at++;
+            }
+
+            Assert.That(bytes[at], Is.EqualTo(1));
+            bytes[at] = 1 << 2;
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
         }
 
         [Test]

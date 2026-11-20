@@ -147,6 +147,10 @@ make server-dotnet ARGS="-rules FreeForAll"
   使い切ると `[Deploy] ... refused reason=NoCharges charges=0/<回数> wait=<秒>`、間隔の内なら `reason=CoolingDown` で断る。回数は出現し直すと満ちる。
   サーバー側のアンチチートの調整値 (見えない相手を送らない `conceal`・違反の累積 `violations`・統計の検知 `stats`・通報の証拠 `evidence`) は
   `server-data/tuning/anticheat.json` から読み、起動の `[Server] combat tuning ... anticheat=<ファイル>` に出す。どれも既定は `enabled` が `false` で、試合の挙動を変えない。
+  - `conceal.enabled` を `true` にすると、受け取る人の味方 (FFA は本人、BR は分隊) の生きている誰の目からも地形に遮られる・`maxDistance` より遠い敵の行に
+    `Concealed` を立て、位置・速度・向き・姿勢・武器・乗っている座席を空にして送る。名簿・スコア・体力・ダウン・チームはそのまま送る。
+    見え始める前に送るため、体の横と上に `marginDistance` ずらした点も見て、最後に見えてから `marginSeconds` の間は見えているとみなす。
+    クライアントは `Concealed` の相手の体を描かず、ロックオン・照準の補助・名札の対象から外し、見え直した tick から補間をやり直す。
   - `violations.enabled` を `true` にすると、拒否された射撃と予算を超えた入力を人ごとに直近 `windowSeconds` 秒で数え、
     `shotRejectionLimit`・`overBudgetLimit` を超えた人を EAC と同じ理由 (`shooter:rejected:anti-cheat`) で切る。
     切るときに `[AntiCheat] violations kicking id=<id>: reason=ShotRejected|InputOverBudget count=<数> limit=<上限> window=<秒>s` と出す。

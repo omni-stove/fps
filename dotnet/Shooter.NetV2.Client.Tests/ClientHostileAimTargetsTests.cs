@@ -107,6 +107,19 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void AConcealedEnemyIsNotCollectedEvenWithAShownPose()
+        {
+            AddPlayer(_me, Team.Alpha, 100, Vector3.Zero);
+            AddPlayer(2, Team.Bravo, 100, new Vector3(0f, 0f, 20f));
+            AddPlayer(3, Team.Bravo, 100, new Vector3(0f, 0f, 5f));
+            _snapshot.Players[1].Concealed = true;
+
+            var found = Collect(new NoWorld(), range: 50f);
+
+            Assert.That(found, Is.EqualTo(new[] { new Vector3(0f, _geometry.Standing.CenterY, 5f) }));
+        }
+
+        [Test]
         public void WhileTheOwnRowIsMissingNothingIsCollected()
         {
             AddPlayer(2, Team.Bravo, 100, new Vector3(0f, 0f, 20f));

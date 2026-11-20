@@ -28,6 +28,23 @@ namespace Shooter.Server
 
         public bool CanSee(Team team, IReadOnlyList<Vector3> eyes, int targetId, Vector3 targetCenter, Vector3 targetEye, double now)
         {
+            return Remember((false, (int)team, targetId), SeenFromAny(eyes, targetCenter, targetEye), now);
+        }
+
+        public bool CanSeeAlone(int viewerId, Vector3 eye, int targetId, Vector3 targetCenter, Vector3 targetEye, double now)
+        {
+            return Remember((true, viewerId, targetId), SeenFrom(eye, targetCenter, targetEye), now);
+        }
+
+        // チームと一致しないまとまり (BR の分隊、FFA の一人) は、まとまりの中で一番小さい番号の人で見分ける。
+        // 一人のまとまりは CanSeeAlone と同じ覚えを使う。番号の人が抜けると Forget で覚えが消えるが、失うのは余裕の秒だけ
+        public bool CanSeeAsGroup(int leaderId, IReadOnlyList<Vector3> eyes, int targetId, Vector3 targetCenter, Vector3 targetEye, double now)
+        {
+            return Remember((true, leaderId, targetId), SeenFromAny(eyes, targetCenter, targetEye), now);
+        }
+
+        private bool SeenFromAny(IReadOnlyList<Vector3> eyes, Vector3 targetCenter, Vector3 targetEye)
+        {
             ArgumentNullException.ThrowIfNull(eyes);
             var seen = false;
             for (var i = 0; i < eyes.Count && !seen; i++)
@@ -35,12 +52,7 @@ namespace Shooter.Server
                 seen = SeenFrom(eyes[i], targetCenter, targetEye);
             }
 
-            return Remember((false, (int)team, targetId), seen, now);
-        }
-
-        public bool CanSeeAlone(int viewerId, Vector3 eye, int targetId, Vector3 targetCenter, Vector3 targetEye, double now)
-        {
-            return Remember((true, viewerId, targetId), SeenFrom(eye, targetCenter, targetEye), now);
+            return seen;
         }
 
         // 抜けた人の番号は後から入る人に使い回されるので、見る側としても見られる側としても覚えを消す

@@ -68,6 +68,18 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void AConcealedPlayerIsNotCollectedEvenWithAShownPose()
+        {
+            AddPlayer(2, 100, new Vector3(0f, 0f, 20f));
+            AddPlayer(3, 100, new Vector3(0f, 0f, 5f));
+            _snapshot.Players[0].Concealed = true;
+
+            var found = Collect(new NoWorld(), range: 50f);
+
+            Assert.That(found.ConvertAll(c => c.Id), Is.EqualTo(_inFrontOfTheWall));
+        }
+
+        [Test]
         public void WithoutASnapshotNothingIsCollected()
         {
             _snapshot = null;

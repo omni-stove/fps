@@ -6,6 +6,7 @@ namespace Shooter.Protocol
     public struct PlayerSnapshot : ISnapshotEntity<PlayerSnapshot>
     {
         private const int _motionFlagCount = 5;
+        private const int _identityFlagCount = 2;
         private const float _leanSteps = 127f;
 
         public int PlayerId { get; set; }
@@ -19,6 +20,10 @@ namespace Shooter.Protocol
 
         // 陣営と同じく試合の間ほぼ変わらないので、部分を分けずに Identity に載せる
         public byte SquadId { get; set; }
+
+        // 行を消さずに旗で隠すのは、名簿・スコア・残りの人数を行から数えているため。動きの値は送る側が空にする。
+        // 見えるかが変わるたびに切り替わるが、部分のビットに空きが無いので、Bot の旗と同じバイトに載せて Identity で送る
+        public bool Concealed { get; set; }
 
         public Vector3 Position { get; set; }
         public Vector3 Velocity { get; set; }
@@ -88,6 +93,7 @@ namespace Shooter.Protocol
             var bits = PlayerFields.None;
             if (Team != baseline.Team
                 || IsBot != baseline.IsBot
+                || Concealed != baseline.Concealed
                 || SquadId != baseline.SquadId
                 || !string.Equals(CosmeticId ?? "", baseline.CosmeticId ?? "", System.StringComparison.Ordinal))
             {
@@ -205,7 +211,7 @@ namespace Shooter.Protocol
             if ((fields & PlayerFields.Identity) != 0)
             {
                 writer.WriteByte((byte)Team);
-                writer.WriteBool(IsBot);
+                writer.WriteByte((byte)((IsBot ? 1 : 0) | (Concealed ? 2 : 0)));
                 writer.WriteString(CosmeticId, MatchProtocol.MaxContentIdBytes);
                 writer.WriteByte(SquadId);
             }
@@ -339,7 +345,9 @@ namespace Shooter.Protocol
             if ((fields & PlayerFields.Identity) != 0)
             {
                 Team = (Team)reader.ReadByteBelow(EnumRange<Team>.Count, "team");
-                IsBot = reader.ReadBool();
+                var flags = reader.ReadByteBelow(1 << _identityFlagCount, "player identity flags");
+                IsBot = (flags & 1) != 0;
+                Concealed = (flags & 2) != 0;
                 CosmeticId = reader.ReadString(MatchProtocol.MaxContentIdBytes, CosmeticId);
                 SquadId = reader.ReadByte();
             }
@@ -463,6 +471,7 @@ namespace Shooter.Protocol
             {
                 Team = baseline.Team;
                 IsBot = baseline.IsBot;
+                Concealed = baseline.Concealed;
                 CosmeticId = baseline.CosmeticId;
                 SquadId = baseline.SquadId;
             }

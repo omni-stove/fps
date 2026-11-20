@@ -54,7 +54,7 @@ namespace Shooter.NetV2
             for (var i = 0; i < latest.Players.Count; i++)
             {
                 var row = latest.Players[i];
-                if (row.PlayerId == _localPlayerId || !_sample(row.PlayerId, out var pose) || !IsFinite(pose.Position))
+                if (row.PlayerId == _localPlayerId || row.Concealed || !_sample(row.PlayerId, out var pose) || !IsFinite(pose.Position))
                 {
                     continue;
                 }

@@ -47,7 +47,7 @@ namespace Shooter.NetV2
             for (var i = 0; i < latest.Players.Count; i++)
             {
                 var row = latest.Players[i];
-                if (row.PlayerId == _localPlayerId || row.Health <= 0 || !TryLocate(row.PlayerId, out var point))
+                if (row.PlayerId == _localPlayerId || row.Concealed || row.Health <= 0 || !TryLocate(row.PlayerId, out var point))
                 {
                     continue;
                 }

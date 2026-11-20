@@ -17,31 +17,6 @@ namespace Shooter.Runtime
 
         public const string TargetTag = "Player";
 
-        // キットを使うゲームがこの名前で読んでいても壊れないよう、EnemySpec に移した後も別名として残す。
-        [Obsolete("Use EnemySpec.DefaultSightRange")]
-        public const float DefaultSightRange = EnemySpec.DefaultSightRange;
-
-        [Obsolete("Use EnemySpec.DefaultAttackRange")]
-        public const float DefaultAttackRange = EnemySpec.DefaultAttackRange;
-
-        [Obsolete("Use EnemySpec.DefaultLoseSightSeconds")]
-        public const float DefaultLoseSightSeconds = EnemySpec.DefaultLoseSightSeconds;
-
-        [Obsolete("Use EnemySpec.DefaultSearchSeconds")]
-        public const float DefaultSearchSeconds = EnemySpec.DefaultSearchSeconds;
-
-        [Obsolete("Use EnemySpec.DefaultReactionSeconds")]
-        public const float DefaultReactionSeconds = EnemySpec.DefaultReactionSeconds;
-
-        [Obsolete("Use EnemySpec.DefaultOpeningSpreadDegrees")]
-        public const float DefaultOpeningSpreadDegrees = EnemySpec.DefaultOpeningSpreadDegrees;
-
-        [Obsolete("Use EnemySpec.DefaultSettledSpreadDegrees")]
-        public const float DefaultSettledSpreadDegrees = EnemySpec.DefaultSettledSpreadDegrees;
-
-        [Obsolete("Use EnemySpec.DefaultOpeningShots")]
-        public const int DefaultOpeningShots = EnemySpec.DefaultOpeningShots;
-
         public const float DefaultEyeHeight = 1.6f;
 
         public const float DefaultTurnSpeed = 360f;

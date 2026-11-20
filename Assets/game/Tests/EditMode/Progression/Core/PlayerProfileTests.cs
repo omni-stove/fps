@@ -27,7 +27,6 @@ namespace Shooter.Core.Tests
             Assert.That(profile.Deaths, Is.EqualTo(4));
             Assert.That(profile.Matches, Is.EqualTo(3));
             Assert.That(profile.Wins, Is.EqualTo(2));
-            Assert.That(profile.LegacyRating, Is.Null);
             Assert.That(profile.Headshots, Is.Zero);
             Assert.That(profile.MeleeKills, Is.Zero);
             Assert.That(profile.PlaySeconds, Is.Zero);
@@ -115,7 +114,6 @@ namespace Shooter.Core.Tests
         public void TheEmptyProfileStartsAtZero()
         {
             Assert.That(PlayerProfile.Empty, Is.EqualTo(new PlayerProfile(0, 0, 0, 0, 0, 0)));
-            Assert.That(PlayerProfile.Empty.LegacyRating, Is.Null);
         }
 
         [TestCase(-1, 0, 0, 0, 0, 0, "xp")]
@@ -196,7 +194,6 @@ namespace Shooter.Core.Tests
 
             Assert.That(read.Cosmetics, Is.Empty);
             Assert.That(read.Version, Is.EqualTo(6));
-            Assert.That(read.LegacyRating, Is.EqualTo(1000));
             Assert.That(read.ToJson(), Does.EndWith("\"achievements\":[\"first-blood\"],\"cosmetics\":{}}"), "the next save writes the current version");
         }
 
@@ -212,30 +209,27 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void AVersion5ProfileHandsItsRatingOverAsTheLegacyRatingAndWritesNone()
+        public void AVersion5ProfileDropsItsRatingAndWritesNone()
         {
             var read = PlayerProfile.FromJson(
                 "{\"version\":5,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,\"rating\":1234,"
                 + "\"headshots\":2,\"meleeKills\":1,\"playSeconds\":754,\"achievements\":[\"first-blood\"],\"cosmetics\":{\"Camo\":\"camo-tiger\"}}");
 
-            Assert.That(read.LegacyRating, Is.EqualTo(1234));
             Assert.That(
                 read.ToJson(),
                 Is.EqualTo(
                     "{\"version\":6,\"xp\":900,\"kills\":3,\"assists\":4,\"deaths\":2,\"matches\":2,\"wins\":1,"
                     + "\"headshots\":2,\"meleeKills\":1,\"playSeconds\":754,\"achievements\":[\"first-blood\"],\"cosmetics\":{\"Camo\":\"camo-tiger\"}}"));
-            Assert.That(PlayerProfile.FromJson(read.ToJson()).LegacyRating, Is.Null, "the next read has no rating left to hand over");
         }
 
         [Test]
-        public void TheLegacyRatingIsNotPartOfTheRecord()
+        public void TheOldRatingIsNotPartOfTheRecord()
         {
             var read = PlayerProfile.FromJson(
                 "{\"version\":3,\"xp\":10,\"kills\":1,\"assists\":0,\"deaths\":0,\"matches\":1,\"wins\":1,\"rating\":1500}");
 
             Assert.That(read, Is.EqualTo(new PlayerProfile(10, 1, 0, 1, 1, 0)));
             Assert.That(read.GetHashCode(), Is.EqualTo(new PlayerProfile(10, 1, 0, 1, 1, 0).GetHashCode()));
-            Assert.That(read.WithStats(1, 0, 0).LegacyRating, Is.Null, "a changed profile is no longer the old save");
             Assert.That(read.ToString(), Is.EqualTo("xp=10 kills=1 assists=0 deaths=0 matches=1 wins=1 headshots=0 meleeKills=0 playSeconds=0 achievements="));
         }
 
@@ -305,7 +299,6 @@ namespace Shooter.Core.Tests
 
             Assert.That(read, Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 0)));
             Assert.That(read.Version, Is.EqualTo(PlayerProfile.CurrentVersion));
-            Assert.That(read.LegacyRating, Is.Null, "version 1 had no rating");
             Assert.That(
                 read.ToJson(),
                 Is.EqualTo(
@@ -315,13 +308,12 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void AVersion3ProfileIsReadWithNoStatsOrAchievementsAndItsRatingAsTheLegacyRating()
+        public void AVersion3ProfileIsReadWithNoStatsOrAchievementsAndNoRating()
         {
             var read = PlayerProfile.FromJson(
                 "{\"version\":3,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2,\"rating\":1234}");
 
             Assert.That(read, Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7, 0, 0, 0, null)));
-            Assert.That(read.LegacyRating, Is.EqualTo(1234));
             Assert.That(read.Version, Is.EqualTo(6));
             Assert.That(read.Achievements, Is.Empty);
             Assert.That(
@@ -340,18 +332,16 @@ namespace Shooter.Core.Tests
                 + "\"headshots\":2,\"meleeKills\":1,\"playSeconds\":95,\"achievements\":[\"first-blood\"]}");
 
             Assert.That(read, Is.EqualTo(new PlayerProfile(0, 3, 0, 1, 0, 0, 2, 1, 95, _firstBlood)));
-            Assert.That(read.LegacyRating, Is.EqualTo(1000));
         }
 
         [Test]
-        public void AVersion2ProfileKeepsItsRecordAndHasNoLegacyRating()
+        public void AVersion2ProfileKeepsItsRecord()
         {
             const string version2 = "{\"version\":2,\"xp\":1650,\"kills\":12,\"assists\":7,\"deaths\":4,\"matches\":3,\"wins\":2}";
 
             var read = PlayerProfile.FromJson(version2);
 
             Assert.That(read, Is.EqualTo(new PlayerProfile(1650, 12, 4, 3, 2, 7)));
-            Assert.That(read.LegacyRating, Is.Null, "version 2 had no rating, so the skill save starts at its own initial rating");
             Assert.That(read.Version, Is.EqualTo(6));
             Assert.That(
                 read.ToJson(),
@@ -409,7 +399,6 @@ namespace Shooter.Core.Tests
                 "{ \"rating\": 7, \"assists\": 6, \"wins\": 1, \"matches\": 2, \"deaths\": 3, \"kills\": 4, \"xp\": 5, \"version\": 3 }\n");
 
             Assert.That(rated, Is.EqualTo(new PlayerProfile(5, 4, 3, 2, 1, 6)));
-            Assert.That(rated.LegacyRating, Is.EqualTo(7));
         }
 
         [TestCase("")]

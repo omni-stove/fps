@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Shooter.Editor
 {
     // セーブ無しから始めるため、この Editor の Application.persistentDataPath にある各ミッションのスロット
-    // (CampaignSaveSlots.For と、Campaign01 は古いスロット CampaignSaveSlots.Legacy) のセーブを走らせる前に消す。
+    // (CampaignSaveSlots.For) のセーブを走らせる前に消す。
     // 走っている間に開始地点のチェックポイントでセーブされるので、終えるときにもう一度消す。
     // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態 (何本目のミッションか・見つけた問題) は SessionState に置く。
     // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
@@ -605,17 +605,9 @@ namespace Shooter.Editor
             var storage = FileSaveStorage.CreateDefault();
             foreach (var mission in CampaignSceneBuilder.Missions())
             {
-                var slots = new List<string> { CampaignSaveSlots.For(mission.Id) };
-                if (CampaignSaveSlots.ReadsLegacy(mission.Id))
-                {
-                    slots.Add(CampaignSaveSlots.Legacy);
-                }
-
-                foreach (var slot in slots)
-                {
-                    storage.Delete(slot);
-                    Debug.Log($"{LogTag} deleted save slot={slot} {when} path={storage.PathFor(slot)}");
-                }
+                var slot = CampaignSaveSlots.For(mission.Id);
+                storage.Delete(slot);
+                Debug.Log($"{LogTag} deleted save slot={slot} {when} path={storage.PathFor(slot)}");
             }
         }
 

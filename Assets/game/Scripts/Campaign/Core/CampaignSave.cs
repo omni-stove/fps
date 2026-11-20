@@ -12,12 +12,6 @@ namespace Shooter.Core
 
         public const int WithoutAttachmentsVersion = 2;
 
-        public const int LegacySingleWeaponVersion = 1;
-
-        // LegacySingleWeaponVersion の頃のプレイヤーは rifle だけを持っていたので、その残弾を rifle に持たせる。
-        // rifle の Id は再ビルドしても変わらない (WeaponAssetBuilder.RifleId と同じ値) ので、ここに書いておける。
-        public const string LegacyWeaponId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
-
         private const string _versionKey = "version";
         private const string _missionIdKey = "missionId";
         private const string _checkpointIdKey = "checkpointId";
@@ -36,11 +30,6 @@ namespace Shooter.Core
         private static readonly string[] _rootKeys =
         {
             _versionKey, _missionIdKey, _checkpointIdKey, _healthKey, _equippedWeaponIdKey, _weaponsKey, _objectivesKey,
-        };
-
-        private static readonly string[] _legacyRootKeys =
-        {
-            _versionKey, _missionIdKey, _checkpointIdKey, _healthKey, _ammoInMagazineKey, _reserveAmmoKey, _objectivesKey,
         };
 
         private static readonly string[] _weaponKeys = { _weaponIdKey, _ammoInMagazineKey, _reserveAmmoKey, _attachmentsKey };
@@ -280,15 +269,14 @@ namespace Shooter.Core
 
             // 形式が変わっても判別できるよう、バージョンは他の項目より先に確かめる。
             var version = ReadInt(root, _versionKey);
-            if (version != CurrentVersion && version != WithoutAttachmentsVersion && version != LegacySingleWeaponVersion)
+            if (version != CurrentVersion && version != WithoutAttachmentsVersion)
             {
                 throw new FormatException(
-                    $"unsupported save data version {version.ToString(CultureInfo.InvariantCulture)} (expected {CurrentVersion.ToString(CultureInfo.InvariantCulture)}, "
-                    + $"{WithoutAttachmentsVersion.ToString(CultureInfo.InvariantCulture)} or {LegacySingleWeaponVersion.ToString(CultureInfo.InvariantCulture)})");
+                    $"unsupported save data version {version.ToString(CultureInfo.InvariantCulture)} (expected {CurrentVersion.ToString(CultureInfo.InvariantCulture)} "
+                    + $"or {WithoutAttachmentsVersion.ToString(CultureInfo.InvariantCulture)})");
             }
 
-            var legacy = version == LegacySingleWeaponVersion;
-            RejectUnknownKeys(root, legacy ? _legacyRootKeys : _rootKeys);
+            RejectUnknownKeys(root, _rootKeys);
             var missionId = ReadString(root, _missionIdKey);
             var checkpointId = ReadString(root, _checkpointIdKey);
             var health = ReadInt(root, _healthKey);
@@ -296,22 +284,9 @@ namespace Shooter.Core
 
             try
             {
-                List<WeaponAmmo> weapons;
-                string equippedWeaponId;
                 var attachments = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-                if (legacy)
-                {
-                    weapons = new List<WeaponAmmo>
-                    {
-                        new WeaponAmmo(LegacyWeaponId, ReadInt(root, _ammoInMagazineKey), ReadInt(root, _reserveAmmoKey)),
-                    };
-                    equippedWeaponId = LegacyWeaponId;
-                }
-                else
-                {
-                    equippedWeaponId = ReadString(root, _equippedWeaponIdKey);
-                    weapons = ReadWeapons(ReadArray(root, _weaponsKey), version == CurrentVersion ? attachments : null);
-                }
+                var equippedWeaponId = ReadString(root, _equippedWeaponIdKey);
+                var weapons = ReadWeapons(ReadArray(root, _weaponsKey), version == CurrentVersion ? attachments : null);
 
                 var objectives = new List<ObjectiveProgress>(items.Count);
                 foreach (var item in items)

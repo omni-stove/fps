@@ -400,7 +400,7 @@ namespace Shooter.NetV2
 
         private void StartClient(IMatchTransport transport, string version, Action<string> log, bool replay)
         {
-            _client =new MatchClient(transport, version, _deviceKey, new PlayerNameStore().Load(), BuildExtras, log);
+            _client = new MatchClient(transport, version, _deviceKey, new PlayerNameStore().Load(), BuildExtras, log);
             _client.Accepted += HandleAccepted;
             _client.SnapshotReceived += HandleSnapshot;
             _client.MessageReceived += HandleMessage;

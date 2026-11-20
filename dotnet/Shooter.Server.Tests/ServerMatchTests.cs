@@ -285,6 +285,28 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void APlayerKeepsTheNameItJoinedWith()
+        {
+            var named = _match.Join(new ConnectionId(1), "device1", displayName: "Ace");
+            var unnamed = _match.Join(new ConnectionId(2), "device2");
+            var bot = _match.JoinBot(BotRoster.FirstBotPlayerId);
+
+            Assert.That(named.DisplayName, Is.EqualTo("Ace"));
+            Assert.That(unnamed.DisplayName, Is.Empty);
+            Assert.That(bot.DisplayName, Is.Empty);
+            Assert.That(_match.Join(new ConnectionId(3), "device3", displayName: "").DisplayName, Is.Empty);
+        }
+
+        [TestCase(" Ace")]
+        [TestCase("A\nce")]
+        [TestCase("twenty-two_characters!")]
+        public void ANameThatWasNotSanitizedIsRefused(string name)
+        {
+            Assert.Throws<ArgumentException>(() => _match.Join(new ConnectionId(1), "device1", displayName: name));
+            Assert.That(_match.PlayerCount, Is.Zero);
+        }
+
+        [Test]
         public void TextFormatBuildsNoJson()
         {
             var match = new ServerMatch(0f, _log, new ServerEventWriter(false, _json, _log), () => _time);

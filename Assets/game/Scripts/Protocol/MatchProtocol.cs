@@ -4,7 +4,7 @@ namespace Shooter.Protocol
     {
         // メッセージの組み合わせの版をつなぐときに確かめるのは、個々のメッセージの版 (IMessage.Version) だけだと、
         // つないだ後に初めて読めない種類が届くまで食い違いに気付けないため。
-        public const ushort Version = 31;
+        public const ushort Version = 32;
 
         public const int MaxReasonBytes = 128;
 

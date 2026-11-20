@@ -14,8 +14,10 @@ namespace Shooter.Server
             string partyId = null,
             long joinOrder = 0,
             int? skillRating = null,
-            string voiceUserId = null)
+            string voiceUserId = null,
+            string displayName = null)
         {
+            DisplayName = displayName ?? string.Empty;
             SkillRating = skillRating;
             ProductUserId = productUserId;
             VoiceUserId = productUserId ?? voiceUserId;
@@ -46,6 +48,9 @@ namespace Shooter.Server
         public long JoinOrder { get; }
 
         public int? SkillRating { get; }
+
+        // 名乗らなかった人や検査で弾いた人を null でなく空にするのは、送る側が名簿の欄で null を分けずに済むようにするため
+        public string DisplayName { get; }
 
         public bool IsBot => BotRoster.IsBotId(PlayerId);
 

@@ -452,8 +452,31 @@ namespace Shooter.Server
             _log.WriteLine("[Net] approved client " + connection.Value.ToString(CultureInfo.InvariantCulture) + " (version " + verdict.ClientVersion + ")");
 
             Match.Join(
-                connection, rejoinKey, productUserId, PartyIdOf(connection, request), request.SkillRating, ClaimedProductUserId(connection, request));
+                connection,
+                rejoinKey,
+                productUserId,
+                PartyIdOf(connection, request),
+                request.SkillRating,
+                ClaimedProductUserId(connection, request),
+                DisplayNameOf(connection, request));
             _host.OnConnected(connection);
+        }
+
+        // 名前は見せるのにしか使わないので、検査で弾いても断らずに名前の無い人として入れる。
+        // 弾いた名前をログに書かないのは、制御文字でログの行を偽れないようにするため
+        private string DisplayNameOf(ConnectionId connection, ConnectRequestMessage request)
+        {
+            var maxLength = (_rules?.Settings ?? NetMatchSettings.Default).MaxDisplayNameLength;
+            var displayName = PlayerDisplayName.Sanitize(request.DisplayName, maxLength);
+            if (displayName.Length == 0 && !string.IsNullOrWhiteSpace(request.DisplayName))
+            {
+                _log.WriteLine(
+                    "[Net] client " + connection.Value.ToString(CultureInfo.InvariantCulture)
+                        + " sent a display name that is over " + maxLength.ToString(CultureInfo.InvariantCulture)
+                        + " characters or has control characters; joining without a name");
+            }
+
+            return displayName;
         }
 
         // 判定に要るのはコードだけなので、パーティなどほかの欄の形が違っても承認のデータ全体を読めなくしないよう、コードの欄だけを載せる。

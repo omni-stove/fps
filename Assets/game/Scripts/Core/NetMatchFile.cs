@@ -38,6 +38,7 @@ namespace Shooter.Core
         public const string JoinCodeItem = "joinCode";
         public const string ChatIntervalSecondsItem = "chatIntervalSeconds";
         public const string MaxChatLengthItem = "maxChatLength";
+        public const string MaxDisplayNameLengthItem = "maxDisplayNameLength";
         public const string RoundWinsToWinItem = "roundWinsToWin";
         public const string RoundPreparationSecondsItem = "roundPreparationSeconds";
         public const string RoundTimeLimitSecondsItem = "roundTimeLimitSeconds";
@@ -210,8 +211,8 @@ namespace Shooter.Core
             ScoreLimitItem, TimeLimitSecondsItem, RespawnSecondsItem, RestartDelaySecondsItem, MaxHealthItem, MinEnemySpawnDistanceItem,
             ReconnectGraceSecondsItem, MaxShotOriginOffsetItem, DominationScoreLimitItem, CaptureSecondsItem, PointsPerSecondItem,
             MaxCapturersItem, MaxPlayersItem, MapPoolItem, MapVoteSecondsItem, MaxTeamSizeDifferenceItem, PrivateMatchItem, JoinCodeItem,
-            ChatIntervalSecondsItem, MaxChatLengthItem, RoundWinsToWinItem, RoundPreparationSecondsItem, RoundTimeLimitSecondsItem,
-            WeatherIdItem, TimeOfDayIdItem,
+            ChatIntervalSecondsItem, MaxChatLengthItem, MaxDisplayNameLengthItem, RoundWinsToWinItem, RoundPreparationSecondsItem,
+            RoundTimeLimitSecondsItem, WeatherIdItem, TimeOfDayIdItem,
             CaptureTheFlagItem, HardpointItem, SearchAndDestroyItem, FreeForAllItem, KillConfirmedItem, GunGameItem,
             VoteKickItem, PayloadItem, EconomyItem,
         };
@@ -419,6 +420,13 @@ namespace Shooter.Core
             writer.String(JoinCodeItem, s.JoinCode ?? string.Empty);
             writer.Float(ChatIntervalSecondsItem, s.ChatIntervalSeconds);
             writer.Int(MaxChatLengthItem, s.MaxChatLength);
+
+            // 既定値のときに書かないのは、項目を足す前に書き出したルールのファイルを書き出し直さずにそのまま使えるようにするため
+            if (s.MaxDisplayNameLength != NetMatchSettings.DefaultMaxDisplayNameLength)
+            {
+                writer.Int(MaxDisplayNameLengthItem, s.MaxDisplayNameLength);
+            }
+
             writer.Int(RoundWinsToWinItem, s.RoundWinsToWin);
             writer.Float(RoundPreparationSecondsItem, s.RoundPreparationSeconds);
             writer.Float(RoundTimeLimitSecondsItem, s.RoundTimeLimitSeconds);
@@ -707,7 +715,8 @@ namespace Shooter.Core
                     gunGame,
                     voteKick,
                     payload,
-                    economy);
+                    economy,
+                    match.ReadInt(MaxDisplayNameLengthItem, d.MaxDisplayNameLength));
             }
             catch (ArgumentException e)
             {

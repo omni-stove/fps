@@ -167,8 +167,10 @@ namespace Shooter.Server
         }
 
         // 選んだ能力は武器と同じく出現のときに持たせ、生きている間に選び直しても持ち替えない
+        // オフラインの AbilityHost が体力を戻すたびに枠を満たすのと同じく、出現し直した人は回数を満たして始める
         private void HandlePlayerSpawned(int playerId)
         {
+            RemoveSlots(playerId);
             if (_abilities.Equip(playerId))
             {
                 _log.WriteLine(ServerDeployableLog.Equipped(playerId, _abilities.EquippedFor(playerId)));
@@ -684,12 +686,6 @@ namespace Shooter.Server
             }
 
             RemoveSlots(owner);
-        }
-
-        // オフラインの AbilityHost が体力を戻すたびに枠を満たすのと同じく、出現し直した人は回数を満たして始める
-        private void HandlePlayerSpawned(int playerId)
-        {
-            RemoveSlots(playerId);
         }
 
         private void RemoveSlots(int owner)

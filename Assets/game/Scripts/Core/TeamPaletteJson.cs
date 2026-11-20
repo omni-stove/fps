@@ -181,7 +181,7 @@ namespace Shooter.Core
 
         private static byte HexByte(string text, int start)
         {
-            return byte.Parse(text.Substring(start, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
+            return byte.Parse(text.AsSpan(start, 2), NumberStyles.AllowHexSpecifier, CultureInfo.InvariantCulture);
         }
     }
 }

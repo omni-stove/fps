@@ -4,7 +4,8 @@
     "references": [
         "Shooter.Core",
         "Shooter.Progression.Core",
-        "Shooter.Runtime"
+        "Shooter.Runtime",
+        "Shooter.Services"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

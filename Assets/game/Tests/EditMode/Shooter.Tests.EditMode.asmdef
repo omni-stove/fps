@@ -4,7 +4,13 @@
     "references": [
         "Shooter.Tests.Support",
         "Shooter.Core",
+        "Shooter.Core.World",
+        "Shooter.Core.Navigation",
         "Shooter.Runtime",
+        "Shooter.Telemetry",
+        "Shooter.Interaction",
+        "Shooter.Services",
+        "Shooter.Vision",
         "Shooter.Editor",
         "Unity.InputSystem",
         "Unity.AI.Navigation",

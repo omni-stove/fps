@@ -2,7 +2,8 @@
     "name": "Shooter.Protocol",
     "rootNamespace": "Shooter.Protocol",
     "references": [
-        "Shooter.Core"
+        "Shooter.Core",
+        "Shooter.Core.World"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

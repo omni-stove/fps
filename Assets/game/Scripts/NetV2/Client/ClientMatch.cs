@@ -15,6 +15,7 @@ namespace Shooter.NetV2
         private readonly InputMessage _input = new InputMessage();
         private readonly Dictionary<int, RemoteTrack> _remotes = new Dictionary<int, RemoteTrack>();
         private readonly HashSet<int> _present = new HashSet<int>();
+        private readonly HashSet<int> _concealed = new HashSet<int>();
         private readonly List<int> _gone = new List<int>();
         private int _nextTick;
 
@@ -137,7 +138,15 @@ namespace Shooter.NetV2
         public bool TrySampleRemote(int playerId, out RemotePose pose)
         {
             pose = default;
-            return _remotes.TryGetValue(playerId, out var track) && track.TrySample(Interpolation.RenderTick, out pose);
+            return !_concealed.Contains(playerId)
+                && _remotes.TryGetValue(playerId, out var track)
+                && track.TrySample(Interpolation.RenderTick, out pose);
+        }
+
+        // 隠れた相手は名簿に残したまま (PlayerRemoved を出さず)、体だけを描かない
+        public bool IsConcealed(int playerId)
+        {
+            return _concealed.Contains(playerId);
         }
 
         // 置き直された人が前の位置から滑って見えないよう、補間の記録を捨てる。
@@ -175,16 +184,29 @@ namespace Shooter.NetV2
                     continue;
                 }
 
-                if (!_remotes.TryGetValue(row.PlayerId, out var track))
+                var added = !_remotes.TryGetValue(row.PlayerId, out var track);
+                if (added)
                 {
                     track = new RemoteTrack();
                     _remotes.Add(row.PlayerId, track);
-                    track.Record(snapshot.Tick, RemotePose.From(row));
-                    PlayerAdded?.Invoke(row.PlayerId);
-                    continue;
                 }
 
-                track.Record(snapshot.Tick, RemotePose.From(row));
+                // 隠れた行の位置は空なので記録に入れない。記録を捨てておくのは、見え直したとき隠れる前の位置から滑って見えないよう、その tick から記録し直すため
+                if (row.Concealed)
+                {
+                    _concealed.Add(row.PlayerId);
+                    track.Clear();
+                }
+                else
+                {
+                    _concealed.Remove(row.PlayerId);
+                    track.Record(snapshot.Tick, RemotePose.From(row));
+                }
+
+                if (added)
+                {
+                    PlayerAdded?.Invoke(row.PlayerId);
+                }
             }
 
             _gone.Clear();
@@ -199,6 +221,7 @@ namespace Shooter.NetV2
             foreach (var id in _gone)
             {
                 _remotes.Remove(id);
+                _concealed.Remove(id);
                 PlayerRemoved?.Invoke(id);
             }
         }

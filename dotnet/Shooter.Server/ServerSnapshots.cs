@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Shooter.Core;
 using Shooter.Protocol;
 
@@ -13,13 +14,29 @@ namespace Shooter.Server
         private MatchRulesSync _rules;
         private MatchObjective _objective;
         private readonly Dictionary<ConnectionId, ClientHistory> _clients = new Dictionary<ConnectionId, ClientHistory>();
-        private ServerContext _context;
+        private readonly MatchRulesModule _sides;
 
-        public ServerSnapshots(GameRules rules, IEnumerable<ISnapshotContributor> contributors, AntiCheatTuning antiCheat = null)
+        // 同じまとまりの人は同じ答えを受け取るので、1 tick の間は見えたかを覚えて当たりを引き直さない
+        private readonly Dictionary<(bool TeamWide, int Id, int Target), bool> _seenThisTick =
+            new Dictionary<(bool TeamWide, int Id, int Target), bool>();
+        private readonly List<Vector3> _eyes = new List<Vector3>();
+        private ServerContext _context;
+        private ServerVisibility _visibility;
+        private double _now;
+
+        // 敵味方と生死は目的 (BR の分隊・FFA) で決まるので、隠すにはルールのモジュールが要る
+        public ServerSnapshots(
+            GameRules rules, IEnumerable<ISnapshotContributor> contributors, AntiCheatTuning antiCheat = null, MatchRulesModule sides = null)
         {
             ArgumentNullException.ThrowIfNull(rules);
             ArgumentNullException.ThrowIfNull(contributors);
             AntiCheat = antiCheat ?? AntiCheatTuning.Default;
+            if (AntiCheat.Conceal.Enabled && sides == null)
+            {
+                throw new ArgumentException("concealing hidden enemies needs the rules module to tell allies and the living", nameof(sides));
+            }
+
+            _sides = sides;
             _rules = MatchRulesSync.From(rules);
             _objective = rules.Objective;
             _contributors = new List<ISnapshotContributor>(contributors);
@@ -41,6 +58,12 @@ namespace Shooter.Server
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _context.Match.RulesChanged += HandleRulesChanged;
+            if (AntiCheat.Conceal.Enabled)
+            {
+                _visibility = new ServerVisibility(_context.World, AntiCheat.Conceal);
+                _context.Match.MapChanged += HandleMapChanged;
+                _context.Match.PlayerLeft += HandlePlayerLeft;
+            }
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -51,6 +74,8 @@ namespace Shooter.Server
                 throw new InvalidOperationException("the server tick no longer fits a snapshot tick");
             }
 
+            _now += deltaSeconds;
+            _seenThisTick.Clear();
             var snapshotTick = (int)tick;
             foreach (var player in _context.Match.Players)
             {
@@ -95,9 +120,23 @@ namespace Shooter.Server
             if (_context != null)
             {
                 _context.Match.RulesChanged -= HandleRulesChanged;
+                _context.Match.MapChanged -= HandleMapChanged;
+                _context.Match.PlayerLeft -= HandlePlayerLeft;
             }
 
+            _visibility = null;
+            _seenThisTick.Clear();
             _clients.Clear();
+        }
+
+        private void HandleMapChanged(ServerMapData map)
+        {
+            _visibility?.UseWorld(map.World);
+        }
+
+        private void HandlePlayerLeft(ServerPlayer player)
+        {
+            _visibility?.Forget(player.PlayerId);
         }
 
         // 目的を持つモジュールが無い試合でも、次の試合の目的とルールを載せる。持つモジュールは Contribute で同じ値を書き直す
@@ -139,6 +178,120 @@ namespace Shooter.Server
             {
                 contributor.Contribute(snapshot, receiver);
             }
+
+            // コントリビューターが書いた動きを後から空にするので、どれより後に置く
+            if (_visibility != null)
+            {
+                ConcealUnseen(snapshot, receiver);
+            }
+        }
+
+        private void ConcealUnseen(SnapshotMessage snapshot, ServerPlayer receiver)
+        {
+            var receiverId = receiver.PlayerId;
+            var teamWide = CollectEyes(receiver, out var leaderId);
+            var players = snapshot.Players;
+            for (var i = 0; i < players.Count; i++)
+            {
+                ref var row = ref players[i];
+                if (row.PlayerId == receiverId || _sides.AreAllies(receiverId, row.PlayerId))
+                {
+                    continue;
+                }
+
+                if (!IsSeen(teamWide, receiver.Team, leaderId, row.PlayerId))
+                {
+                    Conceal(ref row);
+                }
+            }
+        }
+
+        // 見る側のまとまりが受け取る人のチームと一致するなら true (ServerVisibility.CanSee のチームの覚え)。
+        // 一致しない (FFA の一人、BR の分隊) なら、まとまりで一番小さい番号を leaderId に返す
+        private bool CollectEyes(ServerPlayer receiver, out int leaderId)
+        {
+            _eyes.Clear();
+            var receiverId = receiver.PlayerId;
+            leaderId = receiverId;
+            var teamWide = true;
+            var session = _sides.Session;
+            foreach (var player in _context.Match.Players)
+            {
+                var id = player.PlayerId;
+                var allied = id == receiverId || _sides.AreAllies(receiverId, id);
+
+                // まだ試合 (Session) に入っていない人は誰の味方でもないので、チームと一致するかの判定には数えない
+                if (session != null && session.HasPlayer(id) && allied != (player.Team == receiver.Team))
+                {
+                    teamWide = false;
+                }
+
+                if (!allied)
+                {
+                    continue;
+                }
+
+                leaderId = Math.Min(leaderId, id);
+                if (_sides.IsAlive(id) && _context.Bodies.TryGet(id, out var body) && body.HasSpawned)
+                {
+                    _eyes.Add(body.EyePosition);
+                }
+            }
+
+            return teamWide;
+        }
+
+        private bool IsSeen(bool teamWide, Team team, int leaderId, int targetId)
+        {
+            var key = (teamWide, teamWide ? (int)team : leaderId, targetId);
+            if (_seenThisTick.TryGetValue(key, out var seen))
+            {
+                return seen;
+            }
+
+            // 出現していない人は見える位置を持たないので、隠したままにする
+            if (!_context.Bodies.TryGet(targetId, out var body) || !body.HasSpawned)
+            {
+                seen = false;
+            }
+            else if (teamWide)
+            {
+                seen = _visibility.CanSee(team, _eyes, targetId, body.Center, body.EyePosition, _now);
+            }
+            else
+            {
+                seen = _visibility.CanSeeAsGroup(leaderId, _eyes, targetId, body.Center, body.EyePosition, _now);
+            }
+
+            _seenThisTick[key] = seen;
+            return seen;
+        }
+
+        // 名簿・スコア・生死 (体力・ダウン・出現の守り)・チームは残し、どこで何をしているかが分かる値だけを空にする。
+        // 乗っている乗り物も消すのは、乗り物の行の位置から乗っている人の位置が分かるため
+        private static void Conceal(ref PlayerSnapshot row)
+        {
+            row.Concealed = true;
+            row.Position = Vector3.Zero;
+            row.Velocity = Vector3.Zero;
+            row.Yaw = 0f;
+            row.IsGrounded = false;
+            row.IsCrouched = false;
+            row.IsProne = false;
+            row.IsAiming = false;
+            row.IsParachuting = false;
+            row.Cover = default;
+            row.Dodge = default;
+            row.Vault = VaultSync.None;
+            row.Prone = CharacterProneState.None;
+            row.Ladder = CharacterLadderState.None;
+            row.Vehicle = VehicleSeatSync.None;
+            row.WeaponId = "";
+            row.Lean = 0f;
+            row.Swimming = false;
+            row.WallRunSide = default;
+            row.AirJumpsUsed = 0;
+            row.JumpGraceLeft = 0f;
         }
 
         private sealed class ClientHistory

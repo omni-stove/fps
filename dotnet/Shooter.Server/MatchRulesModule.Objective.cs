@@ -63,6 +63,17 @@ namespace Shooter.Server
             return _objective != null ? _objective.AreHostile(a, aTeam, b, bTeam) : aTeam != bTeam;
         }
 
+        // 試合に居ない人はどちら側でも味方に数えない。見えるかを決めるのに、陣営の分からない人の目を使ったり、その人から隠さずにおいたりしないため
+        internal bool AreAllies(int a, int b)
+        {
+            return _session != null && _session.HasPlayer(a) && _session.HasPlayer(b) && _session.AreAllies(a, b);
+        }
+
+        internal bool IsAlive(int playerId)
+        {
+            return _session != null && _session.HasPlayer(playerId) && _session.IsAlive(playerId);
+        }
+
         // 敵でも味方でもない 2 人 (BR の分隊に入れなかった人と誰か)。Session は味方でない人を敵として撃たせるので、ここで止める
         private bool AreNeutral(int a, int b)
         {

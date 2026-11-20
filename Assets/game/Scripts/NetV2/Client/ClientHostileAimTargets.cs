@@ -62,7 +62,7 @@ namespace Shooter.NetV2
             for (var i = 0; i < latest.Players.Count; i++)
             {
                 var row = latest.Players[i];
-                if (row.PlayerId == _localPlayerId || row.Team == team || row.Health <= 0 || row.Downed.IsDowned)
+                if (row.PlayerId == _localPlayerId || row.Team == team || row.Concealed || row.Health <= 0 || row.Downed.IsDowned)
                 {
                     continue;
                 }

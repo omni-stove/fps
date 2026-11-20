@@ -132,7 +132,8 @@ namespace Shooter.Server
             modules.Add(new ServerSnapshots(
                 motorSettings.Rules,
                 new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables },
-                tuning.AntiCheat));
+                tuning.AntiCheat,
+                rules));
 
             // 統計の検知は、移動・戦闘・Bot がこの tick に動かした後の位置で見えるかを決めるので、それらより後。
             // 試合の状態を変えず、切っているときは見えるかの判定 (毎 tick の線) に手間をかけないよう、登録もしない

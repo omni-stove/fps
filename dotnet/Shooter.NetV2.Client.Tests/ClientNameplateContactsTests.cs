@@ -110,6 +110,17 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void AConcealedPlayerGetsNoNameplateEvenWithAShownPose()
+        {
+            AddPlayer(_me, Team.Alpha, 100, Vector3.Zero);
+            AddPlayer(2, Team.Bravo, 100, new Vector3(0f, 0f, 20f));
+            AddPlayer(3, Team.Bravo, 100, new Vector3(0f, 0f, 5f));
+            _snapshot.Players[1].Concealed = true;
+
+            Assert.That(Collect(new NoWorld()).Select(c => c.Id), Is.EqualTo(_ids3));
+        }
+
+        [Test]
         public void WhileTheOwnRowIsMissingEveryoneIsAnEnemy()
         {
             AddPlayer(2, Team.Alpha, 100, new Vector3(0f, 0f, 10f));

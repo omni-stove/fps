@@ -99,6 +99,7 @@ namespace Shooter.Editor
             new TuningSlot("MutatorsTuning", KitTuning.MutatorsResourcePath, c => c.MutatorsTuning, (c, v) => c.MutatorsTuning = v),
             new TuningSlot("PlaylistsTuning", KitTuning.PlaylistsResourcePath, c => c.PlaylistsTuning, (c, v) => c.PlaylistsTuning = v),
             new TuningSlot("KeySharingTuning", KitTuning.KeySharingResourcePath, c => c.KeySharingTuning, (c, v) => c.KeySharingTuning = v),
+            new TuningSlot("NameplatesTuning", KitTuning.NameplatesResourcePath, c => c.NameplatesTuning, (c, v) => c.NameplatesTuning = v),
         };
 
         public static string DefaultPath => ShooterKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);

@@ -141,6 +141,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("同じキーを割り当ててよいアクションの組の JSON。空なら Resources/Tuning/key-sharing")]
         private TextAsset _keySharingTuning;
 
+        [SerializeField, Tooltip("頭上の名前を出す距離の JSON。空なら Resources/Tuning/nameplates")]
+        private TextAsset _nameplatesTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -506,6 +509,12 @@ namespace Shooter.Runtime
         {
             get => _keySharingTuning;
             set => _keySharingTuning = value;
+        }
+
+        public TextAsset NameplatesTuning
+        {
+            get => _nameplatesTuning;
+            set => _nameplatesTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog

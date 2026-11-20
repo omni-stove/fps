@@ -92,6 +92,8 @@
         <ui:VisualElement name="damage-direction" class="damage-direction" picking-mode="Ignore" style="display: none;" />
         <!-- 爆発に巻き込まれる距離のグレネード。GrenadeWarningView が 1 個ごとに印 (grenade-warning__marker) を足し、中央を囲む円周上の向きに置く。 -->
         <ui:VisualElement name="grenade-warning" class="grenade-warning" picking-mode="Ignore" style="display: none;" />
+        <!-- 他のプレイヤーの頭上の名前。NameplateView が NameplateRule で出すと決めた相手ごとに子要素 (nameplate) を足して出す。 -->
+        <ui:VisualElement name="nameplates" class="nameplates" picking-mode="Ignore" style="display: none;" />
         <!-- 敵や場所に付けた印。PingMarkersView が GameSignals.Pings の印ごとに子要素 (ping-marker) を足して出す。 -->
         <ui:VisualElement name="ping-markers" class="ping-markers" picking-mode="Ignore" style="display: none;" />
         <!-- 分隊への指示の印 (守る場所・狙う敵)。SquadOrderMarkerView が GameSignals.SquadOrder の指示があるときだけ、印 (squad-order__marker) を足して出す。 -->

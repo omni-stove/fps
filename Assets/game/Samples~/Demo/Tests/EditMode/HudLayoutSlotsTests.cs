@@ -7,7 +7,7 @@ namespace Shooter.Tests.EditMode
 {
     public sealed class HudLayoutSlotsTests
     {
-        private static readonly string[] _hiddenSlots = { "vote-kick", "wallet", "vision-overlay", "drone-hud" };
+        private static readonly string[] _hiddenSlots = { "vote-kick", "wallet", "vision-overlay", "drone-hud", "nameplates" };
 
         [TestCaseSource(nameof(_hiddenSlots))]
         public void TheHudLayoutHasAHiddenEmptySlot(string slotName)

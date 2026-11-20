@@ -51,6 +51,7 @@ namespace Shooter.Server
             session.Restarted += HandleRestarted;
             session.ScoreChanged += HandleScoreChanged;
             session.Killed += HandleKilled;
+            session.Respawning += HandleRespawning;
             session.Spawned += HandleSpawned;
             session.Ended += HandleEnded;
             session.HeldExpired += HandleHeldExpired;
@@ -65,6 +66,7 @@ namespace Shooter.Server
             session.Restarted -= HandleRestarted;
             session.ScoreChanged -= HandleScoreChanged;
             session.Killed -= HandleKilled;
+            session.Respawning -= HandleRespawning;
             session.Spawned -= HandleSpawned;
             session.Ended -= HandleEnded;
             session.HeldExpired -= HandleHeldExpired;

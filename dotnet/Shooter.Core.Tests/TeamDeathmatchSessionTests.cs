@@ -212,6 +212,35 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void OnlyTheRespawnAfterADeathIsAnnouncedAsRespawningJustBeforeItsSpawn()
+        {
+            var session = Create(respawnSeconds: 3f);
+            session.Respawning += id => _events.Add("respawning " + id);
+            session.Join(1);
+            session.Join(2);
+            Assert.That(_events, Does.Not.Contain("respawning 1").And.Not.Contain("respawning 2"), "joining is not a respawn");
+            _events.Clear();
+
+            session.ApplyDamage(1, 2, _maxHealth);
+            session.Tick(3f);
+
+            Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 1-0", "respawning 2", "spawn 2")));
+            _events.Clear();
+
+            session.ApplyDamage(1, 2, _maxHealth);
+            session.RespawnAll();
+
+            Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 2-0", "spawn 1", "spawn 2")), "the round head puts everyone back without the anchors");
+            _events.Clear();
+
+            session.Finish(null);
+            _events.Clear();
+            session.Restart();
+
+            Assert.That(_events, Does.Not.Contain("respawning 1").And.Not.Contain("respawning 2"), "a restart is not a respawn");
+        }
+
+        [Test]
         public void EnemiesWhoHitTheVictimEnoughGetAnAssistAndItsPoints()
         {
             var session = Create(pointsPerAssist: 2, assist: new AssistSpec(windowSeconds: 10f, minDamage: 20));

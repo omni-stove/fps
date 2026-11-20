@@ -115,11 +115,32 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(point));
             }
 
-            var p = point.Position;
+            return SpawnAt(playerId, point.Position);
+        }
+
+        // 倒されて戻るときだけ、ルールの RespawnAnchor のどれを使ったかを足す (オフラインの ModeLog.Spawn と同じ from=)。
+        public static string Spawn(int playerId, System.Numerics.Vector3 position, RespawnAnchor anchor)
+        {
+            if (!Enum.IsDefined(typeof(RespawnAnchor), anchor))
+            {
+                throw new ArgumentOutOfRangeException(nameof(anchor), anchor, "anchor is not a defined RespawnAnchor");
+            }
+
+            return SpawnAt(playerId, position) + " from=" + anchor;
+        }
+
+        private static string SpawnAt(int playerId, System.Numerics.Vector3 p)
+        {
             return Tag + " spawn player=" + playerId.ToString(CultureInfo.InvariantCulture)
-                + " at=(" + p.X.ToString("F2", CultureInfo.InvariantCulture)
-                + ", " + p.Y.ToString("F2", CultureInfo.InvariantCulture)
-                + ", " + p.Z.ToString("F2", CultureInfo.InvariantCulture) + ")";
+                + " at=(" + Clean(p.X).ToString("F2", CultureInfo.InvariantCulture)
+                + ", " + Clean(p.Y).ToString("F2", CultureInfo.InvariantCulture)
+                + ", " + Clean(p.Z).ToString("F2", CultureInfo.InvariantCulture) + ")";
+        }
+
+        // 向きの計算で出る -0 や極小の負の値が "-0.00" と出ないよう、桁を丸めてから 0 を足して符号を消す。
+        private static float Clean(float v)
+        {
+            return MathF.Round(v * 100f) / 100f + 0f;
         }
 
         public static string SoloState(Match match)

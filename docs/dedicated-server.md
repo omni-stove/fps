@@ -97,7 +97,7 @@ make server-dotnet ARGS="-rules FreeForAll"
   - 経済は `SearchAndDestroy` の目的でだけ動く。他の目的では一覧を置いても財布を作らない。
 - ドローン (置ける物の `role` が `Drone`) と盾 (武器の `shield`) はオフラインだけのもので、専用サーバーでは使えない。
   - `deployables.json` に `Drone` の種類があると、起動のときに `[Deploy] net kind=<id> unusable: a Drone is piloted only offline; ...` と出し、
-    置く要求をビーコンと同じく断る (`[Deploy] ... net refused reason=Unusable`)。
+    置く要求を断る (`[Deploy] ... net refused reason=Unusable`)。
   - サーバーは盾を出さず、盾の武器も普通の武器として撃たせてしまうので、盾の武器はルールの JSON の `loadout`・`catalog` と `economy.json` に入れない。
   - 暗視・サーマル (照準の `visionMode` とゴーグル) もオフラインだけで、ネット対戦では効かない。
 - `make export-server-rules` は、シーンの箱 (`LootContainer`) を `<map>.points.json` の `lootContainers` (`id`・`table`・`position`・`reach`) に、
@@ -139,7 +139,12 @@ make server-dotnet ARGS="-rules FreeForAll"
 - 近接 (`rules.actions.melee`)・ストリーク (`rules.streaks`)・キルカム (`rules.deathCamera` が `KillCam`) はどのモードでも使え、
   モードの例はどれも近接とキルカムを `On` にしてある (`GunGame` はストリークを `Off`)。この 3 つの規則はスナップショットでクライアントにも届く。
 - 近接・ストリークの調整値は `server-data/tuning/melee.json`・`streaks.json` から読む。クライアントの `Resources/Tuning/` と同じ中身にしておく。
-  置ける物 (タレット・盾・囮) は `server-data/tuning/deployables.json` にある種類だけを置かせる。
+  置ける物 (タレット・盾・囮・ビーコン) は `server-data/tuning/deployables.json` にある種類だけを置かせる。
+- リスポーンビーコン (置ける物の `role` が `Beacon`) は、ルールの `respawnAnchor` に `Beacon` があるときだけ復活の場所になる。
+  倒されて戻る人を `respawnAnchor` の順に試し、置いた本人か味方の、使える中でいちばん後に置いたビーコンの前 (`beacon.spawnDistance`) へ出す
+  (`[Beacon] ... used by=<id> ... uses=<残り>/<回数>`・`[Match] spawn player=<id> ... from=Beacon`)。回数 (`beacon.uses`) を使い切るか壊されると消え、拠点に戻る。
+  入った時と試合・ラウンドの頭は拠点から出す。`Squad` (味方の近く) はサーバーではまだ選ばず、次の順へ進める。
+  例のルール (`server-data/rules`) はどれも `abilities` が `Off`・`respawnAnchor` が `["Base"]` なので、使うにはルールの JSON の両方を替える。
 - 文字のチャット (`rules.textChat`)・観戦 (`rules.spectating`)・置ける物 (`rules.actions.abilities`) もどのモードでも止められる。
   `Off` にすると、サーバーはチャットを誰にも配らず (`[Chat] refused ... reason=RuleOff`)、観戦の要求に映す相手を割り当てず (ラウンドの合間も)、
   置く要求を断る (`[Deploy] ... refused reason=RuleOff`)。既定は `textChat` と `spectating` が `On`、`abilities` が `Off` で、

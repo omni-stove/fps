@@ -123,6 +123,39 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void ABeaconWithoutAPrefabIsShownAsItsPoleAndLampWithoutCollidersOrItsOfflineParts()
+        {
+            var beacon = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            beacon.Id = "deploy-beacon";
+            _created.Add(beacon);
+            _part.Dispose();
+            _part = new NetV2DeployablesPart(Send, () => 1, new DeployAbilityDefinition[] { beacon }, _logs.Add);
+
+            var view = (NetV2DeployablesPart.View)_part.Show(
+                DeployableKind.Beacon, "deploy-beacon", Team.Alpha, true, new System.Numerics.Vector3(-3f, 0.5f, 0f), 90f);
+            _created.Add(view.Visual);
+
+            var root = view.Visual.transform;
+            Assert.That(root.Find(BeaconDeployDefinition.PoleName), Is.Not.Null);
+            Assert.That(root.Find(BeaconDeployDefinition.LampName), Is.Not.Null);
+            Assert.That(root.position, Is.EqualTo(new Vector3(-3f, 0.5f, 0f)));
+            Assert.That(root.eulerAngles.y, Is.EqualTo(90f).Within(1e-3f), "a beacon turns as a whole");
+            Assert.That(view.Visual.GetComponentsInChildren<Collider>(), Has.All.Matches<Collider>(c => !c.enabled));
+            Assert.That(view.Visual.GetComponentInChildren<SpawnBeacon>(), Is.Null, "the server counts the uses, not the client");
+            Assert.That(_logs, Does.Contain("[Deploy] net look kind=deploy-beacon role=Beacon prefab=False"));
+        }
+
+        [Test]
+        public void ABeaconWithoutADefinitionIsShownAsTheBeaconBox()
+        {
+            var view = Show(DeployableKind.Beacon, "deploy-unknown-beacon", System.Numerics.Vector3.Zero, 0f);
+
+            Assert.That(
+                view.Visual.transform.Find("Box").localScale,
+                Is.EqualTo(new Vector3(BeaconSpec.DefaultWidth, BeaconSpec.DefaultHeight, BeaconSpec.DefaultDepth)));
+        }
+
+        [Test]
         public void ASnapshotShowsAndRemovesWhatTheServerLists()
         {
             var snapshot = new SnapshotMessage();

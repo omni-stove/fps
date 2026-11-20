@@ -7,5 +7,7 @@ namespace Shooter.Protocol
         Shield,
 
         Decoy,
+
+        Beacon,
     }
 }

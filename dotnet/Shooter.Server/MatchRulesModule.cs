@@ -526,18 +526,30 @@ namespace Shooter.Server
 
         private void HandleSpawned(int playerId, SpawnPoint point)
         {
+            var afterDeath = TakeRespawningAfterDeath(playerId);
             SpectatePlayerSpawned(playerId);
             if (!_bodies.TryGet(playerId, out var body))
             {
                 return;
             }
 
-            _bodies.Teleport(playerId, point.Position, body.Yaw, _tick);
-            _log.WriteLine(MatchLog.Spawn(playerId, point));
+            var position = point.Position;
+            var yaw = body.Yaw;
+            if (afterDeath)
+            {
+                var anchor = ChooseRespawnAnchor(playerId, ref position, ref yaw);
+                _log.WriteLine(MatchLog.Spawn(playerId, position, anchor));
+            }
+            else
+            {
+                _log.WriteLine(MatchLog.Spawn(playerId, point));
+            }
+
+            _bodies.Teleport(playerId, position, yaw, _tick);
             _teleported.PlayerId = playerId;
             _teleported.Tick = (int)Math.Min(_tick, int.MaxValue);
-            _teleported.Position = point.Position;
-            _teleported.Yaw = body.Yaw;
+            _teleported.Position = position;
+            _teleported.Yaw = yaw;
             SendToAll(TransportChannel.Reliable, _teleported);
 
             var protection = _session.GetSpawnProtectionRemaining(playerId);

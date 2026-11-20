@@ -70,6 +70,12 @@ namespace Shooter.Runtime
             return base.CreateAbility();
         }
 
+        // ネット対戦では置いた物の部品 (SpawnBeacon・Deployable) をサーバーが受け持つので、手元には形だけを出す。
+        public GameObject CreateLook()
+        {
+            return CreatePlaceholder(ToDeploySpec());
+        }
+
         // 柱と灯のどちらにも当たり判定を持たせるのは、敵の弾で壊せるようにするため。
         protected override GameObject CreatePlaceholder(DeploySpec spec)
         {

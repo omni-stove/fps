@@ -59,6 +59,16 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void FormatsTheRespawnAnchorOfARespawnAfterDeath()
+        {
+            var at = new Vector3(-2f, 0.5f, 1.25f);
+
+            Assert.That(MatchLog.Spawn(4, at, RespawnAnchor.Beacon), Is.EqualTo("[Match] spawn player=4 at=(-2.00, 0.50, 1.25) from=Beacon"));
+            Assert.That(MatchLog.Spawn(4, at, RespawnAnchor.Base), Is.EqualTo("[Match] spawn player=4 at=(-2.00, 0.50, 1.25) from=Base"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => MatchLog.Spawn(4, at, (RespawnAnchor)99));
+        }
+
+        [Test]
         public void FormatsHoldingAndRejoining()
         {
             Assert.That(MatchLog.Held(1, 60f), Is.EqualTo("[Match] holding player=1 for=60s"));

@@ -5,7 +5,6 @@ using UnityEngine;
 namespace Shooter.Runtime
 {
     // Id の意味がオフライン (CombatEvents.OfflineId) とオンライン (プレイヤー Id) で違うので、相手の集め方と名前の引き先を組にして差し替える。
-    // UI のアセンブリでなくここに置くのは、UI を参照しない NetV2 が実装して GameSignals.NameplateTargets に出すため。
     public interface INameplateTargets
     {
         IParticipants Participants { get; }

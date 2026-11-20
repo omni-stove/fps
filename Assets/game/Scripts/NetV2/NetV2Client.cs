@@ -833,8 +833,6 @@ namespace Shooter.NetV2
             _weaponHooks?.Projectiles.Detach();
             _weaponHooks?.Beams.Detach();
             _weaponHooks?.Spray.Detach();
-
-            // 他の画面が後から出した引き先まで消さないよう、自分が出した値のときだけ消す。
         }
 
         // ロビーを探せないときに既定のサーバーへつなぐのは、開発中に make server-dotnet へつなげるようにするため。

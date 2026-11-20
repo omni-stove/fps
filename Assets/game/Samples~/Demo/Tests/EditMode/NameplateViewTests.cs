@@ -125,37 +125,6 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void PublishedTargetsReplaceTheOfflineOnesUntilTheyAreWithdrawn()
-        {
-            var view = Track(new GameObject("OtherHud")).AddComponent<NameplateView>();
-            view.Viewer = _camera;
-            view.Spec = new NameplateSpec(friendlyRange: 60f, enemyRange: 35f);
-            var published = new FakeTargets(
-                new FakeParticipants(new Participant(42, "Online", Team.Alpha, false)),
-                new NameplateTarget(42, _eye + Vector3.forward * 10f, TeamRelation.Friendly, true, false));
-            Assert.That(view.Targets, Is.InstanceOf<OfflineNameplateTargets>());
-
-            GameSignals.NameplateTargets.Publish(published);
-            view.Refresh();
-
-            Assert.That(view.Targets, Is.SameAs(published), "the online match's targets are used once published");
-            Assert.That(view.TryGetPlate(42, out var plate), Is.True);
-            Assert.That(plate.Text, Is.EqualTo("Online"), "the name comes from the published targets' participants");
-
-            GameSignals.NameplateTargets.ClearIfCurrent(published);
-            view.Refresh();
-
-            Assert.That(view.Targets, Is.InstanceOf<OfflineNameplateTargets>(), "after leaving the match the offline targets are back");
-            Assert.That(view.TryGetPlate(42, out _), Is.False);
-
-            var own = new FakeTargets(new FakeParticipants());
-            view.Targets = own;
-            GameSignals.NameplateTargets.Publish(published);
-
-            Assert.That(view.Targets, Is.SameAs(own), "targets set on the view win over published ones");
-        }
-
-        [Test]
         public void TheLocalPlayerTheDeadAndThoseBehindTheCameraAreNotNamed()
         {
             var dead = Spawn("Dead", 0, new Vector3(0f, 0f, 10f));

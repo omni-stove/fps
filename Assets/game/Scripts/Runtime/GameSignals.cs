@@ -124,9 +124,6 @@ namespace Shooter.Runtime
         // 測る相手 (サーバー) がいるネット対戦の接続中だけ出し、切れたら空に戻す。UI は空を「回線の表示なし」として隠す。
         public static GameSignal<NetStatsSignal?> NetStats { get; } = new GameSignal<NetStatsSignal?>(nameof(NetStats));
 
-        // 相手の体に陣営 (SideMember) が付かない画面 (ネット対戦) だけが出す。空ならネームプレートはオフラインの引き先で集める。
-        public static GameSignal<INameplateTargets> NameplateTargets { get; } = new GameSignal<INameplateTargets>(nameof(NameplateTargets));
-
         // 値で毎回出さず集める口で出すのは、相手が補間で毎フレーム動き、見通しも目の位置で変わるため。空ならオフラインの集め方を使う。
         public static GameSignal<INameplateContacts> Nameplates { get; } = new GameSignal<INameplateContacts>(nameof(Nameplates));
 
@@ -197,7 +194,6 @@ namespace Shooter.Runtime
             Vision.Reset();
             Drone.Reset();
             NetStats.Reset();
-            NameplateTargets.Reset();
             Nameplates.Reset();
             foreach (var reset in _createdResets)
             {

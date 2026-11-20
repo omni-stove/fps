@@ -47,12 +47,6 @@ namespace Shooter.Runtime
                     return _source;
                 }
 
-                var published = GameSignals.NameplateTargets.Value;
-                if (published != null)
-                {
-                    return published;
-                }
-
                 var contacts = GameSignals.Nameplates.Value;
                 if (contacts == null)
                 {

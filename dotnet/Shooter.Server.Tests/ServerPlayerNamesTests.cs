@@ -10,6 +10,10 @@ namespace Shooter.Server.Tests
     {
         private const int _maxLength = NetMatchSettings.DefaultMaxDisplayNameLength;
 
+        private static readonly string[] _badWord = { "badword" };
+        private static readonly string[] _bad = { "bad" };
+        private static readonly string[] _ass = { "ass" };
+
         [Test]
         public void EachJoinSendsEveryoneInJoinOrder()
         {
@@ -53,7 +57,7 @@ namespace Shooter.Server.Tests
         [TestCase(ChatWordFilterAction.Drop)]
         public void ANameWithAFilteredWordFallsBackToTheIdName(ChatWordFilterAction action)
         {
-            var names = new ServerPlayerNames(new ChatWordFilter(new ChatWordFilterSpec(new[] { "badword" }, action: action)), _maxLength);
+            var names = new ServerPlayerNames(new ChatWordFilter(new ChatWordFilterSpec(_badWord, action: action)), _maxLength);
 
             var roster = Entries(names.Join(Human(3, "xBADWORDx")));
 
@@ -63,9 +67,23 @@ namespace Shooter.Server.Tests
         [Test]
         public void TheFilterMatchesFullWidthLettersAsInChat()
         {
-            var names = new ServerPlayerNames(new ChatWordFilter(new ChatWordFilterSpec(new[] { "bad" })), _maxLength);
+            var names = new ServerPlayerNames(new ChatWordFilter(new ChatWordFilterSpec(_bad)), _maxLength);
 
             Assert.That(Entries(names.Join(Human(4, "ＢＡＤguy"))), Is.EqualTo(new[] { (4, "P4") }));
+        }
+
+        [Test]
+        public void ANumberedNameCutIntoAFilteredWordFallsBackToTheIdName()
+        {
+            var names = new ServerPlayerNames(
+                new ChatWordFilter(new ChatWordFilterSpec(_ass, wholeWordsOnly: true)),
+                NetMatchSettings.MaxMaxDisplayNameLength);
+            const string name = "xxxxxxxxxxxxx asskick";
+
+            names.Join(Human(1, name));
+            var roster = Entries(names.Join(Human(2, name)));
+
+            Assert.That(roster, Is.EqualTo(new[] { (1, name), (2, "P2") }), "cutting the name must not leave a whole filtered word");
         }
 
         [TestCase(null)]

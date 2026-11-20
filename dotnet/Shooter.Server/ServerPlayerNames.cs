@@ -50,7 +50,7 @@ namespace Shooter.Server
             var playerId = player.PlayerId;
             if (_names.Remove(playerId))
             {
-                _names[playerId] = Distinct(BaseName(player));
+                _names[playerId] = Distinct(BaseName(player), playerId);
             }
             else
             {
@@ -59,7 +59,7 @@ namespace Shooter.Server
                     throw new InvalidOperationException("a name roster holds at most " + PlayerNamesMessage.MaxEntries + " players");
                 }
 
-                _names[playerId] = Distinct(BaseName(player));
+                _names[playerId] = Distinct(BaseName(player), playerId);
                 _order.Add(playerId);
             }
 
@@ -104,7 +104,32 @@ namespace Shooter.Server
             return name;
         }
 
-        private string Distinct(string name)
+        private string Distinct(string name, int playerId)
+        {
+            if (!IsTaken(name))
+            {
+                return name;
+            }
+
+            for (var number = _firstDuplicateNumber; ; number++)
+            {
+                var numbered = Numbered(name, number);
+
+                // 切ったことで禁止語が語として成り立つことがあるので、番号を付けた名前も通し直す。
+                // 戻した先の名前は BotRoster の形なので、通し直さずに番号だけ付ける
+                if (_filter.Contains(numbered))
+                {
+                    return Unfiltered(BotRoster.KillFeedName(playerId));
+                }
+
+                if (!IsTaken(numbered))
+                {
+                    return numbered;
+                }
+            }
+        }
+
+        private string Unfiltered(string name)
         {
             if (!IsTaken(name))
             {

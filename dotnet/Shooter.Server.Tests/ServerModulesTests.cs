@@ -82,6 +82,30 @@ namespace Shooter.Server.Tests
             Assert.That(movement.CheatSignals, Is.Not.Null);
             Assert.That(combat.CheatSignals, Is.SameAs(movement.CheatSignals));
             Assert.That(_modules.OfType<ServerSnapshots>().Single().AntiCheat, Is.SameAs(antiCheat));
+            Assert.That(_modules.OfType<ServerCheatStats>(), Is.Empty, "the stats are off in this tuning");
+        }
+
+        [Test]
+        public void WithTheStatsOnTheCheatStatsComeRightAfterTheSnapshots()
+        {
+            var stats = new AntiCheatTuning.StatsSettings(true, 60f, 0.5f, 100f, 40f, 2f, 5);
+            var antiCheat = new AntiCheatTuning(
+                AntiCheatTuning.ConcealSettings.Default,
+                AntiCheatTuning.ViolationSettings.Default,
+                stats,
+                AntiCheatTuning.EvidenceSettings.Default);
+            var tuning = new ServerCombatTuning(antiCheat: antiCheat);
+            Assert.That(ServerLaunch.TryParse(Array.Empty<string>(), _ => null, out var launch, out var parseError), Is.True, parseError);
+
+            Assert.That(
+                ServerModules.Create(launch, Runtime(), _modules, _library.Path, ServerMotorSettings.Default, tuning, null, out var error),
+                Is.True,
+                error);
+
+            Assert.That(_modules, Has.Count.EqualTo(14));
+            Assert.That(_modules[12], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[13], Is.InstanceOf<ServerCheatStats>());
+            Assert.That(((ServerCheatStats)_modules[13]).Stats, Is.SameAs(stats));
         }
 
         [Test]

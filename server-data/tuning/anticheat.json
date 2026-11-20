@@ -17,7 +17,8 @@
     "headshotRatio": 0.6,
     "minReactionMs": 120,
     "snapDegreesPerTick": 45,
-    "wallTrackSeconds": 1.5
+    "wallTrackSeconds": 1.5,
+    "minSamples": 10
   },
   "evidence": {
     "enabled": false,

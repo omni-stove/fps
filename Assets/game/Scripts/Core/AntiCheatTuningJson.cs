@@ -21,6 +21,7 @@ namespace Shooter.Core
         public const string MinReactionMsItem = "minReactionMs";
         public const string SnapDegreesPerTickItem = "snapDegreesPerTick";
         public const string WallTrackSecondsItem = "wallTrackSeconds";
+        public const string MinSamplesItem = "minSamples";
         public const string SecondsItem = "seconds";
 
         private const string _kind = "anticheat JSON";
@@ -52,6 +53,7 @@ namespace Shooter.Core
             MinReactionMsItem,
             SnapDegreesPerTickItem,
             WallTrackSecondsItem,
+            MinSamplesItem,
         };
 
         public static IReadOnlyList<string> EvidenceItemNames { get; } = new[] { EnabledItem, SecondsItem };
@@ -133,9 +135,10 @@ namespace Shooter.Core
             var minReaction = fields.ReadFloat(MinReactionMsItem, defaults.MinReactionMs);
             var snap = fields.ReadFloat(SnapDegreesPerTickItem, defaults.SnapDegreesPerTick);
             var wallTrack = fields.ReadFloat(WallTrackSecondsItem, defaults.WallTrackSeconds);
+            var minSamples = fields.ReadInt(MinSamplesItem, defaults.MinSamples);
             try
             {
-                return new AntiCheatTuning.StatsSettings(enabled, window, headshotRatio, minReaction, snap, wallTrack);
+                return new AntiCheatTuning.StatsSettings(enabled, window, headshotRatio, minReaction, snap, wallTrack, minSamples);
             }
             catch (ArgumentException e)
             {

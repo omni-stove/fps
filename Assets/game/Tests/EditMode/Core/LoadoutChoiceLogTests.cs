@@ -60,6 +60,14 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void WritesWhyTheLoadoutScreenDoesNotOfferAbilities()
+        {
+            Assert.That(LoadoutChoiceLog.AbilitiesNotOffered("ability catalog 'Abilities' ability #1 is empty"),
+                Is.EqualTo("[Net] loadout the loadout screen does not offer abilities: ability catalog 'Abilities' ability #1 is empty"));
+            Assert.That(LoadoutChoiceLog.AbilitiesNotOffered(null), Is.EqualTo("[Net] loadout the loadout screen does not offer abilities: -"));
+        }
+
+        [Test]
         public void WritesTheChosenCosmeticOrADashWhenItIsTakenOff()
         {
             Assert.That(LoadoutChoiceLog.Cosmetic(3, "skin-desert"), Is.EqualTo("[Net] loadout cosmetic client=3 id=skin-desert"));

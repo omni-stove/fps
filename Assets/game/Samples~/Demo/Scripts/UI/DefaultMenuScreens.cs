@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Shooter.Core;
 using UnityEngine;
 
@@ -43,13 +42,13 @@ namespace Shooter.Runtime
         {
             private LoadoutSelectView _opened;
 
-            public event Action<IReadOnlyList<string>> Confirmed;
+            public event Action<LoadoutChoice> Confirmed;
 
             public bool IsAnyOpen => LoadoutSelectView.IsAnyOpen;
 
             public bool IsOpen => _opened != null && _opened.IsOpen;
 
-            public void Open(LoadoutSelection selection)
+            public void Open(LoadoutSelection selection, AbilitySelection abilities)
             {
                 var view = LoadoutSelectView.Active;
                 if (view == null)
@@ -64,7 +63,7 @@ namespace Shooter.Runtime
                     _opened.Confirmed += HandleConfirmed;
                 }
 
-                view.Open(selection);
+                view.Open(selection, abilities);
             }
 
             public void Close()
@@ -101,9 +100,9 @@ namespace Shooter.Runtime
                 _opened = null;
             }
 
-            private void HandleConfirmed(IReadOnlyList<string> weaponIds)
+            private void HandleConfirmed(LoadoutChoice choice)
             {
-                Confirmed?.Invoke(weaponIds);
+                Confirmed?.Invoke(choice);
             }
         }
 

@@ -777,7 +777,8 @@ namespace Shooter.Tests.EditMode
                 Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
 
                 var expected = new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId };
-                Assert.That(_store.Load(), Is.EqualTo(expected));
+                Assert.That(_store.Load().WeaponIds, Is.EqualTo(expected));
+                Assert.That(_store.Load().AbilityIds, Is.Null);
                 Assert.That(_screen.IsLoadoutOpen, Is.False);
                 Assert.That(_screen.LoadoutSlot.childCount, Is.Zero);
                 Assert.That(_screen.LoadoutSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
@@ -788,6 +789,79 @@ namespace Shooter.Tests.EditMode
                 _screen.OpenLoadout();
                 Assert.That(_screen.LoadoutPanel.Selection.WeaponIds, Is.EqualTo(expected));
                 Assert.That(_screen.LoadoutPanel.Selection.RestoredPreference, Is.True);
+            }
+        }
+
+        [Test]
+        public void TheLoadoutOpensWithTheAbilityCatalogButStillSavesOnlyTheWeapons()
+        {
+            var catalog = ScriptableObject.CreateInstance<AbilityCatalogAsset>();
+            var beacon = ScriptableObject.CreateInstance<NullAbilityDefinition>();
+            var grapple = ScriptableObject.CreateInstance<NullAbilityDefinition>();
+            beacon.Id = "beacon";
+            grapple.Id = "grapple";
+            catalog.SetAbilities(new AbilityDefinition[] { beacon, grapple });
+            try
+            {
+                using (var assets = new LoadoutTestAssets())
+                {
+                    assets.Loadout.SetAbilities(new AbilityDefinition[] { grapple });
+                    _store.Save(new LoadoutChoice(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }, new[] { "beacon", "grapple" }));
+                    _screen.Loadout = assets.Loadout;
+                    _screen.Catalog = assets.Catalog;
+                    _screen.AbilityCatalog = catalog;
+                    _screen.Bind(_root);
+
+                    _screen.OpenLoadout();
+
+                    Assert.That(_screen.EffectiveAbilityCatalog, Is.SameAs(catalog));
+                    var abilities = _screen.LoadoutPanel.Abilities;
+                    Assert.That(abilities, Is.Not.Null);
+                    Assert.That(abilities.AbilityIds, Is.EqualTo(new[] { "beacon", "grapple" }), "the saved abilities are restored");
+                    Assert.That(abilities.RestoredPreference, Is.True);
+
+                    _screen.LoadoutPanel.Select(0, 1);
+                    Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
+
+                    var saved = _store.Load();
+                    Assert.That(saved.WeaponIds, Is.EqualTo(new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }));
+                    Assert.That(saved.AbilityIds, Is.Null, "the abilities are not chosen on this screen yet");
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(beacon);
+                UnityEngine.Object.DestroyImmediate(grapple);
+                UnityEngine.Object.DestroyImmediate(catalog);
+            }
+        }
+
+        [Test]
+        public void ABrokenAbilityCatalogStillLetsTheWeaponsBeChosen()
+        {
+            var catalog = ScriptableObject.CreateInstance<AbilityCatalogAsset>();
+            catalog.name = "BrokenAbilities";
+            try
+            {
+                using (var assets = new LoadoutTestAssets())
+                {
+                    _screen.Loadout = assets.Loadout;
+                    _screen.Catalog = assets.Catalog;
+                    _screen.AbilityCatalog = catalog;
+                    _screen.Bind(_root);
+                    LogAssert.Expect(LogType.Warning, new Regex(@"^\[Loadout\] the loadout screen does not offer abilities: ability catalog 'BrokenAbilities' has no abilities$"));
+
+                    _screen.OpenLoadout();
+
+                    Assert.That(_screen.IsLoadoutOpen, Is.True);
+                    Assert.That(_screen.LoadoutPanel.Abilities, Is.Null);
+                    Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
+                    Assert.That(_store.Load().WeaponIds, Is.EqualTo(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+                }
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(catalog);
             }
         }
 
@@ -899,7 +973,7 @@ namespace Shooter.Tests.EditMode
                 Assert.That(_screen.LoadoutPanel.Selection.IsAvailableAt(0, 1), Is.True);
                 Assert.That(_screen.LoadoutPanel.Select(0, 1), Is.True);
                 Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
-                Assert.That(_store.Load(), Is.EqualTo(new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }));
+                Assert.That(_store.Load().WeaponIds, Is.EqualTo(new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }));
             }
         }
 

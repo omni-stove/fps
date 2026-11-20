@@ -11,6 +11,10 @@ namespace Shooter.Core
         // 壊れたデータで再帰が深くなりすぎないよう、入れ子の深さに上限を設ける。
         private const int _maxDepth = 32;
 
+        private const char _byteOrderMark = (char)0xFEFF;
+
+        private static readonly char[] _nonIntegerMarks = { '.', 'e', 'E' };
+
         public static object Parse(string text)
         {
             if (text == null)
@@ -18,8 +22,23 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(text));
             }
 
-            var parser = new Parser(text);
-            return parser.ParseDocument();
+            // JsonParser は先頭の BOM を読み飛ばすが、セーブは BOM 付きを壊れたものとして扱ってきたので、それを変えない。
+            if (text.Length > 0 && text[0] == _byteOrderMark)
+            {
+                throw Error("unexpected character at the start of the data");
+            }
+
+            JsonNode root;
+            try
+            {
+                root = new JsonParser(text, _maxDepth).ParseDocument();
+            }
+            catch (FormatException e)
+            {
+                throw Error(e.Message, e);
+            }
+
+            return ToValue(root);
         }
 
         public static void AppendString(StringBuilder builder, string value)
@@ -61,338 +80,57 @@ namespace Shooter.Core
             builder.Append('"');
         }
 
-        private sealed class Parser
+        private static object ToValue(JsonNode node)
         {
-            private readonly string _text;
-            private int _position;
-
-            public Parser(string text)
+            switch (node.Kind)
             {
-                _text = text;
-            }
-
-            public object ParseDocument()
-            {
-                SkipWhitespace();
-                var value = ParseValue(0);
-                SkipWhitespace();
-                if (_position != _text.Length)
-                {
-                    throw Error("unexpected characters after the value");
-                }
-
-                return value;
-            }
-
-            private object ParseValue(int depth)
-            {
-                if (_position >= _text.Length)
-                {
-                    throw Error("unexpected end of data");
-                }
-
-                var c = _text[_position];
-                switch (c)
-                {
-                    case '{':
-                        return ParseObject(depth + 1);
-                    case '[':
-                        return ParseArray(depth + 1);
-                    case '"':
-                        return ParseString();
-                    case 't':
-                        ExpectLiteral("true");
-                        return true;
-                    case 'f':
-                        ExpectLiteral("false");
-                        return false;
-                    case 'n':
-                        ExpectLiteral("null");
-                        return null;
-                    default:
-                        if (c == '-' || IsDigit(c))
-                        {
-                            return ParseInteger();
-                        }
-
-                        throw Error($"unexpected character '{c}'");
-                }
-            }
-
-            private Dictionary<string, object> ParseObject(int depth)
-            {
-                CheckDepth(depth);
-                _position++;
-                var result = new Dictionary<string, object>(StringComparer.Ordinal);
-                SkipWhitespace();
-                if (TryConsume('}'))
-                {
-                    return result;
-                }
-
-                while (true)
-                {
-                    SkipWhitespace();
-                    if (_position >= _text.Length || _text[_position] != '"')
+                case JsonNodeKind.Object:
+                    var map = new Dictionary<string, object>(StringComparer.Ordinal);
+                    foreach (var member in node.Members)
                     {
-                        throw Error("expected a string key");
+                        map.Add(member.Key, ToValue(member.Value));
                     }
 
-                    var key = ParseString();
-                    SkipWhitespace();
-                    Expect(':');
-                    SkipWhitespace();
-                    var value = ParseValue(depth);
-                    if (!result.TryAdd(key, value))
+                    return map;
+                case JsonNodeKind.Array:
+                    var list = new List<object>(node.Elements.Count);
+                    foreach (var element in node.Elements)
                     {
-                        throw Error($"duplicate key '{key}'");
+                        list.Add(ToValue(element));
                     }
 
-                    SkipWhitespace();
-                    if (TryConsume('}'))
-                    {
-                        return result;
-                    }
-
-                    Expect(',');
-                }
-            }
-
-            private List<object> ParseArray(int depth)
-            {
-                CheckDepth(depth);
-                _position++;
-                var result = new List<object>();
-                SkipWhitespace();
-                if (TryConsume(']'))
-                {
-                    return result;
-                }
-
-                while (true)
-                {
-                    SkipWhitespace();
-                    result.Add(ParseValue(depth));
-                    SkipWhitespace();
-                    if (TryConsume(']'))
-                    {
-                        return result;
-                    }
-
-                    Expect(',');
-                }
-            }
-
-            private string ParseString()
-            {
-                _position++;
-                var builder = new StringBuilder();
-                while (true)
-                {
-                    if (_position >= _text.Length)
-                    {
-                        throw Error("unterminated string");
-                    }
-
-                    var c = _text[_position++];
-                    if (c == '"')
-                    {
-                        return builder.ToString();
-                    }
-
-                    if (c < ' ')
-                    {
-                        throw Error("control character in string");
-                    }
-
-                    if (c != '\\')
-                    {
-                        builder.Append(c);
-                        continue;
-                    }
-
-                    if (_position >= _text.Length)
-                    {
-                        throw Error("unterminated string");
-                    }
-
-                    var escape = _text[_position++];
-                    switch (escape)
-                    {
-                        case '"':
-                        case '\\':
-                        case '/':
-                            builder.Append(escape);
-                            break;
-                        case 'b':
-                            builder.Append('\b');
-                            break;
-                        case 'f':
-                            builder.Append('\f');
-                            break;
-                        case 'n':
-                            builder.Append('\n');
-                            break;
-                        case 'r':
-                            builder.Append('\r');
-                            break;
-                        case 't':
-                            builder.Append('\t');
-                            break;
-                        case 'u':
-                            builder.Append(ParseHex4());
-                            break;
-                        default:
-                            throw Error($"invalid escape '\\{escape}'");
-                    }
-                }
-            }
-
-            private char ParseHex4()
-            {
-                if (_position + 4 > _text.Length)
-                {
-                    throw Error("incomplete unicode escape");
-                }
-
-                var value = 0;
-                for (var i = 0; i < 4; i++)
-                {
-                    var c = _text[_position++];
-                    int digit;
-                    if (IsDigit(c))
-                    {
-                        digit = c - '0';
-                    }
-                    else if (c >= 'a' && c <= 'f')
-                    {
-                        digit = c - 'a' + 10;
-                    }
-                    else if (c >= 'A' && c <= 'F')
-                    {
-                        digit = c - 'A' + 10;
-                    }
-                    else
-                    {
-                        throw Error("invalid unicode escape");
-                    }
-
-                    value = (value * 16) + digit;
-                }
-
-                return (char)value;
-            }
-
-            private long ParseInteger()
-            {
-                var negative = TryConsume('-');
-                if (_position >= _text.Length || !IsDigit(_text[_position]))
-                {
-                    throw Error("expected a digit");
-                }
-
-                var leadingZero = _text[_position] == '0';
-                // 負の側で貯めると long.MinValue まで扱える。
-                long value = 0;
-                var digits = 0;
-                while (_position < _text.Length && IsDigit(_text[_position]))
-                {
-                    var digit = _text[_position] - '0';
-                    if (value < (long.MinValue + digit) / 10)
-                    {
-                        throw Error("number is out of range");
-                    }
-
-                    value = (value * 10) - digit;
-                    digits++;
-                    _position++;
-                }
-
-                if (leadingZero && digits > 1)
-                {
-                    throw Error("numbers must not have leading zeros");
-                }
-
-                if (_position < _text.Length && (_text[_position] == '.' || _text[_position] == 'e' || _text[_position] == 'E'))
-                {
-                    throw Error("only integers are supported");
-                }
-
-                if (negative)
-                {
-                    return value;
-                }
-
-                if (value == long.MinValue)
-                {
-                    throw Error("number is out of range");
-                }
-
-                return -value;
-            }
-
-            private void ExpectLiteral(string literal)
-            {
-                if (_position + literal.Length > _text.Length
-                    || string.CompareOrdinal(_text, _position, literal, 0, literal.Length) != 0)
-                {
-                    throw Error("invalid literal");
-                }
-
-                _position += literal.Length;
-            }
-
-            private void Expect(char expected)
-            {
-                if (!TryConsume(expected))
-                {
-                    throw Error($"expected '{expected}'");
-                }
-            }
-
-            private bool TryConsume(char expected)
-            {
-                if (_position < _text.Length && _text[_position] == expected)
-                {
-                    _position++;
+                    return list;
+                case JsonNodeKind.String:
+                    return node.Text;
+                case JsonNodeKind.Number:
+                    return ToInteger(node);
+                case JsonNodeKind.True:
                     return true;
-                }
-
-                return false;
+                case JsonNodeKind.False:
+                    return false;
+                default:
+                    return null;
             }
+        }
 
-            private void SkipWhitespace()
+        private static long ToInteger(JsonNode node)
+        {
+            if (node.Text.IndexOfAny(_nonIntegerMarks) >= 0)
             {
-                while (_position < _text.Length)
-                {
-                    var c = _text[_position];
-                    if (c != ' ' && c != '\t' && c != '\n' && c != '\r')
-                    {
-                        return;
-                    }
-
-                    _position++;
-                }
+                throw Error("only integers are supported at " + node.Position);
             }
 
-            private void CheckDepth(int depth)
+            if (!long.TryParse(node.Text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value))
             {
-                if (depth > _maxDepth)
-                {
-                    throw Error("nesting is too deep");
-                }
+                throw Error("number is out of range at " + node.Position);
             }
 
-            private FormatException Error(string message)
-            {
-                return new FormatException(
-                    $"invalid save data at position {_position.ToString(CultureInfo.InvariantCulture)}: {message}");
-            }
+            return value;
+        }
 
-            private static bool IsDigit(char c)
-            {
-                return c >= '0' && c <= '9';
-            }
+        private static FormatException Error(string message, Exception inner = null)
+        {
+            return new FormatException("invalid save data: " + message, inner);
         }
     }
 }

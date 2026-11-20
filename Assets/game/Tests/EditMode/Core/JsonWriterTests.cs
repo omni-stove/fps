@@ -7,8 +7,8 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class JsonWriterTests
     {
-        static readonly string[] Ids = { "a", "b" };
-        static readonly float[] Floats = { 0.5f, 2f };
+        private static readonly string[] _ids = { "a", "b" };
+        private static readonly float[] _floats ={ 0.5f, 2f };
 
         [Test]
         public void EmptyWriterIsAnEmptyObject()
@@ -58,9 +58,9 @@ namespace Shooter.Core.Tests
             writer.Int("i", -7);
             writer.Enum("kind", JsonNodeKind.Array);
             writer.Vector3("p", new Vector3(1f, 2.5f, -3f));
-            writer.StringArray("ids", Ids);
+            writer.StringArray("ids", _ids);
             writer.StringArray("none", System.Array.Empty<string>());
-            writer.FloatArray("fs", Floats);
+            writer.FloatArray("fs", _floats);
             writer.Embed("rules", "{\n  \"x\": 1\n}\n");
 
             Assert.That(

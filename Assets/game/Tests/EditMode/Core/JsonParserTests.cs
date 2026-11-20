@@ -6,7 +6,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class JsonParserTests
     {
-        static readonly string[] ExpectedKeyOrder = { "z", "a", "m" };
+        private static readonly string[] _expectedKeyOrder ={ "z", "a", "m" };
 
         [Test]
         public void ReadsEveryKindWithItsPosition()
@@ -45,7 +45,7 @@ namespace Shooter.Core.Tests
         {
             var root = new JsonParser("{\"z\": 1, \"a\": 2, \"m\": 3}").ParseDocument();
 
-            Assert.That(root.Members.ConvertAll(m => m.Key), Is.EqualTo(ExpectedKeyOrder));
+            Assert.That(root.Members.ConvertAll(m => m.Key), Is.EqualTo(_expectedKeyOrder));
         }
 
         [TestCase("0")]

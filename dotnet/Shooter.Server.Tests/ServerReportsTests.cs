@@ -15,6 +15,7 @@ namespace Shooter.Server.Tests
         private const string _bob = "fedcba9876543210fedcba9876543210";
         private static readonly string[] _firstEvidenceFile = { "report-1.evidence.jsonl" };
         private static readonly string[] _limitedEvidenceFiles = { "report-1.evidence.jsonl", "report-2.evidence.jsonl" };
+        private static readonly string[] _otherReporterEvidenceFiles = { "report-1.evidence.jsonl", "report-3.evidence.jsonl" };
         private static readonly string[] _afterAMinuteEvidenceFiles =
         {
             "report-1.evidence.jsonl", "report-2.evidence.jsonl", "report-4.evidence.jsonl",
@@ -337,8 +338,8 @@ namespace Shooter.Server.Tests
             }
 
             Report(1, 2, ReportReason.Cheating);
-            Report(1, 3, ReportReason.Cheating);
-            Report(1, 4, ReportReason.Cheating);
+            Report(2, 3, ReportReason.Cheating);
+            Report(3, 4, ReportReason.Cheating);
 
             Assert.That(Lines(), Has.Length.EqualTo(3));
             Assert.That(EvidenceFiles(), Is.EqualTo(_limitedEvidenceFiles));
@@ -350,6 +351,29 @@ namespace Shooter.Server.Tests
 
             Assert.That(Lines(), Has.Length.EqualTo(4));
             Assert.That(EvidenceFiles(), Is.EqualTo(_afterAMinuteEvidenceFiles));
+        }
+
+        [Test]
+        public void AReporterGetsOneEvidenceFilePerMinuteAndTheReportsAreStillKept()
+        {
+            var signals = new ServerCheatSignals();
+            Start(0d, StartEvidence(signals, true));
+            for (var id = 1; id <= 3; id++)
+            {
+                Join(id);
+            }
+
+            Report(1, 2, ReportReason.Cheating);
+            Report(1, 3, ReportReason.Cheating);
+
+            Assert.That(Lines(), Has.Length.EqualTo(2));
+            Assert.That(EvidenceFiles(), Is.EqualTo(_firstEvidenceFile));
+            Assert.That(_log.ToString(), Does.Contain(
+                "[Evidence] skipped the evidence for target=3: the reporter already had evidence saved in the last minute; the report is kept without it"));
+
+            Report(2, 3, ReportReason.Cheating);
+
+            Assert.That(EvidenceFiles(), Is.EqualTo(_otherReporterEvidenceFiles), "another reporter still gets a file");
         }
 
         [Test]

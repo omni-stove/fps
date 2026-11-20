@@ -29,6 +29,10 @@ namespace Shooter.Runtime
 
         private const string LogTag = "[ViewRig]";
 
+        private const int AimHoldIterations = 4;
+
+        private const float AimHoldSettledDegrees = 1e-3f;
+
         // 自分の体を除いて最も近い命中を選ぶための一時バッファ。毎フレームの確保を避ける。
         private const int MaxCastHits = 16;
 
@@ -48,6 +52,9 @@ namespace Shooter.Runtime
 
         [SerializeField, Tooltip("カメラの壁抜け防止と狙う点の判定で当たるレイヤー")]
         private LayerMask _collisionMask = Physics.DefaultRaycastLayers;
+
+        [SerializeField, Min(0f), Tooltip("三人称の覗き込みでカメラが目へ寄る間、照準の下に保つ点の最も近い距離 (m)")]
+        private float _aimHoldMinDistance = AimHold.DefaultMinDistance;
 
         private Transform _eye;
         private Camera _camera;
@@ -71,6 +78,8 @@ namespace Shooter.Runtime
         private Quaternion _appliedLeanRoll = Quaternion.identity;
         private Quaternion _rolledRotation = Quaternion.identity;
         private bool _hasLeanRoll;
+        private FirstPersonLook _look;
+        private float _lastEyeBlend;
 
         public ViewMode Mode
         {
@@ -155,6 +164,20 @@ namespace Shooter.Runtime
         public bool IsLocalView => _isLocalView;
 
         public InputAction SwapShoulderAction => _swapShoulderAction;
+
+        public float AimHoldMinDistance
+        {
+            get => _aimHoldMinDistance;
+            set
+            {
+                if (!(value >= 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "AimHoldMinDistance must be a non-negative finite number");
+                }
+
+                _aimHoldMinDistance = value;
+            }
+        }
 
         public float CollisionRadius
         {
@@ -441,12 +464,23 @@ namespace Shooter.Runtime
                 offset += LeanEyeOffset(lean, leanSpec);
             }
 
-            var cameraTransform = _camera.transform;
+            var localPosition = ResolveCameraLocalPosition(offset);
+            var eyeBlend = sight.EyeBlend;
+            if (eyeBlend != _lastEyeBlend)
+            {
+                HoldAimWhileMoving(localPosition);
+                _lastEyeBlend = eyeBlend;
+            }
+
+            _camera.transform.localPosition = localPosition;
+        }
+
+        private Vector3 ResolveCameraLocalPosition(Vector3 offset)
+        {
             var desired = offset.magnitude;
             if (desired < 1e-6f)
             {
-                cameraTransform.localPosition = Vector3.zero;
-                return;
+                return Vector3.zero;
             }
 
             var origin = _eye.position;
@@ -462,7 +496,46 @@ namespace Shooter.Runtime
             // 下限を残すと、壁際のリーンでカメラが壁の中に止まる。
             var minLength = _mode == ViewMode.FirstPerson ? 0f : _minBoomLength;
             var length = CameraBoom.Length(desired, blockedAt, minLength);
-            cameraTransform.localPosition = offset * (length / desired);
+            return offset * (length / desired);
+        }
+
+        // 覗き込みの寄せで動いたときだけ回す。壁に押されて縮むときまで回すと、壁際を歩くだけで視点が振れる。
+        // 回すのは自分の視点だけで、他人の体の向きは同期で決まる。
+        private void HoldAimWhileMoving(Vector3 nextLocalPosition)
+        {
+            if (!_isLocalView || _mode != ViewMode.ThirdPerson)
+            {
+                return;
+            }
+
+            if (_look == null)
+            {
+                _look = GetComponent<FirstPersonLook>();
+            }
+
+            if (_look == null || !_look.IsInitialized)
+            {
+                return;
+            }
+
+            var cameraTransform = _camera.transform;
+            var eye = _eye.position;
+            var aimPoint = FindAimPoint(cameraTransform, eye, DefaultAimDistance, transform, _collisionMask);
+            var held = AimHold.HeldPoint(
+                cameraTransform.position.ToNumerics(), cameraTransform.forward.ToNumerics(), eye.ToNumerics(), aimPoint.ToNumerics(), _aimHoldMinDistance);
+
+            // 1 度で済ませないのは、目を軸に回すと目の後ろのカメラも動き、1 度の角度では回り足りないため。
+            for (var i = 0; i < AimHoldIterations; i++)
+            {
+                var moved = _eye.TransformPoint(nextLocalPosition);
+                var delta = AimHold.LookDelta(cameraTransform.forward.ToNumerics(), moved.ToNumerics(), held);
+                if (Mathf.Abs(delta.X) < AimHoldSettledDegrees && Mathf.Abs(delta.Y) < AimHoldSettledDegrees)
+                {
+                    return;
+                }
+
+                _look.ApplyLookDelta(delta.ToUnity());
+            }
         }
 
         public Vector3 LeanEyeOffset(float lean, MotorSpec spec)

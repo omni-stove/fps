@@ -276,7 +276,8 @@ namespace Shooter.NetV2
         // 覗き込みを止める撃ち方 (ITriggerModel.BlocksAds) は持っている武器で決まり、武器はサーバーのスナップショットで分かるので外から渡す。
         public bool BlocksAds { get; set; }
 
-        public bool IsAiming => !IsInputBlocked && !BlocksAds && _aim != null && _aim.IsPressed();
+        // IsPressed だけで見ないのは、macOS で Shift (ダッシュ) を離したときなどに押していた覗き込みが取り消されるため (HeldInput)。
+        public bool IsAiming => !IsInputBlocked && !BlocksAds && HeldInput.IsHeld(_aim);
 
         public bool TakeAttack() => Take(ref _attackLatched);
 

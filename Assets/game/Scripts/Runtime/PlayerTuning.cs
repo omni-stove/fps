@@ -11,6 +11,7 @@ namespace Shooter.Runtime
                 int maxHealth,
                 Vector3 thirdPersonOffset,
                 float minBoomLength,
+                float aimHoldMinDistance,
                 float adsTransitionSeconds,
                 MotorSettings motorSettings,
                 TraversalSpec traversal)
@@ -18,6 +19,7 @@ namespace Shooter.Runtime
                 MaxHealth = maxHealth;
                 ThirdPersonOffset = thirdPersonOffset;
                 MinBoomLength = minBoomLength;
+                AimHoldMinDistance = aimHoldMinDistance;
                 AdsTransitionSeconds = adsTransitionSeconds;
                 MotorSettings = motorSettings;
                 Traversal = traversal;
@@ -28,6 +30,8 @@ namespace Shooter.Runtime
             public Vector3 ThirdPersonOffset { get; }
 
             public float MinBoomLength { get; }
+
+            public float AimHoldMinDistance { get; }
 
             public float AdsTransitionSeconds { get; }
 

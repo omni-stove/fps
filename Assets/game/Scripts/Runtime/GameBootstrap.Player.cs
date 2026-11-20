@@ -158,6 +158,7 @@ namespace Shooter.Runtime
             rig = player.AddComponent<ViewRig>();
             rig.ThirdPersonOffset = tuning.ThirdPersonOffset;
             rig.MinBoomLength = tuning.MinBoomLength;
+            rig.AimHoldMinDistance = tuning.AimHoldMinDistance;
             rig.Mode = rules.ViewMode;
             rig.AdsEyeView = rules.AdsEyeView;
             if (!rig.IsInitialized)

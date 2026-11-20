@@ -1116,6 +1116,124 @@ namespace Shooter.Tests.EditMode
         }
 
         // この端末のプレイヤーの三人称で、右肩に落ち着いた状態にする。
+        [Test]
+        public void AScopeInThirdPersonKeepsWhatTheCrosshairCoveredUnderIt()
+        {
+            var sight = new SightSpec("mildot", scopeOverlay: true, eyeViewInThirdPerson: true);
+            var progress = 0f;
+            _rig.SightSource = () => SightView.Of(sight, _rig.Mode, progress);
+            using (var lookAction = new InputAction("Look", InputActionType.Value, expectedControlType: "Vector2"))
+            {
+                AddLook(lookAction);
+                InitializeLocalThirdPerson();
+                var wall = PlaceWallAhead(20f);
+                var covered = CrosshairPoint(wall);
+
+                foreach (var next in new[] { 0.25f, 0.5f, 0.75f, 1f })
+                {
+                    progress = next;
+                    _rig.UpdateCameraPosition();
+                    Assert.That(Vector3.Distance(CrosshairPoint(wall), covered), Is.LessThan(0.01f), $"at progress {next}");
+                }
+
+                Assert.That(_camera.transform.localPosition, Is.EqualTo(Vector3.zero), "the scope looks from the eye");
+                Assert.That(_body.transform.eulerAngles.y, Is.GreaterThan(1f), "the view turned toward the right shoulder's line");
+
+                progress = 0f;
+                _rig.UpdateCameraPosition();
+                Assert.That(Vector3.Distance(CrosshairPoint(wall), covered), Is.LessThan(0.01f), "back on the shoulder");
+            }
+        }
+
+        [Test]
+        public void ANearPointIsHeldAtTheMinimumDistanceSoTheViewDoesNotSwing()
+        {
+            var sight = new SightSpec("mildot", scopeOverlay: true, eyeViewInThirdPerson: true);
+            var progress = 0f;
+            _rig.SightSource = () => SightView.Of(sight, _rig.Mode, progress);
+            using (var lookAction = new InputAction("Look", InputActionType.Value, expectedControlType: "Vector2"))
+            {
+                AddLook(lookAction);
+                InitializeLocalThirdPerson();
+                _rig.AimHoldMinDistance = 2f;
+                PlaceWallAhead(_camera.transform.InverseTransformPoint(_eye.position).z + 0.5f);
+
+                progress = 1f;
+                _rig.UpdateCameraPosition();
+
+                // 0.5 m 先の壁でなく 2 m 先の点を保つので、右肩の 0.5 m を 2 m で戻す角度に留まる
+                var expected = Mathf.Atan2(ViewRig.DefaultThirdPersonOffset.x, 2f) * Mathf.Rad2Deg;
+                Assert.That(Mathf.DeltaAngle(0f, _body.transform.eulerAngles.y), Is.EqualTo(expected).Within(0.5f));
+            }
+        }
+
+        [Test]
+        public void AnotherPlayersScopeDoesNotTurnTheirView()
+        {
+            var sight = new SightSpec("mildot", scopeOverlay: true, eyeViewInThirdPerson: true);
+            var progress = 0f;
+            _rig.SightSource = () => SightView.Of(sight, _rig.Mode, progress);
+            using (var lookAction = new InputAction("Look", InputActionType.Value, expectedControlType: "Vector2"))
+            {
+                AddLook(lookAction);
+                _rig.Initialize(_eye, _camera);
+                _rig.Mode = ViewMode.ThirdPerson;
+                _rig.ApplyBodyVisibility(false);
+                _rig.Tick(false, 0f);
+                PlaceWallAhead(20f);
+
+                progress = 1f;
+                _rig.UpdateCameraPosition();
+
+                Assert.That(Quaternion.Angle(_body.transform.rotation, Quaternion.identity), Is.LessThan(1e-4f));
+                Assert.That(Quaternion.Angle(_eye.localRotation, Quaternion.identity), Is.LessThan(1e-4f));
+            }
+        }
+
+        [Test]
+        public void AWallPullingTheCameraInDoesNotTurnTheView()
+        {
+            using (var lookAction = new InputAction("Look", InputActionType.Value, expectedControlType: "Vector2"))
+            {
+                AddLook(lookAction);
+                InitializeLocalThirdPerson();
+                _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                _wall.transform.position = _eye.position + new Vector3(0f, 0f, -1.2f);
+                _wall.transform.localScale = new Vector3(5f, 5f, 0.2f);
+                Physics.SyncTransforms();
+
+                _rig.UpdateCameraPosition();
+
+                Assert.That(_camera.transform.localPosition.z, Is.GreaterThan(-1.2f), "the wall pulls the camera in");
+                Assert.That(Quaternion.Angle(_body.transform.rotation, Quaternion.identity), Is.LessThan(1e-4f));
+                Assert.That(Quaternion.Angle(_eye.localRotation, Quaternion.identity), Is.LessThan(1e-4f));
+            }
+        }
+
+        private void AddLook(InputAction lookAction)
+        {
+            _body.AddComponent<FirstPersonLook>().Initialize(_eye, lookAction);
+        }
+
+        // 肩越しのカメラの前方 distance m に、正面を向いた大きな壁を置く。
+        private Collider PlaceWallAhead(float distance)
+        {
+            var cameraTransform = _camera.transform;
+            _wall = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            _wall.transform.position = cameraTransform.position + (cameraTransform.forward * (distance + 0.5f));
+            _wall.transform.localScale = new Vector3(20f, 20f, 1f);
+            Physics.SyncTransforms();
+            return _wall.GetComponent<Collider>();
+        }
+
+        // 自分の体に当たらないよう、壁だけを相手に画面の中央の線を飛ばす。
+        private Vector3 CrosshairPoint(Collider wall)
+        {
+            var cameraTransform = _camera.transform;
+            Assert.That(wall.Raycast(new Ray(cameraTransform.position, cameraTransform.forward), out var hit, 1000f), Is.True);
+            return hit.point;
+        }
+
         private void InitializeLocalThirdPerson()
         {
             _rig.Initialize(_eye, _camera);

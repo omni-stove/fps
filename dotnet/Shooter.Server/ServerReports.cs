@@ -192,7 +192,23 @@ namespace Shooter.Server
             // 書けなかった通報は間引きに数えない。数えると、送り直しても残らなくなる
             _savedAt[key] = _now;
             log.WriteLine(ServerReportLog.Saved(reporter.PlayerId, targetId, report.Reason));
-            WriteEvidence(reportId, targetId, reporter.ProductUserId);
+            WriteEvidence(reportId, targetId, ReporterKey(connection, reporter.ProductUserId));
+        }
+
+        // 確かめた ProductUserId が無い通信路では、接続元のアドレスで見分ける。どちらも無い人は鍵が作れないので null を返す
+        private string ReporterKey(ConnectionId connection, string productUserId)
+        {
+            if (!string.IsNullOrEmpty(productUserId))
+            {
+                return "pid:" + productUserId;
+            }
+
+            if (_context.Addresses != null && _context.Addresses.TryGetRemoteAddress(connection, out var address) && !string.IsNullOrEmpty(address))
+            {
+                return "addr:" + address;
+            }
+
+            return null;
         }
 
         public string EvidencePath(string reportId)
@@ -209,7 +225,19 @@ namespace Shooter.Server
         // 証拠が書けなくても通報は残す。通報の行は運営が読む本体で、証拠はその添え物なので
         private void WriteEvidence(string reportId, int targetId, string reporterKey)
         {
-            var text = Evidence?.Describe(targetId, reporterKey);
+            if (Evidence == null)
+            {
+                return;
+            }
+
+            // 鍵が作れない人に全体の枠を使わせると、人ごとの枠を避けて枠を使い切れてしまうため、断る
+            if (reporterKey == null)
+            {
+                _context.Log.WriteLine(ServerReportEvidenceLog.ReporterLimited(targetId));
+                return;
+            }
+
+            var text = Evidence.Describe(targetId, reporterKey);
             if (text == null)
             {
                 return;

@@ -8,6 +8,7 @@ namespace Shooter.Core
         public const string CrouchParameter = "Crouch";
         public const string AimParameter = "Aim";
         public const string CoverParameter = "Cover";
+        public const string CoverCrouchParameter = "CoverCrouch";
         public const string DownedParameter = "Downed";
         public const string DeadParameter = "Dead";
         public const string WeaponCategoryParameter = "WeaponCategory";

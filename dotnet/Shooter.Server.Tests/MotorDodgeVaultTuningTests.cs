@@ -132,11 +132,11 @@ namespace Shooter.Server.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100 });
             var bytes = writer.AsSegment().ToArray();
 
-            // 末尾の吹き飛ばしの値 18 個と落ちる高さ (4 バイト) の前に、リーン・空中のジャンプ・カバーへ走る速さ・水泳・壁走りの値、伏せ 6・カプセル 3 + 層 1・寸法 6 個、
+            // 末尾の吹き飛ばしの値 18 個と落ちる高さ (4 バイト) の前に、リーン・空中のジャンプ・カバーへ走る速さ・カバーできる壁の高さの下限・水泳・壁走りの値、伏せ 6・カプセル 3 + 層 1・寸法 6 個、
             // 持ち物の値、向き 6 個、移動の値 29 個が並ぶ。乗り越えの速さは移動の 15 番目
             var carryLoadBytes = 1 + 1 + (3 * 4) + 1;
             var knockbackBytes = 18 * 4;
-            var traversalBytes = (3 * 4) + 4 + 4 + 4 + 4 + (3 * 4) + 1 + (4 * 4) + (4 * 4);
+            var traversalBytes = (3 * 4) + 4 + 4 + 4 + 4 + 4 + (3 * 4) + 1 + (4 * 4) + (4 * 4);
             var motorStart = bytes.Length - knockbackBytes - 4 - traversalBytes - ((29 + 6 + 6 + 3 + 1 + 6) * 4) - carryLoadBytes;
             var vaultSpeed = motorStart + (14 * 4);
             Assert.That(BitConverter.ToSingle(bytes, vaultSpeed), Is.EqualTo(MotorSpec.DefaultVaultSpeed), "the offset points at the vault speed");

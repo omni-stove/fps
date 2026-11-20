@@ -14,6 +14,7 @@ namespace Shooter.Editor
         public const string CrouchAim = "CrouchAim";
         public const string CoverLow = "CoverLow";
         public const string CoverHigh = "CoverHigh";
+        public const string CoverMid = "CoverMid";
         public const string Downed = "Downed";
         public const string Dead = "Dead";
         public const string Flinch = "Flinch";
@@ -23,6 +24,10 @@ namespace Shooter.Editor
 
         // 足の裏が足元 (0) に付く高さ。
         public const float StandingHipsHeight = 0.95f;
+
+        // CoverMid を置く CoverCrouch の値。CoverHigh (0) と CoverLow (1) の頭の高さの間で CoverMid の頭が来る割合にして、
+        // 度合いに対して頭がほぼ真っすぐ下がるようにする。
+        public const float CoverMidCrouch = 0.26f;
 
         public static IReadOnlyList<CharacterRigClipSpec> All()
         {
@@ -37,6 +42,7 @@ namespace Shooter.Editor
                 CrouchAimClip(),
                 CoverLowClip(),
                 CoverHighClip(),
+                CoverMidClip(),
                 DownedClip(),
                 DeadClip(),
                 FlinchClip(),
@@ -120,10 +126,22 @@ namespace Shooter.Editor
         private static CharacterRigClipSpec CoverLowClip()
         {
             // しゃがみより深く折る。太もも -90°・すね +115° で足の裏が腰から 0.46m 下に来る。
+            // 腰はこれより下げると膝が床に着くので、上体を 60° 倒して頭のてっぺんを 1m 前後まで下げ、低い壁 (1m) の陰に入れる。
             var clip = new CharacterRigClipSpec(CoverLow, 2f, loop: true, RigWave3.Hold(0f, 0.46f, 0f));
-            CrouchBody(clip, torsoLean: 30f, headTilt: -15f);
+            CrouchBody(clip, torsoLean: 60f, headTilt: -15f);
             Stride(clip, thighBase: -90f, thighSwing: 0f, kneeBase: 115f, kneeSwing: 0f, spread: 10f);
             ArmSwing(clip, upperBase: -30f, upperSwing: 0f, spread: 5f, elbow: -100f);
+            return clip;
+        }
+
+        // CoverHigh と CoverLow の間の姿勢。その 2 つを直に混ぜると膝の角度と腰の高さが釣り合わず足が床へ沈むので、中間を置く。
+        // 太もも -50°・すね +70° で、足の裏が腰から 0.44cos50° + 0.51cos20° ≈ 0.76m 下に来る。
+        private static CharacterRigClipSpec CoverMidClip()
+        {
+            var clip = new CharacterRigClipSpec(CoverMid, 2f, loop: true, RigWave3.Hold(0f, 0.76f, 0f));
+            CrouchBody(clip, torsoLean: 15f, headTilt: -8f);
+            Stride(clip, thighBase: -50f, thighSwing: 0f, kneeBase: 70f, kneeSwing: 0f, spread: 7f);
+            ArmSwing(clip, upperBase: -25f, upperSwing: 0f, spread: 8f, elbow: -110f);
             return clip;
         }
 

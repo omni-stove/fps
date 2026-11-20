@@ -83,6 +83,8 @@ namespace Shooter.Runtime
 
         public float CoverTopY => _coverTopY;
 
+        public float CoverWallHeight => _state.IsInCover ? _lastProbe.TopHeight : 0f;
+
         public Vector3 CoverNormal => _state.Normal.ToUnity();
 
         public CoverHeight CoverHeight => _state.Height;

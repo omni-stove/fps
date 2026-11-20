@@ -12,7 +12,7 @@ namespace Shooter.Core.Tests
 
         private static CoverProbeResult Wall(CoverHeight height = CoverHeight.High, CoverEdge edges = CoverEdge.None, float distance = 0.55f)
         {
-            return new CoverProbeResult(true, true, height, edges, _wallNormal, distance);
+            return new CoverProbeResult(true, true, height, edges, _wallNormal, distance, 2f);
         }
 
         [Test]

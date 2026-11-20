@@ -12,8 +12,9 @@ namespace Shooter.Protocol.Tests
         // 承認の末尾に並ぶ吹き飛ばしの値 (力 3 種類 × 3 個と、そのほか 9 個)
         private const int _knockbackBytes = 18 * 4;
 
-        // 伏せの値の後ろに並ぶリーン 3 個・空中で跳べる回数 (4 バイト)・二段目の速さ・ジャンプの猶予・カバーへ走る速さ・水泳 3 個・壁走りの入切 (1 バイト)・壁走り 4 個・パラシュート 4 個
-        private const int _traversalBytes = (3 * 4) + 4 + 4 + 4 + 4 + (3 * 4) + 1 + (4 * 4) + (4 * 4);
+        // 伏せの値の後ろに並ぶリーン 3 個・空中で跳べる回数 (4 バイト)・二段目の速さ・ジャンプの猶予・カバーへ走る速さ・カバーできる壁の高さの下限・水泳 3 個・
+        // 壁走りの入切 (1 バイト)・壁走り 4 個・パラシュート 4 個
+        private const int _traversalBytes = (3 * 4) + 4 + 4 + 4 + 4 + 4 + (3 * 4) + 1 + (4 * 4) + (4 * 4);
 
         private readonly MessageTable _server = MatchMessages.CreateServerTable();
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
@@ -250,8 +251,9 @@ namespace Shooter.Protocol.Tests
             writer.WriteMessage(new ConnectAcceptedMessage { PlayerId = 1, ServerVersion = "1", TickRate = 60, Map = "NetTest", MaxHealth = 100, Motor = motor });
             var bytes = writer.AsSegment().ToArray();
 
-            // ジャンプの猶予はカバーへ走る速さと水泳 3 個の前で、後ろに壁走りの入切 (1 バイト) と 4 個、パラシュート 4 個、落ちる高さ、吹き飛ばしの値が続く
-            var jumpGrace = bytes.Length - _knockbackBytes - 4 - (4 * 4) - (4 * 4) - 1 - (3 * 4) - 4 - 4;
+            // ジャンプの猶予はカバーへ走る速さ・カバーできる壁の高さの下限・水泳 3 個の前で、後ろに壁走りの入切 (1 バイト) と 4 個、パラシュート 4 個、
+            // 落ちる高さ、吹き飛ばしの値が続く
+            var jumpGrace = bytes.Length - _knockbackBytes - 4 - (4 * 4) - (4 * 4) - 1 - (3 * 4) - 4 - 4 - 4;
             Assert.That(System.BitConverter.ToSingle(bytes, jumpGrace), Is.EqualTo(0.12f), "the offset points at the jump grace");
             System.BitConverter.TryWriteBytes(new System.Span<byte>(bytes, jumpGrace, 4), -0.1f);
 

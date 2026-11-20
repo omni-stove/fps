@@ -23,11 +23,30 @@ namespace Shooter.Runtime
         // Speed を寄せるのは、歩きと走りの切り替わりで足の振りが跳ばないようにするため。
         public const float SpeedDampSeconds = 0.1f;
 
+        // 既定のリグ (CharacterRigBuilder) の CoverHigh と CoverLow で、頭のてっぺんが足元から来る高さ (m)。
+        public const float DefaultCoverStandingTop = 1.83f;
+
+        public const float DefaultCoverLowestTop = 1f;
+
+        // 壁沿いに動いて上端の高さが変わったとき、しゃがむ深さが跳ばないよう寄せる。
+        public const float CoverCrouchDampSeconds = 0.1f;
+
         [SerializeField, Tooltip("置くリグのプレハブ。空なら入口 (GameContent) のキャラクターのリグ、それも無ければ Resources の Characters/CharacterRig を読む")]
         private GameObject _rigPrefab;
 
         [SerializeField, Tooltip("リーン・水泳・壁走りの向きへリグの根を傾けるか。AnimatorController のクリップがそれらの姿勢を体の傾きごと持つなら切る (二重に傾くので)")]
         private bool _tiltsRigWithMotor = true;
+
+        [SerializeField, Min(0f), Tooltip("カバーで立ったままの姿勢 (CoverCrouch = 0) の、頭のてっぺんの足元からの高さ (m)。壁の上端に合わせてしゃがむ深さをここから測る")]
+        private float _coverStandingTop = DefaultCoverStandingTop;
+
+        [SerializeField, Min(0f), Tooltip("カバーで一番低い姿勢 (CoverCrouch = 1) の、頭のてっぺんの足元からの高さ (m)。立ったままの高さより低くする")]
+        private float _coverLowestTop = DefaultCoverLowestTop;
+
+        [SerializeField, Min(0f), Tooltip("カバー中、頭のてっぺんを壁の上端からこれだけ (m) 下げる")]
+        private float _coverHeadClearance = CoverCrouch.DefaultHeadClearance;
+
+        private bool _warnedInvalidCoverTops;
 
         private CharacterAnimatorSource _source;
         private PlayerController _mover;
@@ -78,6 +97,7 @@ namespace Shooter.Runtime
         private static readonly int CrouchHash = Animator.StringToHash(CharacterPose.CrouchParameter);
         private static readonly int AimHash = Animator.StringToHash(CharacterPose.AimParameter);
         private static readonly int CoverHash = Animator.StringToHash(CharacterPose.CoverParameter);
+        private static readonly int CoverCrouchHash = Animator.StringToHash(CharacterPose.CoverCrouchParameter);
         private static readonly int DownedHash = Animator.StringToHash(CharacterPose.DownedParameter);
         private static readonly int DeadHash = Animator.StringToHash(CharacterPose.DeadParameter);
         private static readonly int WeaponCategoryHash = Animator.StringToHash(CharacterPose.WeaponCategoryParameter);
@@ -96,6 +116,24 @@ namespace Shooter.Runtime
         {
             get => _tiltsRigWithMotor;
             set => _tiltsRigWithMotor = value;
+        }
+
+        public float CoverStandingTop
+        {
+            get => _coverStandingTop;
+            set => _coverStandingTop = value;
+        }
+
+        public float CoverLowestTop
+        {
+            get => _coverLowestTop;
+            set => _coverLowestTop = value;
+        }
+
+        public float CoverHeadClearance
+        {
+            get => _coverHeadClearance;
+            set => _coverHeadClearance = value;
         }
 
         public ICharacterMotorStateSource MotorSource
@@ -701,6 +739,10 @@ namespace Shooter.Runtime
             SetBool(CrouchHash, parameters.Crouch);
             SetBool(AimHash, parameters.Aim);
             SetInt(CoverHash, parameters.Cover);
+            if (Has(CoverCrouchHash))
+            {
+                _animator.SetFloat(CoverCrouchHash, CoverCrouchAmount(), CoverCrouchDampSeconds, deltaSeconds);
+            }
             SetBool(DownedHash, parameters.Downed);
             SetBool(DeadHash, parameters.Dead);
             SetInt(WeaponCategoryHash, parameters.WeaponCategory);
@@ -712,6 +754,31 @@ namespace Shooter.Runtime
 
             SetBool(SwimmingHash, parameters.Swimming);
             SetInt(WallRunHash, parameters.WallRun);
+        }
+
+        // 壁の高さはプレイヤーの CoverController しか測らないので、敵とネットの体は立ったまま (0) にする。
+        public float CoverCrouchAmount()
+        {
+            if (_source != CharacterAnimatorSource.Player || _cover == null || !_cover.IsInCover)
+            {
+                return 0f;
+            }
+
+            try
+            {
+                return CoverCrouch.Amount(
+                    _cover.IsInCover, _cover.IsPeeking, _cover.CoverWallHeight, _coverStandingTop, _coverLowestTop, _coverHeadClearance);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                if (!_warnedInvalidCoverTops)
+                {
+                    _warnedInvalidCoverTops = true;
+                    Debug.LogWarning($"{LogTag} '{name}' のカバーの頭の高さの設定が正しくないので、壁の高さに合わせてしゃがみません: {e.Message}", this);
+                }
+
+                return 0f;
+            }
         }
 
         // 無いパラメーターを渡すと毎フレーム警告が出るので、あるものだけに渡し、足りなければ一度だけ知らせる。

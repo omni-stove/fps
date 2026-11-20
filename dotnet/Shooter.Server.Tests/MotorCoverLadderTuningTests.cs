@@ -42,6 +42,7 @@ namespace Shooter.Server.Tests
             Assert.That(spec.CoverEnterSpeed, Is.EqualTo(8f));
             Assert.That(spec.CoverBackHoldSeconds, Is.EqualTo(0.2f));
             Assert.That(spec.CoverPeekSlideSeconds, Is.EqualTo(0.15f));
+            Assert.That(spec.CoverMinWallHeight, Is.EqualTo(0f));
             Assert.That(spec.LadderTopEntryDepth, Is.EqualTo(0.3f));
             Assert.That(spec.LadderMinApproachDot, Is.EqualTo(0.5f));
             Assert.That(spec.LadderMinApproachSpeed, Is.EqualTo(0.5f));
@@ -58,6 +59,8 @@ namespace Shooter.Server.Tests
         [TestCase("coverEnterSpeed", float.PositiveInfinity)]
         [TestCase("coverBackHoldSeconds", -0.1f)]
         [TestCase("coverPeekSlideSeconds", 0f)]
+        [TestCase("coverMinWallHeight", -0.1f)]
+        [TestCase("coverMinWallHeight", float.NaN)]
         [TestCase("ladderTopEntryDepth", -0.1f)]
         [TestCase("ladderMinApproachDot", -1.1f)]
         [TestCase("ladderMinApproachDot", 1.1f)]
@@ -79,6 +82,7 @@ namespace Shooter.Server.Tests
             Assert.That(text, Does.Contain("\"coverMaxEnterDistance\": 2"));
             Assert.That(text, Does.Contain("\"ladderMinApproachSpeed\": 1.5"));
             Assert.That(text, Does.Contain("\"coverEnterSpeed\": 3"));
+            Assert.That(text, Does.Contain("\"coverMinWallHeight\": 0.7"));
             AssertTuned(read);
         }
 
@@ -100,6 +104,7 @@ namespace Shooter.Server.Tests
             Assert.That(read.CoverEnterSpeed, Is.EqualTo(MotorSpec.DefaultCoverEnterSpeed));
             Assert.That(read.CoverBackHoldSeconds, Is.EqualTo(MotorSpec.DefaultCoverBackHoldSeconds));
             Assert.That(read.CoverPeekSlideSeconds, Is.EqualTo(MotorSpec.DefaultCoverPeekSlideSeconds));
+            Assert.That(read.CoverMinWallHeight, Is.EqualTo(MotorSpec.DefaultCoverMinWallHeight));
             Assert.That(read.LadderTopEntryDepth, Is.EqualTo(MotorSpec.DefaultLadderTopEntryDepth));
             Assert.That(read.LadderMinApproachDot, Is.EqualTo(MotorSpec.DefaultLadderMinApproachDot));
             Assert.That(read.LadderMinApproachSpeed, Is.EqualTo(MotorSpec.DefaultLadderMinApproachSpeed));
@@ -112,6 +117,7 @@ namespace Shooter.Server.Tests
         [TestCase("{\"motor\": {\"coverPeekSlideSeconds\": 0}}", "motor.coverPeekSlideSeconds")]
         [TestCase("{\"motor\": {\"ladderMinApproachDot\": 2}}", "motor.ladderMinApproachDot")]
         [TestCase("{\"motor\": {\"ladderTopEntryDepth\": -1}}", "motor.ladderTopEntryDepth")]
+        [TestCase("{\"motor\": {\"coverMinWallHeight\": -1}}", "motor.coverMinWallHeight")]
         public void BadValuesInTheRulesFileNameTheItem(string text, string item)
         {
             var e = Assert.Throws<ServerDataJsonException>(() => NetMatchFile.Parse(text, "bad.json"));
@@ -166,10 +172,42 @@ namespace Shooter.Server.Tests
             Assert.That(CoverProbe.PeekOffset(edge, 1f, SpecWith("coverPeekSideDistance", 1.1f)), Is.EqualTo(-1.1f));
         }
 
+        // 上端は足元から 1.3 m。
+        [TestCase(0f, true)]
+        [TestCase(1.3f, true)]
+        [TestCase(1.5f, false)]
+        public void TheProbeTakesOnlyWallsAsHighAsTheMinimum(float minHeight, bool isWall)
+        {
+            var spec = new MotorSpec(
+                MotorSpec.DefaultWalkSpeed,
+                MotorSpec.DefaultSprintSpeed,
+                MotorSpec.DefaultJumpHeight,
+                MotorSpec.DefaultGravity,
+                MotorSpec.DefaultAirControl,
+                MotorSpec.DefaultCrouchSpeed,
+                coverMinWallHeight: minHeight);
+
+            var result = CoverProbe.Evaluate(new CoverWallSample(0.8f, _wallNormal, 1.3f, true, true), Vector3.UnitZ, spec);
+
+            Assert.That(result.IsWall, Is.EqualTo(isWall));
+            Assert.That(result.CanEnter, Is.EqualTo(isWall));
+            Assert.That(result.TopHeight, Is.EqualTo(isWall ? 1.3f : 0f));
+        }
+
+        [TestCase(0f, true)]
+        [TestCase(2.5f, false)]
+        public void TheSimulationEntersA2MeterWallOnlyAboveTheMinWallHeight(float minHeight, bool enters)
+        {
+            AddFloor();
+            AddBox(new Vector3(0f, 1f, 1f + 0.2f), new Vector3(2f, 1f, 0.2f));
+
+            Assert.That(PressCover(SpecWith("coverMinWallHeight", minHeight)).Cover.IsInCover, Is.EqualTo(enters));
+        }
+
         [Test]
         public void TheCoverStateUsesTheConfiguredSeconds()
         {
-            var wall = new CoverProbeResult(true, true, CoverHeight.High, CoverEdge.None, _wallNormal, 0.55f);
+            var wall = new CoverProbeResult(true, true, CoverHeight.High, CoverEdge.None, _wallNormal, 0.55f, 2f);
             var state = new CoverState(SpecWith("coverEnterSeconds", 0.5f));
             state.Step(true, false, Vector2.Zero, wall, 0f);
 
@@ -311,7 +349,8 @@ namespace Shooter.Server.Tests
                 coverPeekSlideSeconds: 0.25f,
                 ladderTopEntryDepth: 0.6f,
                 ladderMinApproachDot: 0.75f,
-                ladderMinApproachSpeed: 1.5f);
+                ladderMinApproachSpeed: 1.5f,
+                coverMinWallHeight: 0.7f);
         }
 
         private static void AssertTuned(MotorSpec read)
@@ -324,6 +363,7 @@ namespace Shooter.Server.Tests
             Assert.That(read.CoverEnterSpeed, Is.EqualTo(3f));
             Assert.That(read.CoverBackHoldSeconds, Is.EqualTo(0.7f));
             Assert.That(read.CoverPeekSlideSeconds, Is.EqualTo(0.25f));
+            Assert.That(read.CoverMinWallHeight, Is.EqualTo(0.7f));
             Assert.That(read.LadderTopEntryDepth, Is.EqualTo(0.6f));
             Assert.That(read.LadderMinApproachDot, Is.EqualTo(0.75f));
             Assert.That(read.LadderMinApproachSpeed, Is.EqualTo(1.5f));
@@ -349,7 +389,8 @@ namespace Shooter.Server.Tests
                 coverPeekSlideSeconds: Pick("coverPeekSlideSeconds", MotorSpec.DefaultCoverPeekSlideSeconds),
                 ladderTopEntryDepth: Pick("ladderTopEntryDepth", MotorSpec.DefaultLadderTopEntryDepth),
                 ladderMinApproachDot: Pick("ladderMinApproachDot", MotorSpec.DefaultLadderMinApproachDot),
-                ladderMinApproachSpeed: Pick("ladderMinApproachSpeed", MotorSpec.DefaultLadderMinApproachSpeed));
+                ladderMinApproachSpeed: Pick("ladderMinApproachSpeed", MotorSpec.DefaultLadderMinApproachSpeed),
+                coverMinWallHeight: Pick("coverMinWallHeight", MotorSpec.DefaultCoverMinWallHeight));
         }
 
         private static NetMotorSettings Settings(MotorSpec spec)

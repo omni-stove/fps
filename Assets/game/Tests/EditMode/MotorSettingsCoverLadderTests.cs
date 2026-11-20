@@ -59,6 +59,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.CoverEnterSpeed, Is.EqualTo(8f));
             Assert.That(spec.CoverBackHoldSeconds, Is.EqualTo(0.2f));
             Assert.That(spec.CoverPeekSlideSeconds, Is.EqualTo(0.15f));
+            Assert.That(spec.CoverMinWallHeight, Is.EqualTo(0f));
             Assert.That(spec.LadderTopEntryDepth, Is.EqualTo(0.3f));
             Assert.That(spec.LadderMinApproachDot, Is.EqualTo(0.5f));
             Assert.That(spec.LadderMinApproachSpeed, Is.EqualTo(0.5f));
@@ -79,6 +80,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.CoverEnterSpeed, Is.EqualTo(3f));
             Assert.That(spec.CoverBackHoldSeconds, Is.EqualTo(0.7f));
             Assert.That(spec.CoverPeekSlideSeconds, Is.EqualTo(0.25f));
+            Assert.That(spec.CoverMinWallHeight, Is.EqualTo(0.7f));
             Assert.That(spec.LadderTopEntryDepth, Is.EqualTo(0.6f));
             Assert.That(spec.LadderMinApproachDot, Is.EqualTo(0.75f));
             Assert.That(spec.LadderMinApproachSpeed, Is.EqualTo(1.5f));
@@ -96,6 +98,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(spec.CoverEnterSeconds, Is.EqualTo(MotorSpec.DefaultCoverEnterSeconds));
             Assert.That(spec.CoverEnterSpeed, Is.EqualTo(MotorSpec.DefaultCoverEnterSpeed));
             Assert.That(spec.CoverPeekSlideSeconds, Is.EqualTo(MotorSpec.DefaultCoverPeekSlideSeconds));
+            Assert.That(spec.CoverMinWallHeight, Is.EqualTo(MotorSpec.DefaultCoverMinWallHeight));
             Assert.That(spec.LadderTopEntryDepth, Is.EqualTo(MotorSpec.DefaultLadderTopEntryDepth));
             Assert.That(spec.LadderMinApproachSpeed, Is.EqualTo(MotorSpec.DefaultLadderMinApproachSpeed));
         }
@@ -113,6 +116,10 @@ namespace Shooter.Tests.EditMode
             _settings.ResetToDefaults();
             _settings.LadderMinApproachDot = 2f;
             Assert.Throws<System.ArgumentOutOfRangeException>(() => MotorSettings.Resolve(_settings));
+
+            _settings.ResetToDefaults();
+            _settings.CoverMinWallHeight = -0.1f;
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => MotorSettings.Resolve(_settings));
         }
 
         [Test]
@@ -127,7 +134,41 @@ namespace Shooter.Tests.EditMode
             Assert.That(motor.CoverMaxEnterDistance, Is.EqualTo(2f));
             Assert.That(motor.CoverPeekSlideSeconds, Is.EqualTo(0.25f));
             Assert.That(motor.CoverEnterSpeed, Is.EqualTo(3f));
+            Assert.That(motor.CoverMinWallHeight, Is.EqualTo(0.7f));
             Assert.That(motor.LadderMinApproachSpeed, Is.EqualTo(1.5f));
+        }
+
+        // 壁の上端は足元から 2 m。
+        [TestCase(0f, true)]
+        [TestCase(1.5f, true)]
+        [TestCase(2f, true)]
+        [TestCase(2.5f, false)]
+        public void TheCoverControllerEntersOnlyWallsAsHighAsTheMinimum(float minHeight, bool enters)
+        {
+            _settings.CoverMinWallHeight = minHeight;
+            var cover = CreateCoverPlayer(_settings.CreateSpec());
+            BuildWall(faceZ: 1f);
+
+            cover.Tick(true, false, Vector2.zero, _frame);
+
+            Assert.That(cover.IsInCover, Is.EqualTo(enters));
+            Assert.That(cover.CoverWallHeight, Is.EqualTo(enters ? 2f : 0f).Within(0.01f));
+        }
+
+        [Test]
+        public void TheCoverControllerLeavesWhenTheHeldWallIsLowerThanTheMinimum()
+        {
+            _settings.CoverMinWallHeight = 1.5f;
+            var cover = CreateCoverPlayer(_settings.CreateSpec());
+            BuildWall(faceZ: 1f);
+            cover.Tick(true, false, Vector2.zero, _frame);
+            Assert.That(cover.IsInCover, Is.True);
+
+            Object.DestroyImmediate(_wall);
+            BuildWall(faceZ: 1f, height: 1f);
+            cover.Tick(false, false, Vector2.zero, _frame);
+
+            Assert.That(cover.IsInCover, Is.False);
         }
 
         [TestCase(1f, false)]
@@ -177,6 +218,7 @@ namespace Shooter.Tests.EditMode
             _settings.CoverEnterSpeed = 3f;
             _settings.CoverBackHoldSeconds = 0.7f;
             _settings.CoverPeekSlideSeconds = 0.25f;
+            _settings.CoverMinWallHeight = 0.7f;
             _settings.LadderTopEntryDepth = 0.6f;
             _settings.LadderMinApproachDot = 0.75f;
             _settings.LadderMinApproachSpeed = 1.5f;
@@ -209,11 +251,11 @@ namespace Shooter.Tests.EditMode
             return cover;
         }
 
-        private void BuildWall(float faceZ)
+        private void BuildWall(float faceZ, float height = 2f)
         {
             _wall = new GameObject("Wall");
-            _wall.transform.position = new Vector3(0f, 1f, faceZ + (_wallThickness * 0.5f));
-            _wall.AddComponent<BoxCollider>().size = new Vector3(4f, 2f, _wallThickness);
+            _wall.transform.position = new Vector3(0f, height / 2f, faceZ + (_wallThickness * 0.5f));
+            _wall.AddComponent<BoxCollider>().size = new Vector3(4f, height, _wallThickness);
             Physics.SyncTransforms();
         }
 

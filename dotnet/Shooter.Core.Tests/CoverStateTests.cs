@@ -19,7 +19,7 @@ namespace Shooter.Core.Tests
 
         private static CoverProbeResult WallAt(float distance, CoverHeight height = CoverHeight.High, CoverEdge edges = CoverEdge.None, bool canEnter = true)
         {
-            return new CoverProbeResult(true, canEnter, height, edges, _wallNormal, distance);
+            return new CoverProbeResult(true, canEnter, height, edges, _wallNormal, distance, 2f);
         }
 
         // 入って寄せ終わった (中の) 状態にする。

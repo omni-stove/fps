@@ -408,6 +408,7 @@ namespace Shooter.Editor
                 new AnimatorControllerParameter { name = CharacterPose.CrouchParameter, type = AnimatorControllerParameterType.Bool },
                 new AnimatorControllerParameter { name = CharacterPose.AimParameter, type = AnimatorControllerParameterType.Bool },
                 new AnimatorControllerParameter { name = CharacterPose.CoverParameter, type = AnimatorControllerParameterType.Int, defaultInt = CharacterPose.CoverNone },
+                new AnimatorControllerParameter { name = CharacterPose.CoverCrouchParameter, type = AnimatorControllerParameterType.Float, defaultFloat = 0f },
                 new AnimatorControllerParameter { name = CharacterPose.DownedParameter, type = AnimatorControllerParameterType.Bool },
                 new AnimatorControllerParameter { name = CharacterPose.DeadParameter, type = AnimatorControllerParameterType.Bool },
                 new AnimatorControllerParameter { name = CharacterPose.WeaponCategoryParameter, type = AnimatorControllerParameterType.Int, defaultInt = CharacterPose.NoWeapon },
@@ -536,7 +537,13 @@ namespace Shooter.Editor
                 new StateSpec(
                     CoverHighState,
                     new Vector3(550f, 80f, 0f),
-                    clips[CharacterRigClips.CoverHigh],
+                    CharacterPose.CoverCrouchParameter,
+                    new[]
+                    {
+                        new BlendChild(clips[CharacterRigClips.CoverHigh], 0f),
+                        new BlendChild(clips[CharacterRigClips.CoverMid], CharacterRigClips.CoverMidCrouch),
+                        new BlendChild(clips[CharacterRigClips.CoverLow], 1f),
+                    },
                     PoseTransitionSeconds,
                     With(
                         calm,
@@ -655,8 +662,8 @@ namespace Shooter.Editor
 
             tree.name = spec.Name;
             tree.blendType = BlendTreeType.Simple1D;
-            tree.blendParameter = CharacterPose.SpeedParameter;
-            tree.blendParameterY = CharacterPose.SpeedParameter;
+            tree.blendParameter = spec.BlendParameter;
+            tree.blendParameterY = spec.BlendParameter;
             tree.useAutomaticThresholds = false;
 
             var children = new ChildMotion[spec.BlendChildren.Length];
@@ -669,7 +676,7 @@ namespace Shooter.Editor
                     position = Vector2.zero,
                     timeScale = 1f,
                     cycleOffset = 0f,
-                    directBlendParameter = CharacterPose.SpeedParameter,
+                    directBlendParameter = spec.BlendParameter,
                     mirror = false,
                 };
             }
@@ -1089,21 +1096,35 @@ namespace Shooter.Editor
 
             public BlendChild[] BlendChildren { get; }
 
+            public string BlendParameter { get; }
+
             public float TransitionSeconds { get; }
             public AnimatorCondition[] Conditions { get; }
 
             public StateSpec(string name, Vector3 position, AnimationClip clip, float transitionSeconds, AnimatorCondition[] conditions)
-                : this(name, position, clip, null, transitionSeconds, conditions)
+                : this(name, position, clip, null, transitionSeconds, conditions, CharacterPose.SpeedParameter)
             {
             }
 
             public StateSpec(string name, Vector3 position, BlendChild[] blendChildren, float transitionSeconds, AnimatorCondition[] conditions)
-                : this(name, position, null, blendChildren, transitionSeconds, conditions)
+                : this(name, position, null, blendChildren, transitionSeconds, conditions, CharacterPose.SpeedParameter)
+            {
+            }
+
+            public StateSpec(
+                string name, Vector3 position, string blendParameter, BlendChild[] blendChildren, float transitionSeconds, AnimatorCondition[] conditions)
+                : this(name, position, null, blendChildren, transitionSeconds, conditions, blendParameter)
             {
             }
 
             private StateSpec(
-                string name, Vector3 position, AnimationClip clip, BlendChild[] blendChildren, float transitionSeconds, AnimatorCondition[] conditions)
+                string name,
+                Vector3 position,
+                AnimationClip clip,
+                BlendChild[] blendChildren,
+                float transitionSeconds,
+                AnimatorCondition[] conditions,
+                string blendParameter)
             {
                 if (clip == null && (blendChildren == null || blendChildren.Length == 0))
                 {
@@ -1114,6 +1135,7 @@ namespace Shooter.Editor
                 Position = position;
                 Clip = clip;
                 BlendChildren = blendChildren;
+                BlendParameter = blendParameter;
                 TransitionSeconds = transitionSeconds;
                 Conditions = conditions;
             }

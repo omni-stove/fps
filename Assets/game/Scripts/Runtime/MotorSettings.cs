@@ -112,6 +112,9 @@ namespace Shooter.Runtime
         [SerializeField, Min(0.01f), Tooltip("高い壁の端から横に出る・戻るのにかける秒数")]
         private float _coverPeekSlideSeconds = MotorSpec.DefaultCoverPeekSlideSeconds;
 
+        [SerializeField, Min(0f), Tooltip("上端 (足元から、m) がこれ未満の壁にはカバーに入れない。0 なら足元の検査に当たる壁すべてに入れる")]
+        private float _coverMinWallHeight = MotorSpec.DefaultCoverMinWallHeight;
+
         [SerializeField, Min(0f), Tooltip("はしごの上の端からつかまったときの足元の、上の足場からの深さ (m)。前からつかまれるのもこの深さより下まで")]
         private float _ladderTopEntryDepth = MotorSpec.DefaultLadderTopEntryDepth;
 
@@ -340,6 +343,12 @@ namespace Shooter.Runtime
             set => _coverPeekSlideSeconds = value;
         }
 
+        public float CoverMinWallHeight
+        {
+            get => _coverMinWallHeight;
+            set => _coverMinWallHeight = value;
+        }
+
         public float LadderTopEntryDepth
         {
             get => _ladderTopEntryDepth;
@@ -537,7 +546,8 @@ namespace Shooter.Runtime
                 _airJumps,
                 _airJumpSpeed,
                 _jumpGraceSeconds,
-                _coverEnterSpeed);
+                _coverEnterSpeed,
+                _coverMinWallHeight);
         }
 
         public ProneSpec CreateProneSpec()
@@ -575,6 +585,7 @@ namespace Shooter.Runtime
             _coverEnterSpeed = MotorSpec.DefaultCoverEnterSpeed;
             _coverBackHoldSeconds = MotorSpec.DefaultCoverBackHoldSeconds;
             _coverPeekSlideSeconds = MotorSpec.DefaultCoverPeekSlideSeconds;
+            _coverMinWallHeight = MotorSpec.DefaultCoverMinWallHeight;
             _ladderTopEntryDepth = MotorSpec.DefaultLadderTopEntryDepth;
             _ladderMinApproachDot = MotorSpec.DefaultLadderMinApproachDot;
             _ladderMinApproachSpeed = MotorSpec.DefaultLadderMinApproachSpeed;

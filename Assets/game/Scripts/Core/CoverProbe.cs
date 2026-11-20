@@ -44,6 +44,11 @@ namespace Shooter.Core
                 return CoverProbeResult.None;
             }
 
+            if (sample.TopHeight < spec.CoverMinWallHeight - _boundaryEpsilon)
+            {
+                return CoverProbeResult.None;
+            }
+
             var normal = Horizontal(sample.Normal);
             var height = sample.TopHeight < spec.CoverLowWallHeight ? CoverHeight.Low : CoverHeight.High;
             var edges = CoverEdge.None;
@@ -57,7 +62,7 @@ namespace Shooter.Core
                 edges |= CoverEdge.Right;
             }
 
-            return new CoverProbeResult(true, FacesWall(facing, normal, spec.CoverMaxEnterAngleDegrees), height, edges, normal, sample.Distance);
+            return new CoverProbeResult(true, FacesWall(facing, normal, spec.CoverMaxEnterAngleDegrees), height, edges, normal, sample.Distance, sample.TopHeight);
         }
 
         public static float PeekOffset(CoverProbeResult result, float preferredSide, MotorSpec spec)

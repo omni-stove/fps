@@ -28,13 +28,6 @@ MonoBehaviour:
   _falloffMinMultiplier: 1
   _explosionRadius: 0
   _adsFieldOfView: 10.99
-  _sight:
-    _enabled: 1
-    _reticleId: mildot
-    _scopeOverlay: 1
-    _eyeViewInThirdPerson: 1
-    _aimedInProgress: 0.9
-    _visionMode: 0
   _blindFireSpreadDegrees: 15
   _activeReloadWindowStart: 0.5
   _activeReloadWindowLength: 0.15
@@ -178,4 +171,25 @@ MonoBehaviour:
     _recoverSeconds: 3
     _swayMultiplier: 0.1
   _swayDegrees: 0.6
+  _sight:
+    _enabled: 1
+    _reticleId: mildot
+    _scopeOverlay: 1
+    _eyeViewInThirdPerson: 1
+    _aimedInProgress: 0.9
+    _visionMode: 0
   _ammoTypes: []
+  _shield:
+    _enabled: 0
+    _blockArcDegrees: 120
+    _width: 0.6
+    _height: 1.2
+    _moveSpeedMultiplier: 0.8
+    _bashDamage: 40
+    _bashReach: 1.6
+    _bashArcDegrees: 90
+    _bashSwingSeconds: 0.6
+    _bashCooldownSeconds: 0.5
+    _bashImpactSeconds: 0.25
+    _bashLungeDistance: 0.5
+    _prefab: {fileID: 0}

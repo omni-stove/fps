@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 5b2af293-a0d8-45cb-af68-8c63628c80d1
   _nameKey: weapon.boltSniper
+  _description: 
   _category: 4
   _fireMode: 1
   _magazineSize: 5
@@ -27,13 +28,6 @@ MonoBehaviour:
   _falloffMinMultiplier: 1
   _explosionRadius: 0
   _adsFieldOfView: 20
-  _sight:
-    _enabled: 1
-    _reticleId: mildot
-    _scopeOverlay: 1
-    _eyeViewInThirdPerson: 1
-    _aimedInProgress: 0.9
-    _visionMode: 0
   _blindFireSpreadDegrees: 15
   _activeReloadWindowStart: 0.5
   _activeReloadWindowLength: 0.15
@@ -48,6 +42,11 @@ MonoBehaviour:
   _hasAdsMoveSpreadDegrees: 1
   _adsMoveSpreadDegrees: 1.5
   _shotNoiseRadius: 80
+  _weight: 6
+  _moveSpeedMultiplier: 1
+  _hasDrawSeconds: 0
+  _drawSeconds: 0
+  _holsterSeconds: 0
   _burst:
     _enabled: 0
     _roundsPerBurst: 3
@@ -171,4 +170,25 @@ MonoBehaviour:
     _recoverSeconds: 2
     _swayMultiplier: 0.2
   _swayDegrees: 0
+  _sight:
+    _enabled: 1
+    _reticleId: mildot
+    _scopeOverlay: 1
+    _eyeViewInThirdPerson: 1
+    _aimedInProgress: 0.9
+    _visionMode: 0
   _ammoTypes: []
+  _shield:
+    _enabled: 0
+    _blockArcDegrees: 120
+    _width: 0.6
+    _height: 1.2
+    _moveSpeedMultiplier: 0.8
+    _bashDamage: 40
+    _bashReach: 1.6
+    _bashArcDegrees: 90
+    _bashSwingSeconds: 0.6
+    _bashCooldownSeconds: 0.5
+    _bashImpactSeconds: 0.25
+    _bashLungeDistance: 0.5
+    _prefab: {fileID: 0}

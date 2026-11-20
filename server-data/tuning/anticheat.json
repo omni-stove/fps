@@ -22,6 +22,7 @@
   },
   "evidence": {
     "enabled": false,
-    "seconds": 30
+    "seconds": 30,
+    "maxFilesPerMinute": 10
   }
 }

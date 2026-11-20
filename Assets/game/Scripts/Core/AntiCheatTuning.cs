@@ -163,19 +163,26 @@ namespace Shooter.Core
         {
             public const bool DefaultEnabled = false;
             public const float DefaultSeconds = 30f;
+            public const int DefaultMaxFilesPerMinute = 10;
 
-            public static readonly EvidenceSettings Default = new EvidenceSettings(DefaultEnabled, DefaultSeconds);
+            public static readonly EvidenceSettings Default = new EvidenceSettings(DefaultEnabled, DefaultSeconds, DefaultMaxFilesPerMinute);
 
-            public EvidenceSettings(bool enabled, float seconds)
+            public EvidenceSettings(bool enabled, float seconds, int maxFilesPerMinute = DefaultMaxFilesPerMinute)
             {
                 RequirePositive(seconds, nameof(seconds));
+                RequireAtLeastOne(maxFilesPerMinute, nameof(maxFilesPerMinute));
                 Enabled = enabled;
                 Seconds = seconds;
+                MaxFilesPerMinute = maxFilesPerMinute;
             }
 
             public bool Enabled { get; }
 
             public float Seconds { get; }
+
+            // 通報の間引きは (通報した人, 相手) の組ごとで、抜けて入り直すと消える。
+            // 1 人が全員を通報し直すだけで証拠のファイルと整形が際限なく増えないよう、サーバー全体の 1 分あたりの数を絞る
+            public int MaxFilesPerMinute { get; }
         }
 
         private static void RequirePositive(float value, string name)

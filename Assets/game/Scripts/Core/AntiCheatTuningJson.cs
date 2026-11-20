@@ -23,6 +23,7 @@ namespace Shooter.Core
         public const string WallTrackSecondsItem = "wallTrackSeconds";
         public const string MinSamplesItem = "minSamples";
         public const string SecondsItem = "seconds";
+        public const string MaxFilesPerMinuteItem = "maxFilesPerMinute";
 
         private const string _kind = "anticheat JSON";
 
@@ -56,7 +57,7 @@ namespace Shooter.Core
             MinSamplesItem,
         };
 
-        public static IReadOnlyList<string> EvidenceItemNames { get; } = new[] { EnabledItem, SecondsItem };
+        public static IReadOnlyList<string> EvidenceItemNames { get; } = new[] { EnabledItem, SecondsItem, MaxFilesPerMinuteItem };
 
         public static AntiCheatTuning Parse(string text, string sourceName)
         {
@@ -156,9 +157,10 @@ namespace Shooter.Core
 
             var enabled = fields.ReadBool(EnabledItem, defaults.Enabled);
             var seconds = fields.ReadFloat(SecondsItem, defaults.Seconds);
+            var maxFiles = fields.ReadInt(MaxFilesPerMinuteItem, defaults.MaxFilesPerMinute);
             try
             {
-                return new AntiCheatTuning.EvidenceSettings(enabled, seconds);
+                return new AntiCheatTuning.EvidenceSettings(enabled, seconds, maxFiles);
             }
             catch (ArgumentException e)
             {

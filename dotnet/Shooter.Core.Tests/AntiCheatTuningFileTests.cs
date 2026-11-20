@@ -30,6 +30,7 @@ namespace Shooter.Core.Tests
             Assert.That(tuning.Stats.MinSamples, Is.EqualTo(defaults.Stats.MinSamples));
             Assert.That(tuning.Evidence.Enabled, Is.False);
             Assert.That(tuning.Evidence.Seconds, Is.EqualTo(defaults.Evidence.Seconds));
+            Assert.That(tuning.Evidence.MaxFilesPerMinute, Is.EqualTo(defaults.Evidence.MaxFilesPerMinute));
         }
 
         private static string RepositoryRoot()

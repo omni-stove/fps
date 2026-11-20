@@ -260,6 +260,39 @@ namespace Shooter.NetV2.Tests
             Assert.That(_transport.Sent, Is.Empty);
         }
 
+        [Test]
+        public void TheLossIsReadFromTheTransportOnlyOnceTheServerIsKnown()
+        {
+            _transport.LossPercent = 4;
+
+            Assert.That(_client.TryGetLossPercent(out _), Is.False, "no server connection yet");
+
+            Connect();
+
+            Assert.That(_client.TryGetLossPercent(out var percent), Is.True);
+            Assert.That(percent, Is.EqualTo(4));
+        }
+
+        [Test]
+        public void ATransportThatHasNotCountedLossGivesNoLoss()
+        {
+            Connect();
+
+            Assert.That(_client.TryGetLossPercent(out var percent), Is.False);
+            Assert.That(percent, Is.Zero);
+        }
+
+        [Test]
+        public void ADisposedClientGivesNoLoss()
+        {
+            _transport.LossPercent = 4;
+            Connect();
+
+            _client.Dispose();
+
+            Assert.That(_client.TryGetLossPercent(out _), Is.False);
+        }
+
         private void Connect()
         {
             _client.Connect("127.0.0.1", 7777);

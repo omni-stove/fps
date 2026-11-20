@@ -165,6 +165,12 @@ namespace Shooter.NetV2
             return _server.IsValid && !_disposed && _transport.TryGetRoundTripTime(_server, out milliseconds);
         }
 
+        public bool TryGetLossPercent(out int percent)
+        {
+            percent = 0;
+            return _server.IsValid && !_disposed && _transport is IConnectionLoss loss && loss.TryGetLossPercent(_server, out percent);
+        }
+
         public void Leave()
         {
             if (_disposed || State == MatchClientState.Disconnected)

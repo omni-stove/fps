@@ -428,6 +428,7 @@ namespace Shooter.Core.Tests
         [TestCase("hud.json", "hud.drone.recall")]
         [TestCase("items.json", "ability.visionGoggles")]
         [TestCase("items.json", "deployable.reconDrone")]
+        [TestCase("items.json", "deployable.beacon")]
         [TestCase("items.json", "weapon.riotShield")]
         [TestCase("items.json", "item.thermalScope")]
         [TestCase("moderation.json", ModerationText.VoteKickStartKey)]

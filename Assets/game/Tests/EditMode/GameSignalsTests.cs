@@ -71,6 +71,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.BuySender.Value, Is.Null);
             Assert.That(GameSignals.Vision.Value, Is.Null);
             Assert.That(GameSignals.Drone.Value, Is.Null);
+            Assert.That(GameSignals.NetStats.Value, Is.Null);
         }
 
         [Test]
@@ -201,6 +202,7 @@ namespace Shooter.Tests.EditMode
             GameSignals.BuySender.Publish(new FakeBuySender());
             GameSignals.Vision.Publish(new VisionStatus(VisionMode.Night, VisionSource.Goggles));
             GameSignals.Drone.Publish(new DroneStatus(1f, 1f, 0, true));
+            GameSignals.NetStats.Publish(new NetStatsSignal(40, 2, 900));
             heard = 0;
 
             GameSignals.ResetAll();
@@ -349,6 +351,64 @@ namespace Shooter.Tests.EditMode
             GameSignals.Drone.Publish(new DroneStatus(0.5f, 0.5f, 0, true));
 
             Assert.That(heard, Is.Zero);
+        }
+
+        [Test]
+        public void TheNetStatsSignalHoldsWhatWasPublishedAndUnknownValuesStayUnknown()
+        {
+            var heard = new List<NetStatsSignal?>();
+            GameSignals.NetStats.Changed += heard.Add;
+
+            GameSignals.NetStats.Publish(new NetStatsSignal(null, null, null));
+            GameSignals.NetStats.Publish(new NetStatsSignal(85, null, 4200));
+
+            Assert.That(GameSignals.NetStats.HasValue, Is.True);
+            Assert.That(GameSignals.NetStats.Value.Value.PingMs, Is.EqualTo(85));
+            Assert.That(GameSignals.NetStats.Value.Value.LossPercent, Is.Null, "a loss the transport cannot count is not 0%");
+            Assert.That(GameSignals.NetStats.Value.Value.ServerTick, Is.EqualTo(4200));
+            Assert.That(heard, Is.EqualTo(new NetStatsSignal?[] { new NetStatsSignal(null, null, null), new NetStatsSignal(85, null, 4200) }),
+                "all unknown is still a published value");
+            Assert.That(GameSignals.NetStats.ToString(), Is.EqualTo("NetStats=ping=85ms loss=-% tick=4200"));
+
+            GameSignals.NetStats.Clear();
+
+            Assert.That(GameSignals.NetStats.HasValue, Is.False);
+            Assert.That(heard[heard.Count - 1], Is.Null);
+        }
+
+        [Test]
+        public void ResetAllDropsTheNetStatsSubscribers()
+        {
+            var heard = 0;
+            GameSignals.NetStats.Changed += _ => heard++;
+
+            GameSignals.ResetAll();
+            GameSignals.NetStats.Publish(new NetStatsSignal(1, 0, 0));
+
+            Assert.That(heard, Is.Zero);
+        }
+
+        [Test]
+        public void TheNetStatsSignalComparesEveryValue()
+        {
+            Assert.That(new NetStatsSignal(30, 1, 10), Is.EqualTo(new NetStatsSignal(30, 1, 10)));
+            Assert.That(new NetStatsSignal(30, 1, 10) == new NetStatsSignal(30, 1, 10), Is.True);
+            Assert.That(new NetStatsSignal(30, 1, 10).GetHashCode(), Is.EqualTo(new NetStatsSignal(30, 1, 10).GetHashCode()));
+            Assert.That(new NetStatsSignal(30, 1, 10) != new NetStatsSignal(31, 1, 10), Is.True);
+            Assert.That(new NetStatsSignal(30, 1, 10), Is.Not.EqualTo(new NetStatsSignal(30, null, 10)), "unknown is not 1%");
+            Assert.That(new NetStatsSignal(30, 1, 10), Is.Not.EqualTo(new NetStatsSignal(30, 1, 11)));
+            Assert.That(new NetStatsSignal(0, 0, 0), Is.Not.EqualTo(default(NetStatsSignal)), "zero is not unknown");
+        }
+
+        [Test]
+        public void TheNetStatsSignalAcceptsTheEdgesAndRejectsValuesOutOfRange()
+        {
+            Assert.DoesNotThrow(() => new NetStatsSignal(0, 0, 0));
+            Assert.DoesNotThrow(() => new NetStatsSignal(int.MaxValue, NetStatsSignal.MaxLossPercent, int.MaxValue));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new NetStatsSignal(-1, null, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new NetStatsSignal(null, -1, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new NetStatsSignal(null, 101, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => new NetStatsSignal(null, null, -1));
         }
 
         [Test]

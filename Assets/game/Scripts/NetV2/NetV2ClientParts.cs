@@ -54,6 +54,9 @@ namespace Shooter.NetV2
 
         public float KillCamSpeed { get; set; } = 1f;
 
+        // 回線の値 (GameSignals.NetStats) を出し直す間隔 (秒)
+        public float NetStatsIntervalSeconds { get; set; } = NetV2NetStatsPart.DefaultIntervalSeconds;
+
         // ファイルから再生する (ReplayTransport) か。再生では通報を送る相手がいないので通報の口を出さず、見方の部品を足す
         public bool Replay { get; set; }
 
@@ -123,6 +126,9 @@ namespace Shooter.NetV2
                 parts.Add(new NetV2ReportPart(context.Send, context.Log));
                 parts.Add(new NetV2VoteKickPart(context.Send, context.Log));
                 parts.Add(new NetV2BuyPart(context.Send, context.Log));
+
+                // 再生の通信路はファイルを読むだけで Ping もロスも無いので、回線の値は試合中だけ出す
+                parts.Add(new NetV2NetStatsPart(client, context.NetStatsIntervalSeconds));
             }
 
             if (context.Voice != null)

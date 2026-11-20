@@ -126,6 +126,125 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheBeaconIsSavedNextToTheOtherAbilitiesAndGoesInTheFirstSlot()
+        {
+            Assert.That(AbilityAssetBuilder.BeaconAbilityPath, Is.EqualTo(AbilityAssetBuilder.Folder + "/DeployBeacon.asset"));
+            Assert.That(AbilityAssetBuilder.BeaconAbilityId, Is.EqualTo("deploy-beacon"));
+            Assert.That(AbilityAssetBuilder.BeaconLoadoutSlot, Is.Zero);
+        }
+
+        [Test]
+        public void BuildsARespawnBeaconWithTheKitDefaultsAndACodeBuiltBody()
+        {
+            var path = _folder + "/DeployBeacon.asset";
+
+            var beacon = AbilityAssetBuilder.BuildBeaconAt(path);
+
+            Assert.That(AssetDatabase.LoadAssetAtPath<BeaconDeployDefinition>(path), Is.SameAs(beacon));
+            Assert.That(beacon.Id, Is.EqualTo("deploy-beacon"));
+            Assert.That(beacon.MaxCharges, Is.EqualTo(1));
+            Assert.That(beacon.RechargeSeconds, Is.EqualTo(45f));
+            Assert.That(beacon.CooldownSeconds, Is.EqualTo(1f));
+            Assert.That(beacon.WindupSeconds, Is.Zero);
+            Assert.That(beacon.MaxActive, Is.EqualTo(1));
+            Assert.That(beacon.MaxHealth, Is.EqualTo(150));
+            Assert.That(beacon.Size, Is.EqualTo(new Vector3(0.4f, 1.2f, 0.4f)));
+            Assert.That(beacon.Prefab, Is.Null, "the pole and lamp are built in code until a game sets its look");
+            Assert.That(beacon.PreviewPrefab, Is.Null);
+            Assert.That(beacon.DisplayNameKey, Is.EqualTo("deployable.beacon"));
+
+            var spec = beacon.ToBeaconSpec();
+            Assert.That(spec.Uses, Is.EqualTo(3));
+            Assert.That(spec.SpawnDistance, Is.EqualTo(1f));
+            Assert.That(beacon.CreateAbility(), Is.InstanceOf<DeployAbility>());
+        }
+
+        [Test]
+        public void ASecondBeaconRunKeepsTheGuidAndRestoresTheValues()
+        {
+            var path = _folder + "/DeployBeacon.asset";
+            var beacon = AbilityAssetBuilder.BuildBeaconAt(path);
+            var guid = AssetDatabase.AssetPathToGUID(path);
+            beacon.Uses = 9;
+            beacon.NameKey = "other";
+
+            var rebuilt = AbilityAssetBuilder.BuildBeaconAt(path);
+
+            Assert.That(rebuilt, Is.SameAs(beacon));
+            Assert.That(AssetDatabase.AssetPathToGUID(path), Is.EqualTo(guid));
+            Assert.That(rebuilt.Uses, Is.EqualTo(BeaconSpec.DefaultUses));
+            Assert.That(rebuilt.DisplayNameKey, Is.EqualTo(BeaconSpec.DefaultNameKey));
+        }
+
+        [Test]
+        public void TheBeaconGoesInTheLoadoutsFirstSlotAndKeepsTheOtherSlot()
+        {
+            var loadoutPath = BuildLoadout();
+            var beacon = AbilityAssetBuilder.BuildBeaconAt(_folder + "/DeployBeacon.asset");
+            var drone = AbilityAssetBuilder.BuildDroneAt(_folder + "/DeployDrone.asset");
+            AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(loadoutPath).SetAbilities(new AbilityDefinition[] { drone, drone });
+
+            var loadout = AbilityAssetBuilder.EquipInLoadoutAt(loadoutPath, beacon, AbilityAssetBuilder.BeaconLoadoutSlot);
+
+            Assert.That(loadout, Is.SameAs(AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(loadoutPath)));
+            Assert.That(loadout.Abilities, Is.EqualTo(new AbilityDefinition[] { beacon, drone }));
+            Assert.That(loadout.Slots.Count, Is.EqualTo(2), "the weapons are left alone");
+
+            AbilityAssetBuilder.EquipInLoadoutAt(loadoutPath, beacon, AbilityAssetBuilder.BeaconLoadoutSlot);
+            Assert.That(loadout.Abilities, Is.EqualTo(new AbilityDefinition[] { beacon, drone }), "a second run changes nothing");
+        }
+
+        [Test]
+        public void AnEmptyLoadoutIsPaddedUpToTheSlot()
+        {
+            var loadoutPath = BuildLoadout();
+            var beacon = AbilityAssetBuilder.BuildBeaconAt(_folder + "/DeployBeacon.asset");
+
+            var loadout = AbilityAssetBuilder.EquipInLoadoutAt(loadoutPath, beacon, 1);
+
+            Assert.That(loadout.Abilities, Is.EqualTo(new AbilityDefinition[] { null, beacon }));
+        }
+
+        [Test]
+        public void EquippingRejectsAMissingAbilityABadSlotAMissingLoadoutAndABadBeacon()
+        {
+            var loadoutPath = BuildLoadout();
+            var beacon = AbilityAssetBuilder.BuildBeaconAt(_folder + "/DeployBeacon.asset");
+
+            Assert.Throws<ArgumentNullException>(() => AbilityAssetBuilder.EquipInLoadoutAt(loadoutPath, null, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AbilityAssetBuilder.EquipInLoadoutAt(loadoutPath, beacon, -1));
+            Assert.Throws<ArgumentOutOfRangeException>(() => AbilityAssetBuilder.EquipInLoadoutAt(loadoutPath, beacon, AbilityHost.SlotCount));
+            Assert.Throws<InvalidOperationException>(() => AbilityAssetBuilder.EquipInLoadoutAt(_folder + "/Missing.asset", beacon, 0));
+
+            beacon.Uses = 0;
+            Assert.Throws<AbilityDefinitionException>(() => AbilityAssetBuilder.EquipInLoadoutAt(loadoutPath, beacon, 0));
+            Assert.That(AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(loadoutPath).Abilities, Is.Empty, "nothing is saved when the beacon is invalid");
+        }
+
+        [Test]
+        public void RejectsABeaconPathOutsideTheAssets()
+        {
+            Assert.Throws<ArgumentException>(() => AbilityAssetBuilder.BuildBeaconAt("Elsewhere/DeployBeacon.asset"));
+        }
+
+        [Test]
+        public void TheCommittedBeaconMatchesTheBuilderAndIsInTheDemoLoadout()
+        {
+            var beacon = AssetDatabase.LoadAssetAtPath<BeaconDeployDefinition>(AbilityAssetBuilder.BeaconAbilityPath);
+            var loadout = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(WeaponAssetBuilder.LoadoutPath);
+
+            Assert.That(beacon, Is.Not.Null, $"run {AbilityAssetBuilder.MenuPath}");
+            Assert.That(beacon.Id, Is.EqualTo(AbilityAssetBuilder.BeaconAbilityId));
+            Assert.That(beacon.DisplayNameKey, Is.EqualTo(BeaconSpec.DefaultNameKey));
+            Assert.DoesNotThrow(() => beacon.ToBeaconSpec());
+            Assert.That(AbilityAssetBuilder.LoadOrBuildBeaconAbility(), Is.SameAs(beacon), "an existing asset is read, not rebuilt");
+
+            Assert.That(loadout, Is.Not.Null);
+            Assert.That(loadout.Abilities.Count, Is.GreaterThan(AbilityAssetBuilder.BeaconLoadoutSlot), $"run {AbilityAssetBuilder.MenuPath}");
+            Assert.That(loadout.Abilities[AbilityAssetBuilder.BeaconLoadoutSlot], Is.SameAs(beacon), $"run {AbilityAssetBuilder.MenuPath}");
+        }
+
+        [Test]
         public void TheCommittedGogglesAndDroneMatchTheBuilder()
         {
             var goggles = AssetDatabase.LoadAssetAtPath<VisionGogglesDefinition>(AbilityAssetBuilder.VisionGogglesAbilityPath);
@@ -139,6 +258,13 @@ namespace Shooter.Tests.EditMode
             Assert.DoesNotThrow(() => drone.ToDroneSpec());
             Assert.That(AbilityAssetBuilder.LoadOrBuildVisionGogglesAbility(), Is.SameAs(goggles), "an existing asset is read, not rebuilt");
             Assert.That(AbilityAssetBuilder.LoadOrBuildDroneAbility(), Is.SameAs(drone));
+        }
+
+        private string BuildLoadout()
+        {
+            var loadoutPath = _folder + "/Loadout.asset";
+            WeaponAssetBuilder.BuildAt(_folder + "/Rifle.asset", _folder + "/Handgun.asset", _folder + "/Catalog.asset", loadoutPath);
+            return loadoutPath;
         }
     }
 }

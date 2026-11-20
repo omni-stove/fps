@@ -14,7 +14,7 @@ namespace Shooter.Net.Tests
         // 本物の一覧 (BlockListStore.DefaultKey) を壊さないよう、テストだけのキーに保存する。
         private const string BlocksKey = "Shooter.Tests.NetV2ClientParts.Blocks";
 
-        private const int VoiceIndex = 16;
+        private const int VoiceIndex = 17;
 
         private readonly List<string> _logs = new List<string>();
         private readonly List<string> _decided = new List<string>();
@@ -58,6 +58,7 @@ namespace Shooter.Net.Tests
             GameSignals.VoteKickSender.Clear();
             GameSignals.Wallet.Clear();
             GameSignals.BuySender.Clear();
+            GameSignals.NetStats.Clear();
         }
 
         [Test]
@@ -83,6 +84,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2ReportPart),
                 typeof(NetV2VoteKickPart),
                 typeof(NetV2BuyPart),
+                typeof(NetV2NetStatsPart),
             }));
         }
 
@@ -111,6 +113,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2ReportPart),
                 typeof(NetV2VoteKickPart),
                 typeof(NetV2BuyPart),
+                typeof(NetV2NetStatsPart),
                 typeof(NetV2VoicePart),
             }));
             Assert.That(((NetV2VoicePart)_parts[VoiceIndex]).Voice, Is.Not.Null);
@@ -145,6 +148,7 @@ namespace Shooter.Net.Tests
             Assert.That(_parts.OfType<NetV2ReportPart>(), Is.Empty, "a replay has no server to send a report to");
             Assert.That(_parts.OfType<NetV2VoteKickPart>(), Is.Empty, "a replay has no server to send a vote to");
             Assert.That(_parts.OfType<NetV2BuyPart>(), Is.Empty, "a replay has no server to buy from");
+            Assert.That(_parts.OfType<NetV2NetStatsPart>(), Is.Empty, "a replay has no connection to measure");
         }
 
         [Test]

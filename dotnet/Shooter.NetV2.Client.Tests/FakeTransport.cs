@@ -4,7 +4,7 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2.Tests
 {
-    internal sealed class FakeTransport : IMatchTransport
+    internal sealed class FakeTransport : IMatchTransport, IConnectionLoss
     {
         public static readonly ConnectionId Server = new ConnectionId(1);
 
@@ -21,6 +21,9 @@ namespace Shooter.NetV2.Tests
         public ConnectRequestMessage LastConnectRequest { get; private set; }
 
         public bool ShutDown { get; private set; }
+
+        // null なら数えていない通信路として false を返す
+        public int? LossPercent { get; set; }
 
         public void Listen(string address, ushort port)
         {
@@ -76,6 +79,12 @@ namespace Shooter.NetV2.Tests
         {
             milliseconds = 20;
             return true;
+        }
+
+        public bool TryGetLossPercent(ConnectionId connection, out int percent)
+        {
+            percent = LossPercent ?? 0;
+            return LossPercent.HasValue && connection == Server;
         }
 
         public bool TryReceive(out TransportEvent transportEvent)

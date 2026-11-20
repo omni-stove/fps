@@ -50,7 +50,7 @@ namespace Shooter.Tests.EditMode
         {
             _store.Save(new[] { _rifle, _handgun });
 
-            Assert.That(PlayerPrefs.GetString(_store.Key), Is.EqualTo(LoadoutPreference.ToJson(new[] { _rifle, _handgun })));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Is.EqualTo(LoadoutPreference.ToJson(new LoadoutChoice(new[] { _rifle, _handgun }))));
             Assert.That(new LoadoutPreferenceStore(_store.Key).Load(), Is.EqualTo(new[] { _rifle, _handgun }));
             LogAssert.NoUnexpectedReceived();
         }

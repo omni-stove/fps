@@ -4,21 +4,25 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    // 武器の値を持たず Id だけを持つのは、値を試合の一覧から引き直すため。
+    // 武器や能力の値を持たず Id だけを持つのは、値を試合の一覧から引き直すため。
     public static class LoadoutPreference
     {
-        public const int Version = 1;
+        public const int Version = 2;
 
-        public static string ToJson(IReadOnlyList<string> weaponIds)
+        // 能力を持たない前の版の保存も、武器の選択は戻せるよう読む
+        public const int OldestReadableVersion = 1;
+
+        public static string ToJson(LoadoutChoice choice)
         {
-            if (weaponIds == null)
+            if (choice == null)
             {
-                throw new ArgumentNullException(nameof(weaponIds));
+                throw new ArgumentNullException(nameof(choice));
             }
 
+            var weaponIds = choice.WeaponIds;
             if (weaponIds.Count == 0)
             {
-                throw new ArgumentException("at least one weapon id is required", nameof(weaponIds));
+                throw new ArgumentException("at least one weapon id is required", nameof(choice));
             }
 
             var builder = new StringBuilder();
@@ -27,7 +31,7 @@ namespace Shooter.Core
             {
                 if (string.IsNullOrEmpty(weaponIds[i]))
                 {
-                    throw new ArgumentException("slot " + i + " has no weapon id", nameof(weaponIds));
+                    throw new ArgumentException("slot " + i + " has no weapon id", nameof(choice));
                 }
 
                 if (i > 0)
@@ -38,11 +42,29 @@ namespace Shooter.Core
                 SaveJson.AppendString(builder, weaponIds[i]);
             }
 
-            builder.Append("]}");
+            builder.Append(']');
+            var abilityIds = choice.AbilityIds;
+            if (abilityIds != null)
+            {
+                builder.Append(",\"abilities\":[");
+                for (var i = 0; i < abilityIds.Count; i++)
+                {
+                    if (i > 0)
+                    {
+                        builder.Append(',');
+                    }
+
+                    SaveJson.AppendString(builder, abilityIds[i]);
+                }
+
+                builder.Append(']');
+            }
+
+            builder.Append('}');
             return builder.ToString();
         }
 
-        public static IReadOnlyList<string> FromJson(string text, out string problem)
+        public static LoadoutChoice FromJson(string text, out string problem)
         {
             if (string.IsNullOrWhiteSpace(text))
             {
@@ -67,7 +89,8 @@ namespace Shooter.Core
                 return null;
             }
 
-            if (!root.TryGetValue("version", out var version) || !(version is long number) || number != Version)
+            if (!root.TryGetValue("version", out var version) || !(version is long number)
+                || number < OldestReadableVersion || number > Version)
             {
                 problem = "the saved loadout has an unknown version";
                 return null;
@@ -91,8 +114,30 @@ namespace Shooter.Core
                 ids[i] = id;
             }
 
+            string[] abilityIds = null;
+            if (number >= 2 && root.TryGetValue("abilities", out var abilities))
+            {
+                if (!(abilities is List<object> abilityList))
+                {
+                    problem = "the saved loadout's abilities are not a list";
+                    return null;
+                }
+
+                abilityIds = new string[abilityList.Count];
+                for (var i = 0; i < abilityList.Count; i++)
+                {
+                    if (!(abilityList[i] is string abilityId))
+                    {
+                        problem = "ability slot " + i + " of the saved loadout is not an id";
+                        return null;
+                    }
+
+                    abilityIds[i] = abilityId;
+                }
+            }
+
             problem = null;
-            return ids;
+            return new LoadoutChoice(ids, abilityIds);
         }
     }
 }

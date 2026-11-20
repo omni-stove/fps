@@ -16,10 +16,12 @@ namespace Shooter.Core
         private readonly ModeSession _session;
         private readonly ControlPoint[] _points;
 
-        // 顔ぶれは _session と同じに保つ。
+        // オフラインの Runner は AddPlayer を通さず Session に直に人を足すので、顔ぶれは _session を正とし、ここには拠点にいる人だけを持つ。
         private readonly Dictionary<int, int?> _playerPoints = new Dictionary<int, int?>();
 
         public DominationSpec Spec { get; }
+
+        public ModeSession Session => _session;
         public GameModeState State => _session.State;
 
         public float RemainingSeconds => _session.RemainingSeconds;
@@ -30,7 +32,7 @@ namespace Shooter.Core
 
         public int PointCount => _points.Length;
 
-        public Domination(DominationSpec spec)
+        public Domination(DominationSpec spec, IRespawnPolicy respawnPolicy = null)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
 
@@ -48,7 +50,7 @@ namespace Shooter.Core
                 new TwoTeams(),
                 spec.TimeLimitSeconds,
                 new IScoreRule[] { new ControlPointScore(this) },
-                null,
+                respawnPolicy,
                 new IWinCondition[] { new ScoreLimitWin(spec.ScoreLimit), new TimeLimitWin() });
             _session.StateChanged += state => StateChanged?.Invoke(state);
             _session.Ended += winner => Ended?.Invoke(Side.ToTeam(winner));
@@ -63,18 +65,13 @@ namespace Shooter.Core
                 point.Reset();
             }
 
-            foreach (var playerId in new List<int>(_playerPoints.Keys))
-            {
-                _playerPoints[playerId] = null;
-            }
-
+            _playerPoints.Clear();
             _session.Reset();
         }
 
         public void AddPlayer(int playerId, Team team)
         {
             _session.AddPlayer(playerId, Side.FromTeam(team));
-            _playerPoints[playerId] = null;
         }
 
         public void RemovePlayer(int playerId)
@@ -158,10 +155,7 @@ namespace Shooter.Core
 
         private void LeavePoint(int playerId)
         {
-            if (_playerPoints.ContainsKey(playerId))
-            {
-                _playerPoints[playerId] = null;
-            }
+            _playerPoints.Remove(playerId);
         }
 
         private void UpdatePoints(float elapsed)
@@ -170,7 +164,7 @@ namespace Shooter.Core
             var bravoCounts = new int[_points.Length];
             foreach (var pair in _playerPoints)
             {
-                if (!pair.Value.HasValue)
+                if (!pair.Value.HasValue || !_session.HasPlayer(pair.Key))
                 {
                     continue;
                 }
@@ -203,12 +197,12 @@ namespace Shooter.Core
 
         private int? FindPoint(int playerId)
         {
-            if (!_playerPoints.TryGetValue(playerId, out var pointIndex))
+            if (!_session.HasPlayer(playerId))
             {
                 throw new ArgumentOutOfRangeException(nameof(playerId), playerId, "no player with this id");
             }
 
-            return pointIndex;
+            return _playerPoints.TryGetValue(playerId, out var pointIndex) ? pointIndex : null;
         }
 
         private sealed class ControlPointScore : IScoreRule

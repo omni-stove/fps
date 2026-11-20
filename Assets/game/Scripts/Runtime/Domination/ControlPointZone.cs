@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Shooter.Runtime
 {
-    // 範囲にいる参加者を自分では調べず、DominationRunner に毎フレーム Scan させるのは、誰が参加者かを知っているのが Runner だから。
+    // 範囲にいる参加者を自分では調べず、Runner に毎フレーム Scan させるのは、誰が参加者かを知っているのが Runner だから。
     [DisallowMultipleComponent]
     public sealed class ControlPointZone : MonoBehaviour
     {

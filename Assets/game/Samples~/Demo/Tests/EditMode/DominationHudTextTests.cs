@@ -13,12 +13,5 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameText.Resolve(DominationHudText.PointOwner(1, null)), Is.EqualTo("B --"));
             Assert.That(GameText.Resolve(DominationHudText.PointOwner(26, null)), Is.EqualTo("P27 --"));
         }
-
-        [Test]
-        public void TeamScoreFloorsThePoints()
-        {
-            Assert.That(GameText.Resolve(DominationHudText.TeamScore(Team.Alpha, 12.9f)), Is.EqualTo("ALPHA 12"));
-            Assert.That(GameText.Resolve(DominationHudText.TeamScore(Team.Bravo, -1f)), Is.EqualTo("BRAVO 0"));
-        }
     }
 }

@@ -11,7 +11,7 @@ namespace Shooter.Editor
 {
     // 敵が拠点を取ったか (team=Bravo) は結果の行に数を出すが、敵がプレイヤーとの撃ち合いに入るかどうかで変わるので合否には使わない。
     // batchmode には入力が無いので、拠点 A へは歩かせずに移し、倒れて戻されたら生き返った後にまた移す。
-    // 再開も R の入力の代わりに DominationRunner.Restart を呼ぶ (R から Restart へつなぐのは DominationRunner の Update)。
+    // 再開も R の入力の代わりに DominationRunner.Restart を呼ぶ (R から Restart へつなぐのは ModeRunnerBase の Update)。
     // Play Mode に入るときにスクリプトが読み直されても続きを走らせられるよう、状態は SessionState に置く。
     // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
@@ -41,9 +41,9 @@ namespace Shooter.Editor
         private const string SecondsKey = "Shooter.DominationSmokeRun.Seconds";
         private const string RequestedAtKey = "Shooter.DominationSmokeRun.RequestedAt";
 
-        private static readonly string _playingLog = DominationLog.Tag + " state=" + GameModeState.Playing + " ";
-        private static readonly string _endedLog = DominationLog.Tag + " ended winner=";
-        private static readonly string _restartLog = DominationLog.Restart();
+        private static readonly string _playingLog = ModeLog.Tag + " state=" + GameModeState.Playing + " ";
+        private static readonly string _endedLog = ModeLog.Tag + " ended winner=";
+        private static readonly string _restartLog = ModeLog.Restart();
         private static readonly string _alphaCaptureSuffix = " team=" + Team.Alpha;
         private static readonly string _bravoCaptureSuffix = " team=" + Team.Bravo;
         private static readonly string _capturedPrefix = DominationLog.Tag + " captured point=";

@@ -150,7 +150,6 @@ namespace Shooter.Runtime
             AddIfMissing<GrenadeCountView>(hudObject);
             AddIfMissing<AbilitySlotsView>(hudObject);
             AddIfMissing<StreakView>(hudObject);
-            AddIfMissing<DominationView>(hudObject);
             AddIfMissing<ControlPointsView>(hudObject);
             AddIfMissing<PingMarkersView>(hudObject);
             AddIfMissing<SquadOrderMarkerView>(hudObject);
@@ -208,8 +207,6 @@ namespace Shooter.Runtime
         public AbilitySlotsView AbilitySlots => GetComponent<AbilitySlotsView>();
 
         public StreakView Streak => GetComponent<StreakView>();
-
-        public DominationView Domination => GetComponent<DominationView>();
 
         public PingMarkersView PingMarkers => GetComponent<PingMarkersView>();
 
@@ -297,12 +294,6 @@ namespace Shooter.Runtime
             if (killFeed != null)
             {
                 killFeed.RefreshTeamColors();
-            }
-
-            var domination = GetComponent<DominationView>();
-            if (domination != null)
-            {
-                domination.RefreshTeamColors();
             }
 
             var controlPoints = GetComponent<ControlPointsView>();

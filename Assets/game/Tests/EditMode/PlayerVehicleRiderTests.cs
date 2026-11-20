@@ -420,7 +420,7 @@ namespace Shooter.Tests.EditMode
             _vehicle.TryEnter(_rider);
             damageable.TakeDamage(10);
 
-            // DominationRunner のように、体を移してから体力を戻す。
+            // モードの Runner (SideMember.Respawn) のように、体を移してから体力を戻す。
             var spawn = new Vector3(20f, 1f, 5f);
             _body.transform.position = spawn;
             LogAssert.Expect(LogType.Log, "[Vehicle] 'Car' leave rider=Player seat=0 reason=Forced exit=0");

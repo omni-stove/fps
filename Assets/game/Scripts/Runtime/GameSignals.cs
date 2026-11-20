@@ -35,8 +35,6 @@ namespace Shooter.Runtime
 
         public static GameSignal<ModeStatus> ModeStatus { get; } = new GameSignal<ModeStatus>(nameof(ModeStatus));
 
-        public static GameSignal<DominationStatus> Domination { get; } = new GameSignal<DominationStatus>(nameof(Domination));
-
         public static GameSignal<IReadOnlyList<ScoreboardEntry>> Scoreboard { get; } =
             new GameSignal<IReadOnlyList<ScoreboardEntry>>(nameof(Scoreboard));
 
@@ -152,7 +150,6 @@ namespace Shooter.Runtime
             LocalHeadingDegrees.Reset();
             Participants.Reset();
             ModeStatus.Reset();
-            Domination.Reset();
             Scoreboard.Reset();
             InteractHint.Reset();
             SeatFiring.Reset();

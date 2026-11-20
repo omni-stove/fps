@@ -68,6 +68,7 @@ private void OnDisable()
 | Free for All | `FreeForAllStanding` |
 | Kill Confirmed | `KillConfirmed` |
 | Hardpoint | `Hardpoint` |
+| Domination | `DominationStatus` (拠点ごとの持ち主・占領の進み・取り合い) |
 | Search and Destroy | `SearchAndDestroyStatus` |
 | Capture the Flag | `CaptureTheFlagStatus` |
 | Payload | `PayloadStatus` |

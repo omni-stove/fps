@@ -11,8 +11,6 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 敵は SideMember を持たない。持たせると敵は陣営の相手を探すが、DominationRunner はプレイヤーに SideMember を付けないので、
-    // 誰も狙わなくなる。
     public static class DominationSceneBuilder
     {
         public static string ScenePath => BuildSceneList.DominationScene;
@@ -285,8 +283,8 @@ namespace Shooter.Editor
                 var spawnRoot = new GameObject(SpawnPointsRootName);
                 created.Add(spawnRoot);
                 SceneManager.MoveGameObjectToScene(spawnRoot, scene);
-                var alphaSpawns = CreateSpawnPoints(spawnRoot.transform, Team.Alpha, AlphaSpawns);
-                var bravoSpawns = CreateSpawnPoints(spawnRoot.transform, Team.Bravo, BravoSpawns);
+                CreateSpawnPoints(spawnRoot.transform, Team.Alpha, AlphaSpawns);
+                CreateSpawnPoints(spawnRoot.transform, Team.Bravo, BravoSpawns);
 
                 var bootstrapObject = new GameObject(BootstrapObjectName);
                 created.Add(bootstrapObject);
@@ -302,7 +300,7 @@ namespace Shooter.Editor
                 for (var i = 0; i < BotObjectives.Count; i++)
                 {
                     var spawn = BravoSpawns[i];
-                    SceneBuildHelpers.CreateEnemy(
+                    var bot = SceneBuildHelpers.CreateEnemy(
                         scene,
                         botsRoot.transform,
                         BotName(i + 1),
@@ -312,6 +310,7 @@ namespace Shooter.Editor
                         BotPatrolRoute(i),
                         ModeSceneBuilder.DefaultBotBody,
                         botWeapon);
+                    bot.gameObject.AddComponent<SideMember>().Side = Side.Bravo;
                 }
 
                 var pointsRoot = new GameObject(ControlPointsRootName);
@@ -326,8 +325,6 @@ namespace Shooter.Editor
                 created.Add(runnerObject);
                 SceneManager.MoveGameObjectToScene(runnerObject, scene);
                 var runner = runnerObject.AddComponent<DominationRunner>();
-                runner.SetSpawnPoints(Team.Alpha, alphaSpawns);
-                runner.SetSpawnPoints(Team.Bravo, bravoSpawns);
                 runner.Definition = tuning;
 
                 EditorSceneManager.MarkSceneDirty(scene);
@@ -347,16 +344,18 @@ namespace Shooter.Editor
             }
         }
 
-        private static List<Transform> CreateSpawnPoints(Transform root, Team team, IReadOnlyList<ModeSpawnPlacement> spawns)
+        private static List<SideSpawnPoint> CreateSpawnPoints(Transform root, Team team, IReadOnlyList<ModeSpawnPlacement> spawns)
         {
-            var points = new List<Transform>(spawns.Count);
+            var points = new List<SideSpawnPoint>(spawns.Count);
             for (var i = 0; i < spawns.Count; i++)
             {
                 var spawn = spawns[i];
                 var marker = new GameObject($"Spawn-{team}-{i + 1}");
                 marker.transform.SetParent(root, false);
                 marker.transform.SetPositionAndRotation(spawn.Feet, Quaternion.LookRotation(spawn.Facing, Vector3.up));
-                points.Add(marker.transform);
+                var point = marker.AddComponent<SideSpawnPoint>();
+                point.Side = Side.FromTeam(team);
+                points.Add(point);
             }
 
             return points;

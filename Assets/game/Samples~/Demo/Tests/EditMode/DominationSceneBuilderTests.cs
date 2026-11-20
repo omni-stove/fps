@@ -158,7 +158,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void PopulatesABootstrapInFirstPersonWithTheRulesAndARunnerWithBothTeamsSpawns()
+        public void PopulatesABootstrapInFirstPersonWithTheRulesAndSideSpawnPointsForBothTeams()
         {
             var rifle = NewWeapon("Rifle", WeaponAssetBuilder.RifleSpec());
             var rules = NewRules(GameRulesAssetBuilder.DominationRules());
@@ -174,8 +174,10 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(runner.name, Is.EqualTo(DominationSceneBuilder.RunnerObjectName));
             Assert.That(runner.gameObject.scene, Is.EqualTo(_scene));
-            AssertSpawns(runner.SpawnPoints(Team.Alpha), DominationSceneBuilder.AlphaSpawns);
-            AssertSpawns(runner.SpawnPoints(Team.Bravo), DominationSceneBuilder.BravoSpawns);
+            var spawns = Find(DominationSceneBuilder.SpawnPointsRootName).GetComponentsInChildren<SideSpawnPoint>();
+            AssertSpawns(spawns.Where(point => point.Side == Side.Alpha).Select(point => point.transform).ToList(), DominationSceneBuilder.AlphaSpawns);
+            AssertSpawns(spawns.Where(point => point.Side == Side.Bravo).Select(point => point.transform).ToList(), DominationSceneBuilder.BravoSpawns);
+            Assert.That(spawns, Has.Length.EqualTo(DominationSceneBuilder.AlphaSpawns.Count + DominationSceneBuilder.BravoSpawns.Count));
         }
 
         [Test]
@@ -227,7 +229,8 @@ namespace Shooter.Tests.EditMode
                 Assert.That(agent.WeaponDefinition, Is.SameAs(rifle));
                 Assert.That(agent.PatrolRoute, Is.EqualTo(DominationSceneBuilder.BotPatrolRoute(i)));
                 Assert.That(bot.GetComponent<Damageable>(), Is.Not.Null);
-                Assert.That(bot.GetComponent<SideMember>(), Is.Null, "with a SideMember the bot would look for a side the player does not have");
+                Assert.That(bot.GetComponent<SideMember>(), Is.Not.Null, "the DominationRunner joins only SideMembers to the match");
+                Assert.That(bot.GetComponent<SideMember>().Side, Is.EqualTo(Side.Bravo));
 
                 var feet = agent.GroundPosition;
                 Assert.That(Flat(feet - DominationSceneBuilder.BravoSpawns[i].Feet).magnitude, Is.LessThan(Epsilon));

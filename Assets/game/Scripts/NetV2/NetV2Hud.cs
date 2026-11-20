@@ -46,6 +46,8 @@ namespace Shooter.NetV2
         private float? _localCharge;
         private GrenadeCountStatus? _grenades;
         private DominationStatus _domination;
+        private Team? _dominationTeam;
+        private ModeStatus _dominationStatus;
         private ClientCaptureTheFlagStatus _captureTheFlag;
         private ModeStatus _modeStatus;
         private ScoreboardEntry[] _publishedScoreboard;
@@ -241,7 +243,6 @@ namespace Shooter.NetV2
             }
 
             _shown = true;
-            ShowControlPoints(snapshot);
             ShowModeStatus(snapshot);
             ShowNotice(own >= 0 ? snapshot.Players[own] : default, own >= 0);
             ShowScoreboard(snapshot);
@@ -417,18 +418,21 @@ namespace Shooter.NetV2
             _model.SetNotice(notice);
         }
 
-        private void ShowControlPoints(SnapshotMessage snapshot)
+        // オフラインの DominationRunner と同じく、Detail に DominationStatus を置く
+        private bool ApplyDomination(SnapshotMessage snapshot)
         {
             var match = snapshot.Match;
             if (match.Objective != MatchObjective.Domination)
             {
-                if (_domination != null)
+                if (_dominationStatus == null)
                 {
-                    GameSignals.Domination.ClearIfCurrent(_domination);
-                    _domination = null;
+                    return false;
                 }
 
-                return;
+                _domination = null;
+                _dominationTeam = null;
+                _dominationStatus = null;
+                return true;
             }
 
             _controlPoints.Clear();
@@ -449,13 +453,31 @@ namespace Shooter.NetV2
             var ended = match.State == GameModeState.Ended;
             var winner = ended && match.HasWinner ? match.Winner : (Team?)null;
             var remaining = Math.Max(0, match.RemainingSeconds);
-            if (_domination != null && SameDomination(_domination, match.AlphaPoints, match.BravoPoints, remaining, ended, winner, _controlPoints))
+            var ownTeam = _teamPublished ? _team : (Team?)null;
+            if (_dominationStatus != null && _dominationTeam == ownTeam
+                && SameDomination(_domination, match.AlphaPoints, match.BravoPoints, remaining, ended, winner, _controlPoints))
             {
-                return;
+                return false;
             }
 
             _domination = new DominationStatus(match.AlphaPoints, match.BravoPoints, remaining, _controlPoints.ToArray(), ended, winner);
-            GameSignals.Domination.Publish(_domination);
+            _dominationTeam = ownTeam;
+
+            // ModeStatus は出した後も UI が持つので、得点の並びは使い回さずに毎回作る
+            var sideScores = new[]
+            {
+                new SideScore(Side.Alpha, match.AlphaPoints),
+                new SideScore(Side.Bravo, match.BravoPoints),
+            };
+            _dominationStatus = new ModeStatus(
+                remaining,
+                sideScores,
+                Side.FromTeam(ownTeam),
+                null,
+                ended,
+                Side.FromTeam(winner),
+                _domination);
+            return true;
         }
 
         private void ShowModeStatus(SnapshotMessage snapshot)
@@ -464,6 +486,7 @@ namespace Shooter.NetV2
             var changed = (_captureTheFlag != null && _captureTheFlag.Apply(snapshot))
                 | (_searchAndDestroy != null && _searchAndDestroy.Apply(snapshot))
                 | (_hardpoint != null && _hardpoint.Apply(snapshot))
+                | ApplyDomination(snapshot)
                 | (_killConfirmed != null && _killConfirmed.Apply(snapshot))
                 | ApplyPayload(snapshot)
                 | (_battleRoyale != null && _battleRoyale.Apply(snapshot, InteractKeyLabel))
@@ -475,6 +498,7 @@ namespace Shooter.NetV2
                 PublishModeStatus(_captureTheFlag?.Status
                     ?? _searchAndDestroy?.Status
                     ?? _hardpoint?.Status
+                    ?? _dominationStatus
                     ?? _killConfirmed?.Status
                     ?? _payload?.Status
                     ?? _battleRoyale?.Status
@@ -808,12 +832,9 @@ namespace Shooter.NetV2
                 _teamPublished = false;
             }
 
-            if (_domination != null)
-            {
-                GameSignals.Domination.ClearIfCurrent(_domination);
-                _domination = null;
-            }
-
+            _domination = null;
+            _dominationTeam = null;
+            _dominationStatus = null;
             PublishModeStatus(null);
             _captureTheFlag?.Clear();
             _searchAndDestroy?.Reset();

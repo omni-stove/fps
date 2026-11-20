@@ -146,12 +146,17 @@ make server-dotnet ARGS="-rules FreeForAll"
   種類ごとの `maxCharges`・`rechargeSeconds`・`cooldownSeconds` (Unity の能力のアセットの回数・戻り・間隔と同じ値にする) で人ごとに置ける回数と間隔を数え、
   使い切ると `[Deploy] ... refused reason=NoCharges charges=0/<回数> wait=<秒>`、間隔の内なら `reason=CoolingDown` で断る。回数は出現し直すと満ちる。
   サーバー側のアンチチートの調整値 (見えない相手を送らない `conceal`・違反の累積 `violations`・統計の検知 `stats`・通報の証拠 `evidence`) は
-  `server-data/tuning/anticheat.json` から読み、起動の `[Server] combat tuning ... anticheat=<ファイル>` に出す。どれも `enabled` が `false` で、まだ試合の挙動は変えない。
-  `stats.enabled` を `true` にすると、人 (Bot は除く) ごとに `stats.windowSeconds` の時間窓で射撃と視線を数え、閾値を超えた指標を
-  `{"type":"cheat-stats","playerId":"1","productUserId":"...","metric":"headshotRatio","value":"0.9","threshold":"0.6","windowSeconds":"120","samples":"12"}` のような 1 行の JSON でログに出す (キックはしない)。
-  指標は `headshotRatio` (命中のうち頭の率が `headshotRatio` より高い)・`reactionMs` (相手が見え始めてから当てるまでの平均が `minReactionMs` より短い)・
-  `snapDegreesPerTick` (1 tick の横の向きの差が `snapDegreesPerTick` より大きい)・`wallTrackSeconds` (見えない相手へ `wallTrackSeconds` より長く向き続けた) の 4 つで、
-  率と平均は時間窓の中の数が `minSamples` に届くまで比べない。同じ人の同じ指標は時間窓ごとに 1 回だけ出し、起動のときに `[CheatStats] collecting ...` と閾値を出す。
+  `server-data/tuning/anticheat.json` から読み、起動の `[Server] combat tuning ... anticheat=<ファイル>` に出す。どれも既定は `enabled` が `false` で、試合の挙動を変えない。
+  - `violations.enabled` を `true` にすると、拒否された射撃と予算を超えた入力を人ごとに直近 `windowSeconds` 秒で数え、
+    `shotRejectionLimit`・`overBudgetLimit` を超えた人を EAC と同じ理由 (`shooter:rejected:anti-cheat`) で切る。
+    切るときに `[AntiCheat] violations kicking id=<id>: reason=ShotRejected|InputOverBudget count=<数> limit=<上限> window=<秒>s` と出す。
+    回避・乗り越えの最中に撃って断られた分 (`Dodging`・`Vaulting`) と Bot は数えず、抜けた人の数は忘れる。
+    起動のときに `[AntiCheat] violations on window=...` か `[AntiCheat] violations off ...` と出す。
+  - `stats.enabled` を `true` にすると、人 (Bot は除く) ごとに `stats.windowSeconds` の時間窓で射撃と視線を数え、閾値を超えた指標を
+    `{"type":"cheat-stats","playerId":"1","productUserId":"...","metric":"headshotRatio","value":"0.9","threshold":"0.6","windowSeconds":"120","samples":"12"}` のような 1 行の JSON でログに出す (キックはしない)。
+    指標は `headshotRatio` (命中のうち頭の率が `headshotRatio` より高い)・`reactionMs` (相手が見え始めてから当てるまでの平均が `minReactionMs` より短い)・
+    `snapDegreesPerTick` (1 tick の横の向きの差が `snapDegreesPerTick` より大きい)・`wallTrackSeconds` (見えない相手へ `wallTrackSeconds` より長く向き続けた) の 4 つで、
+    率と平均は時間窓の中の数が `minSamples` に届くまで比べない。同じ人の同じ指標は時間窓ごとに 1 回だけ出し、起動のときに `[CheatStats] collecting ...` と閾値を出す。
 - 人ごとに置ける種類 (能力) は 2 枠で、選べる候補はルールの JSON の `loadout.abilities` に書いた `deployables.json` の Id にする
   (例: `"loadout": { ..., "abilities": ["deploy-beacon"] }`)。項目が無ければ `deployables.json` の全部 (置けない `Drone` を除く) が候補になり、
   空の並び (`[]`) なら何も置かせない。起動のときに `[Deploy] net abilities=<候補> default=<既定> from=rules|catalog` と出す。

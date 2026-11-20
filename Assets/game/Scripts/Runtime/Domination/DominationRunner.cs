@@ -42,6 +42,7 @@ namespace Shooter.Runtime
         private Domination _domination;
         private ScoreboardEntry[] _publishedScoreboard;
         private bool _publishedPaletteViewer;
+        private Team _paletteViewer = TeamColors.OfflineViewer;
 
         public Domination Domination => _domination;
 
@@ -198,7 +199,9 @@ namespace Shooter.Runtime
 
         protected override void OnBegan()
         {
-            GameSignals.PaletteViewer.Publish(TeamColors.OfflineViewer);
+            // 円盤と同じ陣営から見た色にそろえる
+            _paletteViewer = PlayerSide.TryGetTeam(out var viewerTeam) ? viewerTeam : TeamColors.OfflineViewer;
+            GameSignals.PaletteViewer.Publish(_paletteViewer);
             _publishedPaletteViewer = true;
             ShowScoreboard();
         }
@@ -228,7 +231,7 @@ namespace Shooter.Runtime
             _publishedScoreboard = null;
             if (_publishedPaletteViewer)
             {
-                GameSignals.PaletteViewer.ClearIfCurrent(TeamColors.OfflineViewer);
+                GameSignals.PaletteViewer.ClearIfCurrent(_paletteViewer);
                 _publishedPaletteViewer = false;
             }
 

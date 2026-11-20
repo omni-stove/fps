@@ -24,6 +24,20 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void WritesTheRequestedAbilitiesWithADashForAnEmptySlot()
+        {
+            Assert.That(LoadoutChoiceLog.Requested(new[] { _rifle }, new[] { "beacon", "" }),
+                Is.EqualTo("[Net] loadout request weapons=" + _rifle + " abilities=beacon,-"));
+            Assert.That(LoadoutChoiceLog.Requested(new[] { _rifle }, null),
+                Is.EqualTo("[Net] loadout request weapons=" + _rifle), "a request without abilities reads like a weapons-only one");
+            Assert.Throws<ArgumentNullException>(() => LoadoutChoiceLog.Requested(null, new[] { "beacon" }));
+            Assert.That(LoadoutChoiceLog.SavedAbilitiesNotSent("the saved abilities are not all offered"),
+                Is.EqualTo("[Net] loadout the saved abilities are not sent; the server uses the loadout's: the saved abilities are not all offered"));
+            Assert.That(LoadoutChoiceLog.SavedAbilitiesNotSent(null),
+                Is.EqualTo("[Net] loadout the saved abilities are not sent; the server uses the loadout's: -"));
+        }
+
+        [Test]
         public void WritesTheAcceptedWeaponsAndWhenTheyApply()
         {
             var weapons = new[] { Spec(_rifle, WeaponCategory.AssaultRifle), Spec(_handgun, WeaponCategory.Handgun) };

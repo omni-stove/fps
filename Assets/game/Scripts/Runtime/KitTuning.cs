@@ -45,6 +45,8 @@ namespace Shooter.Runtime
 
         public const string AchievementsResourcePath = "Tuning/achievements";
 
+        public const string NameplatesResourcePath = NameplateJson.ResourcePath;
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<string, object> _loaded = new Dictionary<string, object>(StringComparer.Ordinal);
 
@@ -83,6 +85,9 @@ namespace Shooter.Runtime
 
         public static KeySharingSpec KeySharing =>
             Load(c => c.KeySharingTuning, KeySharingResourcePath, KeySharingJson.Parse, KeySharingSpec.Default);
+
+        public static NameplateSpec Nameplates =>
+            Load(c => c.NameplatesTuning, NameplatesResourcePath, NameplateJson.Parse, NameplateSpec.Default);
 
         public static void Reload()
         {

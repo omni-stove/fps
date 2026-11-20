@@ -1432,6 +1432,30 @@
     color: rgba(255, 60, 50, 0.85);
 }
 
+/* 頭上の名前。画面全体を覆い、名前ごとの子要素の下端の中央を NameplateView が頭の上の点 (left / top の %) に合わせる。 */
+.nameplates {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* 色は設定の色覚のパレットで変わるので、ここに書かず NameplateView が味方・敵の色を入れる。 */
+.nameplate {
+    position: absolute;
+    translate: -50% -100%;
+    margin-bottom: 6px;
+    padding: 1px 6px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    background-color: rgba(0, 0, 0, 0.35);
+    border-radius: 3px;
+    text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+}
+
 /* 印。画面全体を覆い、印ごとの子要素の中心を PingMarkersView が left / top (%) に置く。 */
 .ping-markers {
     position: absolute;

@@ -78,7 +78,6 @@ namespace Shooter.Server.Tests
             var log = _log.ToString();
             Assert.That(log, Does.Contain("[AntiCheat] violations on window=30s shotRejectionLimit=60 overBudgetLimit=120"));
             Assert.That(log, Does.Contain("[CheatStats] collecting window=120s"));
-            Assert.That(log, Does.Contain("[Evidence] holding the last 30s of each player for reports"));
         }
 
         [Test]

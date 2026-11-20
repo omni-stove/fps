@@ -61,17 +61,15 @@ namespace Shooter.Core.Tests
         {
             Assert.That(CampaignSaveSlots.For("Campaign01"), Is.EqualTo("campaign-Campaign01"));
             Assert.That(CampaignSaveSlots.For("Campaign02"), Is.EqualTo("campaign-Campaign02"));
-            Assert.That(CampaignSaveSlots.For("Campaign01"), Is.Not.EqualTo(CampaignSaveSlots.Legacy));
         }
 
         [Test]
-        public void OnlyCampaign01ReadsTheLegacySlot()
+        public void OnlyMissionSlotsAreCampaignSlots()
         {
-            Assert.That(CampaignSaveSlots.Legacy, Is.EqualTo("campaign"));
-            Assert.That(CampaignSaveSlots.ReadsLegacy("Campaign01"), Is.True);
-            Assert.That(CampaignSaveSlots.ReadsLegacy("campaign01"), Is.False);
-            Assert.That(CampaignSaveSlots.ReadsLegacy("Campaign02"), Is.False);
-            Assert.That(CampaignSaveSlots.ReadsLegacy(null), Is.False);
+            Assert.That(CampaignSaveSlots.IsSlot("campaign-Campaign01"), Is.True);
+            Assert.That(CampaignSaveSlots.IsSlot("campaign"), Is.False);
+            Assert.That(CampaignSaveSlots.IsSlot("campaign-"), Is.False);
+            Assert.That(CampaignSaveSlots.IsSlot(null), Is.False);
         }
     }
 }

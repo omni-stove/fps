@@ -724,17 +724,10 @@ namespace Shooter.Runtime
 
         private bool TryRestore()
         {
-            var fromLegacy = false;
             if (!_storage.TryRead(_saveSlot, out var text))
             {
-                if (!CampaignSaveSlots.ReadsLegacy(_missionId) || !_storage.TryRead(CampaignSaveSlots.Legacy, out text))
-                {
-                    Debug.Log($"{LogTag} no save; starting mission={_missionId} from the beginning", this);
-                    return false;
-                }
-
-                fromLegacy = true;
-                Debug.Log($"{LogTag} reading the legacy save slot={CampaignSaveSlots.Legacy} for mission={_missionId}", this);
+                Debug.Log($"{LogTag} no save; starting mission={_missionId} from the beginning", this);
+                return false;
             }
 
             CampaignSave save;
@@ -783,33 +776,8 @@ namespace Shooter.Runtime
             {
                 DeleteSave();
             }
-            else if (fromLegacy)
-            {
-                MigrateLegacySave(text);
-            }
 
             return true;
-        }
-
-        // 書けなければ古いスロットを消さずに残し、次も古いスロットから再開できるようにする。
-        private void MigrateLegacySave(string text)
-        {
-            try
-            {
-                _storage.Write(_saveSlot, text);
-            }
-            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
-            {
-                Debug.LogError(
-                    $"{LogTag} failed to move the legacy save slot={CampaignSaveSlots.Legacy} to slot={_saveSlot}; keeping the legacy slot: {e.Message}",
-                    this);
-                return;
-            }
-
-            if (TryDeleteSlot(CampaignSaveSlots.Legacy))
-            {
-                Debug.Log($"{LogTag} migrated save slot={CampaignSaveSlots.Legacy} to slot={_saveSlot}", this);
-            }
         }
 
         private static string FormatAmmo(System.Collections.Generic.IReadOnlyList<WeaponAmmo> weapons)
@@ -944,12 +912,6 @@ namespace Shooter.Runtime
             if (TryDeleteSlot(_saveSlot))
             {
                 Debug.Log($"{LogTag} deleted save slot={_saveSlot}", this);
-            }
-
-            // 移す前に書けなかった古いスロットが残っていると、達成した後にまた途中から再開してしまう。
-            if (CampaignSaveSlots.ReadsLegacy(_missionId))
-            {
-                TryDeleteSlot(CampaignSaveSlots.Legacy);
             }
         }
 

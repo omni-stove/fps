@@ -6,7 +6,7 @@ namespace Shooter.Core.Tests
 {
     public sealed class CampaignSaveTests
     {
-        private const string _rifleId = CampaignSave.LegacyWeaponId;
+        private const string _rifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
         private const string _handgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
 
         private const string _valid =
@@ -18,10 +18,6 @@ namespace Shooter.Core.Tests
             "{'version':3,'missionId':'m01','checkpointId':'cp2','health':75,'equippedWeaponId':'h'," +
             "'weapons':[{'id':'r','ammoInMagazine':12,'reserveAmmo':60,'attachments':['scope','grip']},{'id':'h','ammoInMagazine':5,'reserveAmmo':24,'attachments':[]}]," +
             "'objectives':[{'id':'kills','state':'active','count':2}]}";
-
-        private const string _validLegacy =
-            "{'version':1,'missionId':'m01','checkpointId':'cp2','health':75,'ammoInMagazine':12,'reserveAmmo':60," +
-            "'objectives':[{'id':'kills','state':'active','count':2},{'id':'exit','state':'locked','count':0}]}";
 
         private static readonly string[] _killsAndExit = { "kills", "exit" };
         private static readonly string[] _killsOnly = { "kills" };
@@ -130,47 +126,8 @@ namespace Shooter.Core.Tests
             Assert.That(loaded.GetState("bonus"), Is.EqualTo(ObjectiveState.Failed));
         }
 
-        [Test]
-        public void ReadsTheLegacySingleWeaponFormatAsTheRiflesAmmo()
-        {
-            var save = CampaignSave.FromJson(Json(_validLegacy));
-
-            Assert.That(save.Version, Is.EqualTo(CampaignSave.CurrentVersion), "a loaded legacy save is upgraded");
-            Assert.That(save.MissionId, Is.EqualTo("m01"));
-            Assert.That(save.CheckpointId, Is.EqualTo("cp2"));
-            Assert.That(save.Health, Is.EqualTo(75));
-            Assert.That(save.Weapons, Has.Count.EqualTo(1));
-            Assert.That(save.Weapons[0].WeaponId, Is.EqualTo(CampaignSave.LegacyWeaponId));
-            Assert.That(save.Weapons[0].AmmoInMagazine, Is.EqualTo(12));
-            Assert.That(save.Weapons[0].ReserveAmmo, Is.EqualTo(60));
-            Assert.That(save.EquippedWeaponId, Is.EqualTo(CampaignSave.LegacyWeaponId));
-            Assert.That(save.Objectives.Select(o => o.Id), Is.EqualTo(_killsAndExit));
-        }
-
-        [Test]
-        public void ALoadedLegacySaveIsWrittenBackInTheCurrentFormat()
-        {
-            var json = CampaignSave.FromJson(Json(_validLegacy)).ToJson();
-
-            Assert.That(json, Does.StartWith("{\"version\":3,"));
-            Assert.That(json, Does.Contain("\"weapons\":[{\"id\":\"" + CampaignSave.LegacyWeaponId + "\",\"ammoInMagazine\":12,\"reserveAmmo\":60,\"attachments\":[]}]"));
-            Assert.That(CampaignSave.FromJson(json).FindWeapon(CampaignSave.LegacyWeaponId).ReserveAmmo, Is.EqualTo(60));
-        }
-
-        [TestCase("'ammoInMagazine':12,", "")]
-        [TestCase("'ammoInMagazine':12", "'ammoInMagazine':-1")]
-        [TestCase("'reserveAmmo':60", "'reserveAmmo':'60'")]
-        [TestCase("'reserveAmmo':60,", "'reserveAmmo':60,'weapons':[],")]
-        [TestCase("'reserveAmmo':60,", "'reserveAmmo':60,'equippedWeaponId':'',")]
-        public void RejectsInvalidLegacyFields(string from, string to)
-        {
-            Assert.That(_validLegacy.Contains(from, StringComparison.Ordinal), Is.True);
-            var json = Json(_validLegacy.Replace(from, to, StringComparison.Ordinal));
-
-            Assert.Throws<FormatException>(() => CampaignSave.FromJson(json));
-        }
-
         [TestCase(0)]
+        [TestCase(1)]
         [TestCase(4)]
         [TestCase(-1)]
         public void RejectsOtherVersions(int version)
@@ -189,7 +146,7 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void TheCurrentFormatDoesNotAcceptTheLegacyFields()
+        public void DoesNotAcceptAmmoOutsideTheWeapons()
         {
             var json = Json(_valid.Replace("'health':75,", "'health':75,'ammoInMagazine':1,", StringComparison.Ordinal));
 

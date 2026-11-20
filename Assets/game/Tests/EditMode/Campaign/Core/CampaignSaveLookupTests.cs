@@ -30,13 +30,14 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void OnlyTheLegacyMissionReadsTheLegacySlot()
+        public void TheOldSharedSlotIsNotRead()
         {
             var storage = new Storage();
-            storage.Slots[CampaignSaveSlots.Legacy] = Save(CampaignSaveSlots.LegacyMissionId, "start").ToJson();
+            storage.Slots["campaign"] = Save("Campaign01", "start").ToJson();
 
-            Assert.That(CampaignSaveLookup.TryReadResumable(storage, CampaignSaveSlots.LegacyMissionId, out _, out _), Is.True);
-            Assert.That(CampaignSaveLookup.TryReadResumable(storage, "Campaign02", out _, out _), Is.False);
+            Assert.That(CampaignSaveLookup.TryReadResumable(storage, "Campaign01", out var save, out var problem), Is.False);
+            Assert.That(save, Is.Null);
+            Assert.That(problem, Is.Null);
         }
 
         [Test]
@@ -55,15 +56,14 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void DeleteRemovesTheMissionSlotAndTheLegacySlotOfTheLegacyMission()
+        public void DeleteRemovesOnlyTheMissionSlot()
         {
             var storage = new Storage();
             storage.Slots[CampaignSaveSlots.For("Campaign01")] = "a";
             storage.Slots[CampaignSaveSlots.For("Campaign02")] = "b";
-            storage.Slots[CampaignSaveSlots.Legacy] = "c";
 
             CampaignSaveLookup.Delete(storage, "Campaign02");
-            Assert.That(storage.Slots.Keys, Is.EquivalentTo(new[] { CampaignSaveSlots.For("Campaign01"), CampaignSaveSlots.Legacy }));
+            Assert.That(storage.Slots.Keys, Is.EquivalentTo(new[] { CampaignSaveSlots.For("Campaign01") }));
 
             CampaignSaveLookup.Delete(storage, "Campaign01");
             Assert.That(storage.Slots, Is.Empty);

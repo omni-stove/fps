@@ -223,6 +223,69 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheDefaultHudCarriesTheNetStatsAndNameplateViewsInTheirSlots()
+        {
+            Assert.That(_hud.NetStats, Is.Not.Null, "net stats");
+            Assert.That(_hud.Nameplates, Is.Not.Null, "nameplates");
+            Assert.That(_hud.NetStats.Element, Is.Not.Null);
+            Assert.That(_hud.NetStats.Element.name, Is.EqualTo(NetStatsView.UxmlName));
+            Assert.That(_hud.Nameplates.Element, Is.Not.Null);
+            Assert.That(_hud.Nameplates.Element.name, Is.EqualTo(NameplateView.UxmlName));
+        }
+
+        [Test]
+        public void AddingTheViewsAgainDoesNotDuplicateTheNetStatsAndNameplateViews()
+        {
+            Hud.AddViews(_hud.gameObject);
+
+            Assert.That(_hud.GetComponents<NetStatsView>(), Has.Length.EqualTo(1));
+            Assert.That(_hud.GetComponents<NameplateView>(), Has.Length.EqualTo(1));
+        }
+
+        [Test]
+        public void TheNameplatesStayHiddenWithNobodyToName()
+        {
+            Assert.That(_hud.Nameplates.ShownCount, Is.EqualTo(0));
+            Assert.That(_hud.Nameplates.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheNetStatsLineIsHiddenOfflineEvenWhenEnabled()
+        {
+            var netStats = _hud.NetStats;
+            netStats.Store = null;
+            netStats.Settings = new RecordingSettingsSink(ControlSettings.Default.WithShowNetStats(true));
+
+            Assert.That(GameSignals.NetStats.HasValue, Is.False, "nothing publishes the net stats offline");
+            Assert.That(netStats.IsShown, Is.False);
+            Assert.That(netStats.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+        }
+
+        [Test]
+        public void TheHudNetStatsLineIsToggledOnlineAndStartsHidden()
+        {
+            var netStats = _hud.NetStats;
+            netStats.Store = null;
+            netStats.Settings = new RecordingSettingsSink(ControlSettings.Default);
+            GameSignals.NetStats.Publish(new NetStatsSignal(48, 3, 1234));
+
+            Assert.That(netStats.IsShown, Is.False, "hidden by default");
+            Assert.That(netStats.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+
+            netStats.Toggle();
+
+            Assert.That(netStats.IsShown, Is.True);
+            Assert.That(netStats.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
+            Assert.That(((Label)netStats.Element).text, Is.EqualTo("Ping 48 ms  ロス 3%  tick 1234"));
+
+            netStats.Toggle();
+
+            Assert.That(netStats.IsShown, Is.False);
+            Assert.That(netStats.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
+            Assert.That(((Label)netStats.Element).text, Is.Empty);
+        }
+
+        [Test]
         public void TheMinimalDensityHidesTheMinimapAndTheCompass()
         {
             Assert.That(_hud.Minimap.IsAllowed, Is.True);

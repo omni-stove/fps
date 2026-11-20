@@ -20,6 +20,18 @@ namespace Shooter.Core
             return Prefix + " request weapons=" + Join(weaponIds);
         }
 
+        // 能力を載せない要求 (abilityIds が null) は、サーバーがロードアウトの能力を使うので、能力の欄を書かずに武器だけの行と同じにする
+        public static string Requested(IReadOnlyList<string> weaponIds, IReadOnlyList<string> abilityIds)
+        {
+            var line = Requested(weaponIds);
+            return abilityIds == null ? line : line + " abilities=" + Join(abilityIds);
+        }
+
+        public static string SavedAbilitiesNotSent(string reason)
+        {
+            return Prefix + " the saved abilities are not sent; the server uses the loadout's: " + (string.IsNullOrEmpty(reason) ? "-" : reason);
+        }
+
         public static string Accepted(ulong clientId, IReadOnlyList<WeaponSpec> weapons)
         {
             if (weapons == null)

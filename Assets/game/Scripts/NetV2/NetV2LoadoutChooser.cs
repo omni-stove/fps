@@ -10,12 +10,13 @@ namespace Shooter.NetV2
     // 断られた並びを次に自動で送らないよう、受け入れられた並びだけを保存する。
     // サーバーは武器のある要求にだけ送った順に答えるので、届いた答えは待っている先頭の並びへのものとして突き合わせる。
     // 見た目は相手から見える体のスキンだけを送る。迷彩は自分の一人称の武器にしか出さず、サーバーを通す必要が無いため。
+    // 受け入れられた能力は、能力の枠を持つ部品 (NetV2DeployInputPart) をこのクラスに縛らないよう、イベントで外へ出す。
     internal sealed class NetV2LoadoutChooser : IDisposable
     {
         private readonly NetV2Weapons _weapons;
         private readonly Func<IMessage, bool> _send;
         private readonly Func<string> _cosmeticId;
-        private readonly LoadoutPreferenceStore _store = new LoadoutPreferenceStore();
+        private readonly LoadoutPreferenceStore _store;
         private readonly LoadoutRequestMessage _request = new LoadoutRequestMessage();
         private readonly Queue<Pending> _pending = new Queue<Pending>();
         private readonly UnityEngine.Object _context;
@@ -31,13 +32,26 @@ namespace Shooter.NetV2
         {
         }
 
-        public NetV2LoadoutChooser(NetV2Weapons weapons, Func<IMessage, bool> send, UnityEngine.Object context, Func<string> cosmeticId)
+        // store を渡せるのは、テストで本物の保存を壊さないよう別のキーを使うため
+        public NetV2LoadoutChooser(
+            NetV2Weapons weapons,
+            Func<IMessage, bool> send,
+            UnityEngine.Object context,
+            Func<string> cosmeticId,
+            LoadoutPreferenceStore store = null)
         {
             _weapons = weapons ?? throw new ArgumentNullException(nameof(weapons));
             _send = send ?? throw new ArgumentNullException(nameof(send));
             _cosmeticId = cosmeticId ?? throw new ArgumentNullException(nameof(cosmeticId));
             _context = context;
+            _store = store ?? new LoadoutPreferenceStore();
         }
+
+        // 能力を載せて送った並びが受け入れられたときだけ出す。能力を載せない要求ではサーバーがロードアウトの能力を使うので、枠を変えさせない
+        public event Action<IReadOnlyList<string>> AbilitiesAccepted;
+
+        // 能力の枠の順で、「なし」の枠は AbilitySelection.None。まだ受け入れられていなければ null
+        public IReadOnlyList<string> AcceptedAbilityIds { get; private set; }
 
         public void Bind(ILoadoutSelect view)
         {
@@ -74,7 +88,7 @@ namespace Shooter.NetV2
             }
 
             Debug.Log(LoadoutChoiceLog.Prefix + " sending the saved loadout", _context);
-            Send(selection.WeaponIds, 0);
+            Send(selection.WeaponIds, SavedAbilitiesToSend(saved.AbilityIds), 0);
         }
 
         public void Apply(SnapshotMessage snapshot, int playerId)
@@ -112,8 +126,8 @@ namespace Shooter.NetV2
             {
                 try
                 {
-                    // 能力はまだサーバーへ送らないので、受け入れられた武器だけを保存する
-                    _store.Save(new LoadoutChoice(pending.WeaponIds));
+                    // 能力を載せなかった並びは能力を null のまま保存し、次に送るときもロードアウトの能力に任せる
+                    _store.Save(new LoadoutChoice(pending.WeaponIds, pending.AbilityIds));
                 }
                 catch (ArgumentException e)
                 {
@@ -126,12 +140,19 @@ namespace Shooter.NetV2
             {
                 _view.ShowAnswer(answer.Accepted, answer.Reason);
             }
+
+            if (answer.Accepted && pending.AbilityIds != null)
+            {
+                AcceptedAbilityIds = pending.AbilityIds;
+                AbilitiesAccepted?.Invoke(pending.AbilityIds);
+            }
         }
 
         public void Dispose()
         {
             Unbind();
             _pending.Clear();
+            AbilitiesAccepted = null;
         }
 
         private void Open()
@@ -149,8 +170,7 @@ namespace Shooter.NetV2
             }
 
             // 能力の一覧が壊れていても武器は選べるよう、能力を選ばせずに開く
-            if (!LoadoutSelectionAssets.TryCreateAbilities(
-                    _weapons.Loadout, GameContent.Pick(c => c.AbilityCatalog), saved?.AbilityIds, out var abilities, out error))
+            if (!LoadoutSelectionAssets.TryCreateAbilities(_weapons.Loadout, AbilityCatalog(), saved?.AbilityIds, out var abilities, out error))
             {
                 Debug.LogWarning(LoadoutChoiceLog.AbilitiesNotOffered(error), _context);
             }
@@ -161,8 +181,7 @@ namespace Shooter.NetV2
 
         private void HandleConfirmed(LoadoutChoice choice)
         {
-            // 能力はまだ要求に載せないので、武器だけを送る
-            if (!Send(choice.WeaponIds, _screenSession))
+            if (!Send(choice.WeaponIds, choice.AbilityIds, _screenSession))
             {
                 _view.ShowAnswer(false, "not connected to the match");
                 return;
@@ -181,6 +200,7 @@ namespace Shooter.NetV2
             }
 
             _request.WeaponIds.Clear();
+            _request.AbilityIds.Clear();
             _request.CosmeticId = cosmeticId;
             if (_send(_request))
             {
@@ -201,28 +221,63 @@ namespace Shooter.NetV2
             return id;
         }
 
-        private bool Send(IReadOnlyList<string> weaponIds, int screenSession)
+        // abilityIds が null なら能力を空の並びで送る。サーバーは空の並びをロードアウトの能力のままにする
+        private bool Send(IReadOnlyList<string> weaponIds, IReadOnlyList<string> abilityIds, int screenSession)
         {
             _request.CosmeticId = CosmeticToSend();
-            _request.WeaponIds.Clear();
-            foreach (var id in weaponIds)
-            {
-                if (_request.WeaponIds.Count == _request.WeaponIds.MaxCount)
-                {
-                    break;
-                }
-
-                _request.WeaponIds.Add(id);
-            }
-
+            Fill(_request.WeaponIds, weaponIds);
+            Fill(_request.AbilityIds, abilityIds ?? Array.Empty<string>());
             if (!_send(_request))
             {
                 return false;
             }
 
-            Debug.Log(LoadoutChoiceLog.Requested(weaponIds), _context);
-            _pending.Enqueue(new Pending(Copy(weaponIds), screenSession));
+            Debug.Log(LoadoutChoiceLog.Requested(weaponIds, abilityIds), _context);
+            _pending.Enqueue(new Pending(Copy(weaponIds), abilityIds != null ? Copy(abilityIds) : null, screenSession));
             return true;
+        }
+
+        // 保存した能力が今の試合で選べないときは、武器まで止めずに能力だけを載せずに送る。断られる並びを自動で送らないため
+        private IReadOnlyList<string> SavedAbilitiesToSend(IReadOnlyList<string> saved)
+        {
+            if (saved == null)
+            {
+                return null;
+            }
+
+            if (!LoadoutSelectionAssets.TryCreateAbilities(_weapons.Loadout, AbilityCatalog(), saved, out var abilities, out var reason))
+            {
+                Debug.LogWarning(LoadoutChoiceLog.SavedAbilitiesNotSent(reason), _context);
+                return null;
+            }
+
+            // カタログが無いのは能力を選ばせないゲームなので、警告にしない
+            if (abilities == null)
+            {
+                return null;
+            }
+
+            if (!abilities.RestoredPreference)
+            {
+                Debug.LogWarning(LoadoutChoiceLog.SavedAbilitiesNotSent("the saved abilities are not all offered in those slots"), _context);
+                return null;
+            }
+
+            return abilities.AbilityIds;
+        }
+
+        private static AbilityCatalogAsset AbilityCatalog()
+        {
+            return GameContent.Pick(c => c.AbilityCatalog);
+        }
+
+        private static void Fill(ContentIdList list, IReadOnlyList<string> ids)
+        {
+            list.Clear();
+            for (var i = 0; i < ids.Count && list.Count < list.MaxCount; i++)
+            {
+                list.Add(ids[i]);
+            }
         }
 
         private LoadoutChoice LoadSaved()
@@ -272,13 +327,17 @@ namespace Shooter.NetV2
 
         private readonly struct Pending
         {
-            public Pending(IReadOnlyList<string> weaponIds, int screenSession)
+            public Pending(IReadOnlyList<string> weaponIds, IReadOnlyList<string> abilityIds, int screenSession)
             {
                 WeaponIds = weaponIds;
+                AbilityIds = abilityIds;
                 ScreenSession = screenSession;
             }
 
             public IReadOnlyList<string> WeaponIds { get; }
+
+            // 能力を載せずに送った並びは null
+            public IReadOnlyList<string> AbilityIds { get; }
 
             // 自動で送った並びは 0 (画面に出さない)
             public int ScreenSession { get; }

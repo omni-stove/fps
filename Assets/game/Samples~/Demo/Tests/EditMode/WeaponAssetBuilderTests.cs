@@ -325,13 +325,6 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void LegacySavesAreReadAsTheRiflesAmmo()
-        {
-            // 武器 1 本の頃のセーブには Id が無く、CampaignSave はその残弾をこの Id の武器に持たせる。
-            Assert.That(CampaignSave.LegacyWeaponId, Is.EqualTo(WeaponAssetBuilder.RifleId));
-        }
-
-        [Test]
         public void ThePlayerLoadoutIsTheCommittedRifleThenHandgun()
         {
             Assume.That(

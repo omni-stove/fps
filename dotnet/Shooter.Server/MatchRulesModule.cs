@@ -157,7 +157,7 @@ namespace Shooter.Server
                     break;
                 case LoadoutRequestMessage loadout:
                     ServerChooseCosmetic(player, loadout.CosmeticId);
-                    ServerChooseLoadout(player, loadout.WeaponIds);
+                    ServerChooseLoadout(player, loadout.WeaponIds, loadout.AbilityIds);
                     break;
                 case ChatRequestMessage chat:
                     OnChatRequest(player, chat);
@@ -403,6 +403,7 @@ namespace Shooter.Server
             var playerId = player.PlayerId;
             _lastKillers.Remove(playerId);
             _loadout.Remove(playerId);
+            Abilities.Remove(playerId);
             _cosmetics.Remove(playerId);
             ForgetDowned(playerId);
             PingPlayerLeft(playerId);

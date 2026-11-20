@@ -8,7 +8,7 @@ namespace Shooter.Runtime
     {
         public static void Register()
         {
-            CloudSaveBootstrap.RegisterSlots(CampaignSaveSlots.IsSlot, new[] { CampaignSaveSlots.Legacy }, CanRead);
+            CloudSaveBootstrap.RegisterSlots(CampaignSaveSlots.IsSlot, System.Array.Empty<string>(), CanRead);
         }
 
         public static bool CanRead(string text)

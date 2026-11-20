@@ -41,14 +41,12 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(missions.Count(), Is.EqualTo(2));
             Assert.That(missions[0].Id, Is.EqualTo("Campaign01"));
-            Assert.That(missions[0].Id, Is.EqualTo(CampaignSaveSlots.LegacyMissionId), "Campaign01 is the mission that owned the legacy save slot");
             Assert.That(missions[0].NameKey, Is.EqualTo(CampaignSceneBuilder.MissionNameKey));
             Assert.That(missions[0].ScenePath, Is.EqualTo(CampaignSceneBuilder.ScenePath));
             Assert.That(missions[0].DefinitionPath, Is.EqualTo(CampaignSceneBuilder.DefinitionPath));
 
             Assert.That(missions[1].Id, Is.EqualTo(MissionCatalogBuilder.Campaign02Id));
             Assert.That(missions[1].Id, Is.EqualTo("Campaign02"));
-            Assert.That(CampaignSaveSlots.ReadsLegacy(missions[1].Id), Is.False, "only Campaign01 reads the legacy save slot");
             Assert.That(missions[1].NameKey, Is.EqualTo(Campaign02Mission.MissionNameKey));
             Assert.That(missions[1].ScenePath, Is.EqualTo(BuildSceneList.Campaign02Scene));
             Assert.That(missions[1].DefinitionPath, Is.EqualTo(Campaign02Mission.DefinitionPath));

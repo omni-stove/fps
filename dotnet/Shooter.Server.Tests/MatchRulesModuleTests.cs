@@ -464,6 +464,43 @@ namespace Shooter.Server.Tests
             Assert.That(spawned, Does.Contain(1));
         }
 
+        // 置ける物のモジュールが無ければ能力の候補も無いので、どの枠も「なし」の選択だけを受け入れる
+        [Test]
+        public void WithoutDeployablesOnlyEmptyAbilitySlotsAreAccepted()
+        {
+            Start(Plain());
+            Join(1);
+
+            var empty = new LoadoutRequestMessage();
+            empty.WeaponIds.Add(TestRules.RifleId);
+            empty.WeaponIds.Add(TestRules.HandgunId);
+            empty.AbilityIds.Add(AbilitySelection.None);
+            empty.AbilityIds.Add(AbilitySelection.None);
+            _module.OnMessage(new ConnectionId(1), empty);
+            var shield = new LoadoutRequestMessage();
+            shield.WeaponIds.Add(TestRules.HandgunId);
+            shield.WeaponIds.Add(TestRules.RifleId);
+            shield.AbilityIds.Add("deploy-shield");
+            shield.AbilityIds.Add(AbilitySelection.None);
+            _module.OnMessage(new ConnectionId(1), shield);
+
+            var answers = _transport.Read<LoadoutAnswerMessage>(1, Copy);
+            Assert.That(answers, Has.Count.EqualTo(2));
+            Assert.That(answers[0].Accepted, Is.True);
+            Assert.That(answers[1].Accepted, Is.False);
+            Assert.That(answers[1].Reason, Is.EqualTo("ability slot 0 names an ability the rules do not offer"));
+            Assert.That(_log.ToString(), Does.Contain("[Net] loadout abilities accepted client=1 abilities=-,- applies=next-spawn"));
+            Assert.That(
+                _log.ToString(),
+                Does.Contain("[Net] loadout abilities rejected client=1 reason=ability slot 0 names an ability the rules do not offer"));
+            Assert.That(_module.WeaponsFor(1)[0].Id, Is.EqualTo(TestRules.RifleId), "the refused request does not change the weapons");
+            Assert.That(_module.Abilities.HasChoice(1), Is.True);
+
+            _match.Leave(new ConnectionId(1));
+
+            Assert.That(_module.Abilities.HasChoice(1), Is.False, "leaving forgets the abilities");
+        }
+
         [Test]
         public void TheCosmeticSentWithALoadoutIsShownInThePlayerRowUntilTheyLeave()
         {

@@ -1076,7 +1076,6 @@ namespace Shooter.Tests.EditMode
                 var storage = UseCampaign(missions);
                 storage.Slots[CampaignSaveSlots.For(CampaignTestCatalog.Mission01)] =
                     CampaignTestCatalog.SaveJson(CampaignTestCatalog.Mission01, "area-a");
-                storage.Slots[CampaignSaveSlots.Legacy] = CampaignTestCatalog.SaveJson(CampaignTestCatalog.Mission01, "start");
                 _screen.OpenCampaign();
                 var panel = _screen.CampaignPanel;
 
@@ -1085,7 +1084,7 @@ namespace Shooter.Tests.EditMode
                 Assert.That(panel.Question, Does.Contain(CampaignTestCatalog.Mission01Name));
                 Assert.That(panel.IsShown(CampaignMenuItemKind.ConfirmRestart), Is.True);
                 Assert.That(panel.IsShown(CampaignMenuItemKind.Continue), Is.False);
-                Assert.That(storage.Slots.Count(), Is.EqualTo(2), "nothing is deleted before the answer");
+                Assert.That(storage.Slots.Count(), Is.EqualTo(1), "nothing is deleted before the answer");
                 Assert.That(_host.Loaded, Is.Empty);
 
                 panel.Cancel();
@@ -1095,7 +1094,7 @@ namespace Shooter.Tests.EditMode
                 panel.Press(CampaignMenuItemKind.Restart);
                 panel.Press(CampaignMenuItemKind.ConfirmRestart);
 
-                Assert.That(storage.Slots, Is.Empty, "the mission slot and the legacy slot are both gone");
+                Assert.That(storage.Slots, Is.Empty, "the mission slot is gone");
                 Assert.That(_host.Loaded, Is.EqualTo(new[] { MenuRoute.CampaignScene }));
             }
         }

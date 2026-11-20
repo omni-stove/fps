@@ -21,8 +21,7 @@ namespace Shooter.Tests.EditMode
         private const string CheckpointId = "cp1";
         private const string Slot = CampaignSaveSlots.Prefix + MissionName;
 
-        // 古い形式のセーブは rifle の残弾として読むので、テストの rifle にもその Id を使う。
-        private const string RifleId = CampaignSave.LegacyWeaponId;
+        private const string RifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
         private const string HandgunId = "00000000-0000-4000-8000-0000000000a2";
 
         private static readonly Vector3 _checkpointPosition = new Vector3(5f, 0f, 10f);
@@ -374,7 +373,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void RestoresALegacySingleWeaponSaveAsTheRiflesAmmo()
+        public void IgnoresASaveOfTheSingleWeaponVersion()
         {
             _storage.Write(
                 Slot,
@@ -386,17 +385,12 @@ namespace Shooter.Tests.EditMode
             var scene = BuildScene();
 
             ExpectCampaign($"started mission={MissionName}");
-            ExpectCampaign($"restored mission={MissionName} checkpoint={CheckpointId} health=55 equipped={RifleId} ammo={RifleId}:5/6,{HandgunId}:30/90 state=Active");
+            LogAssert.Expect(
+                LogType.Warning,
+                new Regex($@"^\[Campaign\] ignored a broken save; starting mission={MissionName} from the beginning: unsupported save data version 1 "));
             scene.Begin(_storage, () => _reloads++);
 
-            Assert.That(scene.Weapon.CurrentIndex, Is.Zero, "the rifle is held");
-            Assert.That(scene.Weapon.Weapon.AmmoInMagazine, Is.EqualTo(5));
-            Assert.That(scene.Weapon.Weapon.ReserveAmmo, Is.EqualTo(6));
-            Assert.That(scene.Weapon.Loadout.Items[1].AmmoInMagazine, Is.EqualTo(scene.Handgun.MagazineSize), "the handgun was not in the old save");
-
-            scene.Campaign.SaveAt("next");
-            Assert.That(_storage.TryRead(Slot, out var text), Is.True);
-            Assert.That(text, Does.StartWith("{\"version\":" + CampaignSave.CurrentVersion + ","));
+            AssertStartedFresh(scene);
         }
 
         [Test]
@@ -924,99 +918,29 @@ namespace Shooter.Tests.EditMode
             Assert.That(scene.Checkpoint.HandleEnter(scene.PlayerCollider), Is.True);
 
             Assert.That(_storage.TryRead(Slot, out _), Is.True);
-            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out _), Is.False, "the legacy slot is not written any more");
         }
 
         [Test]
-        public void Campaign01RestoresTheLegacySlotAndMovesItToItsOwnSlot()
+        public void Campaign01DoesNotReadTheOldSharedSlot()
         {
-            const string id = CampaignSaveSlots.LegacyMissionId;
+            const string id = "Campaign01";
             _definition.Id = id;
-            var legacy = SaveAtCheckpoint(id, 45).ToJson();
-            _storage.Write(CampaignSaveSlots.Legacy, legacy);
+            var old = SaveAtCheckpoint(id, 45).ToJson();
+            _storage.Write("campaign", old);
             var scene = BuildScene();
 
             ExpectCampaign($"started mission={id}");
-            ExpectCampaign($"reading the legacy save slot={CampaignSaveSlots.Legacy} for mission={id}");
-            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={id} checkpoint={CheckpointId} health=45 "));
-            ExpectCampaign($"migrated save slot={CampaignSaveSlots.Legacy} to slot={CampaignSaveSlots.Prefix}{id}");
+            ExpectCampaign($"no save; starting mission={id} from the beginning");
             scene.Begin(_storage, () => _reloads++);
-
-            Assert.That(scene.Player.Health.Current, Is.EqualTo(45));
-            Assert.That(scene.Missions.Mission.GetState("kill"), Is.EqualTo(ObjectiveState.Active));
-            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out _), Is.False, "the legacy slot is moved away");
-            Assert.That(_storage.TryRead(CampaignSaveSlots.Prefix + id, out var moved), Is.True);
-            Assert.That(moved, Is.EqualTo(legacy));
-
-            scene.Dispose();
-            var second = BuildScene();
-            ExpectCampaign($"started mission={id}");
-            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={id} checkpoint={CheckpointId} health=45 "));
-            second.Begin(_storage, () => _reloads++);
-            Assert.That(second.Player.Health.Current, Is.EqualTo(45));
-        }
-
-        [Test]
-        public void Campaign01PrefersItsOwnSlotAndCompletionDeletesBothSlots()
-        {
-            const string id = CampaignSaveSlots.LegacyMissionId;
-            _definition.Id = id;
-            _storage.Write(CampaignSaveSlots.Legacy, SaveAtCheckpoint(id, 20).ToJson());
-            _storage.Write(CampaignSaveSlots.Prefix + id, SaveAtCheckpoint(id, 80).ToJson());
-            var scene = BuildScene();
-
-            ExpectCampaign($"started mission={id}");
-            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={id} checkpoint={CheckpointId} health=80 "));
-            scene.Begin(_storage, () => _reloads++);
-            Assert.That(scene.Player.Health.Current, Is.EqualTo(80));
-            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out _), Is.True, "the legacy slot is only moved when it is read");
-
-            ExpectCampaign($"mission={id} completed");
-            ExpectCampaign($"deleted save slot={CampaignSaveSlots.Prefix}{id}");
-            scene.Missions.Progress("kill", 2);
-            scene.Missions.Progress("extract");
-
-            Assert.That(_storage.TryRead(CampaignSaveSlots.Prefix + id, out _), Is.False);
-            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out _), Is.False, "a finished mission does not resume from the legacy slot");
-        }
-
-        [Test]
-        public void OtherMissionsDoNotReadTheLegacySlot()
-        {
-            var legacy = SaveAtCheckpoint(MissionName, 45).ToJson();
-            _storage.Write(CampaignSaveSlots.Legacy, legacy);
-            var scene = BuildScene();
-
-            BeginQuietly(scene);
 
             AssertStartedFresh(scene);
-            Assert.That(_storage.TryRead(CampaignSaveSlots.Legacy, out var text), Is.True, "another mission's legacy save is left alone");
-            Assert.That(text, Is.EqualTo(legacy));
+            Assert.That(_storage.TryRead("campaign", out var text), Is.True, "the old slot is left alone");
+            Assert.That(text, Is.EqualTo(old));
+            Assert.That(_storage.TryRead(CampaignSaveSlots.Prefix + id, out _), Is.False);
         }
 
-        [Test]
-        public void AFailedMigrationKeepsTheLegacySlot()
-        {
-            const string id = CampaignSaveSlots.LegacyMissionId;
-            _definition.Id = id;
-            var storage = new MemoryStorage();
-            var legacy = SaveAtCheckpoint(id, 45).ToJson();
-            storage.Write(CampaignSaveSlots.Legacy, legacy);
-            storage.FailWrites = true;
-            var scene = BuildScene();
 
-            ExpectCampaign($"started mission={id}");
-            ExpectCampaign(new Regex($@"^\[Campaign\] restored mission={id} checkpoint={CheckpointId} health=45 "));
-            LogAssert.Expect(
-                LogType.Error,
-                new Regex($@"^\[Campaign\] failed to move the legacy save slot={CampaignSaveSlots.Legacy} to slot={CampaignSaveSlots.Prefix}{id}; keeping the legacy slot: disk full$"));
-            scene.Begin(storage, () => _reloads++);
 
-            Assert.That(scene.Player.Health.Current, Is.EqualTo(45), "the save is still restored");
-            Assert.That(storage.TryRead(CampaignSaveSlots.Legacy, out var text), Is.True);
-            Assert.That(text, Is.EqualTo(legacy));
-            Assert.That(storage.TryRead(CampaignSaveSlots.Prefix + id, out _), Is.False);
-        }
 
         [Test]
         public void BeginRejectsAMissionIdThatCannotNameASlot()
@@ -1299,33 +1223,6 @@ namespace Shooter.Tests.EditMode
             {
                 Created.Add(created);
                 return created;
-            }
-        }
-
-        private sealed class MemoryStorage : ISaveStorage
-        {
-            private readonly Dictionary<string, string> _slots = new Dictionary<string, string>(StringComparer.Ordinal);
-
-            public bool FailWrites { get; set; }
-
-            public bool TryRead(string slot, out string text)
-            {
-                return _slots.TryGetValue(slot, out text);
-            }
-
-            public void Write(string slot, string text)
-            {
-                if (FailWrites)
-                {
-                    throw new IOException("disk full");
-                }
-
-                _slots[slot] = text;
-            }
-
-            public void Delete(string slot)
-            {
-                _slots.Remove(slot);
             }
         }
 

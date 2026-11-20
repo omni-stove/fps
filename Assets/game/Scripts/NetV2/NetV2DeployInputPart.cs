@@ -14,7 +14,7 @@ namespace Shooter.NetV2
         private static readonly string[] _slotPaths = { InputActionPaths.Ability1, InputActionPaths.Ability2 };
 
         private readonly NetV2DeployablesPart _deployables;
-        private readonly IReadOnlyList<DeployAbilityDefinition> _slots;
+        private IReadOnlyList<DeployAbilityDefinition> _slots;
         private readonly Func<NetV2LocalPlayer> _localPlayer;
         private readonly Func<int, bool> _slotPressed;
         private readonly Func<bool> _canAct;
@@ -31,7 +31,7 @@ namespace Shooter.NetV2
             Func<int, bool> slotPressed = null)
         {
             _deployables = deployables ?? throw new ArgumentNullException(nameof(deployables));
-            _slots = slots ?? throw new ArgumentNullException(nameof(slots));
+            _slots = CopySlots(slots ?? throw new ArgumentNullException(nameof(slots)));
             _canAct = canAct ?? throw new ArgumentNullException(nameof(canAct));
             _localPlayer = localPlayer ?? (() => NetV2Client.Current != null ? NetV2Client.Current.LocalPlayer : null);
             _slotPressed = slotPressed ?? ReadSlotPressed;
@@ -54,6 +54,33 @@ namespace Shooter.NetV2
             }
 
             return slots;
+        }
+
+        // 受け入れられた能力の選択 (枠の順の Id、「なし」は空の Id) を、カタログで引いた置く物の定義にする。
+        // カタログに無い Id と置く物でない能力の枠は null。カタログが壊れていれば AbilityCatalogAsset.TryFind の例外をそのまま投げる
+        public static IReadOnlyList<DeployAbilityDefinition> SlotsOf(IReadOnlyList<string> abilityIds, AbilityCatalogAsset catalog)
+        {
+            var slots = new DeployAbilityDefinition[SlotCount];
+            if (abilityIds == null || catalog == null)
+            {
+                return slots;
+            }
+
+            for (var i = 0; i < slots.Length && i < abilityIds.Count; i++)
+            {
+                slots[i] = catalog.TryFind(abilityIds[i], out var definition) ? definition as DeployAbilityDefinition : null;
+            }
+
+            return slots;
+        }
+
+        // 枠の順で、置く物でない枠は null
+        public IReadOnlyList<DeployAbilityDefinition> Slots => _slots;
+
+        // つないだときのロードアウトの枠を、サーバーに受け入れられた能力の選択で後から差し替えるための口
+        public void SetSlots(IReadOnlyList<DeployAbilityDefinition> slots)
+        {
+            _slots = CopySlots(slots ?? throw new ArgumentNullException(nameof(slots)));
         }
 
         public bool Handle(IMessage message)
@@ -100,6 +127,18 @@ namespace Shooter.NetV2
         public void Dispose()
         {
             _disposed = true;
+        }
+
+        // 渡した側が後から並びを書き換えても、差し替えたとき (SetSlots) 以外に枠が変わらないよう写しを持つ
+        private static IReadOnlyList<DeployAbilityDefinition> CopySlots(IReadOnlyList<DeployAbilityDefinition> slots)
+        {
+            var copy = new DeployAbilityDefinition[slots.Count];
+            for (var i = 0; i < copy.Length; i++)
+            {
+                copy[i] = slots[i];
+            }
+
+            return Array.AsReadOnly(copy);
         }
 
         private bool ReadSlotPressed(int slot)

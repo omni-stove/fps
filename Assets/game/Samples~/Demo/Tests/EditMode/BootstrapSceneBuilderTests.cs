@@ -777,13 +777,13 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheRangeAbilitiesAreTheNightGogglesThenTheDrone()
+        public void TheRangeAbilitiesAreTheNightAndThermalGogglesThenTheDrone()
         {
             var abilities = BootstrapSceneBuilder.LoadAbilities();
 
             Assert.That(abilities, Has.Length.EqualTo(AbilityHost.SlotCount));
             Assert.That(abilities[0], Is.InstanceOf<VisionGogglesDefinition>());
-            Assert.That(((VisionGogglesDefinition)abilities[0]).ToMode(), Is.EqualTo(VisionMode.Night));
+            Assert.That(((VisionGogglesDefinition)abilities[0]).ToModes(), Is.EqualTo(new[] { VisionMode.Night, VisionMode.Thermal }));
             Assert.That(abilities[1], Is.InstanceOf<DroneDeployDefinition>());
             Assert.That(AssetDatabase.GetAssetPath(abilities[0]), Is.EqualTo(AbilityAssetBuilder.VisionGogglesAbilityPath));
             Assert.That(AssetDatabase.GetAssetPath(abilities[1]), Is.EqualTo(AbilityAssetBuilder.DroneAbilityPath));

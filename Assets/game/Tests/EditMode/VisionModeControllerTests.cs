@@ -282,6 +282,138 @@ namespace Shooter.Tests.EditMode
             Assert.That(error.Message, Does.Contain("'goggles'"));
         }
 
+        [Test]
+        public void GogglesWithTwoModesStepFromNightToThermalToOffWithOneCharge()
+        {
+            var host = _player.AddComponent<AbilityHost>();
+            host.Configure(_abilitiesOn);
+            var goggles = Goggles(VisionMode.Night, maxCharges: 2);
+            goggles.Modes = new[] { VisionMode.Night, VisionMode.Thermal };
+            host.Equip(0, goggles);
+
+            Assert.That(host.TryUse(0), Is.True);
+            host.Step(PlayerCommands.None, 0.01f);
+            Assert.That(_controller.Current, Is.EqualTo(new VisionStatus(VisionMode.Night, VisionSource.Goggles)));
+            Assert.That(host.Slot(0).Charges, Is.EqualTo(1));
+
+            Assert.That(host.TryUse(0), Is.True);
+            Assert.That(_controller.Current, Is.EqualTo(new VisionStatus(VisionMode.Thermal, VisionSource.Goggles)), "switched at once");
+            Assert.That(GameSignals.Vision.Value, Is.EqualTo((VisionStatus?)new VisionStatus(VisionMode.Thermal, VisionSource.Goggles)));
+            Assert.That(host.Slot(0).Charges, Is.EqualTo(1), "switching gives the charge back");
+            host.Step(PlayerCommands.None, 0.01f);
+            Assert.That(_controller.Goggles, Is.EqualTo(VisionMode.Thermal), "the step does not put the first mode back on");
+
+            Assert.That(host.TryUse(0), Is.True);
+            Assert.That(_controller.GogglesOn, Is.False, "the press after the last mode takes them off");
+            Assert.That(GameSignals.Vision.Value, Is.Null);
+            Assert.That(host.Slot(0).Charges, Is.EqualTo(1));
+            host.Step(PlayerCommands.None, 0.01f);
+
+            Assert.That(host.TryUse(0), Is.True);
+            host.Step(PlayerCommands.None, 0.01f);
+            Assert.That(_controller.Goggles, Is.EqualTo(VisionMode.Night), "on again starts from the first mode");
+        }
+
+        [Test]
+        public void GogglesWithTwoModesStepEvenWithoutChargesLeft()
+        {
+            var host = _player.AddComponent<AbilityHost>();
+            host.Configure(_abilitiesOn);
+            var goggles = Goggles(VisionMode.Night, maxCharges: 1);
+            goggles.Modes = new[] { VisionMode.Night, VisionMode.Thermal };
+            host.Equip(0, goggles);
+
+            host.TryUse(0);
+            host.Step(PlayerCommands.None, 0.01f);
+            Assert.That(host.Slot(0).Charges, Is.Zero);
+
+            Assert.That(host.TryUse(0), Is.True, "the follow-up switches to thermal");
+            Assert.That(_controller.Goggles, Is.EqualTo(VisionMode.Thermal));
+
+            Assert.That(host.TryUse(0), Is.True, "the follow-up takes them off");
+            Assert.That(_controller.GogglesOn, Is.False);
+
+            Assert.That(host.TryUse(0), Is.False, "putting them on again waits for the charge");
+            Assert.That(_controller.GogglesOn, Is.False);
+        }
+
+        [Test]
+        public void GogglesWithTwoModesPutTheFirstOnOverAnotherPairsMode()
+        {
+            var host = _player.AddComponent<AbilityHost>();
+            host.Configure(_abilitiesOn);
+            var goggles = Goggles(VisionMode.Thermal, maxCharges: 2);
+            goggles.Modes = new[] { VisionMode.Thermal };
+            host.Equip(0, goggles);
+            _controller.SetGoggles(VisionMode.Night);
+
+            Assert.That(host.TryUse(0), Is.True);
+            host.Step(PlayerCommands.None, 0.01f);
+
+            Assert.That(_controller.Goggles, Is.EqualTo(VisionMode.Thermal), "a mode not in this pair's list is swapped, not switched off");
+            Assert.That(host.Slot(0).Charges, Is.EqualTo(1), "putting them on costs a charge");
+        }
+
+        [Test]
+        public void TheNextModeFollowsTheListAndEndsInOff()
+        {
+            var ability = new VisionGogglesAbility(new[] { VisionMode.Night, VisionMode.Thermal });
+
+            Assert.That(ability.Mode, Is.EqualTo(VisionMode.Night));
+            Assert.That(ability.Modes, Is.EqualTo(new[] { VisionMode.Night, VisionMode.Thermal }));
+            Assert.That(ability.NextAfter(VisionMode.None), Is.Null);
+            Assert.That(ability.NextAfter(VisionMode.Night), Is.EqualTo((VisionMode?)VisionMode.Thermal));
+            Assert.That(ability.NextAfter(VisionMode.Thermal), Is.EqualTo((VisionMode?)VisionMode.None));
+            Assert.That(new VisionGogglesAbility(VisionMode.Thermal).NextAfter(VisionMode.Thermal), Is.EqualTo((VisionMode?)VisionMode.None));
+            Assert.That(new VisionGogglesAbility(VisionMode.Thermal).NextAfter(VisionMode.Night), Is.Null);
+        }
+
+        [Test]
+        public void TheGogglesAbilityRejectsAnEmptyNoneOrRepeatedList()
+        {
+            Assert.Throws<System.ArgumentException>(() => new VisionGogglesAbility((IReadOnlyList<VisionMode>)null));
+            Assert.Throws<System.ArgumentException>(() => new VisionGogglesAbility(new VisionMode[0]));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new VisionGogglesAbility(new[] { VisionMode.Night, VisionMode.None }));
+            Assert.Throws<System.ArgumentOutOfRangeException>(() => new VisionGogglesAbility((VisionMode)99));
+            Assert.Throws<System.ArgumentException>(() => new VisionGogglesAbility(new[] { VisionMode.Night, VisionMode.Night }));
+        }
+
+        [Test]
+        public void TheGogglesDefinitionKeepsItsFirstModeAndListsTheRest()
+        {
+            var goggles = Goggles(VisionMode.Thermal, maxCharges: 1);
+
+            Assert.That(goggles.Modes, Is.EqualTo(new[] { VisionMode.Thermal }), "a single mode without a list");
+            Assert.That(goggles.ToModes(), Is.EqualTo(new[] { VisionMode.Thermal }));
+
+            goggles.Modes = new[] { VisionMode.Night, VisionMode.Thermal };
+
+            Assert.That(goggles.Mode, Is.EqualTo(VisionMode.Night));
+            Assert.That(goggles.ToMode(), Is.EqualTo(VisionMode.Night));
+            Assert.That(goggles.ToModes(), Is.EqualTo(new[] { VisionMode.Night, VisionMode.Thermal }));
+            var ability = (VisionGogglesAbility)goggles.CreateAbility();
+            Assert.That(ability.Modes, Is.EqualTo(new[] { VisionMode.Night, VisionMode.Thermal }));
+
+            goggles.Mode = VisionMode.Thermal;
+            Assert.That(goggles.Modes, Is.EqualTo(new[] { VisionMode.Thermal, VisionMode.Thermal }), "setting Mode only changes the first");
+            Assert.Throws<System.ArgumentException>(() => goggles.Modes = new VisionMode[0]);
+            Assert.Throws<System.ArgumentException>(() => goggles.Modes = null);
+        }
+
+        [Test]
+        public void AGogglesDefinitionWithARepeatedOrNoneModeIsRejected()
+        {
+            var goggles = Goggles(VisionMode.Night, maxCharges: 1);
+
+            goggles.Modes = new[] { VisionMode.Night, VisionMode.Night };
+            var repeated = Assert.Throws<AbilityDefinitionException>(() => goggles.CreateAbility());
+            Assert.That(repeated.Message, Does.Contain("'goggles'").And.Contain("twice"));
+
+            goggles.Modes = new[] { VisionMode.Night, VisionMode.None };
+            var none = Assert.Throws<AbilityDefinitionException>(() => goggles.ToModes());
+            Assert.That(none.Message, Does.Contain("mode 1"));
+        }
+
         private Damageable AddBody()
         {
             var body = _player.AddComponent<Damageable>();

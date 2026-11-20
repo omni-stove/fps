@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Shooter.Core;
 using Shooter.Runtime;
 using UnityEditor;
@@ -59,7 +60,12 @@ namespace Shooter.Editor
         public const string VisionGogglesAbilityId = "vision-goggles";
         public const VisionMode VisionGogglesMode = VisionMode.Night;
 
-        // 外すと使った 1 回が戻る (VisionGogglesAbility) ので、1 回あれば掛け外しを繰り返せる。
+        // 枠が 2 つともゴーグルとドローンで埋まっているので、サーマルは 3 つ目の枠を足さずに同じゴーグルの 2 つ目の見え方にする。
+        public const VisionMode VisionGogglesSecondMode = VisionMode.Thermal;
+
+        public static IReadOnlyList<VisionMode> VisionGogglesModes => new[] { VisionGogglesMode, VisionGogglesSecondMode };
+
+        // 切り替えと外すと使った 1 回が戻る (VisionGogglesAbility) ので、1 回あれば掛け外しを繰り返せる。
         public const int VisionGogglesMaxCharges = 1;
         public const float VisionGogglesRechargeSeconds = 5f;
         public const float VisionGogglesCooldownSeconds = 1f;
@@ -137,7 +143,7 @@ namespace Shooter.Editor
             if (existing != null)
             {
                 existing.ToSpec();
-                existing.ToMode();
+                existing.ToModes();
                 return existing;
             }
 
@@ -534,9 +540,9 @@ namespace Shooter.Editor
             ability.RechargeSeconds = VisionGogglesRechargeSeconds;
             ability.CooldownSeconds = VisionGogglesCooldownSeconds;
             ability.WindupSeconds = VisionGogglesWindupSeconds;
-            ability.Mode = VisionGogglesMode;
+            ability.Modes = VisionGogglesModes;
             ability.ToSpec();
-            ability.ToMode();
+            ability.ToModes();
         }
 
         // 飛び方と見回し方はキットの既定 (DroneSpec.Default*) のまま。見た目 (Prefab) は空にし、胴と羽の仮の形をコードで作る。

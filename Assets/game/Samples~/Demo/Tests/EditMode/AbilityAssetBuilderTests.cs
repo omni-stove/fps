@@ -38,7 +38,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void BuildsNightVisionGogglesThatCostAChargeToPutOn()
+        public void BuildsGogglesThatGoFromNightToThermalAndCostAChargeToPutOn()
         {
             var path = _folder + "/VisionGoggles.asset";
 
@@ -47,6 +47,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(AssetDatabase.LoadAssetAtPath<VisionGogglesDefinition>(path), Is.SameAs(goggles));
             Assert.That(goggles.Id, Is.EqualTo("vision-goggles"));
             Assert.That(goggles.ToMode(), Is.EqualTo(VisionMode.Night));
+            Assert.That(goggles.ToModes(), Is.EqualTo(new[] { VisionMode.Night, VisionMode.Thermal }));
+            Assert.That(AbilityAssetBuilder.VisionGogglesModes, Is.EqualTo(new[] { VisionMode.Night, VisionMode.Thermal }));
             Assert.That(goggles.MaxCharges, Is.EqualTo(1));
             Assert.That(goggles.RechargeSeconds, Is.EqualTo(5f));
             Assert.That(goggles.CooldownSeconds, Is.EqualTo(1f));
@@ -56,6 +58,7 @@ namespace Shooter.Tests.EditMode
             var ability = goggles.CreateAbility();
             Assert.That(ability, Is.InstanceOf<VisionGogglesAbility>());
             Assert.That(((VisionGogglesAbility)ability).Mode, Is.EqualTo(VisionMode.Night));
+            Assert.That(((VisionGogglesAbility)ability).Modes, Is.EqualTo(new[] { VisionMode.Night, VisionMode.Thermal }));
         }
 
         [Test]
@@ -99,7 +102,7 @@ namespace Shooter.Tests.EditMode
             var drone = AbilityAssetBuilder.BuildDroneAt(dronePath);
             var gogglesGuid = AssetDatabase.AssetPathToGUID(gogglesPath);
             var droneGuid = AssetDatabase.AssetPathToGUID(dronePath);
-            goggles.Mode = VisionMode.Thermal;
+            goggles.Modes = new[] { VisionMode.Thermal };
             goggles.MaxCharges = 4;
             drone.Speed = 99f;
             drone.MaxActive = 3;
@@ -109,7 +112,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(AssetDatabase.AssetPathToGUID(gogglesPath), Is.EqualTo(gogglesGuid));
             Assert.That(AssetDatabase.AssetPathToGUID(dronePath), Is.EqualTo(droneGuid));
-            Assert.That(rebuiltGoggles.Mode, Is.EqualTo(VisionMode.Night));
+            Assert.That(rebuiltGoggles.Modes, Is.EqualTo(new[] { VisionMode.Night, VisionMode.Thermal }));
             Assert.That(rebuiltGoggles.MaxCharges, Is.EqualTo(AbilityAssetBuilder.VisionGogglesMaxCharges));
             Assert.That(rebuiltDrone.Speed, Is.EqualTo(DroneSpec.DefaultSpeed));
             Assert.That(rebuiltDrone.MaxActive, Is.EqualTo(DroneSpec.DefaultMaxActive));
@@ -131,7 +134,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(goggles, Is.Not.Null, $"run {AbilityAssetBuilder.MenuPath}");
             Assert.That(drone, Is.Not.Null, $"run {AbilityAssetBuilder.MenuPath}");
             Assert.That(goggles.Id, Is.EqualTo(AbilityAssetBuilder.VisionGogglesAbilityId));
-            Assert.That(goggles.ToMode(), Is.EqualTo(AbilityAssetBuilder.VisionGogglesMode));
+            Assert.That(goggles.ToModes(), Is.EqualTo(AbilityAssetBuilder.VisionGogglesModes), $"run {AbilityAssetBuilder.MenuPath}");
             Assert.That(drone.Id, Is.EqualTo(AbilityAssetBuilder.DroneAbilityId));
             Assert.DoesNotThrow(() => drone.ToDroneSpec());
             Assert.That(AbilityAssetBuilder.LoadOrBuildVisionGogglesAbility(), Is.SameAs(goggles), "an existing asset is read, not rebuilt");

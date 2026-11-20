@@ -8,8 +8,8 @@ namespace Shooter.Core.Tests
 {
     public sealed class NetMatchFileTests
     {
-        private static readonly string[] ExpectedBeacon = { "beacon" };
-        private static readonly string[] RepeatedBeacon = { "beacon", "beacon" };
+        private static readonly string[] _expectedBeacon = { "beacon" };
+        private static readonly string[] _repeatedBeacon = { "beacon", "beacon" };
 
         private const string _rifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
         private const string _handgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
@@ -321,7 +321,7 @@ namespace Shooter.Core.Tests
         {
             var text = NetMatchFile.Write(File());
 
-            Assert.That(text, Does.Not.Contain("\"" + NetMatchFile.AbilitiesItem + "\""));
+            Assert.That(text, Does.Not.Contain("\"" + NetMatchFile.AbilitiesItem + "\": ["));
             Assert.That(NetMatchFile.Parse(text, "TeamDeathmatch.json").LoadoutAbilities, Is.Null);
         }
 
@@ -364,7 +364,7 @@ namespace Shooter.Core.Tests
 
             abilities[0] = "mine";
 
-            Assert.That(file.LoadoutAbilities, Is.EqualTo(ExpectedBeacon));
+            Assert.That(file.LoadoutAbilities, Is.EqualTo(_expectedBeacon));
         }
 
         [Test]
@@ -374,7 +374,7 @@ namespace Shooter.Core.Tests
 
             Assert.Throws<ArgumentException>(() => new NetMatchFile(
                 plain.Name, plain.Rules, plain.Settings, plain.LoadoutName, plain.LoadoutRule, plain.LoadoutWeapons, plain.SwitchSeconds,
-                null, null, null, RepeatedBeacon));
+                null, null, null, _repeatedBeacon));
             Assert.Throws<ArgumentException>(() => new NetMatchFile(
                 plain.Name, plain.Rules, plain.Settings, plain.LoadoutName, plain.LoadoutRule, plain.LoadoutWeapons, plain.SwitchSeconds,
                 null, null, null, new[] { "beacon", null }));

@@ -147,6 +147,7 @@ namespace Shooter.Server.Tests
             var caseHandle = inventory.Stacks.Single(s => s.ItemId == _caseId).Handle;
 
             Request(1, new InventoryRequestMessage { Action = InventoryAction.Use, Handle = (ushort)herbHandle });
+            Step(1.1f);
             Request(1, new InventoryRequestMessage { Action = InventoryAction.Use, Handle = (ushort)caseHandle });
             Tick();
 
@@ -495,6 +496,168 @@ namespace Shooter.Server.Tests
             Assert.That(inventory.HoldsWeapon(TestRules.HandgunId), Is.True);
         }
 
+        [Test]
+        public void ADeadPlayerCannotUseOrDropAndIsToldWhy()
+        {
+            Start(Catalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var inventory = _inventories.InventoryOf(1);
+            var herbHandle = inventory.Stacks.First(s => s.ItemId == _herbId).Handle;
+            var caseHandle = inventory.Stacks.Single(s => s.ItemId == _caseId).Handle;
+            _rules.ApplyDamage(2, 1, 1000);
+            Assert.That(_rules.Session.IsAlive(1), Is.False);
+
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Use, Handle = (ushort)herbHandle });
+            Step(1.1f);
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Drop, Handle = (ushort)caseHandle, Count = 1 });
+            Tick();
+
+            Assert.That(inventory.CountOf(_herbId), Is.EqualTo(4));
+            Assert.That(inventory.CountOf(_caseId), Is.EqualTo(1), "nothing is thrown away while dead");
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] use owner=1 handle=" + herbHandle + " rejected=Dead"));
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] drop owner=1 handle=" + caseHandle + " count=1 rejected=Dead"));
+        }
+
+        [Test]
+        public void ADownedPlayerCannotHealFromTheInventory()
+        {
+            Start(Catalog(), downed: Downed.Revive);
+            Join(1);
+            Join(2);
+            Join(3);
+            Step(0.2f);
+            Assert.That(_rules.Session.GetTeam(3), Is.EqualTo(_rules.Session.GetTeam(1)), "a standing ally lets player 1 go down instead of falling");
+            Assert.That(_rules.ApplyDamage(2, 1, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Downed));
+            var inventory = _inventories.InventoryOf(1);
+            var herbHandle = inventory.Stacks.First(s => s.ItemId == _herbId).Handle;
+
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Use, Handle = (ushort)herbHandle });
+            Tick();
+
+            Assert.That(_rules.Session.IsDowned(1), Is.True);
+            Assert.That(inventory.CountOf(_herbId), Is.EqualTo(4));
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] use owner=1 handle=" + herbHandle + " rejected=Downed"));
+        }
+
+        [Test]
+        public void ADeadPlayerCannotSwitchWeaponsFromTheInventory()
+        {
+            Start(WeaponCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var handgun = _inventories.InventoryOf(1).Stacks.Single(s => s.ItemId == _handgunItemId).Handle;
+            _rules.ApplyDamage(2, 1, 1000);
+
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Use, Handle = (ushort)handgun });
+            Tick();
+
+            Assert.That(_combat.WeaponsOf(1).CurrentSpec.Id, Is.EqualTo(TestRules.RifleId));
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] equip owner=1 weapon=" + TestRules.HandgunId + " rejected=Dead"));
+        }
+
+        [Test]
+        public void SwitchingToTheHeldWeaponIsRefusedAsAlreadyEquipped()
+        {
+            Start(WeaponCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var rifle = _inventories.InventoryOf(1).Stacks.Single(s => s.ItemId == _rifleItemId).Handle;
+
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Use, Handle = (ushort)rifle });
+            Tick();
+
+            Assert.That(_combat.WeaponsOf(1).CurrentSpec.Id, Is.EqualTo(TestRules.RifleId));
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] equip owner=1 weapon=" + TestRules.RifleId + " rejected=AlreadyEquipped"));
+        }
+
+        [Test]
+        public void ADeadPlayerCannotAttachOrDetach()
+        {
+            Start(AttachmentCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var inventory = _inventories.InventoryOf(1);
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Attach, Handle = (ushort)inventory.Stacks.Single(s => s.ItemId == _magazineId).Handle });
+            Tick();
+            Assert.That(inventory.AttachmentsOf(TestRules.RifleId), Is.EqualTo(new[] { _magazineId }));
+            var suppressor = inventory.Stacks.Single(s => s.ItemId == _suppressorId).Handle;
+            var rifleStack = inventory.Stacks.Single(s => s.ItemId == _rifleItemId).Handle;
+            _rules.ApplyDamage(2, 1, 1000);
+
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Attach, Handle = (ushort)suppressor });
+            Step(1.1f);
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Detach, Handle = (ushort)rifleStack, ItemId = _magazineId });
+            Tick();
+
+            Assert.That(inventory.CountOf(_suppressorId), Is.EqualTo(1));
+            Assert.That(_combat.WeaponsOf(1).AttachmentsOf(TestRules.RifleId), Is.EqualTo(new[] { _magazineId }));
+            Assert.That(inventory.CountOf(_magazineId), Is.Zero);
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] attach owner=1 handle=" + suppressor + " item=- weapon=- replaced=- rejected=Dead"));
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] detach owner=1 weapon=- item=" + _magazineId + " rejected=Dead"));
+        }
+
+        [Test]
+        public void ADetachOfAnUnlistedIdDoesNotWriteTheSentTextToTheLog()
+        {
+            Start(AttachmentCatalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var rifleStack = _inventories.InventoryOf(1).Stacks.Single(s => s.ItemId == _rifleItemId).Handle;
+
+            Request(1, new InventoryRequestMessage
+            {
+                Action = InventoryAction.Detach,
+                Handle = (ushort)rifleStack,
+                ItemId = "x\n[Inventory] give owner=2 item=forged count=99/99",
+            });
+            Tick();
+
+            Assert.That(_log.ToString(), Does.Contain("[Inventory] detach owner=1 weapon=" + TestRules.RifleId + " item=- rejected=NotAttached"));
+            Assert.That(_log.ToString(), Does.Not.Contain("forged"));
+        }
+
+        [Test]
+        public void RepeatedRefusalsAreLoggedOncePerInterval()
+        {
+            Start(Catalog());
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            var herbHandle = _inventories.InventoryOf(1).Stacks.First(s => s.ItemId == _herbId).Handle;
+            var refused = "[Inventory] use owner=1 handle=" + herbHandle + " rejected=Full";
+
+            for (var i = 0; i < 5; i++)
+            {
+                Request(1, new InventoryRequestMessage { Action = InventoryAction.Use, Handle = (ushort)herbHandle });
+            }
+
+            Tick();
+            Assert.That(Occurrences(_log.ToString(), refused), Is.EqualTo(1), "five refusals in one tick write one line");
+
+            Step(1.1f);
+            Request(1, new InventoryRequestMessage { Action = InventoryAction.Use, Handle = (ushort)herbHandle });
+            Tick();
+
+            Assert.That(Occurrences(_log.ToString(), refused), Is.EqualTo(2), "a refusal after the interval is written again");
+        }
+
+        private static int Occurrences(string text, string part)
+        {
+            var count = 0;
+            for (var at = text.IndexOf(part, StringComparison.Ordinal); at >= 0; at = text.IndexOf(part, at + part.Length, StringComparison.Ordinal))
+            {
+                count++;
+            }
+
+            return count;
+        }
+
         // 8x4 の持ち物に、小銃 (4x2・5.56) と拳銃 (2x1・9mm) と、1 発 0.01 kg・60 発で 1 山の弾薬
         private static ItemCatalog WeaponCatalog()
         {
@@ -536,13 +699,13 @@ namespace Shooter.Server.Tests
                 new[] { new ItemCount(_caseId, 1), new ItemCount(_herbId, 4) });
         }
 
-        private static GameRules Rules()
+        private static GameRules Rules(Downed downed = Downed.Off)
         {
-            var actions = ActionRules.Default.WithDowned(Downed.Off);
+            var actions = ActionRules.Default.WithDowned(downed);
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
-        private void Start(ItemCatalog items, WeaponSpec rifle = null)
+        private void Start(ItemCatalog items, WeaponSpec rifle = null, Downed downed = Downed.Off)
         {
             var colliders = new List<WorldCollider>
             {
@@ -550,7 +713,7 @@ namespace Shooter.Server.Tests
             };
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points, null);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(Rules(), rifle: rifle), PingSpec.Default, "memory", null, items: items);
+            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(Rules(downed), rifle: rifle), PingSpec.Default, "memory", null, items: items);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(true, _json, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),

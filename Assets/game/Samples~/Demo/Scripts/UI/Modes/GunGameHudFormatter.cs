@@ -10,7 +10,7 @@ namespace Shooter.Runtime
 
         public static LocalizedText Tier(int tier, int tierCount, LocalizedText weaponName)
         {
-            return new LocalizedText("mode.gungame.tier", GunGameText.DisplayedTier(tier, tierCount), tierCount, Name(weaponName));
+            return new LocalizedText("mode.gungame.tier", GunGameDisplayedTier.Of(tier, tierCount), tierCount, Name(weaponName));
         }
 
         public static LocalizedText Next(LocalizedText nextWeaponName)

@@ -133,16 +133,16 @@ namespace Shooter.Server
             var count = _gunGame.Ladder.TierCount;
             if (kill.Demoted)
             {
-                _host.Log.WriteLine(GunGameText.Demote(kill.VictimId, kill.VictimTier, count, _gunGame.GetWeapon(kill.VictimId).LogName));
+                _host.Log.WriteLine(GunGameLog.Demote(kill.VictimId, kill.VictimTier, count, _gunGame.GetWeapon(kill.VictimId).LogName));
             }
 
             if (kill.Finished)
             {
-                _host.Log.WriteLine(GunGameText.Finish(kill.KillerId, _gunGame.GetWeapon(kill.KillerId).LogName));
+                _host.Log.WriteLine(GunGameLog.Finish(kill.KillerId, _gunGame.GetWeapon(kill.KillerId).LogName));
             }
             else if (kill.Promoted)
             {
-                _host.Log.WriteLine(GunGameText.Promote(kill.KillerId, kill.KillerTier, count, _gunGame.GetWeapon(kill.KillerId).LogName));
+                _host.Log.WriteLine(GunGameLog.Promote(kill.KillerId, kill.KillerTier, count, _gunGame.GetWeapon(kill.KillerId).LogName));
             }
         }
 

@@ -15,6 +15,11 @@ namespace Shooter.NetV2.Tests
         private static readonly StanceGeometry _geometry = new StanceGeometry(1.8f, 0.9f, 1.6f, 1.2f, 1f, 0.4f);
         private static readonly Vector3 _eye = new Vector3(0f, 1.6f, 0f);
 
+        private static readonly int[] _ids23 = { 2, 3 };
+        private static readonly int[] _ids3 = { 3 };
+        private static readonly int[] _ids4 = { 4 };
+        private static readonly int[] _ids992 = { 99, 2 };
+
         private readonly Dictionary<int, RemotePose> _poses = new Dictionary<int, RemotePose>();
         private SnapshotMessage _snapshot;
 
@@ -35,7 +40,7 @@ namespace Shooter.NetV2.Tests
 
             var found = Collect(new NoWorld());
 
-            Assert.That(found.Select(c => c.Id), Is.EqualTo(new[] { 2, 3 }), "not me and not a player who is not shown yet");
+            Assert.That(found.Select(c => c.Id), Is.EqualTo(_ids23), "not me and not a player who is not shown yet");
             Assert.That(found[0].Relation, Is.EqualTo(TeamRelation.Friendly));
             Assert.That(found[0].HeadPosition, Is.EqualTo(new Vector3(0f, _geometry.Standing.TopY, 10f)));
             Assert.That(found[1].Relation, Is.EqualTo(TeamRelation.Enemy));
@@ -83,7 +88,7 @@ namespace Shooter.NetV2.Tests
             var found = new List<NameplateContact>();
             contacts.CopyTo(_eye, found);
 
-            Assert.That(found.Where(c => c.IsInSight).Select(c => c.Id), Is.EqualTo(new[] { 3 }));
+            Assert.That(found.Where(c => c.IsInSight).Select(c => c.Id), Is.EqualTo(_ids3));
         }
 
         [Test]
@@ -142,7 +147,7 @@ namespace Shooter.NetV2.Tests
             AddPlayer(3, Team.Bravo, 100, new Vector3(0f, float.PositiveInfinity, 10f));
             AddPlayer(4, Team.Bravo, 100, new Vector3(0f, 0f, 10f));
 
-            Assert.That(Collect(new NoWorld()).Select(c => c.Id), Is.EqualTo(new[] { 4 }));
+            Assert.That(Collect(new NoWorld()).Select(c => c.Id), Is.EqualTo(_ids4));
         }
 
         [Test]
@@ -166,7 +171,7 @@ namespace Shooter.NetV2.Tests
 
             Contacts(new NoWorld()).CopyTo(_eye, found);
 
-            Assert.That(found.Select(c => c.Id), Is.EqualTo(new[] { 99, 2 }));
+            Assert.That(found.Select(c => c.Id), Is.EqualTo(_ids992));
         }
 
         [Test]

@@ -47,17 +47,31 @@ namespace Shooter.Core
             _selected = new int[_options.Length];
             var usePreferred = preferred != null && preferred.Count == _options.Length;
             var restored = usePreferred;
+            var decided = new bool[_options.Length];
+
+            // 前の枠の既定が後ろの枠の保存した値を押し出さないよう、先に全枠で保存した値を確定させてから既定で埋める
             for (var slot = 0; slot < _options.Length; slot++)
             {
                 var index = usePreferred ? IndexOf(slot, preferred[slot]) : -1;
                 if (index < 0)
                 {
                     restored = false;
-
-                    // 既定のロードアウトの能力は枠の数より少ないことがあるので、足りない枠は「なし」にする
-                    index = fallback != null && slot < fallback.Count ? IndexOf(slot, fallback[slot]) : -1;
+                    continue;
                 }
 
+                _selected[slot] = index;
+                decided[slot] = true;
+            }
+
+            for (var slot = 0; slot < _options.Length; slot++)
+            {
+                if (decided[slot])
+                {
+                    continue;
+                }
+
+                // 既定のロードアウトの能力は枠の数より少ないことがあるので、足りない枠は「なし」にする
+                var index = fallback != null && slot < fallback.Count ? IndexOf(slot, fallback[slot]) : -1;
                 _selected[slot] = index < 0 ? NoneIndex : index;
             }
 
@@ -177,11 +191,12 @@ namespace Shooter.Core
             }
         }
 
-        private static IReadOnlyList<string> CopyOptions(IReadOnlyList<string> ids, int slot)
+        private static System.Collections.ObjectModel.ReadOnlyCollection<string> CopyOptions(IReadOnlyList<string> options, int slot)
         {
+            var ids = options;
             if (ids == null)
             {
-                throw new ArgumentException("slot " + slot + " has no list of abilities", "options");
+                throw new ArgumentException("slot " + slot + " has no list of abilities", nameof(options));
             }
 
             var copy = new List<string>(ids.Count + 1) { None };
@@ -189,12 +204,12 @@ namespace Shooter.Core
             {
                 if (string.IsNullOrEmpty(ids[i]))
                 {
-                    throw new ArgumentException("slot " + slot + " option " + i + " has no ability id", "options");
+                    throw new ArgumentException("slot " + slot + " option " + i + " has no ability id", nameof(options));
                 }
 
                 if (copy.Contains(ids[i]))
                 {
-                    throw new ArgumentException("slot " + slot + " lists ability " + ids[i] + " more than once", "options");
+                    throw new ArgumentException("slot " + slot + " lists ability " + ids[i] + " more than once", nameof(options));
                 }
 
                 copy.Add(ids[i]);

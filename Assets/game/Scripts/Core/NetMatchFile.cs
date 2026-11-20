@@ -1288,7 +1288,7 @@ namespace Shooter.Core
         }
 
         // 枠を「なし」にする空の Id を断らないのは、保存した選択 (LoadoutPreference) と同じ書き方で枠を飛ばせるようにするため
-        private static IReadOnlyList<string> CopyAbilities(IReadOnlyList<string> abilities)
+        private static System.Collections.ObjectModel.ReadOnlyCollection<string> CopyAbilities(IReadOnlyList<string> abilities)
         {
             if (abilities == null)
             {

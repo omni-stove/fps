@@ -41,6 +41,15 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ADefaultInAnEarlierSlotDoesNotDisplaceASavedChoiceInALaterSlot()
+        {
+            var selection = Select(new[] { "gone", _beacon }, new[] { _beacon, _mine });
+
+            Assert.That(selection.AbilityIds, Is.EqualTo(new[] { string.Empty, _beacon }));
+            Assert.That(selection.RestoredPreference, Is.False);
+        }
+
+        [Test]
         public void TheSavedChoiceIsRestored()
         {
             var selection = Select(new[] { _drone, string.Empty }, new[] { _beacon, _mine });

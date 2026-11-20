@@ -253,18 +253,18 @@ namespace Shooter.Core.Tests
             var mode = Start();
             var tag = mode.DropTag(_bravo1);
 
-            Assert.That(KillConfirmedText.DropLog(tag), Is.EqualTo("[Mode] killconfirmed drop tag=1 owner=3 side=1"));
+            Assert.That(KillConfirmedLog.DropLog(tag), Is.EqualTo("[Mode] killconfirmed drop tag=1 owner=3 side=1"));
             Assert.That(
-                KillConfirmedText.CollectLog(tag, _alpha1, Side.Alpha, KillConfirmedResult.Confirmed),
+                KillConfirmedLog.CollectLog(tag, _alpha1, Side.Alpha, KillConfirmedResult.Confirmed),
                 Is.EqualTo("[Mode] killconfirmed confirm tag=1 owner=3 side=1 by=1 by-side=0"));
             Assert.That(
-                KillConfirmedText.CollectLog(tag, _bravo2, Side.Bravo, KillConfirmedResult.Denied),
+                KillConfirmedLog.CollectLog(tag, _bravo2, Side.Bravo, KillConfirmedResult.Denied),
                 Is.EqualTo("[Mode] killconfirmed deny tag=1 owner=3 side=1 by=4 by-side=1"));
             Assert.That(
-                KillConfirmedText.CollectLog(tag, _alpha1, Side.Alpha, KillConfirmedResult.Gone),
+                KillConfirmedLog.CollectLog(tag, _alpha1, Side.Alpha, KillConfirmedResult.Gone),
                 Is.EqualTo("[Mode] killconfirmed ignore tag=1 owner=3 side=1 by=1 by-side=0 reason=Gone"));
-            Assert.That(KillConfirmedText.ExpireLog(tag), Is.EqualTo("[Mode] killconfirmed expire tag=1 owner=3 side=1"));
-            Assert.That(KillConfirmedText.DiscardLog(tag, null), Is.EqualTo("[Mode] killconfirmed discard tag=1 owner=3 side=1 by=-"));
+            Assert.That(KillConfirmedLog.ExpireLog(tag), Is.EqualTo("[Mode] killconfirmed expire tag=1 owner=3 side=1"));
+            Assert.That(KillConfirmedLog.DiscardLog(tag, null), Is.EqualTo("[Mode] killconfirmed discard tag=1 owner=3 side=1 by=-"));
         }
 
         [Test]

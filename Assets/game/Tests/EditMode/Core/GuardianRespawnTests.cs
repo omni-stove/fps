@@ -245,8 +245,8 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheLeaderLogsNameTheSideAndPlayer()
         {
-            Assert.That(GuardianText.LeaderChosenLog(Side.Bravo, 4), Is.EqualTo("[Mode] leader side=1 player=4"));
-            Assert.That(GuardianText.LeaderFellLog(Side.Bravo, 4), Is.EqualTo("[Mode] leader-down side=1 player=4 respawn=off"));
+            Assert.That(GuardianLog.LeaderChosenLog(Side.Bravo, 4), Is.EqualTo("[Mode] leader side=1 player=4"));
+            Assert.That(GuardianLog.LeaderFellLog(Side.Bravo, 4), Is.EqualTo("[Mode] leader-down side=1 player=4 respawn=off"));
         }
 
         [Test]

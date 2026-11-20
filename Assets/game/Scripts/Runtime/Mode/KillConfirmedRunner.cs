@@ -301,7 +301,7 @@ namespace Shooter.Runtime
                 pickup.Collected += OnTagCollected;
                 _tagOf.Add(pickup, tag);
                 _pickupOf.Add(tag.Id, pickup);
-                Debug.Log(KillConfirmedText.DropLog(tag), pickup);
+                Debug.Log(KillConfirmedLog.DropLog(tag), pickup);
             }
         }
 
@@ -320,13 +320,13 @@ namespace Shooter.Runtime
             var collectorId = IdOf(collector);
             if (collectorId < 0)
             {
-                Debug.Log(KillConfirmedText.DiscardLog(tag, collection.Collector != null ? collection.Collector.Id : null), this);
+                Debug.Log(KillConfirmedLog.DiscardLog(tag, collection.Collector != null ? collection.Collector.Id : null), this);
                 _killConfirmed.Discard(tag.Id);
                 return;
             }
 
             var result = _killConfirmed.Collect(tag.Id, collectorId);
-            Debug.Log(KillConfirmedText.CollectLog(tag, collectorId, collector.Side, result), collector);
+            Debug.Log(KillConfirmedLog.CollectLog(tag, collectorId, collector.Side, result), collector);
 
             switch (result)
             {
@@ -350,7 +350,7 @@ namespace Shooter.Runtime
 
         private void OnTagExpired(KillConfirmedTag tag)
         {
-            Debug.Log(KillConfirmedText.ExpireLog(tag), this);
+            Debug.Log(KillConfirmedLog.ExpireLog(tag), this);
             if (_pickupOf.TryGetValue(tag.Id, out var pickup))
             {
                 Forget(pickup);

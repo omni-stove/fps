@@ -3,7 +3,7 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    public static class KillConfirmedText
+    public static class KillConfirmedLog
     {
         public const string LogPrefix = ModeLog.Tag + " killconfirmed";
 

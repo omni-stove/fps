@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    public static class HardpointText
+    public static class HardpointLog
     {
         public static string MovedLog(int previousPointIndex, int nextPointIndex)
         {

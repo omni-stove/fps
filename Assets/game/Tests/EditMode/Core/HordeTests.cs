@@ -241,18 +241,18 @@ namespace Shooter.Core.Tests
         [Test]
         public void LogsReadAsDocumented()
         {
-            Assert.That(HordeText.WaveStartedLog(2, 5, 6), Is.EqualTo("[Mode] wave start number=2/5 enemies=6"));
-            Assert.That(HordeText.WaveStartedLog(2, null, 6), Is.EqualTo("[Mode] wave start number=2/endless enemies=6"));
-            Assert.That(HordeText.WaveClearedLog(2, 120, 1), Is.EqualTo("[Mode] wave cleared number=2 currency=120 returning=1"));
-            Assert.That(HordeText.EarnedLog(2, 12, 120), Is.EqualTo("[Mode] currency +12 wave=2 total=120"));
+            Assert.That(HordeLog.WaveStartedLog(2, 5, 6), Is.EqualTo("[Mode] wave start number=2/5 enemies=6"));
+            Assert.That(HordeLog.WaveStartedLog(2, null, 6), Is.EqualTo("[Mode] wave start number=2/endless enemies=6"));
+            Assert.That(HordeLog.WaveClearedLog(2, 120, 1), Is.EqualTo("[Mode] wave cleared number=2 currency=120 returning=1"));
+            Assert.That(HordeLog.EarnedLog(2, 12, 120), Is.EqualTo("[Mode] currency +12 wave=2 total=120"));
             Assert.That(
-                HordeText.PurchasedLog(HordeFortificationAction.Repair, "Wall-North", 3, 15, 105),
+                HordeLog.PurchasedLog(HordeFortificationAction.Repair, "Wall-North", 3, 15, 105),
                 Is.EqualTo("[Mode] repair structure=Wall-North pieces=3 cost=15 currency=105"));
             Assert.That(
-                HordeText.DeniedLog(HordeFortificationAction.Build, "Barricade-NE", HordePurchaseVerdict.NotEnoughCurrency, 40, 10),
+                HordeLog.DeniedLog(HordeFortificationAction.Build, "Barricade-NE", HordePurchaseVerdict.NotEnoughCurrency, 40, 10),
                 Is.EqualTo("[Mode] purchase-denied action=build structure=Barricade-NE reason=NotEnoughCurrency cost=40 currency=10"));
-            Assert.That(HordeText.ResultLog(true, 5, 5), Is.EqualTo("[Mode] horde victory waves=5/5"));
-            Assert.That(HordeText.ResultLog(false, 3, 5), Is.EqualTo("[Mode] horde defeat wave=3/5"));
+            Assert.That(HordeLog.ResultLog(true, 5, 5), Is.EqualTo("[Mode] horde victory waves=5/5"));
+            Assert.That(HordeLog.ResultLog(false, 3, 5), Is.EqualTo("[Mode] horde defeat wave=3/5"));
         }
 
         private static WaveSchedule Schedule(int waveCount)

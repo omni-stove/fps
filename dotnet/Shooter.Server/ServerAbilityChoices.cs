@@ -93,10 +93,7 @@ namespace Shooter.Server
         // 選んだ並びを持たせてよいかを見る。よければ null、だめなら断る理由。理由に Id を載せないのは、クライアントが送った文字でログの行を崩さないため
         public string Check(IReadOnlyList<string> abilityIds)
         {
-            if (abilityIds == null)
-            {
-                throw new ArgumentNullException(nameof(abilityIds));
-            }
+            ArgumentNullException.ThrowIfNull(abilityIds);
 
             if (abilityIds.Count != SlotCount)
             {

@@ -27,15 +27,8 @@ namespace Shooter.Server
 
         public static string Abilities(IReadOnlyList<string> candidates, IReadOnlyList<string> defaults, bool fromRules)
         {
-            if (candidates == null)
-            {
-                throw new ArgumentNullException(nameof(candidates));
-            }
-
-            if (defaults == null)
-            {
-                throw new ArgumentNullException(nameof(defaults));
-            }
+            ArgumentNullException.ThrowIfNull(candidates);
+            ArgumentNullException.ThrowIfNull(defaults);
 
             return DeployLog.Tag + " net abilities=" + Join(candidates) + " default=" + Join(defaults)
                 + " from=" + (fromRules ? "rules" : "catalog");
@@ -55,10 +48,7 @@ namespace Shooter.Server
 
         public static string Equipped(int playerId, IReadOnlyList<string> abilityIds)
         {
-            if (abilityIds == null)
-            {
-                throw new ArgumentNullException(nameof(abilityIds));
-            }
+            ArgumentNullException.ThrowIfNull(abilityIds);
 
             return DeployLog.Prefix(Owner(playerId), null) + " net equipped abilities=" + Join(abilityIds);
         }

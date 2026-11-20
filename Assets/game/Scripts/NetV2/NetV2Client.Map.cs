@@ -121,6 +121,16 @@ namespace Shooter.NetV2
                 AddRemote(id);
             }
 
+            // 見通しは照準の吸い付き (AttachAimAssist) と同じく地図の当たりと煙で確かめ、名前が見える相手と吸い付く相手を揃える。
+            _nameplates = new ClientNameplateContacts(
+                _client.PlayerId,
+                () => _client.LatestSnapshot,
+                _match.TrySampleRemote,
+                _world.Collision,
+                _client.Motor.Stance,
+                (eye, point) => EnemySenses.IsVisionBlocked(eye.ToUnity(), point.ToUnity()));
+            GameSignals.Nameplates.Publish(_nameplates);
+
             _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor, _client.TickRate);
             _hud.BindStatusEffects(_weaponHooks.StatusEffects);
             _hud.BindInventory(_inventory);

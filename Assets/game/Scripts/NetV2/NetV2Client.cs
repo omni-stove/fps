@@ -66,6 +66,7 @@ namespace Shooter.NetV2
         private bool _wasReloading;
         private bool _startedFromMenu;
         private NetV2Hud _hud;
+        private ClientNameplateContacts _nameplates;
         private Transform _remoteRoot;
         private IMenuNavigator _menu;
         private AsyncOperation _mapLoad;
@@ -799,6 +800,12 @@ namespace Shooter.NetV2
 
         private void DestroyViews()
         {
+            if (_nameplates != null)
+            {
+                GameSignals.Nameplates.ClearIfCurrent(_nameplates);
+                _nameplates = null;
+            }
+
             _weaponHooks?.StatusEffects.Clear();
             if (_local != null)
             {

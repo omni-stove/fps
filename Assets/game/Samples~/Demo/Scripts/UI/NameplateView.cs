@@ -23,6 +23,9 @@ namespace Shooter.Runtime
         private readonly List<int> _stale = new List<int>();
         private NameplateSpec _spec;
         private INameplateTargets _source;
+        private OfflineNameplateTargets _offline;
+        private SignalNameplateTargets _online;
+        private INameplateTargets _logged;
 
         public override string ElementName => UxmlName;
 
@@ -34,9 +37,10 @@ namespace Shooter.Runtime
             set => _spec = value ?? throw new ArgumentNullException(nameof(value));
         }
 
+        // 決めた集め方を持ち続けないのは、同じ HUD のままネット対戦に入ったり地図を替えたりして、キットが出す集め方 (GameSignals.Nameplates) が入れ替わるため。
         public INameplateTargets Targets
         {
-            get => _source ?? (_source = new OfflineNameplateTargets());
+            get => _source ?? CurrentTargets();
             set => _source = value ?? throw new ArgumentNullException(nameof(value));
         }
 
@@ -80,14 +84,21 @@ namespace Shooter.Runtime
         public void Refresh()
         {
             var camera = Viewer != null ? Viewer : PingMarkersView.LocalPlayerCamera();
+            var source = Targets;
+            if (!ReferenceEquals(source, _logged))
+            {
+                _logged = source;
+                Debug.Log(NameplateLog.Source(source.GetType().Name), this);
+            }
+
             _targets.Clear();
             if (camera != null)
             {
-                Targets.CopyTo(camera.transform.position, _targets);
+                source.CopyTo(camera.transform.position, _targets);
             }
 
             var spec = Spec;
-            var participants = Targets.Participants;
+            var participants = source.Participants;
             var palette = TeamColors.Current;
             foreach (var entry in _entries.Values)
             {
@@ -164,6 +175,22 @@ namespace Shooter.Runtime
             {
                 Refresh();
             }
+        }
+
+        private INameplateTargets CurrentTargets()
+        {
+            var contacts = GameSignals.Nameplates.Value;
+            if (contacts == null)
+            {
+                return _offline ?? (_offline = new OfflineNameplateTargets());
+            }
+
+            if (_online == null || !ReferenceEquals(_online.Contacts, contacts))
+            {
+                _online = new SignalNameplateTargets(contacts);
+            }
+
+            return _online;
         }
 
         private static bool TryName(IParticipants participants, int id, out string name)

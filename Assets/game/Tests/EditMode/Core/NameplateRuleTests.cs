@@ -100,6 +100,8 @@ namespace Shooter.Core.Tests
                 Is.EqualTo("[Nameplate] view=NameplateView friendlyRange=60.0 enemyRange=35.0"));
             Assert.That(NameplateLog.Shown(7, TeamRelation.Enemy, 12.34f), Is.EqualTo("[Nameplate] shown id=7 relation=Enemy distance=12.3"));
             Assert.That(NameplateLog.Hidden(7), Is.EqualTo("[Nameplate] hidden id=7"));
+            Assert.That(NameplateLog.Source(" SignalNameplateTargets "), Is.EqualTo("[Nameplate] source=SignalNameplateTargets"));
+            Assert.That(NameplateLog.Source(null), Is.EqualTo("[Nameplate] source=none"));
             Assert.Throws<ArgumentNullException>(() => NameplateLog.View("NameplateView", null));
         }
     }

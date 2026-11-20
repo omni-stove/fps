@@ -92,6 +92,23 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheNameKeyDefaultsToTheBeaconKeyAndABlankOneIsEmpty()
+        {
+            Assert.That(_definition.NameKey, Is.EqualTo("deployable.beacon"));
+            Assert.That(_definition.DisplayNameKey, Is.EqualTo(BeaconSpec.DefaultNameKey));
+
+            _definition.NameKey = " deployable.squadBeacon ";
+            Assert.That(_definition.DisplayNameKey, Is.EqualTo("deployable.squadBeacon"));
+
+            _definition.NameKey = " ";
+            Assert.That(_definition.DisplayNameKey, Is.Empty);
+
+            _definition.NameKey = null;
+            Assert.That(_definition.DisplayNameKey, Is.Empty);
+            Assert.That(_definition.Id, Is.EqualTo(Kind));
+        }
+
+        [Test]
         public void ArmingLogsTheUsesAndTheSide()
         {
             LogAssert.Expect(LogType.Log, BeaconLog.Armed(OwnerId, Kind, 1, BeaconSpec.DefaultUses, Side.Alpha));

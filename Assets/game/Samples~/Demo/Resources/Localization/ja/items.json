@@ -34,6 +34,7 @@
   "deployable.mine": "地雷",
   "deployable.remoteCharge": "C4",
   "deployable.reconDrone": "偵察ドローン",
+  "deployable.beacon": "リスポーンビーコン",
   "ability.visionGoggles": "暗視・サーマルゴーグル",
   "weapon.riotShield": "ライオットシールド",
   "item.thermalScope": "サーマルスコープ",

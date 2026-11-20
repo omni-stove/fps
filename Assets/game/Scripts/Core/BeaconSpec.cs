@@ -4,6 +4,8 @@ namespace Shooter.Core
 {
     public sealed class BeaconSpec
     {
+        public const string DefaultNameKey = "deployable.beacon";
+
         public const int DefaultUses = 3;
 
         // 足元ちょうどに出すとビーコンの当たり判定に体が重なるので、前 (+Z) へ離して出す。

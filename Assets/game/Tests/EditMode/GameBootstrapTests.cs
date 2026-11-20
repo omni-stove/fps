@@ -440,6 +440,73 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WithoutWiredAbilitiesThePlayerGetsTheLoadoutsAbilitySlots()
+        {
+            var host = new GameObject("Bootstrap-LoadoutAbilities");
+            var loadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
+            var beacon = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            beacon.name = "DeployBeacon";
+            beacon.Id = "deploy-beacon";
+            loadout.SetAbilities(new AbilityDefinition[] { beacon });
+            BootstrapWorld world = null;
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.CreatesFloor = false;
+                bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
+                bootstrap.RulesDefinition = _rules;
+                bootstrap.Loadout = loadout;
+
+                Assert.That(bootstrap.AbilityDefinitions, Is.Empty);
+                Assert.That(bootstrap.EffectiveAbilityDefinitions, Is.EqualTo(new AbilityDefinition[] { beacon }));
+
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                world = bootstrap.Build();
+
+                Assert.That(world.Abilities.Definition(0), Is.SameAs(beacon), "the loadout's Ability1 goes in the first slot");
+                Assert.That(world.Abilities.Definition(1), Is.Null);
+            }
+            finally
+            {
+                DestroyWorld(world);
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(loadout);
+                Object.DestroyImmediate(beacon);
+            }
+        }
+
+        [Test]
+        public void WiredAbilitiesWinOverTheLoadoutsAbilities()
+        {
+            var host = new GameObject("Bootstrap-WiredAbilities");
+            var loadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
+            var beacon = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            var wired = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            loadout.SetAbilities(new AbilityDefinition[] { beacon });
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.Loadout = loadout;
+                bootstrap.AbilityDefinitions = new AbilityDefinition[] { wired };
+
+                Assert.That(bootstrap.EffectiveAbilityDefinitions, Is.EqualTo(new AbilityDefinition[] { wired }));
+
+                bootstrap.AbilityDefinitions = null;
+                Assert.That(bootstrap.EffectiveAbilityDefinitions, Is.EqualTo(new AbilityDefinition[] { beacon }), "an emptied list falls back to the loadout");
+
+                loadout.SetAbilities(null);
+                Assert.That(bootstrap.EffectiveAbilityDefinitions, Is.Empty);
+            }
+            finally
+            {
+                Object.DestroyImmediate(host);
+                Object.DestroyImmediate(loadout);
+                Object.DestroyImmediate(beacon);
+                Object.DestroyImmediate(wired);
+            }
+        }
+
+        [Test]
         public void TheSceneMotorSettingsAndTraversalReachThePlayer()
         {
             var host = new GameObject("Bootstrap-Tuning");

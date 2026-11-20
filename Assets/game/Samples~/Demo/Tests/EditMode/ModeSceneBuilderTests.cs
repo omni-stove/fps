@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Shooter.Core;
 using Shooter.Editor;
+using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -136,6 +137,45 @@ namespace Shooter.Tests.EditMode
         {
             Assert.That(ModeSceneBuilder.BotName(new Side(1), 2), Is.EqualTo("Bot-1-2"));
             Assert.That(ModeSceneBuilder.BotId(new Side(1), 2), Is.EqualTo("bot-1-2"));
+        }
+
+        [Test]
+        public void TheModeBootstrapGetsTheLoadoutAndLeavesTheAbilitySlotsToIt()
+        {
+            var host = new GameObject("Bootstrap-Mode");
+            var weapon = ScriptableObject.CreateInstance<WeaponDefinition>();
+            var loadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
+            var beacon = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            var stale = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            var rules = ScriptableObject.CreateInstance<GameRulesDefinition>();
+            loadout.SetAbilities(new AbilityDefinition[] { beacon });
+            try
+            {
+                var bootstrap = host.AddComponent<GameBootstrap>();
+                bootstrap.AbilityDefinitions = new AbilityDefinition[] { stale };
+
+                ModeSceneBuilder.ConfigureBootstrap(bootstrap, new[] { weapon }, loadout, rules);
+
+                Assert.That(bootstrap.CreatesFloor, Is.False);
+                Assert.That(bootstrap.WeaponDefinitions, Is.EqualTo(new[] { weapon }));
+                Assert.That(bootstrap.Loadout, Is.SameAs(loadout));
+                Assert.That(bootstrap.RulesDefinition, Is.SameAs(rules));
+                Assert.That(bootstrap.AbilityDefinitions, Is.Empty, "the scene does not copy the loadout's abilities");
+                Assert.That(bootstrap.EffectiveAbilityDefinitions, Is.EqualTo(new AbilityDefinition[] { beacon }));
+
+                Assert.Throws<ArgumentNullException>(() => ModeSceneBuilder.ConfigureBootstrap(null, new[] { weapon }, loadout, rules));
+                Assert.Throws<ArgumentNullException>(() => ModeSceneBuilder.ConfigureBootstrap(bootstrap, new[] { weapon }, null, rules));
+                Assert.Throws<ArgumentException>(() => ModeSceneBuilder.ConfigureBootstrap(bootstrap, Array.Empty<WeaponDefinition>(), loadout, rules));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(host);
+                UnityEngine.Object.DestroyImmediate(weapon);
+                UnityEngine.Object.DestroyImmediate(loadout);
+                UnityEngine.Object.DestroyImmediate(beacon);
+                UnityEngine.Object.DestroyImmediate(stale);
+                UnityEngine.Object.DestroyImmediate(rules);
+            }
         }
 
         [Test]

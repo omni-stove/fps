@@ -145,6 +145,9 @@ make server-dotnet ARGS="-rules FreeForAll"
   置ける物 (タレット・盾・囮・ビーコン) は `server-data/tuning/deployables.json` にある種類だけを置かせる。
   種類ごとの `maxCharges`・`rechargeSeconds`・`cooldownSeconds` (Unity の能力のアセットの回数・戻り・間隔と同じ値にする) で人ごとに置ける回数と間隔を数え、
   使い切ると `[Deploy] ... refused reason=NoCharges charges=0/<回数> wait=<秒>`、間隔の内なら `reason=CoolingDown` で断る。回数は出現し直すと満ちる。
+  ルールの JSON の `loadout.abilities` は、`make export-server-rules` がロードアウトの能力の枠ごとに書く既定の能力の Id。
+  `deployables.json` にあってドローンでない種類で、GameContent の能力のカタログ (`AbilityCatalog`) があればそこにも載っているものだけを残し、
+  ほかの枠は空 (`""`、なし) にする。`deployables.json` の Id を変えたら書き出し直す。
 - 箱を開ける要求は、水平の届く距離に加えて足元と箱の高さの差が 2 m 以内で、体から箱までの線が壁に遮られないときだけ受ける
   (`[Loot] open ... refused=OutOfReach`・`refused=OutOfSight`)。ストリークの要求は `streaks.json` の報酬の表に無い Id を `reason=UnknownReward` で断る。
 - リスポーンビーコン (置ける物の `role` が `Beacon`) は、ルールの `respawnAnchor` に `Beacon` があるときだけ復活の場所になる。

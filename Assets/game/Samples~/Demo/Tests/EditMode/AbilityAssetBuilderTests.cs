@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using Shooter.Core;
 using Shooter.Editor;
 using Shooter.Runtime;
@@ -258,6 +259,147 @@ namespace Shooter.Tests.EditMode
             Assert.DoesNotThrow(() => drone.ToDroneSpec());
             Assert.That(AbilityAssetBuilder.LoadOrBuildVisionGogglesAbility(), Is.SameAs(goggles), "an existing asset is read, not rebuilt");
             Assert.That(AbilityAssetBuilder.LoadOrBuildDroneAbility(), Is.SameAs(drone));
+        }
+
+        [Test]
+        public void TheCatalogIsSavedNextToTheOtherAbilitiesAndListsTheDemoAbilitiesInOrder()
+        {
+            Assert.That(AbilityAssetBuilder.AbilityCatalogPath, Is.EqualTo(AbilityAssetBuilder.Folder + "/AbilityCatalog.asset"));
+            Assert.That(AbilityAssetBuilder.CatalogAbilityIds, Is.EqualTo(new[]
+            {
+                "deploy-beacon",
+                "vision-goggles",
+                "deploy-drone",
+                "deploy-shield",
+                "deploy-turret",
+                "deploy-decoy",
+                "deploy-mine",
+                "deploy-remote-charge",
+                "distraction-throw",
+                "grapple",
+            }));
+            Assert.That(AbilityAssetBuilder.CatalogAbilityIds, Does.Not.Contain(AbilityAssetBuilder.NullAbilityId), "the do-nothing ability is only for tests");
+        }
+
+        [Test]
+        public void BuildsACatalogInTheGivenOrder()
+        {
+            var path = _folder + "/AbilityCatalog.asset";
+            var beacon = AbilityAssetBuilder.BuildBeaconAt(_folder + "/DeployBeacon.asset");
+            var goggles = AbilityAssetBuilder.BuildVisionGogglesAt(_folder + "/VisionGoggles.asset");
+            var drone = AbilityAssetBuilder.BuildDroneAt(_folder + "/DeployDrone.asset");
+
+            var catalog = AbilityAssetBuilder.BuildCatalogAt(path, new AbilityDefinition[] { beacon, goggles, drone });
+
+            Assert.That(AssetDatabase.LoadAssetAtPath<AbilityCatalogAsset>(path), Is.SameAs(catalog));
+            Assert.That(catalog.name, Is.EqualTo("AbilityCatalog"));
+            Assert.That(catalog.Abilities, Is.EqualTo(new AbilityDefinition[] { beacon, goggles, drone }));
+            Assert.That(catalog.ToIds(), Is.EqualTo(new[] { "deploy-beacon", "vision-goggles", "deploy-drone" }));
+            Assert.That(catalog.TryFind("vision-goggles", out var found), Is.True);
+            Assert.That(found, Is.SameAs(goggles));
+        }
+
+        [Test]
+        public void ASecondCatalogRunKeepsTheGuidAndReplacesTheList()
+        {
+            var path = _folder + "/AbilityCatalog.asset";
+            var beacon = AbilityAssetBuilder.BuildBeaconAt(_folder + "/DeployBeacon.asset");
+            var drone = AbilityAssetBuilder.BuildDroneAt(_folder + "/DeployDrone.asset");
+            var catalog = AbilityAssetBuilder.BuildCatalogAt(path, new AbilityDefinition[] { beacon });
+            var guid = AssetDatabase.AssetPathToGUID(path);
+
+            var rebuilt = AbilityAssetBuilder.BuildCatalogAt(path, new AbilityDefinition[] { drone, beacon });
+
+            Assert.That(rebuilt, Is.SameAs(catalog));
+            Assert.That(AssetDatabase.AssetPathToGUID(path), Is.EqualTo(guid));
+            Assert.That(rebuilt.ToIds(), Is.EqualTo(new[] { "deploy-drone", "deploy-beacon" }));
+        }
+
+        [Test]
+        public void AnInvalidCatalogIsRefusedAndTheSavedOneIsKept()
+        {
+            var path = _folder + "/AbilityCatalog.asset";
+            var beacon = AbilityAssetBuilder.BuildBeaconAt(_folder + "/DeployBeacon.asset");
+            var drone = AbilityAssetBuilder.BuildDroneAt(_folder + "/DeployDrone.asset");
+            var catalog = AbilityAssetBuilder.BuildCatalogAt(path, new AbilityDefinition[] { beacon, drone });
+
+            var repeated = Assert.Throws<AbilityDefinitionException>(
+                () => AbilityAssetBuilder.BuildCatalogAt(path, new AbilityDefinition[] { beacon, beacon }));
+            Assert.That(repeated.Message, Does.Contain("'AbilityCatalog'").And.Contain("deploy-beacon"));
+            Assert.Throws<AbilityDefinitionException>(() => AbilityAssetBuilder.BuildCatalogAt(path, new AbilityDefinition[] { beacon, null }));
+            Assert.Throws<AbilityDefinitionException>(() => AbilityAssetBuilder.BuildCatalogAt(path, new AbilityDefinition[0]));
+            Assert.Throws<ArgumentNullException>(() => AbilityAssetBuilder.BuildCatalogAt(path, null));
+
+            Assert.That(catalog.Abilities, Is.EqualTo(new AbilityDefinition[] { beacon, drone }), "a refused list does not touch the saved catalog");
+            Assert.That(catalog.ToIds(), Is.EqualTo(new[] { "deploy-beacon", "deploy-drone" }));
+        }
+
+        [Test]
+        public void ACatalogWithoutAnyAbilityIsNotSaved()
+        {
+            var path = _folder + "/AbilityCatalog.asset";
+
+            Assert.Throws<AbilityDefinitionException>(() => AbilityAssetBuilder.BuildCatalogAt(path, new AbilityDefinition[0]));
+
+            Assert.That(AssetDatabase.LoadAssetAtPath<AbilityCatalogAsset>(path), Is.Null);
+        }
+
+        [Test]
+        public void RejectsACatalogPathOutsideTheAssets()
+        {
+            var beacon = AbilityAssetBuilder.BuildBeaconAt(_folder + "/DeployBeacon.asset");
+
+            Assert.Throws<ArgumentException>(() => AbilityAssetBuilder.BuildCatalogAt("Elsewhere/AbilityCatalog.asset", new AbilityDefinition[] { beacon }));
+        }
+
+        [Test]
+        public void TheBuilderAndTheGameContentEntryCanBeCalledWithExecuteMethod()
+        {
+            foreach (var (type, name) in new[]
+            {
+                (typeof(AbilityAssetBuilder), nameof(AbilityAssetBuilder.Build)),
+                (typeof(GameContentAssets), nameof(GameContentAssets.Create)),
+            })
+            {
+                var method = type.GetMethod(name, BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null);
+                Assert.That(method, Is.Not.Null, $"{type.FullName}.{name} needs to be public, static and take no arguments");
+                Assert.That(method.ReturnType, Is.EqualTo(typeof(void)));
+                Assert.That(type.FullName, Is.EqualTo("Shooter.Editor." + type.Name), "-executeMethod names the type with its namespace");
+            }
+        }
+
+        [Test]
+        public void TheCommittedCatalogMatchesTheBuilderAndGameContentPicksItUp()
+        {
+            var catalog = AssetDatabase.LoadAssetAtPath<AbilityCatalogAsset>(AbilityAssetBuilder.AbilityCatalogPath);
+
+            Assert.That(catalog, Is.Not.Null, $"run {AbilityAssetBuilder.MenuPath}");
+            Assert.That(catalog.ToIds(), Is.EqualTo(AbilityAssetBuilder.CatalogAbilityIds), $"run {AbilityAssetBuilder.MenuPath}");
+            Assert.That(catalog.Abilities[0], Is.SameAs(AssetDatabase.LoadAssetAtPath<BeaconDeployDefinition>(AbilityAssetBuilder.BeaconAbilityPath)));
+            Assert.That(AbilityAssetBuilder.LoadOrBuildCatalog(), Is.SameAs(catalog), "an existing catalog is read, not rebuilt");
+
+            var found = GameContentAssets.FindInProject(typeof(AbilityCatalogAsset));
+            Assert.That(found, Is.EqualTo(new UnityEngine.Object[] { catalog }), "game-content fills the slot only when there is one catalog");
+
+            var content = ScriptableObject.CreateInstance<GameContent>();
+            try
+            {
+                var left = GameContentAssets.FillEmpty(content, t => t == typeof(AbilityCatalogAsset) ? found : Array.Empty<UnityEngine.Object>(), _ => Array.Empty<TextAsset>());
+                Assert.That(left, Does.Not.Contain("AbilityCatalog"));
+                Assert.That(content.AbilityCatalog, Is.SameAs(catalog));
+
+                GameContent.Use(content);
+                Assert.That(GameContent.Pick(c => c.AbilityCatalog), Is.SameAs(catalog));
+
+                var loadout = AssetDatabase.LoadAssetAtPath<LoadoutDefinition>(WeaponAssetBuilder.LoadoutPath);
+                Assert.That(LoadoutSelectionAssets.TryCreateAbilities(loadout, GameContent.Pick(c => c.AbilityCatalog), null, out var selection, out var error), Is.True, error);
+                Assert.That(selection.SelectedAt(AbilityAssetBuilder.BeaconLoadoutSlot), Is.EqualTo(AbilityAssetBuilder.BeaconAbilityId), "the loadout's beacon is chosen first");
+            }
+            finally
+            {
+                GameContent.Use(null);
+                UnityEngine.Object.DestroyImmediate(content);
+            }
         }
 
         private string BuildLoadout()

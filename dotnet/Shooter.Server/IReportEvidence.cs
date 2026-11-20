@@ -6,6 +6,7 @@ namespace Shooter.Server
     {
         // 証拠のファイルの中身 (1 件 1 行で、各行を "\n" で終えた JSON Lines) を返す。
         // null は証拠を残さないという意味で、ファイルを作らせない。空の文字列は記録が無かったことを残す
-        string Describe(int targetId);
+        // reporterKey は通報した人の切断で変わらない識別 (ProductUserId)。1 人が全体の枠を使い切れないようにするために渡す
+        string Describe(int targetId, string reporterKey);
     }
 }

@@ -532,7 +532,7 @@ namespace Shooter.Server.Tests
 
             public int LastTarget { get; private set; }
 
-            public string Describe(int targetId)
+            public string Describe(int targetId, string reporterKey)
             {
                 Asked++;
                 LastTarget = targetId;

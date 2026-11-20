@@ -129,6 +129,20 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void OneReporterCannotUseUpTheSharedLimit()
+        {
+            Start(true, 30f);
+
+            Assert.That(_evidence.Describe(1, "reporter-a"), Is.Not.Null);
+            Assert.That(_evidence.Describe(2, "reporter-a"), Is.Null, "the same reporter is limited");
+            Assert.That(_evidence.Describe(2, "reporter-b"), Is.Not.Null, "another reporter still gets evidence");
+
+            _evidence.Tick(1, 61f);
+
+            Assert.That(_evidence.Describe(2, "reporter-a"), Is.Not.Null, "the reporter's window has passed");
+        }
+
+        [Test]
         public void DisabledEvidenceHoldsNothingAndDescribesNothing()
         {
             Start(false, 30f);

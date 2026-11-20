@@ -77,6 +77,15 @@ namespace Shooter.Server
                 maxFilesPerMinute);
         }
 
+        public static string ReporterLimited(int targetId)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} skipped the evidence for target={1}: the reporter already had evidence saved in the last minute; the report is kept without it",
+                Tag,
+                targetId);
+        }
+
         public static string WriteFailed(string path, string error)
         {
             return Tag + " could not write the evidence to " + path + " (" + error + "); the report is kept without it";

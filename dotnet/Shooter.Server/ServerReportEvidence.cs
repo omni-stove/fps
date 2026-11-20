@@ -23,6 +23,8 @@ namespace Shooter.Server
         private readonly Dictionary<int, Ring> _byPlayer = new Dictionary<int, Ring>();
         private readonly int _maxRecords;
         private readonly Queue<double> _describedAt = new Queue<double>();
+        private readonly Dictionary<string, double> _reporterDescribedAt = new Dictionary<string, double>();
+        private readonly List<string> _expiredReporters = new List<string>();
         private ServerContext _context;
         private bool _listening;
         private double _now;
@@ -103,9 +105,10 @@ namespace Shooter.Server
 
             _byPlayer.Clear();
             _describedAt.Clear();
+            _reporterDescribedAt.Clear();
         }
 
-        public string Describe(int targetId)
+        public string Describe(int targetId, string reporterKey = null)
         {
             if (!_listening)
             {
@@ -117,6 +120,31 @@ namespace Shooter.Server
                 _describedAt.Dequeue();
             }
 
+            // 全体の枠の前に通報した人ごとの枠を置く。全体の枠だけだと、1 人が通報を送り続けるだけで他の人の証拠を締め出せるため。
+            // 全体の枠を使う前に断るので、断られた通報は全体の枠を減らさない
+            if (reporterKey != null)
+            {
+                _expiredReporters.Clear();
+                foreach (var pair in _reporterDescribedAt)
+                {
+                    if (_now - pair.Value >= _filesWindowSeconds)
+                    {
+                        _expiredReporters.Add(pair.Key);
+                    }
+                }
+
+                foreach (var key in _expiredReporters)
+                {
+                    _reporterDescribedAt.Remove(key);
+                }
+
+                if (_reporterDescribedAt.ContainsKey(reporterKey))
+                {
+                    _context.Log.WriteLine(ServerReportEvidenceLog.ReporterLimited(targetId));
+                    return null;
+                }
+            }
+
             if (_describedAt.Count >= Settings.MaxFilesPerMinute)
             {
                 _context.Log.WriteLine(ServerReportEvidenceLog.Limited(targetId, Settings.MaxFilesPerMinute));
@@ -124,6 +152,10 @@ namespace Shooter.Server
             }
 
             _describedAt.Enqueue(_now);
+            if (reporterKey != null)
+            {
+                _reporterDescribedAt[reporterKey] = _now;
+            }
 
             if (!_byPlayer.TryGetValue(targetId, out var ring))
             {

@@ -192,7 +192,7 @@ namespace Shooter.Server
             // 書けなかった通報は間引きに数えない。数えると、送り直しても残らなくなる
             _savedAt[key] = _now;
             log.WriteLine(ServerReportLog.Saved(reporter.PlayerId, targetId, report.Reason));
-            WriteEvidence(reportId, targetId);
+            WriteEvidence(reportId, targetId, reporter.ProductUserId);
         }
 
         public string EvidencePath(string reportId)
@@ -207,9 +207,9 @@ namespace Shooter.Server
 
         // 通報の行を書いた後に書くのは、証拠だけが残って対になる通報の無いファイルを作らないため。
         // 証拠が書けなくても通報は残す。通報の行は運営が読む本体で、証拠はその添え物なので
-        private void WriteEvidence(string reportId, int targetId)
+        private void WriteEvidence(string reportId, int targetId, string reporterKey)
         {
-            var text = Evidence?.Describe(targetId);
+            var text = Evidence?.Describe(targetId, reporterKey);
             if (text == null)
             {
                 return;

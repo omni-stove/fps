@@ -14,30 +14,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.AttachmentModelCatalog
   _attachments:
   - _itemId: 2451a5a1-24e5-45ed-bbc1-8b23276152f8
-    _prefab: {fileID: 5482276230732069936, guid: a98a34b49ad404ee3b08e11ff46481d5, type: 3}
+    _prefab: {fileID: 0}
     _anchor: 0
     _placeholderSize: {x: 0.035, y: 0.04, z: 0.06}
-  - _itemId: 79fb2f9e-fc61-425a-b651-8baa8d1a6b2b
-    _prefab: {fileID: 5361861914194271220, guid: d70468f901baf454592ee6e36acd7c6d, type: 3}
-    _anchor: 0
-    _placeholderSize: {x: 0.044, y: 0.05, z: 0.06}
   - _itemId: a2c5e73b-69fa-4402-b0ef-3c4297973226
-    _prefab: {fileID: 3891054957522882483, guid: 38a8304819fb040f08e21c752ff4c830, type: 3}
+    _prefab: {fileID: 0}
     _anchor: 0
     _placeholderSize: {x: 0.04, y: 0.045, z: 0.18}
   - _itemId: 8d8c8546-59d4-4b4c-ba71-890664e5c260
-    _prefab: {fileID: 7962545644395573816, guid: 85a671a934b344fedac1bd2dc4272bdf, type: 3}
+    _prefab: {fileID: 0}
     _anchor: 1
     _placeholderSize: {x: 0.035, y: 0.035, z: 0.16}
   - _itemId: 3fc98d19-5fb3-4680-bd5f-30d30d14f84e
-    _prefab: {fileID: 8587182699281723701, guid: 08435ab758d114d64988f803e16d67d1, type: 3}
+    _prefab: {fileID: 0}
     _anchor: 1
     _placeholderSize: {x: 0.03, y: 0.03, z: 0.05}
   - _itemId: 6142e02c-15a1-4fe8-9f31-015752f1ca2e
-    _prefab: {fileID: 3655885797949976086, guid: b26610a2aeb124d6593264187f5e226e, type: 3}
+    _prefab: {fileID: 0}
     _anchor: 2
     _placeholderSize: {x: 0.025, y: 0.08, z: 0.025}
   - _itemId: eb45e06b-489d-410d-ae0d-f1095df96a0b
-    _prefab: {fileID: 692289926493081620, guid: 4783921eba9724019b6ca0bdf1670675, type: 3}
+    _prefab: {fileID: 0}
     _anchor: 2
     _placeholderSize: {x: 0.03, y: 0.14, z: 0.05}

@@ -13,7 +13,8 @@ using Object = UnityEngine.Object;
 namespace Shooter.Net.Tests
 {
     // 画面で決めた能力を要求に載せ、受け入れられた能力で NetV2DeployInputPart の枠を差し替える。
-    // つなぎ込み (NetV2ClientParts / NetV2Client) はまだ無いので、テストで AbilitiesAccepted を SetSlots につなぐ。
+    // 押した入力を差し替えて置くところまで見るため、部品を手で組み、AbilitiesAccepted を SetSlots につなぐ。
+    // NetV2ClientParts が組むつなぎ込みは NetV2AbilityWiringTests で確かめる
     public sealed class NetV2LoadoutAbilitiesTests
     {
         private const string StoreKey = "Shooter.Tests.NetV2LoadoutAbilities";

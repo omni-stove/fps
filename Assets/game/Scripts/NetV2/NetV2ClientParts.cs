@@ -49,8 +49,14 @@ namespace Shooter.NetV2
 
         public StreakSpec Streaks { get; set; }
 
-        // ロードアウトの能力の並び。置く物の能力の見た目と、Ability1・Ability2 で置く種類をここから引く
+        // ロードアウトの能力の並び。つないだ直後の Ability1・Ability2 で置く種類をここから引く
         public IReadOnlyList<AbilityDefinition> Abilities { get; set; } = Array.Empty<AbilityDefinition>();
+
+        // 装備画面で選べる能力の一覧。誰かが選んで置いた物の見た目と、受け入れられた選択の枠の定義をここから引く。null なら能力を選ばせないゲーム
+        public AbilityCatalogAsset AbilityCatalog { get; set; }
+
+        // 受け入れられた能力の選択を出す側。null なら枠はロードアウトの能力のまま
+        internal NetV2LoadoutChooser Loadout { get; set; }
 
         public float KillCamSpeed { get; set; } = 1f;
 
@@ -85,7 +91,15 @@ namespace Shooter.NetV2
             var client = context.Client;
             var blocks = new NetV2BlockPart(
                 client, context.VoiceRoster, context.Blocks ?? new BlockListStore(), context.Voice == null, context.Log);
-            var deployables = new NetV2DeployablesPart(context.Send, () => client.PlayerId, DeployDefinitionsOf(context.Abilities), context.Log);
+            var deployables = new NetV2DeployablesPart(
+                context.Send, () => client.PlayerId, DeployDefinitionsOf(context.Abilities, context.AbilityCatalog), context.Log);
+            var deployInput = new NetV2DeployInputPart(
+                deployables, NetV2DeployInputPart.SlotsOf(context.Abilities), () => CanAct(client), context.LocalPlayer);
+            if (context.Loadout != null)
+            {
+                deployInput.Follow(context.Loadout, context.AbilityCatalog, context.Log);
+            }
+
             var parts = new List<INetV2ClientPart>
             {
                 blocks,
@@ -98,8 +112,7 @@ namespace Shooter.NetV2
                 new NetV2StreakPart(client, context.Send, () => StreaksRule(client), context.Log, context.Streaks, context.LocalPlayer),
                 new NetV2MeleePart(client, context.Melee, context.LocalPlayer, context.Log),
                 deployables,
-                new NetV2DeployInputPart(
-                    deployables, NetV2DeployInputPart.SlotsOf(context.Abilities), () => CanAct(client), context.LocalPlayer),
+                deployInput,
                 new NetV2KillCamPart(client, context.KillCamSpeed, context.LocalPlayer, context.Log),
 
                 // 天候と時刻もスナップショットの MatchRulesSync で届くので、マップを替えるたびにシーンの空へ当て直す
@@ -179,12 +192,25 @@ namespace Shooter.NetV2
             return local != null ? local.transform.position : (UnityEngine.Vector3?)null;
         }
 
-        private static List<DeployAbilityDefinition> DeployDefinitionsOf(IReadOnlyList<AbilityDefinition> abilities)
+        // 他の人はカタログのどの置く物を選んでいてもよいので、ロードアウトの能力だけでなくカタログ全部の置く物を渡す。
+        // 同じ Id はロードアウトのものを先に置き、NetV2DeployablesPart が最初の 1 つだけを使う
+        internal static List<DeployAbilityDefinition> DeployDefinitionsOf(IReadOnlyList<AbilityDefinition> abilities, AbilityCatalogAsset catalog)
         {
             var definitions = new List<DeployAbilityDefinition>();
+            AddDeploys(definitions, abilities);
+            if (catalog != null)
+            {
+                AddDeploys(definitions, catalog.Abilities);
+            }
+
+            return definitions;
+        }
+
+        private static void AddDeploys(List<DeployAbilityDefinition> definitions, IReadOnlyList<AbilityDefinition> abilities)
+        {
             if (abilities == null)
             {
-                return definitions;
+                return;
             }
 
             foreach (var ability in abilities)
@@ -194,8 +220,6 @@ namespace Shooter.NetV2
                     definitions.Add(deploy);
                 }
             }
-
-            return definitions;
         }
     }
 }

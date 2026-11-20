@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
 using Shooter.Core;
@@ -16,7 +17,12 @@ namespace Shooter.Server.Tests
             HandgunId, "weapon.handgun", WeaponCategory.Handgun, FireMode.Semi, 12, 48, 0.2f, 1.5f, 34, 60f, DamageFalloff.None);
 
         public static NetMatchFile File(
-            GameRules rules = null, NetMatchSettings settings = null, string name = "TeamDeathmatch", WeaponSpec rifle = null, NetMotorSettings motor = null)
+            GameRules rules = null,
+            NetMatchSettings settings = null,
+            string name = "TeamDeathmatch",
+            WeaponSpec rifle = null,
+            NetMotorSettings motor = null,
+            IReadOnlyList<string> abilities = null)
         {
             rifle ??= Rifle();
             return new NetMatchFile(
@@ -29,7 +35,8 @@ namespace Shooter.Server.Tests
                 0.4f,
                 "WeaponCatalog",
                 new WeaponCatalog(new[] { rifle, Handgun() }),
-                motor);
+                motor,
+                abilities);
         }
 
         public static ServerRulesData Data(

@@ -73,6 +73,7 @@ namespace Shooter.Protocol
                 new KillCamClipMessage(),
                 new StashStateMessage(),
                 new BuyAnswerMessage(),
+                new PlayerNamesMessage(),
             };
         }
 

@@ -244,6 +244,7 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.VoteKickState)]
         [TestCase(MessageIds.StashState)]
         [TestCase(MessageIds.BuyAnswer)]
+        [TestCase(MessageIds.PlayerNames)]
         public void TheNewServerMessagesAreOnlyReadByTheClient(ushort id)
         {
             Assert.That(MatchMessages.CreateClientTable().TryGet(id, out _), Is.True);
@@ -297,6 +298,15 @@ namespace Shooter.Protocol.Tests
             Assert.That(new BuyAnswerMessage().Id, Is.EqualTo(MessageIds.BuyAnswer));
             Assert.That(MatchMessages.CreateClientTable().TryGet(MessageIds.BuyAnswer, out var answer), Is.True);
             Assert.That(answer, Is.InstanceOf<BuyAnswerMessage>());
+        }
+
+        [Test]
+        public void ThePlayerNamesHaveTheLastIdAndAreReadAsTheirType()
+        {
+            Assert.That(MessageIds.PlayerNames, Is.EqualTo(89));
+            Assert.That(new PlayerNamesMessage().Id, Is.EqualTo(MessageIds.PlayerNames));
+            Assert.That(MatchMessages.CreateClientTable().TryGet(MessageIds.PlayerNames, out var names), Is.True);
+            Assert.That(names, Is.InstanceOf<PlayerNamesMessage>());
         }
 
         [Test]

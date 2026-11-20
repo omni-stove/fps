@@ -157,8 +157,15 @@ namespace Shooter.Server
             string productUserId = null,
             string partyId = null,
             int? skillRating = null,
-            string voiceUserId = null)
+            string voiceUserId = null,
+            string displayName = null)
         {
+            // 受け取った名前は PlayerDisplayName.Sanitize を通してから渡すので、ここで通らない名前は呼ぶ側の誤り
+            if (!string.IsNullOrEmpty(displayName) && !PlayerDisplayName.IsValid(displayName, NetMatchSettings.MaxMaxDisplayNameLength))
+            {
+                throw new ArgumentException("'" + displayName + "' is not a sanitized display name", nameof(displayName));
+            }
+
             if (!string.IsNullOrEmpty(partyId) && !ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
             {
                 throw new ArgumentException(
@@ -185,7 +192,7 @@ namespace Shooter.Server
                 throw new ArgumentException("connection " + connection + " has already joined", nameof(connection));
             }
 
-            return Add(connection, playerId, rejoinKey, productUserId, partyId, skillRating, voiceUserId);
+            return Add(connection, playerId, rejoinKey, productUserId, partyId, skillRating, voiceUserId, displayName);
         }
 
         // Bot は接続を持たないので ConnectionId.None で加え、送る側はそれを読み飛ばす。
@@ -202,7 +209,7 @@ namespace Shooter.Server
             }
 
             _botCount++;
-            return Add(ConnectionId.None, playerId, null, null, null, null, null);
+            return Add(ConnectionId.None, playerId, null, null, null, null, null, null);
         }
 
         public bool LeaveBot(int playerId)
@@ -217,7 +224,14 @@ namespace Shooter.Server
         }
 
         private ServerPlayer Add(
-            ConnectionId connection, int playerId, string rejoinKey, string productUserId, string partyId, int? skillRating, string voiceUserId)
+            ConnectionId connection,
+            int playerId,
+            string rejoinKey,
+            string productUserId,
+            string partyId,
+            int? skillRating,
+            string voiceUserId,
+            string displayName)
         {
             var rejoined = false;
             var team = ChooseTeam != null
@@ -230,7 +244,8 @@ namespace Shooter.Server
                 team = ChooseWithParty(partyId);
             }
 
-            var player = new ServerPlayer(connection, playerId, team, rejoinKey, productUserId, partyId, ++_joinCount, skillRating, voiceUserId);
+            var player = new ServerPlayer(
+                connection, playerId, team, rejoinKey, productUserId, partyId, ++_joinCount, skillRating, voiceUserId, displayName);
             _players.Add(playerId, player);
             if (connection.IsValid)
             {

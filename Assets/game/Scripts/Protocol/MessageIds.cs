@@ -65,5 +65,6 @@ namespace Shooter.Protocol
         public const ushort KillCamClip = 86;
         public const ushort StashState = 87;
         public const ushort BuyAnswer = 88;
+        public const ushort PlayerNames = 89;
     }
 }

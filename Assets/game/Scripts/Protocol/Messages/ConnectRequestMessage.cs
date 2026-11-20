@@ -10,7 +10,7 @@ namespace Shooter.Protocol
     {
         public const byte CurrentVersion = 1;
 
-        public const int MaxDisplayNameBytes = 64;
+        public const int MaxDisplayNameBytes = PlayerDisplayName.MaxBytes;
 
         public ushort Id => MessageIds.ConnectRequest;
 

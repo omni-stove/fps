@@ -22,6 +22,7 @@ namespace Shooter.Core
         public const int DefaultRoundWinsToWin = 3;
         public const float DefaultRoundPreparationSeconds = 5f;
         public const float DefaultRoundTimeLimitSeconds = 120f;
+        public const int DefaultMaxDisplayNameLength = 16;
 
         // Core からは Protocol を参照できないので、Shooter.Protocol.SnapshotMessage.MaxPlayers の値を写す
         public const int MaxMaxPlayers = 64;
@@ -31,6 +32,9 @@ namespace Shooter.Core
 
         // Core からは Protocol を参照できないので、Shooter.Protocol.MatchProtocol.MaxChatBytes (512) を UTF-8 の 1 文字の最大 3 バイトで割った数にする
         public const int MaxMaxChatLength = 170;
+
+        // 名前を 1 文字 3 バイトで数えても PlayerDisplayName.MaxBytes に収まり、長さの設定の内なら送れない名前が出ないようにする
+        public const int MaxMaxDisplayNameLength = PlayerDisplayName.MaxBytes / 3;
 
         // 天候と時刻の Id はマップ名と同じくファイル名やアセットの Id に使うので、マップ名と同じ長さで切る
         public const int MaxEnvironmentIdLength = NetLaunchOptions.MaxMapNameLength;
@@ -69,7 +73,8 @@ namespace Shooter.Core
             GunGameSpec gunGame = null,
             VoteKickSpec voteKick = null,
             PayloadSpec payload = null,
-            EconomySpec economy = null)
+            EconomySpec economy = null,
+            int maxDisplayNameLength = DefaultMaxDisplayNameLength)
         {
             RequirePositive(scoreLimit, nameof(scoreLimit));
             RequirePositive(timeLimitSeconds, nameof(timeLimitSeconds));
@@ -110,6 +115,14 @@ namespace Shooter.Core
                     nameof(maxChatLength), maxChatLength, nameof(maxChatLength) + " must be between 1 and " + MaxMaxChatLength);
             }
 
+            if (maxDisplayNameLength < 1 || maxDisplayNameLength > MaxMaxDisplayNameLength)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(maxDisplayNameLength),
+                    maxDisplayNameLength,
+                    nameof(maxDisplayNameLength) + " must be between 1 and " + MaxMaxDisplayNameLength);
+            }
+
             RequirePositive(roundWinsToWin, nameof(roundWinsToWin));
             RequireNotNegative(roundPreparationSeconds, nameof(roundPreparationSeconds));
             RequirePositive(roundTimeLimitSeconds, nameof(roundTimeLimitSeconds));
@@ -132,6 +145,7 @@ namespace Shooter.Core
             JoinCode = joinCode;
             ChatIntervalSeconds = chatIntervalSeconds;
             MaxChatLength = maxChatLength;
+            MaxDisplayNameLength = maxDisplayNameLength;
             ScoreLimit = scoreLimit;
             TimeLimitSeconds = timeLimitSeconds;
             RespawnSeconds = respawnSeconds;
@@ -188,7 +202,8 @@ namespace Shooter.Core
                 gunGame: GunGame,
                 voteKick: VoteKick,
                 payload: Payload,
-                economy: Economy);
+                economy: Economy,
+                maxDisplayNameLength: MaxDisplayNameLength);
         }
 
         public int ScoreLimit { get; }
@@ -230,6 +245,9 @@ namespace Shooter.Core
         public float ChatIntervalSeconds { get; }
 
         public int MaxChatLength { get; }
+
+        // UTF-16 の文字数で数えるのは、チャットの長さ (MaxChatLength) と数え方をそろえるため
+        public int MaxDisplayNameLength { get; }
 
         public int RoundWinsToWin { get; }
 

@@ -54,6 +54,24 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void SettingsCarryTheDisplayNameLimit()
+        {
+            Assert.That(_match.ToSettings().MaxDisplayNameLength, Is.EqualTo(16));
+
+            _match.MaxDisplayNameLength = 10;
+
+            Assert.That(_match.ToSettings().MaxDisplayNameLength, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void ADisplayNameLimitOverTheBytesIsRefused()
+        {
+            _match.MaxDisplayNameLength = NetMatchSettings.MaxMaxDisplayNameLength + 1;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => _match.ToSettings());
+        }
+
+        [Test]
         public void JoinCodeWithASpaceIsRefused()
         {
             _match.JoinCode = "abc 123";

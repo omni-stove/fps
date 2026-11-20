@@ -120,6 +120,10 @@ namespace Shooter.Runtime
         [SerializeField, Range(1, NetMatchSettings.MaxMaxChatLength), Tooltip("チャットの 1 行の文字数の上限")]
         private int _maxChatLength = NetMatchSettings.DefaultMaxChatLength;
 
+        [Header("名前")]
+        [SerializeField, Range(1, NetMatchSettings.MaxMaxDisplayNameLength), Tooltip("サーバーが受け付けるプレイヤー名の文字数の上限。超えた名前は名前の無い人として扱う")]
+        private int _maxDisplayNameLength = NetMatchSettings.DefaultMaxDisplayNameLength;
+
         [Header("投票キック (専用サーバー)")]
         [SerializeField, Tooltip("プレイヤーが投票で他のプレイヤーを試合から外せるようにする")]
         private bool _voteKickEnabled = VoteKickSpec.DefaultEnabled;
@@ -249,6 +253,12 @@ namespace Shooter.Runtime
         {
             get => _maxTeamSizeDifference;
             set => _maxTeamSizeDifference = value;
+        }
+
+        public int MaxDisplayNameLength
+        {
+            get => _maxDisplayNameLength;
+            set => _maxDisplayNameLength = value;
         }
 
         public CaptureTheFlagDefinition CaptureTheFlag
@@ -427,7 +437,8 @@ namespace Shooter.Runtime
                     _economyRoundWinReward,
                     _economyRoundLossReward,
                     _economyLossStreakBonus,
-                    _economyMaxLossReward));
+                    _economyMaxLossReward),
+                _maxDisplayNameLength);
         }
 
         // オフラインのモードと同じ値で動くよう、各モードのランナーと同じ順 (この欄、入口) で調整値のアセットを選ぶ

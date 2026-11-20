@@ -21,6 +21,9 @@ namespace Shooter.Server.Tests
 
         private readonly List<TestClient> _clients = new List<TestClient>();
         private List<string> _calls;
+        // An attribute argument must be a constant, and a raw U+202E in the source is invisible.
+        private static readonly string[] _bidiOverrideName = { "A" + (char)0x202E + "ce" };
+
         private StringWriter _log;
         private StringWriter _json;
         private UdpMatchTransport _transport;
@@ -102,6 +105,47 @@ namespace Shooter.Server.Tests
             Assert.That(_server.Match.TryGetPlayer(1, out var player), Is.True);
             Assert.That(player.VoiceUserId, Is.Null);
             Assert.That(_log.ToString(), Does.Contain("[Net] client 1 sent a malformed product user id; joining without voice"));
+        }
+
+        [Test]
+        public void TheDisplayNameIsTrimmedAndKept()
+        {
+            Start();
+            var client = RequestWithDisplayName("  Ace  ");
+
+            Assert.That(client.Accepted, Is.Not.Null, client.DisconnectReason);
+            Assert.That(_server.Match.TryGetPlayer(1, out var player), Is.True);
+            Assert.That(player.DisplayName, Is.EqualTo("Ace"));
+            Assert.That(_log.ToString(), Does.Not.Contain("joining without a name"));
+        }
+
+        [Test]
+        public void NoDisplayNameJoinsWithoutAName()
+        {
+            Start();
+            var client = RequestWithDisplayName("");
+
+            Assert.That(client.Accepted, Is.Not.Null, client.DisconnectReason);
+            Assert.That(_server.Match.TryGetPlayer(1, out var player), Is.True);
+            Assert.That(player.DisplayName, Is.Empty);
+            Assert.That(_log.ToString(), Does.Not.Contain("joining without a name"), "sending no name is not a refusal");
+        }
+
+        [TestCase("A\nce")]
+        [TestCaseSource(nameof(_bidiOverrideName))]
+        [TestCase("seventeen_chars__")]
+        public void ARefusedDisplayNameStillJoinsWithoutAName(string name)
+        {
+            Start();
+            var client = RequestWithDisplayName(name);
+
+            Assert.That(client.Accepted, Is.Not.Null, client.DisconnectReason);
+            Assert.That(_server.Match.TryGetPlayer(1, out var player), Is.True);
+            Assert.That(player.DisplayName, Is.Empty);
+            Assert.That(
+                _log.ToString(),
+                Does.Contain("[Net] client 1 sent a display name that is over 16 characters or has control characters; joining without a name"));
+            Assert.That(_log.ToString(), Does.Not.Contain(name), "the refused name is not written to the log");
         }
 
         [Test]
@@ -403,6 +447,19 @@ namespace Shooter.Server.Tests
                 RejoinKey = "device1",
                 DisplayName = "tester",
                 ProductUserId = productUserId,
+            });
+            Pump(() => client.Disconnected || client.Accepted != null);
+            return client;
+        }
+
+        private TestClient RequestWithDisplayName(string displayName)
+        {
+            var client = ConnectClient();
+            client.Send(new ConnectRequestMessage
+            {
+                ClientVersion = "0.2.0",
+                RejoinKey = "device1",
+                DisplayName = displayName,
             });
             Pump(() => client.Disconnected || client.Accepted != null);
             return client;

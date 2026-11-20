@@ -388,7 +388,7 @@ namespace Shooter.Server.Tests
             _host = new ServerHost();
             _host.Register(_movement);
             _host.Register(_rules);
-            _host.Register(new ServerSnapshots(data.Rules, new ISnapshotContributor[] { _movement, _rules }));
+            _host.Register(new ServerSnapshots(data.Rules, new ISnapshotContributor[] { _movement, _rules }, TestAntiCheat.Off));
             _host.Start(context);
         }
 

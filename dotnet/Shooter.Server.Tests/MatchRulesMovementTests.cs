@@ -204,7 +204,7 @@ namespace Shooter.Server.Tests
                 data);
             _movement = new ServerMovement(settings);
             _rules = new MatchRulesModule();
-            _snapshots = new ServerSnapshots(rules, new ISnapshotContributor[] { _movement, _rules });
+            _snapshots = new ServerSnapshots(rules, new ISnapshotContributor[] { _movement, _rules }, TestAntiCheat.Off);
             _host = new ServerHost();
             _host.Register(_movement);
             _host.Register(_rules);

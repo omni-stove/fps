@@ -10,7 +10,7 @@ namespace Shooter.Server.Tests
     // 通報・統計・テレメトリは起動の引数で頼んだときだけ、試合のモジュールとスナップショットの後に足す
     public sealed class ServerModulesRecordsTests
     {
-        public const int MatchModules = 14;
+        public const int MatchModules = 15;
 
         private TempDirectory _roots;
         private TempDirectory _library;
@@ -56,17 +56,19 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void AReportFileAddsTheReportsAfterTheSnapshots()
+        public void AReportFileAddsTheEvidenceAndTheReportsAfterTheSnapshots()
         {
             var path = Path.Combine(_records.Path, "reports", ServerReports.DefaultFileName);
 
             Assert.That(Create("--report-file", path), Is.Null);
 
-            Assert.That(_modules, Has.Count.EqualTo(MatchModules + 1));
-            Assert.That(_modules[MatchModules - 1], Is.InstanceOf<ServerSnapshots>());
-            Assert.That(_modules[MatchModules], Is.InstanceOf<ServerReports>());
-            Assert.That(((ServerReports)_modules[MatchModules]).Path, Is.EqualTo(Path.GetFullPath(path)));
-            Assert.That(((ServerReports)_modules[MatchModules]).RepeatSeconds, Is.EqualTo(ServerReports.DefaultRepeatSeconds));
+            Assert.That(_modules, Has.Count.EqualTo(MatchModules + 2));
+            Assert.That(_modules[MatchModules - 3], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[MatchModules], Is.InstanceOf<ServerReportEvidence>());
+            var reports = (ServerReports)_modules[MatchModules + 1];
+            Assert.That(reports.Path, Is.EqualTo(Path.GetFullPath(path)));
+            Assert.That(reports.RepeatSeconds, Is.EqualTo(ServerReports.DefaultRepeatSeconds));
+            Assert.That(reports.Evidence, Is.SameAs(_modules[MatchModules]));
             Assert.That(_output.ToString(), Does.Not.Contain("reports are not kept"));
         }
 
@@ -170,10 +172,11 @@ namespace Shooter.Server.Tests
                     AppContext.BaseDirectory,
                     "--report-file", Path.Combine(_records.Path, "reports.jsonl"), "--stats", "--telemetry", "--telemetry-dir", _records.Path),
                 Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(MatchModules + 3));
-            Assert.That(_modules[MatchModules], Is.InstanceOf<ServerReports>());
-            Assert.That(_modules[MatchModules + 1], Is.InstanceOf<ServerStatsModule>());
-            Assert.That(_modules[MatchModules + 2], Is.InstanceOf<ServerTelemetry>());
+            Assert.That(_modules, Has.Count.EqualTo(MatchModules + 4));
+            Assert.That(_modules[MatchModules], Is.InstanceOf<ServerReportEvidence>());
+            Assert.That(_modules[MatchModules + 1], Is.InstanceOf<ServerReports>());
+            Assert.That(_modules[MatchModules + 2], Is.InstanceOf<ServerStatsModule>());
+            Assert.That(_modules[MatchModules + 3], Is.InstanceOf<ServerTelemetry>());
         }
 
         private void TearDownModules()

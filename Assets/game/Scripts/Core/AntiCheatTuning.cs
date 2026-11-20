@@ -26,7 +26,7 @@ namespace Shooter.Core
 
         public sealed class ConcealSettings
         {
-            public const bool DefaultEnabled = false;
+            public const bool DefaultEnabled = true;
             public const float DefaultMaxDistance = 150f;
             public const float DefaultMarginDistance = 1.5f;
             public const float DefaultMarginSeconds = 0.5f;
@@ -58,7 +58,7 @@ namespace Shooter.Core
 
         public sealed class ViolationSettings
         {
-            public const bool DefaultEnabled = false;
+            public const bool DefaultEnabled = true;
             public const float DefaultWindowSeconds = 30f;
             public const int DefaultShotRejectionLimit = 60;
             public const int DefaultOverBudgetLimit = 120;
@@ -88,7 +88,7 @@ namespace Shooter.Core
 
         public sealed class StatsSettings
         {
-            public const bool DefaultEnabled = false;
+            public const bool DefaultEnabled = true;
             public const float DefaultWindowSeconds = 120f;
             public const float DefaultHeadshotRatio = 0.6f;
             public const float DefaultMinReactionMs = 120f;
@@ -161,7 +161,7 @@ namespace Shooter.Core
 
         public sealed class EvidenceSettings
         {
-            public const bool DefaultEnabled = false;
+            public const bool DefaultEnabled = true;
             public const float DefaultSeconds = 30f;
             public const int DefaultMaxFilesPerMinute = 10;
 

@@ -9,6 +9,9 @@ namespace Shooter.Core.Tests
         private const string _rifle = "00000000-0000-4000-8000-00000000000a";
         private const string _handgun = "00000000-0000-4000-8000-000000000002";
 
+        private static readonly string[] _beaconAndEmpty = { "beacon", "" };
+        private static readonly string[] _beaconOnly = { "beacon" };
+
         private static WeaponSpec Spec(string id, WeaponCategory category)
         {
             return new WeaponSpec(id, null, category, FireMode.Auto, 30, 90, 0.1f, 2f, 25, 100f, DamageFalloff.None);
@@ -26,11 +29,11 @@ namespace Shooter.Core.Tests
         [Test]
         public void WritesTheRequestedAbilitiesWithADashForAnEmptySlot()
         {
-            Assert.That(LoadoutChoiceLog.Requested(new[] { _rifle }, new[] { "beacon", "" }),
+            Assert.That(LoadoutChoiceLog.Requested(new[] { _rifle }, _beaconAndEmpty),
                 Is.EqualTo("[Net] loadout request weapons=" + _rifle + " abilities=beacon,-"));
             Assert.That(LoadoutChoiceLog.Requested(new[] { _rifle }, null),
                 Is.EqualTo("[Net] loadout request weapons=" + _rifle), "a request without abilities reads like a weapons-only one");
-            Assert.Throws<ArgumentNullException>(() => LoadoutChoiceLog.Requested(null, new[] { "beacon" }));
+            Assert.Throws<ArgumentNullException>(() => LoadoutChoiceLog.Requested(null, _beaconOnly));
             Assert.That(LoadoutChoiceLog.SavedAbilitiesNotSent("the saved abilities are not all offered"),
                 Is.EqualTo("[Net] loadout the saved abilities are not sent; the server uses the loadout's: the saved abilities are not all offered"));
             Assert.That(LoadoutChoiceLog.SavedAbilitiesNotSent(null),

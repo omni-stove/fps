@@ -1138,6 +1138,23 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void ABeaconRoundTripsWithItsKind()
+        {
+            var sent = Build(100);
+            AddDeployable(sent, 7, DeployableKind.Beacon, "deploy-beacon", Team.Alpha, 3, new Vector3(-2f, 0.5f, 4f), 180f, 150);
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Deployables.Count, Is.EqualTo(1));
+            Assert.That(got.Deployables[0].Kind, Is.EqualTo(DeployableKind.Beacon));
+            Assert.That(got.Deployables[0].TypeId, Is.EqualTo("deploy-beacon"));
+            Assert.That(got.Deployables[0].OwnerId, Is.EqualTo(3));
+            Assert.That(got.Deployables[0].Yaw, Is.EqualTo(180f));
+            Assert.That(got.Deployables[0].Health, Is.EqualTo(150));
+            Assert.That(got.Deployables[0].ChangedBits(sent.Deployables[0]), Is.Zero);
+        }
+
+        [Test]
         public void ADamagedTurretSendsOnlyItsHealth()
         {
             var baseline = Build(100);

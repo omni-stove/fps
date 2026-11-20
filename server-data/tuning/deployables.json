@@ -51,6 +51,23 @@
         "callIntervalSeconds": 2,
         "callRadius": 10
       }
+    },
+    {
+      "id": "deploy-beacon",
+      "role": "Beacon",
+      "maxActive": 1,
+      "overflow": "ReplaceOldest",
+      "maxHealth": 150,
+      "maxRange": 4,
+      "maxSlopeDegrees": 30,
+      "maxStepHeight": 0.25,
+      "width": 0.4,
+      "height": 1.2,
+      "depth": 0.4,
+      "beacon": {
+        "uses": 3,
+        "spawnDistance": 1
+      }
     }
   ]
 }

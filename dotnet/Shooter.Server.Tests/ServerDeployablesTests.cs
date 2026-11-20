@@ -407,29 +407,6 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void ABeaconIsRefusedWithTheReasonAndOtherTypesStayUsable()
-        {
-            var beacon = new DeployType(_beaconId, DeployRole.Beacon, DeployType.DefaultDeploy(DeployRole.Beacon), beacon: BeaconSpec.Default);
-            var shield = new DeployType(_shieldId, DeployRole.Shield, DeployType.DefaultDeploy(DeployRole.Shield));
-            Start(new DeployCatalog(new[] { beacon, shield }));
-            Join(1);
-            Join(2);
-            Step(0.2f);
-
-            Assert.That(
-                _log.ToString(),
-                Does.Contain("[Deploy] net kind=deploy-beacon unusable: " + ServerDeployables.BeaconUnsupported));
-            Assert.That(ServerDeployables.BeaconUnsupported, Does.Contain("Beacon").And.Contain("dedicated server"));
-            Assert.That(_log.ToString(), Does.Contain("[Deploy] net types=2 usable=1 from=memory"));
-            Assert.That(_deployables.Place(1, _beaconId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.Unusable));
-            Assert.That(_deployables.Count, Is.Zero);
-            Assert.That(Rows(1), Is.Empty, "nothing is sent for a refused beacon");
-
-            Assert.That(_deployables.Place(1, _shieldId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.None));
-            Assert.That(_deployables.Count, Is.EqualTo(1));
-        }
-
-        [Test]
         public void ADroneIsRefusedWithTheReasonAndOtherTypesStayUsable()
         {
             var drone = new DeployType(_droneId, DeployRole.Drone, DeployType.DefaultDeploy(DeployRole.Drone), drone: DroneSpec.Default);
@@ -521,14 +498,16 @@ namespace Shooter.Server.Tests
             });
         }
 
-        private static GameRules Rules(Abilities abilities)
+        private static GameRules Rules(Abilities abilities, IReadOnlyList<RespawnAnchor> respawnAnchors = null)
         {
             var actions = ActionRules.Default.WithDowned(Downed.Off).WithAbilities(abilities);
-            return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
+            var rules = GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
+            return respawnAnchors != null ? rules.WithRespawnAnchors(respawnAnchors) : rules;
         }
 
         // wall は Alpha の前 (x=-2) で床から浮いた梁 (y 1.0〜1.4) と、x=-3・z 0〜1 に置いた上面 2.5 の 1 m 角の段
-        private void Start(DeployCatalog catalog, bool wall = false, Abilities abilities = Abilities.On)
+        private void Start(
+            DeployCatalog catalog, bool wall = false, Abilities abilities = Abilities.On, IReadOnlyList<RespawnAnchor> respawnAnchors = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -542,7 +521,7 @@ namespace Shooter.Server.Tests
 
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(Rules(abilities)), PingSpec.Default, "memory", null);
+            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(Rules(abilities, respawnAnchors)), PingSpec.Default, "memory", null);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(false, TextWriter.Null, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),

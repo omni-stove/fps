@@ -9,13 +9,11 @@ using Shooter.Protocol;
 namespace Shooter.Server
 {
     // 種類ごとの値はデータ (server-data/tuning/deployables.json) から読み、置けるか (DeployPlacement)・タレットの狙い (TurretTargeting)・
-    // 弾と時間 (TurretState)・囮の呼び声 (DecoyState) はオフラインと同じ Core で決める。人へのダメージは ServerCombat.DealDamage を通し、
-    // 味方撃ち・出現直後の無敵・キルの数え方を撃った弾とそろえる。
-    internal sealed partial class ServerDeployables : IServerModule, ISnapshotContributor
+    // 弾と時間 (TurretState)・囮の呼び声 (DecoyState)・ビーコンの回数 (BeaconState) はオフラインと同じ Core で決める。人へのダメージは
+    // ServerCombat.DealDamage を通し、味方撃ち・出現直後の無敵・キルの数え方を撃った弾とそろえる。
+    internal sealed partial class ServerDeployables : IServerModule, ISnapshotContributor, IServerRespawnBeacons
     {
         public const string CatalogFileName = "deployables.json";
-
-        internal const string BeaconUnsupported = "a Beacon respawns players only offline; the dedicated server does not respawn at beacons yet";
 
         internal const string DroneUnsupported = "a Drone is piloted only offline; the dedicated server does not fly drones or send them yet";
 
@@ -31,6 +29,9 @@ namespace Shooter.Server
         private readonly Dictionary<string, WeaponSpec> _turretWeapons = new Dictionary<string, WeaponSpec>(StringComparer.Ordinal);
         private readonly HashSet<string> _unusable = new HashSet<string>(StringComparer.Ordinal);
         private readonly List<Placed> _scratch = new List<Placed>();
+
+        // 使える中でいちばん後に置いたビーコンから戻すため、置いた順に持つ (Id は一巡すると戻るので、Id の順は置いた順にならない)
+        private readonly List<Placed> _beacons = new List<Placed>();
         private ServerContext _context;
         private TextWriter _log;
         private ServerMatch _match;
@@ -49,6 +50,9 @@ namespace Shooter.Server
 
             // 人の弾・爆発が置いた物に当たるよう、戦闘の当たり判定に置いた物を渡す (乗り物の ServerVehicles.Combat と同じつなぎ方)
             combat.Deployables = this;
+
+            // 倒されて戻る人をルールの RespawnAnchor の順でビーコンへ出せるよう、ルールにビーコンを渡す
+            rules.Beacons = this;
         }
 
         public string Name => "deployables";
@@ -128,6 +132,7 @@ namespace Shooter.Server
             _rules.RulesChanged -= HandleRulesChanged;
             _placed.Clear();
             _rosters.Clear();
+            _beacons.Clear();
         }
 
         // 置ける物の種類は武器の並び (ルールのファイルのロードアウト) で決まり、ルールを替えても変わらないので選び直さない
@@ -288,6 +293,10 @@ namespace Shooter.Server
             {
                 placed.Decoy = new DecoyState(type.Decoy);
             }
+            else if (type.Role == DeployRole.Beacon)
+            {
+                placed.Beacon = new BeaconState(type.Beacon);
+            }
 
             foreach (var evicted in roster.Add(placed))
             {
@@ -295,12 +304,22 @@ namespace Shooter.Server
             }
 
             _placed.Add(placed.Id, placed);
+            if (placed.Beacon != null)
+            {
+                _beacons.Add(placed);
+            }
+
             var owner = ServerDeployableLog.Owner(playerId);
             _log.WriteLine(DeployLog.Placed(owner, type.Id, placed.Id, point, roster.Count, roster.MaxActive));
             if (placed.Turret != null)
             {
                 _log.WriteLine(TurretLog.Armed(
                     owner, type.Id, placed.Id, placed.Weapon.Id, type.Turret.Rounds, type.Turret.LifetimeSeconds, _data.Rules.FriendlyFire));
+            }
+
+            if (placed.Beacon != null)
+            {
+                _log.WriteLine(BeaconLog.Armed(owner, type.Id, placed.Id, placed.Beacon.Uses, Side.FromTeam(placed.Team)));
             }
 
             return ServerDeployRefusal.None;
@@ -427,14 +446,8 @@ namespace Shooter.Server
                     + " bytes and cannot be sent";
             }
 
-            // 復活の場所はまだ専用サーバーの出現で選ばれず、スナップショットにも送る種類 (DeployableKind) が無い。置かせると使えない物が残るだけなので、
+            // ドローンはスナップショットで送る種類 (DeployableKind) が無く、操縦の入力を受ける口も無いので、置かせると使えない物が残るだけになる。
             // 置く前に断る
-            if (type.Role == DeployRole.Beacon)
-            {
-                return BeaconUnsupported;
-            }
-
-            // ドローンもスナップショットで送る種類 (DeployableKind) が無く、操縦の入力を受ける口も無いので、ビーコンと同じく置く前に断る
             if (type.Role == DeployRole.Drone)
             {
                 return DroneUnsupported;
@@ -523,6 +536,11 @@ namespace Shooter.Server
 
             placed.Removed = true;
             _placed.Remove(placed.Id);
+            if (placed.Beacon != null)
+            {
+                _beacons.Remove(placed);
+            }
+
             if (_rosters.TryGetValue((placed.OwnerId, placed.Type.Id), out var roster))
             {
                 roster.Remove(placed);
@@ -646,6 +664,8 @@ namespace Shooter.Server
                     return DeployableKind.Shield;
                 case DeployRole.Decoy:
                     return DeployableKind.Decoy;
+                case DeployRole.Beacon:
+                    return DeployableKind.Beacon;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(role), role, "role is not a defined DeployRole");
             }
@@ -694,6 +714,8 @@ namespace Shooter.Server
             public float SearchIn { get; set; }
 
             public DecoyState Decoy { get; set; }
+
+            public BeaconState Beacon { get; set; }
 
             public void Arm(TurretState turret, WeaponSpec weapon)
             {

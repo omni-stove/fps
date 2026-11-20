@@ -293,7 +293,8 @@ namespace Shooter.Editor
         }
 
         // Demo でリスポーンビーコン (装備の Ability1 の枠) を試せるモード。置いたビーコンが残っていればそこへ、無ければ拠点へ戻す。
-        // ビーコンを入れるモードにガーディアンを選んだのは、専用サーバーへ書き出すルール (server-data/rules) に無く、ビーコンから戻す処理を持たない NetV2 にルールが渡らないため。
+        // 専用サーバーへ書き出すモード (FreeForAll・Hardpoint など) に入れないのは、オンラインの既定の遊び方を変えないため。
+        // 専用サーバーも RespawnAnchors に Beacon があればビーコンから戻すので、オンラインで使うときは書き出すルールの Abilities と RespawnAnchors を替える。
         public static readonly IReadOnlyList<RespawnAnchor> GuardianRespawnAnchors = Array.AsReadOnly(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base });
 
         public static GameRules GuardianRules()

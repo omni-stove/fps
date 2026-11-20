@@ -8,17 +8,37 @@ namespace Shooter.Core.Tests
     // サーバーの設置物の値は Unity のアセット (Samples~/Demo/Abilities) を書き出したものではないので、食い違いをここで見つける
     public sealed class DeployablesTuningFileTests
     {
-        private static readonly string[] _shippedIds = { "deploy-turret", "deploy-shield", "deploy-decoy" };
+        private static readonly string[] _shippedIds = { "deploy-turret", "deploy-shield", "deploy-decoy", "deploy-beacon" };
         private static readonly string[] _assetNames = { "DeployTurret", "DeployShield", "DeployDecoy" };
-        private static readonly DeployRole[] _shippedRoles = { DeployRole.Turret, DeployRole.Shield, DeployRole.Decoy };
+        private static readonly DeployRole[] _shippedRoles = { DeployRole.Turret, DeployRole.Shield, DeployRole.Decoy, DeployRole.Beacon };
 
         [Test]
-        public void TheShippedFileIsReadableAndHasATurretAShieldAndADecoy()
+        public void TheShippedFileIsReadableAndHasATurretAShieldADecoyAndABeacon()
         {
             var catalog = Read(RepositoryRoot());
 
             Assert.That(catalog.All.Select(t => t.Id), Is.EqualTo(_shippedIds));
             Assert.That(catalog.All.Select(t => t.Role), Is.EqualTo(_shippedRoles));
+        }
+
+        // Demo のビーコンのアセットはビルダー (AbilityAssetBuilder.ConfigureBeacon) が作り、キットの既定 (BeaconSpec.Default*) のままにするので、既定と比べる
+        [Test]
+        public void TheBeaconHasTheShapeAndUsesOfTheDemoBeacon()
+        {
+            var beacon = Read(RepositoryRoot()).All.Single(t => t.Role == DeployRole.Beacon);
+
+            Assert.That(beacon.Id, Is.EqualTo("deploy-beacon"));
+            Assert.That(beacon.Deploy.MaxActive, Is.EqualTo(BeaconSpec.DefaultMaxActive));
+            Assert.That(beacon.Deploy.Overflow, Is.EqualTo(DeploySpec.DefaultOverflow));
+            Assert.That(beacon.Deploy.MaxHealth, Is.EqualTo(BeaconSpec.DefaultMaxHealth));
+            Assert.That(beacon.Deploy.MaxRange, Is.EqualTo(DeploySpec.DefaultMaxRange));
+            Assert.That(beacon.Deploy.MaxSlopeDegrees, Is.EqualTo(DeploySpec.DefaultMaxSlopeDegrees));
+            Assert.That(beacon.Deploy.MaxStepHeight, Is.EqualTo(DeploySpec.DefaultMaxStepHeight));
+            Assert.That(beacon.Deploy.Width, Is.EqualTo(BeaconSpec.DefaultWidth));
+            Assert.That(beacon.Deploy.Height, Is.EqualTo(BeaconSpec.DefaultHeight));
+            Assert.That(beacon.Deploy.Depth, Is.EqualTo(BeaconSpec.DefaultDepth));
+            Assert.That(beacon.Beacon.Uses, Is.EqualTo(BeaconSpec.DefaultUses));
+            Assert.That(beacon.Beacon.SpawnDistance, Is.EqualTo(BeaconSpec.DefaultSpawnDistance));
         }
 
         [Test]

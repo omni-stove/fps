@@ -19,6 +19,10 @@ namespace Shooter.Core
 
         public event Action<int, SpawnPoint> Spawned;
 
+        // 倒されて戻る時が来て出直すときだけ、その人の Spawned の直前に出す。入った時・試合の頭・ラウンドの頭の並べ直し・外が決める出直し
+        // (RespawnPlayer) と見分けて、出す所をビーコンのような復活の場所 (GameRules.RespawnAnchors) に替えられるようにするため
+        public event Action<int> Respawning;
+
         public event Action<Team?> Ended;
 
         public event Action<int, int> Downed;
@@ -142,7 +146,7 @@ namespace Shooter.Core
             }
 
             _match = new TeamDeathmatch(spec);
-            _match.RespawnReady += playerId => Defer(() => Respawn(playerId));
+            _match.RespawnReady += playerId => Defer(() => Respawn(playerId, true));
             _match.Ended += winner =>
             {
                 // 終わった瞬間から数える (Ended の受け手が残り秒数を読めるよう、知らせるより先に)
@@ -743,7 +747,7 @@ namespace Shooter.Core
                 // 受け手の中で抜けた人は飛ばす
                 if (_health.ContainsKey(playerId))
                 {
-                    Respawn(playerId);
+                    Respawn(playerId, false);
                 }
             }
         }
@@ -758,7 +762,7 @@ namespace Shooter.Core
                 return false;
             }
 
-            Defer(() => Respawn(playerId));
+            Defer(() => Respawn(playerId, false));
             return true;
         }
 
@@ -851,7 +855,7 @@ namespace Shooter.Core
             }
         }
 
-        private void Respawn(int playerId)
+        private void Respawn(int playerId, bool afterDeath)
         {
             // 待っている間に抜けていたら何もしない。
             if (!_health.ContainsKey(playerId))
@@ -864,6 +868,11 @@ namespace Shooter.Core
             if (wasDowned)
             {
                 DownedChanged?.Invoke(playerId);
+            }
+
+            if (afterDeath)
+            {
+                Respawning?.Invoke(playerId);
             }
 
             Spawned?.Invoke(playerId, SelectSpawn(playerId));

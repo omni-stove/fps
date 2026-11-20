@@ -101,9 +101,12 @@ namespace Shooter.NetV2
         {
             _definitions.TryGetValue(typeId ?? "", out var definition);
             var turret = definition as TurretDeployDefinition;
+            var beacon = definition as BeaconDeployDefinition;
             var visual = definition != null && definition.Prefab != null
                 ? UnityEngine.Object.Instantiate(definition.Prefab)
-                : turret != null ? turret.CreateLook() : CreatePlaceholder(kind, definition);
+                : turret != null ? turret.CreateLook()
+                : beacon != null ? beacon.CreateLook()
+                : CreatePlaceholder(kind, definition);
             visual.name = "Net" + (string.IsNullOrEmpty(typeId) ? kind.ToString() : typeId);
             Quiet(visual);
             // タレットのスナップショットの向きは頭の向きなので、台は回さず頭だけに当てる
@@ -176,6 +179,8 @@ namespace Shooter.NetV2
                     return DeployRole.Turret;
                 case DeployableKind.Decoy:
                     return DeployRole.Decoy;
+                case DeployableKind.Beacon:
+                    return DeployRole.Beacon;
                 default:
                     return DeployRole.Shield;
             }

@@ -1,6 +1,9 @@
 {
   "progression.title": "プロフィール",
   "progression.back": "戻る",
+  "progression.nameTitle": "名前",
+  "progression.nameHint": "名前を入力 ({0} 文字まで)",
+  "progression.nameRejected": "この名前は使えません。改行や制御文字を除いて {0} 文字以内にしてください",
   "progression.level": "レベル {0}",
   "progression.totalXp": "累計 {0} XP",
   "progression.xpToNext": "レベル {1} まで あと {0} XP",

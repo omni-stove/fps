@@ -76,7 +76,8 @@ namespace Shooter.Server
                 return true;
             }
 
-            return _lastSeen.TryGetValue(key, out var last) && now - last <= Conceal.MarginSeconds;
+            // 余裕の秒が 0 なら覚えを持ち越さない。同じ時刻に見えた覚えが「0 秒以内」として残ってしまうため
+            return Conceal.MarginSeconds > 0f && _lastSeen.TryGetValue(key, out var last) && now - last <= Conceal.MarginSeconds;
         }
 
         private bool SeenFrom(Vector3 eye, Vector3 targetCenter, Vector3 targetEye)

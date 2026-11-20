@@ -1,0 +1,35 @@
+{
+  "standard": {
+    "friendly": [0.25, 0.5, 1],
+    "enemy": [1, 0.3, 0.25],
+    "neutral": [0.85, 0.85, 0.85],
+    "highlight": "#FF463C",
+    "objective": [1, 0.65, 0.1],
+    "danger": [1, 0.15, 0.1],
+    "contested": [1, 0.82, 0.31],
+    "safe": [0.2, 0.8, 0.3],
+    "usesMarks": false
+  },
+  "redGreen": {
+    "friendly": "#56B4E9",
+    "enemy": "#E69F00",
+    "neutral": [0.85, 0.85, 0.85],
+    "highlight": "#F0E442",
+    "objective": "#F0E442",
+    "danger": "#D55E00",
+    "contested": "#CC79A7",
+    "safe": "#0072B2",
+    "usesMarks": true
+  },
+  "blueYellow": {
+    "friendly": "#28C8B4",
+    "enemy": "#EB3C32",
+    "neutral": [0.85, 0.85, 0.85],
+    "highlight": "#FF8CD2",
+    "objective": "#AAFA6E",
+    "danger": "#DC1E1E",
+    "contested": "#FF9696",
+    "safe": "#008C5A",
+    "usesMarks": true
+  }
+}

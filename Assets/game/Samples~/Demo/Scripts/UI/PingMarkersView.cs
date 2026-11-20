@@ -223,7 +223,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            var enemy = EnemyColorOf(TeamPalette.For(settings.Palette));
+            var enemy = EnemyColorOf(TeamColors.For(settings.Palette));
             if (enemy == _enemyColor)
             {
                 return;

@@ -194,6 +194,20 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void ATickClaimedBeyondTheRewindRangeIsClampedAndTheReactionStillCounts()
+        {
+            Start(Stats());
+            Place(1, _viewerSpot, 0f);
+            Place(2, _hidden, 0f);
+            Step(1);
+
+            React(3, 3, 100);
+
+            Assert.That(Suspicions(), Has.Count.EqualTo(1));
+            Assert.That(Suspicions()[0], Does.Contain("\"metric\":\"reactionMs\"").And.Contain("\"value\":\"50\""));
+        }
+
+        [Test]
         public void AReactionSlowerThanTheThresholdIsNotWritten()
         {
             Start(Stats());
@@ -531,14 +545,17 @@ namespace Shooter.Server.Tests
         private void Shoot(int shooter, int victim, float shotTick, params HitZone[] zones)
         {
             _signals.RaiseShotAccepted(shooter, Vector3.Zero, Vector3.UnitX, shotTick);
+
+            // 当たり判定は申告の tick を [今 - 最大巻き戻し, 今] に丸めて巻き戻し幅を出すので、ここでも同じに丸める
+            var rewind = Math.Clamp(_tick - shotTick, 0f, LagCompensator.DefaultMaxRewindTicks);
             foreach (var zone in zones)
             {
-                _signals.RaiseHit(shooter, victim, zone, 0f);
+                _signals.RaiseHit(shooter, victim, zone, rewind);
             }
         }
 
         // 毎回陰へ戻すのは、見え始め 1 回につき反応を 1 つしか数えないため
-        private void React(int count, int delayTicks)
+        private void React(int count, int delayTicks, int claimedOffset = 0)
         {
             for (var i = 0; i < count; i++)
             {
@@ -546,7 +563,7 @@ namespace Shooter.Server.Tests
                 Step(1);
                 var seenTick = _tick;
                 Step(delayTicks);
-                Shoot(1, 2, seenTick + delayTicks, HitZone.Body);
+                Shoot(1, 2, seenTick + delayTicks + claimedOffset, HitZone.Body);
                 Place(2, _hidden, 0f);
                 Step(1);
             }

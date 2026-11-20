@@ -28,6 +28,7 @@ namespace Shooter.Server
         private ServerContext _context;
         private ServerVisibility _visibility;
         private double _now;
+        private long _tick;
         private bool _collecting;
 
         public ServerCheatStats(ServerCheatSignals signals, AntiCheatTuning antiCheat, ServerCombat combat, int tickRate = TickClock.DefaultTickRate)
@@ -93,6 +94,7 @@ namespace Shooter.Server
             }
 
             _now += deltaSeconds;
+            _tick = tick;
             foreach (var player in _players.Values)
             {
                 Roll(player);
@@ -139,7 +141,6 @@ namespace Shooter.Server
             }
 
             player.ShotSerial++;
-            player.ShotTick = shotTick;
         }
 
         private void HandleHit(int shooterId, int victimId, HitZone zone, float rewindTicks)
@@ -150,7 +151,7 @@ namespace Shooter.Server
             }
 
             CountHeadshot(player, victimId, zone);
-            CountReaction(player, victimId);
+            CountReaction(player, victimId, rewindTicks);
         }
 
         // 散弾は 1 発で何粒も当たるので、同じ弾が同じ相手に当てた分は 1 回と数え、どれかが頭なら頭と数える
@@ -183,7 +184,8 @@ namespace Shooter.Server
                 }
             }
 
-            if (player.Hits < _stats.MinSamples)
+            // 率は頭を数えたときだけ見る。散弾は粒の順が決まっておらず、体の粒で先に見ると同じ弾の頭の粒を待たずに低い率で出してしまうため
+            if (!head || player.Hits < _stats.MinSamples)
             {
                 return;
             }
@@ -195,8 +197,9 @@ namespace Shooter.Server
             }
         }
 
-        // 反応は受け取った時刻でなく、撃った人が見ていた tick (ShotAccepted の shotTick) で測る。受け取った時刻で測ると遅延の分だけ遅く見え、速すぎる人を見逃すため
-        private void CountReaction(Watched player, int victimId)
+        // 反応は受け取った時刻でなく、撃った人が見ていた tick で測る。受け取った時刻で測ると遅延の分だけ遅く見え、速すぎる人を見逃すため。
+        // 撃った tick はクライアントの申告 (ShotAccepted の shotTick) をそのまま使わず、当たり判定が丸めた巻き戻し幅 (rewindTicks) から出す。範囲外の申告で反応を偽られないため
+        private void CountReaction(Watched player, int victimId, float rewindTicks)
         {
             if (!_sights.TryGetValue((player.PlayerId, victimId), out var sight) || !sight.Visible || sight.Reacted)
             {
@@ -204,7 +207,7 @@ namespace Shooter.Server
             }
 
             sight.Reacted = true;
-            var reactionMs = (player.ShotTick - sight.VisibleSinceTick) * _tickSeconds * 1000f;
+            var reactionMs = ((_tick - rewindTicks) - sight.VisibleSinceTick) * _tickSeconds * 1000f;
 
             // 見え始めより前に撃った弾は、見てから撃ったものではないので反応に数えない
             if (reactionMs < 0f)
@@ -477,8 +480,6 @@ namespace Shooter.Server
             public double ReactionMsSum { get; set; }
 
             public int ShotSerial { get; set; }
-
-            public float ShotTick { get; set; }
 
             public int CountedSerial { get; set; } = -1;
 

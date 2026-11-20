@@ -3,6 +3,7 @@
     "rootNamespace": "Shooter.Editor",
     "references": [
         "Shooter.Core",
+        "Shooter.Core.World",
         "Shooter.Aircraft.Core",
         "Shooter.Aircraft",
         "Shooter.Campaign.Core",
@@ -15,6 +16,9 @@
         "Shooter.NetV2.Client",
         "Shooter.Protocol",
         "Shooter.Runtime",
+        "Shooter.Interaction",
+        "Shooter.Services",
+        "Shooter.Vision",
         "Shooter.Runtime.UI",
         "Unity.AI.Navigation",
         "Unity.RenderPipelines.Universal.Editor"

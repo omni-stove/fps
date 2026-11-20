@@ -3,6 +3,7 @@
     "rootNamespace": "Shooter.NetV2",
     "references": [
         "Shooter.Core",
+        "Shooter.Core.World",
         "Shooter.Protocol"
     ],
     "includePlatforms": [],

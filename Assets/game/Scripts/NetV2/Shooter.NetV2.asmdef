@@ -3,9 +3,11 @@
     "rootNamespace": "Shooter.NetV2",
     "references": [
         "Shooter.Core",
+        "Shooter.Core.World",
         "Shooter.Protocol",
         "Shooter.NetV2.Client",
         "Shooter.Runtime",
+        "Shooter.Services",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],

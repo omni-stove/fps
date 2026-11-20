@@ -34,7 +34,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.LocalBlindSeconds.Value, Is.Null);
             Assert.That(GameSignals.Participants.Value, Is.Null);
             Assert.That(GameSignals.ModeStatus.Value, Is.Null);
-            Assert.That(GameSignals.Domination.Value, Is.Null);
             Assert.That(GameSignals.Scoreboard.Value, Is.Null);
             Assert.That(GameSignals.InteractHint.Value, Is.Null);
             Assert.That(GameSignals.KillCam.Value, Is.Null);

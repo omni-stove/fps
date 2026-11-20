@@ -115,18 +115,18 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheDefaultHudCarriesTheGrenadeAbilityAndDominationViewsFromTheStart()
+        public void TheDefaultHudCarriesTheGrenadeAbilityAndControlPointViewsFromTheStart()
         {
             var hud = DefaultHud;
 
             Assert.That(hud.GrenadeCount, Is.Not.Null);
             Assert.That(hud.AbilitySlots, Is.Not.Null);
-            Assert.That(hud.Domination, Is.Not.Null);
+            Assert.That(hud.GetComponent<ControlPointsView>(), Is.Not.Null);
 
             Assert.That(hud.GetComponents<GrenadeCountView>(), Has.Length.EqualTo(1));
             Assert.That(hud.GetComponents<AbilitySlotsView>(), Has.Length.EqualTo(1));
-            Assert.That(hud.GetComponents<DominationView>(), Has.Length.EqualTo(1));
-            Assert.That(hud.Domination.Source, Is.Null, "nothing to show until a domination match begins");
+            Assert.That(hud.GetComponents<ControlPointsView>(), Has.Length.EqualTo(1));
+            Assert.That(hud.GetComponent<ControlPointsView>().IsShown, Is.False, "nothing to show until a domination match begins");
         }
 
         [Test]
@@ -261,7 +261,7 @@ namespace Shooter.Tests.EditMode
             var hud = DefaultHud;
             HudElementView[] views =
             {
-                hud.HitMarker, hud.DamageDirection, hud.KillFeed, hud.Scoreboard, hud.LoadoutSelect, hud.TutorialPrompt, hud.AbilitySlots, hud.Domination,
+                hud.HitMarker, hud.DamageDirection, hud.KillFeed, hud.Scoreboard, hud.LoadoutSelect, hud.TutorialPrompt, hud.AbilitySlots, hud.GetComponent<ControlPointsView>(),
             };
 
             Assert.That(views, Has.None.Null);

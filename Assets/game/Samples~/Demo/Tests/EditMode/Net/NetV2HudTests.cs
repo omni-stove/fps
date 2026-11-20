@@ -52,7 +52,6 @@ namespace Shooter.Net.Tests
             GameSignals.PauseTimeMode.Clear();
             GameSignals.HudDensity.Clear();
             GameSignals.PaletteViewer.Clear();
-            GameSignals.Domination.Clear();
             GameSignals.Scoreboard.Clear();
             GameSignals.GrenadeCount.Clear();
             GameSignals.LocalBlindSeconds.Clear();
@@ -241,7 +240,7 @@ namespace Shooter.Net.Tests
             Assert.That(status.RemainingSeconds, Is.EqualTo(240f));
             Assert.That(status.SideScores[0].Score, Is.EqualTo(12d));
             Assert.That(status.SideScores[1].Score, Is.EqualTo(30d));
-            Assert.That(GameSignals.Domination.Value, Is.Null, "the hill's points are not domination points");
+            Assert.That(status.Detail, Is.Not.InstanceOf<DominationStatus>(), "the hill's points are not domination points");
             Assert.That(_hud.Model.FirstScore, Is.EqualTo(30), "the HUD's team scores are the hardpoint points");
             Assert.That(_hud.Model.SecondScore, Is.EqualTo(12));
 
@@ -325,7 +324,7 @@ namespace Shooter.Net.Tests
             Assert.That(payload.Pushers, Is.EqualTo(2));
             Assert.That(status.OwnSide, Is.EqualTo((Side?)Side.Bravo));
             Assert.That(status.RemainingSeconds, Is.EqualTo(240f));
-            Assert.That(GameSignals.Domination.Value, Is.Null);
+            Assert.That(status.Detail, Is.Not.InstanceOf<DominationStatus>());
 
             snapshot.Tick++;
             _hud.Apply(snapshot);
@@ -451,8 +450,14 @@ namespace Shooter.Net.Tests
 
             _hud.Apply(snapshot);
 
-            var status = GameSignals.Domination.Value;
-            Assert.That(status, Is.Not.Null);
+            var modeStatus = GameSignals.ModeStatus.Value;
+            Assert.That(modeStatus, Is.Not.Null);
+            Assert.That(modeStatus.OwnSide, Is.EqualTo((Side?)Side.Bravo));
+            Assert.That(modeStatus.RemainingSeconds, Is.EqualTo(90f));
+            Assert.That(modeStatus.SideScores, Is.EqualTo(new[] { new SideScore(Side.Alpha, 30d), new SideScore(Side.Bravo, 12d) }));
+            Assert.That(modeStatus.IsEnded, Is.False);
+            var status = modeStatus.Detail as DominationStatus;
+            Assert.That(status, Is.Not.Null, "the points ride on ModeStatus.Detail like the offline DominationRunner");
             Assert.That(status.AlphaScore, Is.EqualTo(30f));
             Assert.That(status.BravoScore, Is.EqualTo(12f));
             Assert.That(status.RemainingSeconds, Is.EqualTo(90f));
@@ -461,11 +466,11 @@ namespace Shooter.Net.Tests
             Assert.That(_hud.Model.FirstScore, Is.EqualTo(12), "the HUD's team scores are the domination points");
 
             _hud.Apply(snapshot);
-            Assert.That(GameSignals.Domination.Value, Is.SameAs(status), "an unchanged state is not published again");
+            Assert.That(GameSignals.ModeStatus.Value, Is.SameAs(modeStatus), "an unchanged state is not published again");
 
             snapshot.Match.Objective = MatchObjective.None;
             _hud.Apply(snapshot);
-            Assert.That(GameSignals.Domination.Value, Is.Null);
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null);
         }
 
         [Test]
@@ -531,7 +536,7 @@ namespace Shooter.Net.Tests
             Assert.That(GameSignals.PauseTimeMode.Value, Is.Null);
             Assert.That(GameSignals.HudDensity.Value, Is.Null);
             Assert.That(GameSignals.PaletteViewer.Value, Is.Null);
-            Assert.That(GameSignals.Domination.Value, Is.Null);
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null);
             Assert.That(GameSignals.Scoreboard.Value, Is.Null);
             Assert.That(GameSignals.GrenadeCount.Value, Is.Null);
             Assert.That(GameSignals.LocalBlindSeconds.Value, Is.Null);
@@ -555,7 +560,6 @@ namespace Shooter.Net.Tests
             Assert.That(view.TeamColor(Team.Bravo), Is.EqualTo(TeamColors.Of(TeamColors.Current, Team.Bravo, Team.Bravo)), "painted from the local team");
             var rings = view.GetComponent<ControlPointsView>();
             Assert.That(rings.ColorOf(Team.Alpha), Is.EqualTo(view.TeamColor(Team.Alpha)));
-            Assert.That(view.Domination.Source, Is.Null, "the scores and the time are on the HUD already");
 
             // Edit Mode では UIDocument が木を作らないことがあり、そのときビューは何も受けない
             if (view.View != null)
@@ -563,7 +567,6 @@ namespace Shooter.Net.Tests
                 Assert.That(view.View.HealthLabel.text, Is.EqualTo(HudNumberFormat.Health(_hud.Model)));
                 Assert.That(rings.Statuses, Has.Count.EqualTo(2));
                 Assert.That(rings.Element.style.display.value, Is.EqualTo(DisplayStyle.Flex));
-                Assert.That(view.Domination.Element.style.display.value, Is.EqualTo(DisplayStyle.None));
             }
 
             Assert.That(view.KillFeed.Names.Describe(new KillFeedEntry(_otherId, _localId, "", false, false)).Victim,

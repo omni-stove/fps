@@ -1,12 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Shooter.Core;
-using Shooter.Editor;
 using Shooter.Runtime;
 using NUnit.Framework;
 using UnityEngine;
-using UnityEngine.AI;
-using UnityEngine.TestTools;
 using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
@@ -20,51 +17,19 @@ namespace Shooter.Tests.EditMode
         private const float TimeLimit = 60f;
         private const float RespawnSeconds = 2f;
 
-        private static readonly Vector3 EnemyStart = new Vector3(20f, 1f, 20f);
+        private static readonly Vector3 PointA = Vector3.zero;
+        private static readonly Vector3 PointB = new Vector3(20f, 0f, 0f);
+        private static readonly Vector3 Away = new Vector3(0f, 0f, -40f);
 
-        private readonly List<Object> _created = new List<Object>();
-        private GameObject _host;
-        private BootstrapWorld _world;
+        private readonly List<Object> _objects = new List<Object>();
         private DominationRunner _runner;
-        private ControlPointZone _zone;
-        private EnemyAgent _enemy;
-        private Damageable _enemyBody;
-        private WeaponDefinition _rifle;
 
         [SetUp]
         public void SetUp()
         {
             CombatEvents.ClearSubscribers();
             GameSignals.ResetAll();
-
-            _host = new GameObject("Bootstrap");
-            _created.Add(_host);
-            var bootstrap = _host.AddComponent<GameBootstrap>();
-            LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
-            _world = bootstrap.Build();
-
-            _zone = CreateZone("PointA", 0, Vector3.zero);
-
-            _rifle = ScriptableObject.CreateInstance<WeaponDefinition>();
-            _rifle.name = "Rifle";
-            WeaponAssets.Configure(_rifle, TestWeapons.RifleSpec());
-            _created.Add(_rifle);
-
-            // Edit Mode では Awake が走らないので、敵は自分で初期化する。
-            var enemyObject = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            enemyObject.name = "Enemy-1";
-            enemyObject.transform.position = EnemyStart;
-            _created.Add(enemyObject);
-            _enemy = enemyObject.AddComponent<EnemyAgent>();
-
-            // カプセルの中心が Transform の位置なので、足元は 1m 下 (出現点の比較をこの値で書く)。
-            enemyObject.GetComponent<NavMeshAgent>().baseOffset = 1f;
-            _enemy.WeaponDefinition = _rifle;
-            _enemy.Id = "enemy-1";
-            Assert.That(_enemy.TryInitialize(), Is.True);
-            _enemyBody = enemyObject.GetComponent<Damageable>();
-
-            _runner = _host.AddComponent<DominationRunner>();
+            _runner = Track(new GameObject("Runner")).AddComponent<DominationRunner>();
             _runner.CaptureSeconds = CaptureSeconds;
             _runner.PointsPerSecond = PointsPerSecond;
             _runner.ScoreLimit = ScoreLimit;
@@ -75,368 +40,216 @@ namespace Shooter.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
-            if (_runner != null)
+            _runner.Stop();
+            for (var i = _objects.Count - 1; i >= 0; i--)
             {
-                _runner.Stop();
-            }
-
-            if (_world != null)
-            {
-                Object.DestroyImmediate(_world.Floor);
-                Object.DestroyImmediate(_world.Player);
-                Object.DestroyImmediate(_world.Light.gameObject);
-                Object.DestroyImmediate(_world.TargetRoot);
-            }
-
-            foreach (var created in _created)
-            {
-                if (created != null)
+                if (_objects[i] != null)
                 {
-                    Object.DestroyImmediate(created);
+                    Object.DestroyImmediate(_objects[i]);
                 }
             }
 
-            _created.Clear();
+            _objects.Clear();
             CombatEvents.ClearSubscribers();
             GameSignals.ResetAll();
         }
 
         [Test]
-        public void BeginAddsThePlayerAndEnemiesAndStarts()
+        public void BeginShowsEveryPointNeutralAndPublishesTheStatusAsTheDetail()
         {
-            Begin();
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, Away);
+            Begin(zones, new[] { player }, player);
 
-            var domination = _runner.Domination;
-            Assert.That(domination.State, Is.EqualTo(GameModeState.Playing));
-            Assert.That(domination.PlayerCount, Is.EqualTo(2));
-            Assert.That(domination.GetTeam(DominationRunner.PlayerId), Is.EqualTo(Team.Alpha));
-            Assert.That(domination.GetTeam(1), Is.EqualTo(Team.Bravo));
-            Assert.That(domination.PointCount, Is.EqualTo(1));
-            Assert.That(_runner.Zones, Is.EqualTo(new[] { _zone }));
-            Assert.That(_world.TargetRoot.activeSelf, Is.False, "target dummies are not part of the match");
-        }
-
-        [Test]
-        public void BeginPaintsTheTeamsFromTheOfflinePlayersSideUntilStopped()
-        {
-            Assert.That(GameSignals.PaletteViewer.Value, Is.Null);
-
-            Begin();
+            Assert.That(_runner.Zones, Is.EqualTo(zones));
+            Assert.That(zones[0].Owner, Is.Null);
+            Assert.That(zones[1].Owner, Is.Null);
+            Assert.That(GameSignals.ModeStatus.Value, Is.SameAs(_runner.Status));
             Assert.That(GameSignals.PaletteViewer.Value, Is.EqualTo((Team?)TeamColors.OfflineViewer));
 
-            _runner.Stop();
-            Assert.That(GameSignals.PaletteViewer.Value, Is.Null);
-
-            GameSignals.PaletteViewer.Publish(Team.Bravo);
-            _runner.Stop();
-            Assert.That(GameSignals.PaletteViewer.Value, Is.EqualTo((Team?)Team.Bravo), "a viewer published by someone else stays");
+            var detail = _runner.Status.Detail as DominationStatus;
+            Assert.That(detail, Is.Not.Null);
+            Assert.That(detail.Points, Is.EqualTo(new[]
+            {
+                new ControlPointStatus(null, 0, false),
+                new ControlPointStatus(null, 0, false),
+            }));
+            Assert.That(detail.RemainingSeconds, Is.EqualTo(TimeLimit));
+            Assert.That(detail.IsEnded, Is.False);
+            Assert.That(_runner.Status.OwnSide, Is.EqualTo((Side?)Side.Alpha));
         }
 
         [Test]
-        public void StandingOnThePointCapturesItAndScores()
+        public void StandingAloneOnAPointCapturesItAndScoresForEveryOwnedSecond()
         {
-            Begin();
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, PointA);
+            var bot = Member("Bot-1", Side.Bravo, Away);
+            Begin(zones, new[] { player, bot }, player);
 
-            LogAssert.Expect(LogType.Log, "[Domination] captured point=A team=Alpha");
             _runner.Tick(CaptureSeconds);
 
-            var domination = _runner.Domination;
-            Assert.That(domination.GetPlayerPoint(DominationRunner.PlayerId), Is.EqualTo(0));
-            Assert.That(domination.GetPlayerPoint(1), Is.Null, "the enemy stands outside the point");
-            Assert.That(domination.GetOwner(0), Is.EqualTo(Team.Alpha));
-            Assert.That(_zone.Owner, Is.EqualTo(Team.Alpha));
-            Assert.That(_zone.Occupants, Is.EqualTo(new[] { _world.PlayerDamageable }));
+            Assert.That(_runner.Domination.GetOwner(0), Is.EqualTo((Team?)Team.Alpha));
+            Assert.That(_runner.Domination.GetOwner(1), Is.Null);
+            Assert.That(zones[0].Owner, Is.EqualTo((Team?)Team.Alpha));
+            var detail = (DominationStatus)_runner.Status.Detail;
+            Assert.That(detail.Points[0], Is.EqualTo(new ControlPointStatus(Team.Alpha, ControlPointStatus.FullPercent, false)));
 
+            var before = _runner.Session.GetScore(Side.Alpha);
             _runner.Tick(1f);
 
-            Assert.That(domination.GetScore(Team.Alpha), Is.EqualTo(PointsPerSecond).Within(1e-4f));
+            Assert.That(_runner.Session.GetScore(Side.Alpha), Is.EqualTo(before + PointsPerSecond));
+            Assert.That(_runner.Session.GetScore(Side.Bravo), Is.Zero);
+            Assert.That(((DominationStatus)_runner.Status.Detail).AlphaScore, Is.EqualTo((float)(before + PointsPerSecond)));
         }
 
         [Test]
-        public void ReachingTheScoreLimitEndsWithTheWinnerAndStopsThePlayer()
+        public void BothSidesOnAPointContestItAndNobodyCapturesIt()
         {
-            Begin();
-            LogAssert.Expect(LogType.Log, "[Domination] captured point=A team=Alpha");
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, PointA);
+            var bot = Member("Bot-1", Side.Bravo, PointA + new Vector3(1f, 0f, 0f));
+            Begin(zones, new[] { player, bot }, player);
+
+            _runner.Tick(2f);
+
+            Assert.That(_runner.Domination.GetOwner(0), Is.Null);
+            Assert.That(_runner.Domination.IsContested(0), Is.True);
+            Assert.That(((DominationStatus)_runner.Status.Detail).Points[0].Contested, Is.True);
+            Assert.That(zones[0].Owner, Is.Null);
+        }
+
+        [Test]
+        public void ADeadMemberLeavesThePoint()
+        {
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, PointA);
+            var bot = Member("Bot-1", Side.Bravo, PointA + new Vector3(1f, 0f, 0f));
+            Begin(zones, new[] { player, bot }, player);
+
+            using (CombatEvents.Attribute(player.gameObject, "rifle"))
+            {
+                bot.Damageable.Kill();
+            }
+
             _runner.Tick(CaptureSeconds);
 
-            LogAssert.Expect(LogType.Log, "[Domination] state=Ended A=30 B=0 remaining=56.0");
-            LogAssert.Expect(LogType.Log, "[Domination] ended winner=Alpha A=30 B=0");
-            _runner.Tick(3f);
+            Assert.That(_runner.Domination.GetPlayerPoint(_runner.IdOf(bot)), Is.Null);
+            Assert.That(_runner.Domination.GetOwner(0), Is.EqualTo((Team?)Team.Alpha));
+            Assert.That(_runner.Session.GetKills(_runner.IdOf(player)), Is.EqualTo(1));
+        }
 
-            Assert.That(_runner.Domination.Winner, Is.EqualTo(Team.Alpha));
-            Assert.That(_world.Mover.enabled, Is.False);
-            Assert.That(_world.Weapon.enabled, Is.False);
+        [Test]
+        public void ADeadMemberRespawnsAfterTheRespawnSeconds()
+        {
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, Away);
+            var bot = Member("Bot-1", Side.Bravo, PointB);
+            Begin(zones, new[] { player, bot }, player);
+
+            using (CombatEvents.Attribute(player.gameObject, "rifle"))
+            {
+                bot.Damageable.Kill();
+            }
+
+            _runner.Tick(RespawnSeconds - 0.5f);
+            Assert.That(bot.Damageable.IsDead, Is.True);
+
+            _runner.Tick(1f);
+            Assert.That(bot.Damageable.IsDead, Is.False);
+        }
+
+        [Test]
+        public void ReachingTheScoreLimitEndsTheMatchWithTheWinnerOnce()
+        {
+            var results = new List<MatchResult>();
+            CombatEvents.MatchFinished += results.Add;
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, PointA);
+            var bot = Member("Bot-1", Side.Bravo, Away);
+            Begin(zones, new[] { player, bot }, player);
+
+            _runner.Tick(CaptureSeconds);
+            _runner.Tick(ScoreLimit / PointsPerSecond);
+            _runner.Tick(1f);
+
+            Assert.That(_runner.IsMatchOver, Is.True);
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.EqualTo((Side?)Side.Alpha));
+            var detail = (DominationStatus)_runner.Status.Detail;
+            Assert.That(detail.IsEnded, Is.True);
+            Assert.That(detail.Winner, Is.EqualTo((Team?)Team.Alpha));
+            Assert.That(results, Has.Count.EqualTo(1));
+            Assert.That(results[0].Outcome, Is.EqualTo(MatchOutcome.Won));
+            Assert.That(results[0].OwnScore, Is.EqualTo(ScoreLimit));
         }
 
         [Test]
         public void RunningOutOfTimeWithNoPointsIsADraw()
         {
-            _zone.transform.position = new Vector3(-20f, 0f, -20f);
-            Begin();
-
-            LogAssert.Expect(LogType.Log, "[Domination] ended winner=draw A=0 B=0");
-            _runner.Tick(TimeLimit);
-
-            Assert.That(_runner.Domination.State, Is.EqualTo(GameModeState.Ended));
-            Assert.That(_runner.Domination.Winner, Is.Null);
-        }
-
-        [Test]
-        public void WinningRaisesThePlayersResultOnce()
-        {
-            var results = RecordResults();
-            Begin();
-            _runner.Tick(CaptureSeconds);
-            Assert.That(results, Is.Empty, "nothing is raised before the end");
-
-            _runner.Tick(3f);
-
-            Assert.That(results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Won, 0, 0, ScoreLimit) }));
-        }
-
-        [Test]
-        public void LosingRaisesThePlayersDeathAndAlphasScore()
-        {
-            _zone.transform.position = EnemyStart;
-            var results = RecordResults();
-            Begin();
-
-            using (CombatEvents.Attribute(_enemy.gameObject, "rifle"))
-            {
-                _world.PlayerDamageable.Kill();
-            }
-
-            _runner.Tick(CaptureSeconds);
-            _runner.Tick(3f);
-
-            Assert.That(_runner.Domination.Winner, Is.EqualTo((Team?)Team.Bravo));
-            Assert.That(results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Lost, 0, 1, 0) }));
-        }
-
-        [Test]
-        public void ATimeUpWithNoPointsRaisesADraw()
-        {
-            _zone.transform.position = new Vector3(-20f, 0f, -20f);
-            var results = RecordResults();
-            Begin();
-
-            using (CombatEvents.Attribute(_world.Player, "rifle"))
-            {
-                _enemyBody.Kill();
-            }
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, Away);
+            Begin(zones, new[] { player }, player);
 
             _runner.Tick(TimeLimit);
 
-            Assert.That(_runner.Domination.Winner, Is.Null);
-            Assert.That(results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Draw, 1, 0, 0) }));
+            Assert.That(_runner.Status.IsEnded, Is.True);
+            Assert.That(_runner.Status.Winner, Is.Null);
+            Assert.That(((DominationStatus)_runner.Status.Detail).Winner, Is.Null);
         }
 
         [Test]
-        public void NothingIsRaisedAgainAfterTheEnd()
+        public void BeginAndAKillPublishTheMembersOnTheScoreboard()
         {
-            var results = RecordResults();
-            Begin();
-            _runner.Tick(CaptureSeconds);
-            _runner.Tick(3f);
-
-            _runner.Tick(TimeLimit);
-            using (CombatEvents.Attribute(_world.Player, "rifle"))
-            {
-                _enemyBody.Kill();
-            }
-
-            _runner.Tick(1f);
-
-            Assert.That(results, Is.EqualTo(new[] { new MatchResult(MatchOutcome.Won, 0, 0, ScoreLimit) }));
-        }
-
-        [Test]
-        public void EnemyShotByThePlayerCountsAsAKillAndRespawnsLater()
-        {
-            Begin();
-            _enemy.transform.position = new Vector3(-10f, 1f, 5f);
-
-            LogAssert.Expect(LogType.Log, "[Domination] kill killer=0 victim=1");
-            using (CombatEvents.Attribute(_world.Player, "rifle"))
-            {
-                _enemyBody.Kill();
-            }
-
-            var domination = _runner.Domination;
-            Assert.That(domination.GetKills(DominationRunner.PlayerId), Is.EqualTo(1));
-            Assert.That(domination.GetDeaths(1), Is.EqualTo(1));
-            Assert.That(_enemy.Brain.IsDead, Is.True);
-
-            _runner.Tick(RespawnSeconds - 0.5f);
-            Assert.That(_enemyBody.IsDead, Is.True, "the enemy waits before coming back");
-
-            LogAssert.Expect(LogType.Log, "[Domination] respawn player=1 team=Bravo at=(20.00, 0.00, 20.00)");
-            _runner.Tick(1f);
-
-            Assert.That(_enemyBody.IsDead, Is.False);
-            Assert.That(_enemyBody.Health.Current, Is.EqualTo(_enemyBody.Health.Max));
-            Assert.That(_enemy.Brain.IsDead, Is.False);
-            Assert.That(_enemy.Weapon.AmmoInMagazine, Is.EqualTo(_enemy.Weapon.Spec.MagazineSize));
-        }
-
-        [Test]
-        public void PlayerShotByTheEnemyCountsForTheEnemyAndCannotHoldThePoint()
-        {
-            Begin();
-
-            LogAssert.Expect(LogType.Log, "[Domination] kill killer=1 victim=0");
-            using (CombatEvents.Attribute(_enemy.gameObject, "rifle"))
-            {
-                _world.PlayerDamageable.Kill();
-            }
-
-            var domination = _runner.Domination;
-            Assert.That(domination.GetKills(1), Is.EqualTo(1));
-            Assert.That(domination.GetDeaths(DominationRunner.PlayerId), Is.EqualTo(1));
-            Assert.That(_world.Mover.enabled, Is.False, "a dead player cannot move");
-            Assert.That(_world.Weapon.enabled, Is.False, "a dead player cannot shoot");
-
-            _runner.Tick(1f);
-            Assert.That(domination.GetPlayerPoint(DominationRunner.PlayerId), Is.Null, "a dead player is not on the point");
-            Assert.That(domination.GetOwner(0), Is.Null);
-        }
-
-        [Test]
-        public void DeadPlayerRespawnsAtTheAlphaSpawnPoint()
-        {
-            var spawn = new GameObject("AlphaSpawn").transform;
-            _created.Add(spawn.gameObject);
-            spawn.position = new Vector3(3f, 0f, -4f);
-            _runner.SetSpawnPoints(Team.Alpha, new[] { spawn });
-            Begin();
-
-            LogAssert.Expect(LogType.Log, "[Domination] death player=0");
-            _world.PlayerDamageable.Kill();
-
-            LogAssert.Expect(LogType.Log, "[Domination] respawn player=0 team=Alpha at=(3.00, 0.00, -4.00)");
-            _runner.Tick(RespawnSeconds);
-
-            Assert.That(_world.PlayerDamageable.IsDead, Is.False);
-            Assert.That(_world.Player.transform.position, Is.EqualTo(new Vector3(3f, GameBootstrap.PlayerHeight / 2f, -4f)));
-            Assert.That(_world.Mover.enabled, Is.True);
-            Assert.That(_world.Weapon.enabled, Is.True);
-        }
-
-        [Test]
-        public void BeginAndTickPublishTheScoresTimeAndPoints()
-        {
-            var published = new List<DominationStatus>();
-            GameSignals.Domination.Changed += published.Add;
-
-            Begin();
-
-            Assert.That(published, Has.Count.EqualTo(1), "Begin publishes once");
-            var status = GameSignals.Domination.Value;
-            Assert.That(status, Is.SameAs(published[0]));
-            Assert.That(status, Is.SameAs(_runner.Status));
-            Assert.That(status.AlphaScore, Is.EqualTo(0f));
-            Assert.That(status.BravoScore, Is.EqualTo(0f));
-            Assert.That(status.RemainingSeconds, Is.EqualTo(TimeLimit));
-            Assert.That(status.Points, Is.EqualTo(new[] { new ControlPointStatus(null, 0, false) }));
-            Assert.That(status.IsEnded, Is.False);
-
-            LogAssert.Expect(LogType.Log, "[Domination] captured point=A team=Alpha");
-            _runner.Tick(CaptureSeconds);
-            _runner.Tick(1.5f);
-
-            Assert.That(published, Has.Count.EqualTo(3), "each tick publishes");
-            status = GameSignals.Domination.Value;
-            Assert.That(status.AlphaScore, Is.EqualTo(15f).Within(1e-4f));
-            Assert.That(status.RemainingSeconds, Is.EqualTo(TimeLimit - CaptureSeconds - 1.5f).Within(1e-4f));
-            Assert.That(status.Points, Is.EqualTo(new[] { new ControlPointStatus(Team.Alpha, ControlPointStatus.FullPercent, false) }));
-
-            _runner.Tick(10f);
-
-            status = GameSignals.Domination.Value;
-            Assert.That(status.IsEnded, Is.True);
-            Assert.That(status.Winner, Is.EqualTo(Team.Alpha));
-
-            _runner.Tick(1f);
-            Assert.That(published, Has.Count.EqualTo(4), "an ended match no longer publishes");
-            GameSignals.Domination.Changed -= published.Add;
-        }
-
-        [Test]
-        public void StopClearsThePublishedStatus()
-        {
-            Begin();
-
-            _runner.Stop();
-
-            Assert.That(GameSignals.Domination.Value, Is.Null);
-            Assert.That(_runner.Status, Is.Null);
-        }
-
-        [Test]
-        public void StopKeepsAStatusPublishedByAnotherRunner()
-        {
-            Begin();
-            var other = new DominationStatus(0f, 0f, 1f, null, false, null);
-            GameSignals.Domination.Publish(other);
-
-            _runner.Stop();
-
-            Assert.That(GameSignals.Domination.Value, Is.SameAs(other));
-        }
-
-        [Test]
-        public void BeginPublishesTheParticipantsOnTheScoreboard()
-        {
-            Begin();
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, Away);
+            var bot = Member("Bot-1", Side.Bravo, PointB);
+            Begin(zones, new[] { player, bot }, player);
 
             var entries = GameSignals.Scoreboard.Value;
             Assert.That(entries, Is.SameAs(_runner.PublishedScoreboard));
-            Assert.That(entries, Is.EqualTo(new[]
-            {
-                new ScoreboardEntry(DominationRunner.PlayerId, ScoreboardName.LocalPlayer, Team.Alpha, 0, 0, 0, ScoreboardConnection.None, true),
-                new ScoreboardEntry(1, ScoreboardName.Literal("enemy-1"), Team.Bravo, 0, 0, 0, ScoreboardConnection.None, false),
-            }));
-        }
+            Assert.That(entries, Has.Count.EqualTo(2));
+            Assert.That(entries[0].Name == ScoreboardName.LocalPlayer, Is.True);
+            Assert.That(entries[0].Team, Is.EqualTo(Team.Alpha));
+            Assert.That(entries[0].IsLocal, Is.True);
+            Assert.That(entries[1].Name == ScoreboardName.Literal("Bot-1"), Is.True);
+            Assert.That(entries[1].Team, Is.EqualTo(Team.Bravo));
+            Assert.That(entries[1].IsLocal, Is.False);
 
-        [Test]
-        public void AKillPublishesTheNewCounts()
-        {
-            Begin();
-            var before = GameSignals.Scoreboard.Value;
-
-            LogAssert.Expect(LogType.Log, "[Domination] kill killer=0 victim=1");
-            using (CombatEvents.Attribute(_world.Player, "rifle"))
+            using (CombatEvents.Attribute(player.gameObject, "rifle"))
             {
-                _enemyBody.Kill();
+                bot.Damageable.Kill();
             }
 
-            var entries = GameSignals.Scoreboard.Value;
-            Assert.That(entries, Is.Not.SameAs(before), "each publish is a new list");
-            Assert.That(entries[0].Kills, Is.EqualTo(1));
-            Assert.That(entries[0].Deaths, Is.Zero);
-            Assert.That(entries[1].Kills, Is.Zero);
-            Assert.That(entries[1].Deaths, Is.EqualTo(1));
+            var after = GameSignals.Scoreboard.Value;
+            Assert.That(after, Is.Not.SameAs(entries), "a new array is published for every change");
+            Assert.That(after[0].Kills, Is.EqualTo(1));
+            Assert.That(after[1].Deaths, Is.EqualTo(1));
         }
 
         [Test]
-        public void StopClearsThePublishedScoreboard()
+        public void StopClearsOnlyWhatThisRunnerPublished()
         {
-            Begin();
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, Away);
+            Begin(zones, new[] { player }, player);
 
             _runner.Stop();
 
-            Assert.That(GameSignals.Scoreboard.Value, Is.Null);
-            Assert.That(_runner.PublishedScoreboard, Is.Null);
+            Assert.That(GameSignals.ModeStatus.HasValue, Is.False);
+            Assert.That(GameSignals.Scoreboard.HasValue, Is.False);
+            Assert.That(GameSignals.PaletteViewer.HasValue, Is.False);
+            Assert.That(_runner.Domination, Is.Null);
+            Assert.That(_runner.Zones, Is.Empty);
         }
 
         [Test]
-        public void StopKeepsAScoreboardPublishedByAnotherRunner()
+        public void StopKeepsTheScoreboardAnotherRunnerPublished()
         {
-            Begin();
-            var other = new[]
-            {
-                new ScoreboardEntry(7, ScoreboardName.Literal("other"), Team.Alpha, 0, 0, 0, ScoreboardConnection.None, true),
-            };
+            var zones = Zones();
+            var player = Member("Player", Side.Alpha, Away);
+            Begin(zones, new[] { player }, player);
+            var other = new[] { new ScoreboardEntry(7, ScoreboardName.Literal("other"), Team.Bravo, 0, 0, 0, ScoreboardConnection.None, false) };
             GameSignals.Scoreboard.Publish(other);
 
             _runner.Stop();
@@ -447,75 +260,58 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void DuplicatePointIndicesAreRejected()
         {
-            var second = CreateZone("PointB", 0, new Vector3(30f, 0f, 0f));
+            var player = Member("Player", Side.Alpha, Away);
+            var first = Zone("ControlPoint-A", 0, PointA);
+            var second = Zone("ControlPoint-B", 0, PointB);
 
             var e = Assert.Throws<ArgumentException>(
-                () => _runner.Begin(_world, new[] { _zone, second }, new[] { _enemy }, _runner.CreateSpec(2)));
+                () => _runner.Begin(_runner.CreateDomination(2), new[] { first, second }, new[] { player }, Array.Empty<SideSpawnPoint>(), player));
             StringAssert.Contains("used more than once", e.Message);
             Assert.That(_runner.IsStarted, Is.False);
         }
 
         [Test]
-        public void PointCountMustMatchTheSpec()
+        public void PointCountMustMatchTheDomination()
         {
+            var player = Member("Player", Side.Alpha, Away);
+
             Assert.Throws<ArgumentException>(
-                () => _runner.Begin(_world, new[] { _zone }, new[] { _enemy }, _runner.CreateSpec(2)));
+                () => _runner.Begin(_runner.CreateDomination(3), Zones(), new[] { player }, Array.Empty<SideSpawnPoint>(), player));
             Assert.That(_runner.IsStarted, Is.False);
+            Assert.That(_runner.Domination, Is.Null);
         }
 
         [Test]
-        public void InvalidSettingsAreRejectedBySpec()
+        public void InvalidSettingsAreRejected()
         {
             _runner.ScoreLimit = 0;
-
             Assert.Throws<ArgumentOutOfRangeException>(() => _runner.CreateSpec(1));
+
+            _runner.ScoreLimit = ScoreLimit;
+            _runner.RespawnSeconds = -1f;
+            Assert.Throws<ArgumentOutOfRangeException>(() => _runner.CreateDomination(1));
         }
 
         [Test]
-        public void TheTuningAssetDecidesTheCaptureTimeAndTheScoreLimit()
+        public void TheTuningAssetDecidesTheSpecAndTheRespawnSeconds()
         {
             var tuning = Tuning();
             tuning.CaptureSeconds = 2f;
             tuning.PointsPerSecond = 5f;
             tuning.ScoreLimit = 10;
-            tuning.TimeLimitSeconds = TimeLimit;
-            _runner.Definition = tuning;
-
-            Begin();
-
-            _runner.Tick(CaptureSeconds);
-            Assert.That(_runner.Domination.GetOwner(0), Is.Null, "the runner's own one second is not used");
-
-            LogAssert.Expect(LogType.Log, "[Domination] captured point=A team=Alpha");
-            _runner.Tick(1f);
-            Assert.That(_runner.Domination.GetOwner(0), Is.EqualTo(Team.Alpha));
-
-            LogAssert.Expect(LogType.Log, "[Domination] state=Ended A=10 B=0 remaining=56.0");
-            LogAssert.Expect(LogType.Log, "[Domination] ended winner=Alpha A=10 B=0");
-            _runner.Tick(2f);
-
-            Assert.That(_runner.Domination.Winner, Is.EqualTo(Team.Alpha));
-        }
-
-        [Test]
-        public void TheTuningAssetDecidesTheRespawnSeconds()
-        {
-            var tuning = Tuning();
-            tuning.TimeLimitSeconds = TimeLimit;
+            tuning.TimeLimitSeconds = 90f;
+            tuning.MaxCapturers = 2;
             tuning.RespawnSeconds = RespawnSeconds * 2f;
             _runner.Definition = tuning;
+
+            var spec = _runner.CreateSpec(2);
+
+            Assert.That(spec.CaptureSeconds, Is.EqualTo(2f));
+            Assert.That(spec.PointsPerSecond, Is.EqualTo(5f));
+            Assert.That(spec.ScoreLimit, Is.EqualTo(10));
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(90f));
+            Assert.That(spec.MaxCapturers, Is.EqualTo(2));
             Assert.That(_runner.EffectiveRespawnSeconds, Is.EqualTo(RespawnSeconds * 2f));
-
-            Begin();
-
-            LogAssert.Expect(LogType.Log, "[Domination] death player=0");
-            _world.PlayerDamageable.Kill();
-
-            _runner.Tick(RespawnSeconds);
-            Assert.That(_world.PlayerDamageable.IsDead, Is.True, "the runner's own respawn seconds are not used");
-
-            _runner.Tick(RespawnSeconds);
-            Assert.That(_world.PlayerDamageable.IsDead, Is.False);
         }
 
         [Test]
@@ -593,48 +389,61 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void ZoneScanCountsOnlyLivingCandidatesInside()
         {
-            var inside = _world.PlayerDamageable;
-            _zone.Scan(new[] { inside, _enemyBody, null });
+            var zone = Zone("ControlPoint-A", 0, PointA);
+            var inside = Member("Inside", Side.Alpha, PointA).Damageable;
+            var outside = Member("Outside", Side.Bravo, Away).Damageable;
+            zone.Scan(new[] { inside, outside, null });
 
-            Assert.That(_zone.Occupants, Is.EqualTo(new[] { inside }));
+            Assert.That(zone.Occupants, Is.EqualTo(new[] { inside }));
 
             inside.Kill();
-            _zone.Scan(new[] { inside });
-            Assert.That(_zone.Occupants, Is.Empty);
-        }
-
-        private void Begin()
-        {
-            LogAssert.Expect(LogType.Log, "[Domination] joined player=0 team=Alpha name=" + _world.PlayerDamageable.Id);
-            LogAssert.Expect(LogType.Log, "[Domination] joined player=1 team=Bravo name=enemy-1");
-            LogAssert.Expect(LogType.Log, "[Domination] state=Playing A=0 B=0 remaining=60.0");
-            _runner.Begin(_world, new[] { _zone }, new[] { _enemy }, _runner.CreateSpec(1));
-        }
-
-        private static List<MatchResult> RecordResults()
-        {
-            var results = new List<MatchResult>();
-            CombatEvents.MatchFinished += results.Add;
-            return results;
+            zone.Scan(new[] { inside });
+            Assert.That(zone.Occupants, Is.Empty);
         }
 
         private DominationDefinition Tuning()
         {
             var tuning = ScriptableObject.CreateInstance<DominationDefinition>();
             tuning.name = "DominationTuning";
-            _created.Add(tuning);
+            _objects.Add(tuning);
             return tuning;
         }
 
-        private ControlPointZone CreateZone(string name, int index, Vector3 position)
+        private void Begin(IReadOnlyList<ControlPointZone> zones, IReadOnlyList<SideMember> members, SideMember localPlayer)
         {
-            var zoneObject = new GameObject(name);
-            _created.Add(zoneObject);
-            zoneObject.transform.position = position;
-            var zone = zoneObject.AddComponent<ControlPointZone>();
+            _runner.Begin(_runner.CreateDomination(zones.Count), zones, members, Array.Empty<SideSpawnPoint>(), localPlayer);
+        }
+
+        private ControlPointZone[] Zones()
+        {
+            return new[] { Zone("ControlPoint-A", 0, PointA), Zone("ControlPoint-B", 1, PointB) };
+        }
+
+        private ControlPointZone Zone(string name, int index, Vector3 position)
+        {
+            var go = Track(new GameObject(name));
+            go.transform.position = position;
+            var zone = go.AddComponent<ControlPointZone>();
+            zone.ShowsMarker = false;
             zone.Index = index;
-            zone.Radius = 5f;
+            zone.Radius = 4f;
             return zone;
+        }
+
+        private SideMember Member(string name, Side side, Vector3 position)
+        {
+            var go = Track(new GameObject(name));
+            go.transform.position = position;
+            go.AddComponent<Damageable>().Initialize(name, Damageable.DefaultMaxHealth);
+            var member = go.AddComponent<SideMember>();
+            member.Side = side;
+            return member;
+        }
+
+        private GameObject Track(GameObject go)
+        {
+            _objects.Add(go);
+            return go;
         }
     }
 }

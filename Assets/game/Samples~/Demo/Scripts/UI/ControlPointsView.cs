@@ -121,7 +121,7 @@ namespace Shooter.Runtime
             _contestedColor = ContestedColorOf(TeamColors.Current);
             // 拠点の数が同じだと Write は描き直さないので、今の木の要素を先に作る
             Rebuild();
-            HandleStatusChanged(GameSignals.Domination.Value);
+            HandleStatusChanged(GameSignals.ModeStatus.Value);
         }
 
         private void OnDestroy()
@@ -133,7 +133,7 @@ namespace Shooter.Runtime
         {
             if (!_subscribed)
             {
-                GameSignals.Domination.Changed += HandleStatusChanged;
+                GameSignals.ModeStatus.Changed += HandleStatusChanged;
                 AppliedControlSettings.Changed += HandleSettingsChanged;
                 _subscribed = true;
             }
@@ -143,7 +143,7 @@ namespace Shooter.Runtime
         {
             if (_subscribed)
             {
-                GameSignals.Domination.Changed -= HandleStatusChanged;
+                GameSignals.ModeStatus.Changed -= HandleStatusChanged;
                 AppliedControlSettings.Changed -= HandleSettingsChanged;
                 _subscribed = false;
             }
@@ -172,23 +172,22 @@ namespace Shooter.Runtime
             }
         }
 
-        private void HandleStatusChanged(DominationStatus status)
+        private void HandleStatusChanged(ModeStatus status)
         {
             // Edit Mode では OnDestroy が呼ばれずに消えることがあるので、消えた後に届いた通知で購読を外す
             if (this == null)
             {
-                GameSignals.Domination.Changed -= HandleStatusChanged;
+                GameSignals.ModeStatus.Changed -= HandleStatusChanged;
                 return;
             }
 
-            var hud = GetComponent<Hud>();
-            if (status == null || hud == null || !hud.ShowsTeamScores)
+            if (status == null || !(status.Detail is DominationStatus domination))
             {
                 Clear();
                 return;
             }
 
-            Write(status.Points);
+            Write(domination.Points);
         }
 
         protected override void OnUnbinding(VisualElement element)

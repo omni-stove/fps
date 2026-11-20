@@ -117,17 +117,17 @@ namespace Shooter.Runtime
 
             if (kill.Demoted)
             {
-                Debug.Log(GunGameText.Demote(kill.VictimId, kill.VictimTier, count, gunGame.GetWeapon(kill.VictimId).LogName), victim);
+                Debug.Log(GunGameLog.Demote(kill.VictimId, kill.VictimTier, count, gunGame.GetWeapon(kill.VictimId).LogName), victim);
                 QueueEquip(victim);
             }
 
             if (kill.Finished)
             {
-                Debug.Log(GunGameText.Finish(kill.KillerId, gunGame.GetWeapon(kill.KillerId).LogName), killer);
+                Debug.Log(GunGameLog.Finish(kill.KillerId, gunGame.GetWeapon(kill.KillerId).LogName), killer);
             }
             else if (kill.Promoted)
             {
-                Debug.Log(GunGameText.Promote(kill.KillerId, kill.KillerTier, count, gunGame.GetWeapon(kill.KillerId).LogName), killer);
+                Debug.Log(GunGameLog.Promote(kill.KillerId, kill.KillerTier, count, gunGame.GetWeapon(kill.KillerId).LogName), killer);
                 QueueEquip(killer);
             }
         }
@@ -206,7 +206,7 @@ namespace Shooter.Runtime
 
             if (changed)
             {
-                Debug.Log(GunGameText.Equip(id, tier, gunGame.Ladder.TierCount, gunGame.GetWeapon(id).LogName), member);
+                Debug.Log(GunGameLog.Equip(id, tier, gunGame.Ladder.TierCount, gunGame.GetWeapon(id).LogName), member);
             }
         }
 

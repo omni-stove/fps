@@ -7,7 +7,7 @@ namespace Shooter.Server
     {
         public static string Started(GunGameSpec spec, FriendlyFire friendlyFire)
         {
-            return GunGameText.LogPrefix + " net tiers=" + Number(spec.TierWeaponIds.Count)
+            return GunGameLog.LogPrefix + " net tiers=" + Number(spec.TierWeaponIds.Count)
                 + " timeLimit=" + Seconds(spec.TimeLimitSeconds) + "s"
                 + " respawn=" + Seconds(spec.RespawnSeconds) + "s"
                 + " melee=" + Number(spec.MeleeWeaponIds.Count)
@@ -17,23 +17,23 @@ namespace Shooter.Server
 
         public static string Restart()
         {
-            return GunGameText.LogPrefix + " restart";
+            return GunGameLog.LogPrefix + " restart";
         }
 
         public static string Finished(int playerId, Team? team)
         {
-            return GunGameText.LogPrefix + " ended by=finish winner=" + Number(playerId) + " team=" + TeamName(team);
+            return GunGameLog.LogPrefix + " ended by=finish winner=" + Number(playerId) + " team=" + TeamName(team);
         }
 
         public static string TimeUp(int? leaderId, Team? team)
         {
-            return GunGameText.LogPrefix + " ended by=time winner=" + (leaderId.HasValue ? Number(leaderId.Value) : ModeLog.Draw)
+            return GunGameLog.LogPrefix + " ended by=time winner=" + (leaderId.HasValue ? Number(leaderId.Value) : ModeLog.Draw)
                 + " team=" + TeamName(team);
         }
 
         public static string Rearm(int playerId, string weaponId)
         {
-            return GunGameText.LogPrefix + " rearm player=" + Number(playerId) + " weapon=" + (weaponId ?? "");
+            return GunGameLog.LogPrefix + " rearm player=" + Number(playerId) + " weapon=" + (weaponId ?? "");
         }
 
         public static string MissingTierWeapon(int tier, string weaponId, string rulesName)

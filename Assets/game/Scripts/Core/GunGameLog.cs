@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    public static class GunGameText
+    public static class GunGameLog
     {
         public const string LogPrefix = ModeLog.Tag + " gungame";
 
@@ -29,18 +29,8 @@ namespace Shooter.Core
         private static string Change(string action, int playerId, int tier, int tierCount, string weaponName)
         {
             return LogPrefix + " " + action + " player=" + Number(playerId)
-                + " tier=" + Number(DisplayedTier(tier, tierCount)) + "/" + Number(tierCount)
+                + " tier=" + Number(GunGameDisplayedTier.Of(tier, tierCount)) + "/" + Number(tierCount)
                 + " weapon=" + Name(weaponName);
-        }
-
-        public static int DisplayedTier(int tier, int tierCount)
-        {
-            if (tier < 0)
-            {
-                return 1;
-            }
-
-            return tier >= tierCount ? tierCount : tier + 1;
         }
 
         private static string Name(string weaponName)

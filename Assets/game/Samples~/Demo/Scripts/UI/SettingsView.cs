@@ -880,7 +880,7 @@ namespace Shooter.Runtime
 
         private void Edit(ControlSettings settings)
         {
-            // 回線の表示はこの画面に無く、開いている間にも F3 (Shooter.Net の NetHud) で切り替わるので、開いたときの値で戻さない
+            // 回線の表示はこの画面に無く、開いている間にも F3 (HUD の NetStatsView) で切り替わるので、開いたときの値で戻さない
             settings = settings.WithShowNetStats(_sink.Current.ShowNetStats);
             if (settings.Equals(_editing))
             {

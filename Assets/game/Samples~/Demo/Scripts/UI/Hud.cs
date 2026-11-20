@@ -165,6 +165,8 @@ namespace Shooter.Runtime
             AddIfMissing<BuyMenuView>(hudObject);
             AddIfMissing<VisionOverlayView>(hudObject);
             AddIfMissing<DroneHudView>(hudObject);
+            AddIfMissing<NetStatsView>(hudObject);
+            AddIfMissing<NameplateView>(hudObject);
             AddIfMissing<PauseMenu>(hudObject);
             // PauseMenu の後に付けると、木を作り直したときも PauseMenu が「設定」のボタンを持ってから開く処理を渡せる。
             AddIfMissing<PauseSettingsView>(hudObject);
@@ -234,6 +236,10 @@ namespace Shooter.Runtime
         public VisionOverlayView VisionOverlay => GetComponent<VisionOverlayView>();
 
         public DroneHudView DroneHud => GetComponent<DroneHudView>();
+
+        public NetStatsView NetStats => GetComponent<NetStatsView>();
+
+        public NameplateView Nameplates => GetComponent<NameplateView>();
 
         public PauseMenu PauseMenu => GetComponent<PauseMenu>();
 

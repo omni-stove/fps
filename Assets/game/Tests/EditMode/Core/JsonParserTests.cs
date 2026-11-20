@@ -6,7 +6,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class JsonParserTests
     {
-        private static readonly string[] _expectedKeyOrder  = { "z", "a", "m" };
+        private static readonly string[] _expectedKeyOrder = { "z", "a", "m" };
 
         [Test]
         public void ReadsEveryKindWithItsPosition()

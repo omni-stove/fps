@@ -8,7 +8,7 @@ namespace Shooter.Core.Tests
     public sealed class JsonWriterTests
     {
         private static readonly string[] _ids = { "a", "b" };
-        private static readonly float[] _floats  = { 0.5f, 2f };
+        private static readonly float[] _floats = { 0.5f, 2f };
 
         [Test]
         public void EmptyWriterIsAnEmptyObject()

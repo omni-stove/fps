@@ -123,6 +123,7 @@ namespace Shooter.Runtime
         private VisualElement _loadoutSlot;
         private LoadoutSelectPanel _loadoutPanel;
         private LoadoutPreferenceStore _loadoutStore = new LoadoutPreferenceStore();
+        private PlayerNameStore _nameStore = new PlayerNameStore();
         private VisualElement _campaignSlot;
         private CampaignSelectPanel _campaignPanel;
         private VisualElement _profileSlot;
@@ -213,6 +214,12 @@ namespace Shooter.Runtime
         {
             get => _loadoutStore;
             set => _loadoutStore = value ?? new LoadoutPreferenceStore();
+        }
+
+        public PlayerNameStore NameStore
+        {
+            get => _nameStore;
+            set => _nameStore = value ?? new PlayerNameStore();
         }
 
         public ProgressionRecorder Progression
@@ -645,7 +652,7 @@ namespace Shooter.Runtime
             ShowNotice(null);
             SetDisplayed(_profileSlot, true);
             SetButtonsEnabled(false);
-            _profilePanel = new ProfilePanel(_profileSlot, progression.Ledger, progression.Profile, ProfileWeapons(), KitTuning.Items);
+            _profilePanel = new ProfilePanel(_profileSlot, progression.Ledger, progression.Profile, ProfileWeapons(), KitTuning.Items, _nameStore);
             _profilePanel.Cancelled += CloseProfile;
 
             // Epic アカウントで入ると他の端末のプロフィールがクラウドから入ってくるので、開いたままでも出し直す。
@@ -1129,6 +1136,7 @@ namespace Shooter.Runtime
             }
 
             _texts?.Refresh();
+            _profilePanel?.Refresh();
             if (!_noticeSource.IsEmpty)
             {
                 ShowNoticeText(Localizer.Resolve(_noticeSource));

@@ -1,6 +1,9 @@
 {
   "progression.title": "Profile",
   "progression.back": "Back",
+  "progression.nameTitle": "Name",
+  "progression.nameHint": "Enter a name (up to {0} characters)",
+  "progression.nameRejected": "This name can't be used. Use up to {0} characters without line breaks or control characters",
   "progression.level": "Level {0}",
   "progression.totalXp": "{0} XP total",
   "progression.xpToNext": "{0} XP to level {1}",

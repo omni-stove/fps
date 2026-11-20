@@ -22,6 +22,7 @@ namespace Shooter.Tests.EditMode
         private VisualElement _root;
         private RecordingHost _host;
         private LoadoutPreferenceStore _store;
+        private PlayerNameStore _names;
 
         [SetUp]
         public void SetUp()
@@ -39,6 +40,8 @@ namespace Shooter.Tests.EditMode
             // 本物の選択 (LoadoutPreferenceStore.DefaultKey) を壊さないよう、テストごとに別のキーを使う
             _store = new LoadoutPreferenceStore("Shooter.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"));
             _screen.LoadoutStore = _store;
+            _names = new PlayerNameStore("Shooter.Tests.MainMenuName." + Guid.NewGuid().ToString("N"));
+            _screen.NameStore = _names;
 
             // 本物のセーブ (persistentDataPath) を読み書きしないよう、キャンペーンのテストはメモリの置き場所を使う
             _screen.SaveStorage = new MemorySaveStorage();
@@ -58,6 +61,7 @@ namespace Shooter.Tests.EditMode
             ProgressionBootstrap.Uninstall();
             CombatEvents.ClearSubscribers();
             _store.Delete();
+            _names.Delete();
             MenuNavigator.Host = null;
             MenuNavigator.Scenes = null;
             MenuNavigator.SceneRoot = null;
@@ -945,6 +949,35 @@ namespace Shooter.Tests.EditMode
             Assert.That(_screen.IsProfileOpen, Is.True);
             Assert.That(_screen.ProfilePanel.Profile, Is.EqualTo(PlayerProfile.Empty));
             Assert.That(_screen.ProfilePanel.Level, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void TheNameTypedInTheProfileIsSavedOnCloseAndShownWhenReopened()
+        {
+            ProgressionBootstrap.Install(new ProgressionRecorder(new MemorySaveStorage(), _profileSpec, new OfflineParticipants()));
+            _screen.Bind(_root);
+
+            _screen.OpenProfile();
+            Assert.That(_screen.ProfilePanel.IsNameShown, Is.True);
+            Assert.That(_screen.ProfilePanel.NameField.value, Is.EqualTo(string.Empty));
+            _screen.ProfilePanel.NameField.value = "Ace";
+            _screen.ProfilePanel.Cancel();
+
+            Assert.That(_screen.IsProfileOpen, Is.False);
+            Assert.That(new PlayerNameStore(_names.Key).Load(), Is.EqualTo("Ace"));
+
+            _screen.OpenProfile();
+            Assert.That(_screen.ProfilePanel.NameField.value, Is.EqualTo("Ace"));
+        }
+
+        [Test]
+        public void TheNameStoreFallsBackToTheGameKey()
+        {
+            _screen.NameStore = null;
+
+            Assert.That(_screen.NameStore.Key, Is.EqualTo(PlayerNameStore.DefaultKey));
+            _screen.NameStore = _names;
+            Assert.That(_screen.NameStore, Is.SameAs(_names));
         }
 
         [Test]

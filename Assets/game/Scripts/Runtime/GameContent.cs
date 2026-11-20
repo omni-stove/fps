@@ -144,6 +144,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("頭上の名前を出す距離の JSON。空なら Resources/Tuning/nameplates")]
         private TextAsset _nameplatesTuning;
 
+        [SerializeField, Tooltip("味方・敵・目的の物などの色の組 (標準・色覚向け) の JSON。空なら Resources/Tuning/palettes")]
+        private TextAsset _palettesTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -518,6 +521,12 @@ namespace Shooter.Runtime
         {
             get => _nameplatesTuning;
             set => _nameplatesTuning = value;
+        }
+
+        public TextAsset PalettesTuning
+        {
+            get => _palettesTuning;
+            set => _palettesTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog

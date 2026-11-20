@@ -47,6 +47,8 @@ namespace Shooter.Runtime
 
         public const string NameplatesResourcePath = NameplateJson.ResourcePath;
 
+        public const string PalettesResourcePath = TeamPaletteJson.ResourcePath;
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static readonly Dictionary<string, object> _loaded = new Dictionary<string, object>(StringComparer.Ordinal);
 
@@ -88,6 +90,9 @@ namespace Shooter.Runtime
 
         public static NameplateSpec Nameplates =>
             Load(c => c.NameplatesTuning, NameplatesResourcePath, NameplateJson.Parse, NameplateSpec.Default);
+
+        public static IReadOnlyList<TeamPalette> Palettes =>
+            Load(c => c.PalettesTuning, PalettesResourcePath, TeamPaletteJson.Parse, TeamPalette.All);
 
         public static void Reload()
         {

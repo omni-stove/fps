@@ -368,6 +368,7 @@ namespace Shooter.Tests.EditMode
                 (() => content.PlaylistsTuning, v => content.PlaylistsTuning = v),
                 (() => content.KeySharingTuning, v => content.KeySharingTuning = v),
                 (() => content.NameplatesTuning, v => content.NameplatesTuning = v),
+                (() => content.PalettesTuning, v => content.PalettesTuning = v),
             };
 
             foreach (var slot in slots)
@@ -612,8 +613,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(asked, Does.Contain("weather").And.Contain("telemetry").And.Contain("infected").And.Contain("loot"));
             Assert.That(asked, Does.Contain("stash").And.Contain("extraction").And.Contain("replay"));
             Assert.That(asked, Does.Contain("payload").And.Contain("economy").And.Contain("supply-drops").And.Contain("mutators").And.Contain("playlists"));
-            Assert.That(asked, Does.Contain("redeploy").And.Contain("key-sharing").And.Contain("nameplates"));
-            Assert.That(asked, Has.Count.EqualTo(37));
+            Assert.That(asked, Does.Contain("redeploy").And.Contain("key-sharing").And.Contain("nameplates").And.Contain("palettes"));
+            Assert.That(asked, Has.Count.EqualTo(38));
         }
 
         [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", "Packages/com.example.kit/Resources/Tuning", true)]

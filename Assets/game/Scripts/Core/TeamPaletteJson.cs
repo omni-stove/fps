@@ -118,9 +118,9 @@ namespace Shooter.Core
             var item = fields.ItemPath(name);
             switch (node.Kind)
             {
-                case GameRulesJson.NodeKind.String:
+                case JsonNodeKind.String:
                     return FromHex(fields, item, node);
-                case GameRulesJson.NodeKind.Array:
+                case JsonNodeKind.Array:
                     return FromComponents(fields, item, node);
                 default:
                     throw fields.Invalid(item, node, $"must be {_colorForms}, but is {node.Describe()}");
@@ -128,7 +128,7 @@ namespace Shooter.Core
         }
 
         // FromBytes を通すのは、既定の組の FromBytes で決めた色と同じ値に読めるようにするため。
-        private static PaletteColor FromHex(ServerDataJson.Fields fields, string item, GameRulesJson.Node node)
+        private static PaletteColor FromHex(ServerDataJson.Fields fields, string item, JsonNode node)
         {
             var text = node.Text;
             if (text.Length != 7 || text[0] != '#')
@@ -147,7 +147,7 @@ namespace Shooter.Core
             return PaletteColor.FromBytes(HexByte(text, 1), HexByte(text, 3), HexByte(text, 5));
         }
 
-        private static PaletteColor FromComponents(ServerDataJson.Fields fields, string item, GameRulesJson.Node node)
+        private static PaletteColor FromComponents(ServerDataJson.Fields fields, string item, JsonNode node)
         {
             if (node.Elements.Count != 3)
             {
@@ -161,7 +161,7 @@ namespace Shooter.Core
                 Component(fields, item, node, 2));
         }
 
-        private static float Component(ServerDataJson.Fields fields, string item, GameRulesJson.Node array, int index)
+        private static float Component(ServerDataJson.Fields fields, string item, JsonNode array, int index)
         {
             var element = array.Elements[index];
             var path = item + "[" + index.ToString(CultureInfo.InvariantCulture) + "]";

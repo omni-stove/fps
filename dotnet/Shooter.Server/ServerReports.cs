@@ -16,13 +16,20 @@ namespace Shooter.Server
         public const double DefaultRepeatSeconds = 300;
 
         private readonly Func<DateTime> _utcNow;
+        private readonly Func<string> _newReportId;
         private readonly Dictionary<(int Reporter, int Target), double> _savedAt = new Dictionary<(int Reporter, int Target), double>();
         private readonly List<(int Reporter, int Target)> _expired = new List<(int Reporter, int Target)>();
         private ServerContext _context;
         private StreamWriter _writer;
         private double _now;
 
-        public ServerReports(string path, Func<DateTime> utcNow, double repeatSeconds = DefaultRepeatSeconds, IReportEvidence evidence = null)
+        // newReportId を受け取るのは、テストが証拠のファイルの名前を決め打ちで確かめられるようにするため
+        public ServerReports(
+            string path,
+            Func<DateTime> utcNow,
+            double repeatSeconds = DefaultRepeatSeconds,
+            IReportEvidence evidence = null,
+            Func<string> newReportId = null)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -38,6 +45,7 @@ namespace Shooter.Server
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             RepeatSeconds = repeatSeconds;
             Evidence = evidence;
+            _newReportId = newReportId ?? ServerReportLog.NewReportId;
         }
 
         public string Name => "reports";
@@ -165,7 +173,9 @@ namespace Shooter.Server
                 return;
             }
 
+            var reportId = _newReportId();
             var line = ServerReportLog.Record(
+                reportId,
                 _utcNow(),
                 _context.Match.MatchId,
                 reporter.PlayerId,
@@ -182,6 +192,44 @@ namespace Shooter.Server
             // 書けなかった通報は間引きに数えない。数えると、送り直しても残らなくなる
             _savedAt[key] = _now;
             log.WriteLine(ServerReportLog.Saved(reporter.PlayerId, targetId, report.Reason));
+            WriteEvidence(reportId, targetId);
+        }
+
+        public string EvidencePath(string reportId)
+        {
+            if (!ServerReportLog.IsReportId(reportId))
+            {
+                throw new ArgumentException("not a report id", nameof(reportId));
+            }
+
+            return System.IO.Path.Combine(System.IO.Path.GetDirectoryName(Path) ?? string.Empty, reportId + ServerReportEvidenceLog.FileSuffix);
+        }
+
+        // 通報の行を書いた後に書くのは、証拠だけが残って対になる通報の無いファイルを作らないため。
+        // 証拠が書けなくても通報は残す。通報の行は運営が読む本体で、証拠はその添え物なので
+        private void WriteEvidence(string reportId, int targetId)
+        {
+            var text = Evidence?.Describe(targetId);
+            if (text == null)
+            {
+                return;
+            }
+
+            var path = EvidencePath(reportId);
+            try
+            {
+                // CreateNew にするのは、id がぶつかったときに前の通報の証拠を上書きして消さないため
+                using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.Read);
+                using var writer = new StreamWriter(stream, new UTF8Encoding(false));
+                writer.Write(text);
+            }
+            catch (Exception e) when (e is IOException || e is UnauthorizedAccessException)
+            {
+                _context.Log.WriteLine(ServerReportEvidenceLog.WriteFailed(path, e.Message));
+                return;
+            }
+
+            _context.Log.WriteLine(ServerReportEvidenceLog.Saved(reportId, targetId, path));
         }
 
         public void Stop()

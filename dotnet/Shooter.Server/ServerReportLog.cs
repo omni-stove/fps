@@ -11,8 +11,10 @@ namespace Shooter.Server
     {
         public const string Tag = "[Report]";
         public const string RecordType = "report";
+        public const int MaxReportIdLength = 64;
 
         public static string Record(
+            string reportId,
             DateTime utcNow,
             string matchId,
             int reporterId,
@@ -22,6 +24,11 @@ namespace Shooter.Server
             ReportReason reason,
             string comment)
         {
+            if (!IsReportId(reportId))
+            {
+                throw new ArgumentException("reportId must be 1 to " + MaxReportIdLength + " letters, digits, '-' or '_'", nameof(reportId));
+            }
+
             if (string.IsNullOrEmpty(matchId))
             {
                 throw new ArgumentException("matchId must not be null or empty", nameof(matchId));
@@ -35,6 +42,7 @@ namespace Shooter.Server
             var values = new List<KeyValuePair<string, string>>
             {
                 Pair("type", RecordType),
+                Pair("id", reportId),
                 Pair("time", ServerEventLog.FormatTime(utcNow)),
                 Pair("matchId", matchId),
             };
@@ -48,6 +56,30 @@ namespace Shooter.Server
             }
 
             return FlatJsonObject.Format(values);
+        }
+
+        // id は証拠のファイルの名前にもなるので、どの OS でもそのまま名前に使え、置き場所の外を指せない文字だけを許す
+        public static bool IsReportId(string reportId)
+        {
+            if (string.IsNullOrEmpty(reportId) || reportId.Length > MaxReportIdLength)
+            {
+                return false;
+            }
+
+            foreach (var c in reportId)
+            {
+                if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_'))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public static string NewReportId()
+        {
+            return Guid.NewGuid().ToString("N");
         }
 
         public static string Opened(string path, double repeatSeconds)

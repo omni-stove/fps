@@ -1,5 +1,7 @@
 using System;
 using System.IO;
+using System.Linq;
+using System.Numerics;
 using NUnit.Framework;
 using Shooter.Core;
 using Shooter.Protocol;
@@ -19,7 +21,9 @@ namespace Shooter.Server.Tests
         private ServerMatch _match;
         private ServerContext _context;
         private ServerReports _reports;
+        private ServerReportEvidence _evidence;
         private long _tick;
+        private int _ids;
 
         [SetUp]
         public void SetUp()
@@ -37,6 +41,7 @@ namespace Shooter.Server.Tests
                 new ServerMessenger(_transport),
                 new StubControl());
             _tick = 0;
+            _ids = 0;
         }
 
         [TearDown]
@@ -44,6 +49,8 @@ namespace Shooter.Server.Tests
         {
             _reports?.Dispose();
             _reports = null;
+            _evidence?.Stop();
+            _evidence = null;
             _transport.Dispose();
             _log.Dispose();
             _folder.Dispose();
@@ -62,7 +69,7 @@ namespace Shooter.Server.Tests
 
             Assert.That(Lines(), Is.EqualTo(new[]
             {
-                "{\"type\":\"report\",\"time\":\"2026-11-15T09:00:00.000Z\",\"matchId\":\"" + _match.MatchId + "\","
+                "{\"type\":\"report\",\"id\":\"report-1\",\"time\":\"2026-11-15T09:00:00.000Z\",\"matchId\":\"" + _match.MatchId + "\","
                     + "\"reporterId\":\"1\",\"reporterProductUserId\":\"" + _alice + "\","
                     + "\"targetId\":\"2\",\"targetProductUserId\":\"" + _bob + "\","
                     + "\"reason\":\"AbusiveChat\",\"comment\":\"暴言を\\n繰り返す \\\"x\\\"\"}",
@@ -83,7 +90,7 @@ namespace Shooter.Server.Tests
 
             Assert.That(Lines(), Is.EqualTo(new[]
             {
-                "{\"type\":\"report\",\"time\":\"2026-11-15T09:00:00.000Z\",\"matchId\":\"" + _match.MatchId + "\","
+                "{\"type\":\"report\",\"id\":\"report-1\",\"time\":\"2026-11-15T09:00:00.000Z\",\"matchId\":\"" + _match.MatchId + "\","
                     + "\"reporterId\":\"2\",\"targetId\":\"1\",\"reason\":\"Cheating\"}",
             }));
         }
@@ -266,9 +273,118 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void TheEvidenceIsHeldButNotWrittenYet()
+        public void AReportWritesTheTargetsEvidenceUnderTheSameIdNextToTheReports()
         {
-            var evidence = new CountingEvidence();
+            var signals = new ServerCheatSignals();
+            var evidence = StartEvidence(signals, true);
+            Start(evidence: evidence);
+            Join(1);
+            Join(2);
+            _context.Bodies.Add(2).SetPose(new Vector3(4f, 0f, 6f), 90f, PlayerStance.Standing);
+            _context.Bodies.Add(1).SetPose(new Vector3(-1f, 0f, -1f), 0f, PlayerStance.Standing);
+            signals.RaiseLooked(1, 7, 0f, null);
+            signals.RaiseLooked(2, 7, 90f, null);
+            Advance(0.5f);
+            signals.RaiseShotAccepted(2, new Vector3(4f, 1.5f, 6f), new Vector3(0f, 0f, 1f), 37f);
+            signals.RaiseHit(2, 1, HitZone.Head, 3f);
+
+            Report(1, 2, ReportReason.Cheating);
+
+            Assert.That(Lines(), Has.Length.EqualTo(1));
+            Assert.That(Lines()[0], Does.StartWith("{\"type\":\"report\",\"id\":\"report-1\","));
+            var path = Path.Combine(_folder.Path, "reports", "report-1.evidence.jsonl");
+            Assert.That(_reports.EvidencePath("report-1"), Is.EqualTo(Path.GetFullPath(path)));
+            Assert.That(File.ReadAllText(path), Is.EqualTo(
+                "{\"type\":\"look\",\"ago\":\"0.500\",\"tick\":\"7\",\"x\":\"4\",\"y\":\"0\",\"z\":\"6\",\"yaw\":\"90\"}\n"
+                    + "{\"type\":\"shot\",\"ago\":\"0.000\",\"tick\":\"37\",\"x\":\"4\",\"y\":\"1.5\",\"z\":\"6\",\"dirX\":\"0\",\"dirY\":\"0\",\"dirZ\":\"1\"}\n"
+                    + "{\"type\":\"hit\",\"ago\":\"0.000\",\"victimId\":\"1\",\"zone\":\"Head\",\"rewindTicks\":\"3\"}\n"));
+            Assert.That(_log.ToString(), Does.Contain("[Evidence] saved report=report-1 target=2 to " + Path.GetFullPath(path)));
+        }
+
+        [Test]
+        public void ARepeatedReportWritesNoEvidence()
+        {
+            var signals = new ServerCheatSignals();
+            Start(evidence: StartEvidence(signals, true));
+            Join(1);
+            Join(2);
+            signals.RaiseLooked(2, 1, 0f, null);
+
+            Report(1, 2, ReportReason.Cheating);
+            Report(1, 2, ReportReason.Cheating);
+
+            Assert.That(Lines(), Has.Length.EqualTo(1));
+            Assert.That(EvidenceFiles(), Is.EqualTo(new[] { "report-1.evidence.jsonl" }));
+            Assert.That(_ids, Is.EqualTo(1), "a held-back report takes no id");
+        }
+
+        [Test]
+        public void ARefusedReportWritesNoEvidence()
+        {
+            var signals = new ServerCheatSignals();
+            Start(evidence: StartEvidence(signals, true));
+            Join(1);
+            signals.RaiseLooked(1, 1, 0f, null);
+
+            Report(1, 1, ReportReason.Cheating);
+            Report(1, 9, ReportReason.Cheating);
+
+            Assert.That(EvidenceFiles(), Is.Empty);
+        }
+
+        [Test]
+        public void DisabledEvidenceWritesNoFile()
+        {
+            var signals = new ServerCheatSignals();
+            Start(evidence: StartEvidence(signals, false));
+            Join(1);
+            Join(2);
+            signals.RaiseLooked(2, 1, 0f, null);
+
+            Report(1, 2, ReportReason.Cheating);
+
+            Assert.That(Lines(), Has.Length.EqualTo(1));
+            Assert.That(EvidenceFiles(), Is.Empty);
+            Assert.That(_log.ToString(), Does.Not.Contain("[Evidence] saved"));
+        }
+
+        [Test]
+        public void ATargetWithoutRecordsGetsAnEmptyEvidenceFile()
+        {
+            Start(evidence: StartEvidence(new ServerCheatSignals(), true));
+            Join(1);
+            Join(2);
+
+            Report(1, 2, ReportReason.Cheating);
+
+            Assert.That(File.ReadAllText(Path.Combine(_folder.Path, "reports", "report-1.evidence.jsonl")), Is.Empty);
+        }
+
+        [Test]
+        public void AnEvidenceFileThatAlreadyExistsIsKeptAndTheReportIsStillSaved()
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(FilePath));
+            var existing = Path.Combine(_folder.Path, "reports", "same.evidence.jsonl");
+            File.WriteAllText(existing, "earlier\n");
+            var evidence = new CountingEvidence("{\"type\":\"look\"}\n");
+            _reports = new ServerReports(FilePath, () => _time, 0d, evidence, () => "same");
+            _reports.Start(_context);
+            Join(1);
+            Join(2);
+
+            Report(1, 2, ReportReason.Cheating);
+
+            Assert.That(Lines(), Has.Length.EqualTo(1));
+            Assert.That(evidence.Asked, Is.EqualTo(1));
+            Assert.That(File.ReadAllText(existing), Is.EqualTo("earlier\n"));
+            Assert.That(_log.ToString(), Does.Contain("[Evidence] could not write the evidence to " + Path.GetFullPath(existing) + " ("));
+            Assert.That(_log.ToString(), Does.Contain("[Report] saved reporter=1 target=2 reason=Cheating"));
+        }
+
+        [Test]
+        public void AnEvidenceThatDescribesNothingWritesNoFile()
+        {
+            var evidence = new CountingEvidence(null);
             Start(evidence: evidence);
             Join(1);
             Join(2);
@@ -276,9 +392,23 @@ namespace Shooter.Server.Tests
             Report(1, 2, ReportReason.Cheating);
 
             Assert.That(_reports.Evidence, Is.SameAs(evidence));
-            Assert.That(evidence.Asked, Is.Zero);
+            Assert.That(evidence.Asked, Is.EqualTo(1));
+            Assert.That(evidence.LastTarget, Is.EqualTo(2));
             Assert.That(Lines(), Has.Length.EqualTo(1));
-            Assert.That(Lines()[0], Does.Not.Contain("evidence"));
+            Assert.That(EvidenceFiles(), Is.Empty);
+        }
+
+        [Test]
+        public void TheEvidencePathRefusesTextThatIsNotAReportId()
+        {
+            using var reports = new ServerReports(FilePath, () => _time);
+
+            Assert.Throws<ArgumentException>(() => reports.EvidencePath("../x"));
+            Assert.Throws<ArgumentException>(() => reports.EvidencePath(""));
+            Assert.That(ServerReportLog.IsReportId(ServerReportLog.NewReportId()), Is.True);
+            Assert.That(ServerReportLog.IsReportId(new string('a', ServerReportLog.MaxReportIdLength + 1)), Is.False);
+            Assert.That(ServerReportLog.IsReportId("a/b"), Is.False);
+            Assert.That(ServerReportLog.IsReportId("a.b"), Is.False);
         }
 
         [Test]
@@ -295,17 +425,32 @@ namespace Shooter.Server.Tests
         [Test]
         public void TheRecordRefusesAMissingMatchIdOrAnUnknownReason()
         {
-            Assert.Throws<ArgumentException>(() => ServerReportLog.Record(_time, "", 1, null, 2, null, ReportReason.Cheating, null));
-            Assert.Throws<ArgumentOutOfRangeException>(() => ServerReportLog.Record(_time, "m", 1, null, 2, null, (ReportReason)99, null));
+            Assert.Throws<ArgumentException>(() => ServerReportLog.Record("r", _time, "", 1, null, 2, null, ReportReason.Cheating, null));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ServerReportLog.Record("r", _time, "m", 1, null, 2, null, (ReportReason)99, null));
             Assert.Throws<ArgumentException>(
-                () => ServerReportLog.Record(DateTime.SpecifyKind(_time, DateTimeKind.Local), "m", 1, null, 2, null, ReportReason.Cheating, null));
+                () => ServerReportLog.Record("r", DateTime.SpecifyKind(_time, DateTimeKind.Local), "m", 1, null, 2, null, ReportReason.Cheating, null));
+            Assert.Throws<ArgumentException>(() => ServerReportLog.Record("", _time, "m", 1, null, 2, null, ReportReason.Cheating, null));
+            Assert.Throws<ArgumentException>(() => ServerReportLog.Record("..\\x", _time, "m", 1, null, 2, null, ReportReason.Cheating, null));
         }
 
         private void Start(double repeatSeconds = ServerReports.DefaultRepeatSeconds, IReportEvidence evidence = null)
         {
-            _reports = new ServerReports(FilePath, () => _time, repeatSeconds, evidence);
+            _reports = new ServerReports(FilePath, () => _time, repeatSeconds, evidence, () => "report-" + ++_ids);
             _reports.Start(_context);
             Assert.That(_log.ToString(), Does.Contain("[Report] writing reports to " + FilePath));
+        }
+
+        private ServerReportEvidence StartEvidence(ServerCheatSignals signals, bool enabled)
+        {
+            _evidence = new ServerReportEvidence(signals, new AntiCheatTuning.EvidenceSettings(enabled, 30f));
+            _evidence.Start(_context);
+            return _evidence;
+        }
+
+        private string[] EvidenceFiles()
+        {
+            var folder = Path.GetDirectoryName(FilePath);
+            return Directory.GetFiles(folder, "*" + ServerReportEvidenceLog.FileSuffix).Select(Path.GetFileName).OrderBy(name => name, StringComparer.Ordinal).ToArray();
         }
 
         private void Join(int id)
@@ -321,7 +466,9 @@ namespace Shooter.Server.Tests
 
         private void Advance(float seconds)
         {
-            _reports.Tick(++_tick, seconds);
+            ++_tick;
+            _evidence?.Tick(_tick, seconds);
+            _reports.Tick(_tick, seconds);
         }
 
         private string[] Lines()
@@ -340,12 +487,22 @@ namespace Shooter.Server.Tests
 
         private sealed class CountingEvidence : IReportEvidence
         {
+            private readonly string _text;
+
+            public CountingEvidence(string text)
+            {
+                _text = text;
+            }
+
             public int Asked { get; private set; }
+
+            public int LastTarget { get; private set; }
 
             public string Describe(int targetId)
             {
                 Asked++;
-                return "{}";
+                LastTarget = targetId;
+                return _text;
             }
         }
     }

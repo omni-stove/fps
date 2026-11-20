@@ -132,7 +132,7 @@ namespace Shooter.Server
                 tuning.AntiCheat));
 
             // 通報・統計・テレメトリは試合の状態を変えず、ルールが出したキルと試合の始まり・終わりを読むだけなので、スナップショットより後でよい
-            if (!TryAddRecords(launch, runtime, libraryDirectory, rules, modules, out error))
+            if (!TryAddRecords(launch, runtime, libraryDirectory, rules, signals, tuning.AntiCheat.Evidence, modules, out error))
             {
                 return false;
             }
@@ -183,19 +183,31 @@ namespace Shooter.Server
             ServerRuntime runtime,
             string libraryDirectory,
             MatchRulesModule rules,
+            ServerCheatSignals signals,
+            AntiCheatTuning.EvidenceSettings evidence,
             ICollection<IServerModule> modules,
             out string error)
         {
             ArgumentNullException.ThrowIfNull(launch);
             ArgumentNullException.ThrowIfNull(runtime);
             ArgumentNullException.ThrowIfNull(rules);
+            ArgumentNullException.ThrowIfNull(signals);
+            ArgumentNullException.ThrowIfNull(evidence);
             ArgumentNullException.ThrowIfNull(modules);
 
             var records = launch.Records;
             var output = runtime.Output;
             if (records.ReportFile != null)
             {
-                modules.Add(new ServerReports(records.ReportFile, () => DateTime.UtcNow));
+                // 証拠は通報を書くときにだけ読むので、通報を残さない起動や無効のときは記録を持たせない
+                ServerReportEvidence held = null;
+                if (evidence.Enabled)
+                {
+                    held = new ServerReportEvidence(signals, evidence);
+                    modules.Add(held);
+                }
+
+                modules.Add(new ServerReports(records.ReportFile, () => DateTime.UtcNow, evidence: held));
             }
             else
             {

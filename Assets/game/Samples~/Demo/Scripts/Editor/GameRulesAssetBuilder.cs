@@ -292,9 +292,16 @@ namespace Shooter.Editor
             return TeamDeathmatchRules();
         }
 
+        // Demo でリスポーンビーコン (装備の Ability1 の枠) を試せるモード。置いたビーコンが残っていればそこへ、無ければ拠点へ戻す。
+        // ビーコンを入れるモードにガーディアンを選んだのは、専用サーバーへ書き出すルール (server-data/rules) に無く、ビーコンから戻す処理を持たない NetV2 にルールが渡らないため。
+        public static readonly IReadOnlyList<RespawnAnchor> GuardianRespawnAnchors = Array.AsReadOnly(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base });
+
         public static GameRules GuardianRules()
         {
-            return TeamDeathmatchRules();
+            var teamDeathmatch = TeamDeathmatchRules();
+            return teamDeathmatch
+                .WithActions(teamDeathmatch.Actions.WithAbilities(Abilities.On))
+                .WithRespawnAnchors(GuardianRespawnAnchors);
         }
 
         // ラウンド中は戻らない (RespawnMode.None) ので、出現直後の無敵は無くす。

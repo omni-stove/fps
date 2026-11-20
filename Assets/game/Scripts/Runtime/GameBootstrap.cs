@@ -59,7 +59,7 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("プレイヤーの WeaponController に渡す武器の定義の並び (既定のロードアウト)。空ならロードアウトのスロットの武器")]
         private WeaponDefinition[] _weaponDefinitions = Array.Empty<WeaponDefinition>();
 
-        [SerializeField, Tooltip("プレイヤーのロードアウト。持ち替え秒数と、武器の並びが空のときの武器を引く。空なら入口 (GameContent) のロードアウト")]
+        [SerializeField, Tooltip("プレイヤーのロードアウト。持ち替え秒数と、武器・能力の並びが空のときの武器・能力を引く。空なら入口 (GameContent) のロードアウト")]
         private LoadoutDefinition _loadout;
 
         [SerializeField, Tooltip("プレイヤーの自動回復と予備弾のルール。空なら入口 (GameContent) のルール、それも無ければ GameRules.Default を使い警告を出す")]
@@ -68,7 +68,7 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("ルールの上にこの順で重ねるミューテーターの Id (mutators.json の id)。GameRulesOverride に積んだものはこの後に重ねる。空なら重ねない")]
         private string[] _mutatorIds = Array.Empty<string>();
 
-        [SerializeField, Tooltip("プレイヤーの能力の枠 (AbilityHost) に入れる能力。i 番目が i 番目の枠 (0 が Ability1)。使えるかはルールの Abilities で決まる")]
+        [SerializeField, Tooltip("プレイヤーの能力の枠 (AbilityHost) に入れる能力。i 番目が i 番目の枠 (0 が Ability1)。空ならロードアウトの能力。使えるかはルールの Abilities で決まる")]
         private AbilityDefinition[] _abilityDefinitions = Array.Empty<AbilityDefinition>();
 
         [SerializeField, Tooltip("生成する床。原点が床面の中心で、当たり判定を持たせる。大きさはプレハブのまま。空なら 50m 四方の仮の板を作る")]
@@ -219,6 +219,21 @@ namespace Shooter.Runtime
             }
         }
 
+        public IReadOnlyList<AbilityDefinition> EffectiveAbilityDefinitions
+        {
+            get
+            {
+                var wired = AbilityDefinitions;
+                if (wired.Count > 0)
+                {
+                    return wired;
+                }
+
+                var loadout = EffectiveLoadout;
+                return loadout != null ? loadout.Abilities : wired;
+            }
+        }
+
         public GameRulesDefinition RulesDefinition
         {
             get => _rules;
@@ -330,7 +345,7 @@ namespace Shooter.Runtime
             {
                 floor = _createFloor ? CreateFloor(_floorPrefab) : null;
                 player = CreatePlayer(
-                    EffectiveWeaponDefinitions, AbilityDefinitions, rules, EffectiveSwitchSeconds, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
+                    EffectiveWeaponDefinitions, EffectiveAbilityDefinitions, rules, EffectiveSwitchSeconds, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
                     out var weapon, out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera,
                     out var abilities);
                 ApplyPlayerVisuals(player, grenades, MockBodyPrefabs, _grenadePrefab);

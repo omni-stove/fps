@@ -871,6 +871,55 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void GuardianIsTeamDeathmatchWithAbilitiesAndRespawnsAtABeaconFirst()
+        {
+            var guardian = GameRulesAssetBuilder.GuardianRules();
+            var teamDeathmatch = GameRulesAssetBuilder.TeamDeathmatchRules();
+
+            Assert.That(GameRulesAssetBuilder.GuardianRespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base }));
+            Assert.That(guardian.Actions.Abilities, Is.EqualTo(Abilities.On), "the beacon sits in an ability slot");
+            Assert.That(guardian.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base }));
+            Assert.That(guardian.RespawnMode, Is.EqualTo(RespawnMode.Individual));
+            Assert.That(guardian.SpawnProtectionSeconds, Is.EqualTo(teamDeathmatch.SpawnProtectionSeconds));
+            Assert.That(guardian.Objective, Is.EqualTo(teamDeathmatch.Objective));
+            Assert.That(guardian.Actions.Downed, Is.EqualTo(teamDeathmatch.Actions.Downed));
+            Assert.That(guardian.Actions.Melee, Is.EqualTo(teamDeathmatch.Actions.Melee));
+            Assert.That(guardian.Actions.GrenadeCount, Is.EqualTo(teamDeathmatch.Actions.GrenadeCount));
+            Assert.That(GameRulesAssetBuilder.ModeRules(GameRulesAssetBuilder.GuardianName).RespawnAnchors, Is.EqualTo(guardian.RespawnAnchors));
+        }
+
+        [Test]
+        public void OnlyGuardianTurnsAbilitiesOnOrUsesTheBeacon()
+        {
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchRules().Actions.Abilities, Is.EqualTo(Abilities.Off));
+            Assert.That(GameRulesAssetBuilder.TeamDeathmatchRules().RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Base }));
+
+            foreach (var name in GameRulesAssetBuilder.ModeNames.Where(name => name != GameRulesAssetBuilder.GuardianName))
+            {
+                var rules = GameRulesAssetBuilder.ModeRules(name);
+                Assert.That(rules.Actions.Abilities, Is.EqualTo(Abilities.Off), name);
+                Assert.That(rules.RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Base }), name);
+            }
+        }
+
+        [Test]
+        public void TheBuiltGuardianAssetKeepsTheBeaconAnchorAndARerunRestoresIt()
+        {
+            var built = GameRulesAssetBuilder.BuildModesAt(_folder);
+            var guardian = built[Array.IndexOf(ToArray(GameRulesAssetBuilder.ModeNames), GameRulesAssetBuilder.GuardianName)];
+
+            Assert.That(guardian.ToRules().RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base }));
+            Assert.That(guardian.ToRules().Actions.Abilities, Is.EqualTo(Abilities.On));
+
+            guardian.RespawnAnchors = new[] { RespawnAnchor.Base };
+            EditorUtility.SetDirty(guardian);
+            AssetDatabase.SaveAssets();
+            GameRulesAssetBuilder.BuildModesAt(_folder);
+
+            Assert.That(guardian.ToRules().RespawnAnchors, Is.EqualTo(new[] { RespawnAnchor.Beacon, RespawnAnchor.Base }));
+        }
+
+        [Test]
         public void BattleRoyaleAndExtractionNameTheirObjectiveForTheDedicatedServer()
         {
             Assert.That(GameRulesAssetBuilder.BattleRoyaleRules().Objective, Is.EqualTo(MatchObjective.BattleRoyale));

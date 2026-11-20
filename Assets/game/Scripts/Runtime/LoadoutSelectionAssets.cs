@@ -62,5 +62,63 @@ namespace Shooter.Runtime
             error = null;
             return true;
         }
+
+        // カタログが無いのは能力を選ばせないゲームなので、失敗にせず selection を null にして true を返す。武器の選択まで止めないため。
+        public static bool TryCreateAbilities(
+            LoadoutDefinition loadout,
+            AbilityCatalogAsset catalog,
+            IReadOnlyList<string> preferred,
+            out AbilitySelection selection,
+            out string error,
+            Func<string, bool> isAvailable = null)
+        {
+            selection = null;
+
+            // 参照切れ (破棄されたアセット) も Unity の == null で拾う
+            if (loadout == null)
+            {
+                error = "no loadout is assigned";
+                return false;
+            }
+
+            if (catalog == null)
+            {
+                error = null;
+                return true;
+            }
+
+            IReadOnlyList<string> abilityIds;
+            try
+            {
+                abilityIds = catalog.ToIds();
+            }
+            catch (AbilityDefinitionException e)
+            {
+                error = e.Message;
+                return false;
+            }
+
+            selection = new AbilitySelection(abilityIds, preferred, DefaultAbilityIds(loadout), isAvailable, AbilityHost.SlotCount);
+            error = null;
+            return true;
+        }
+
+        // ロードアウトの空の要素はその枠を空にする決まりなので、「なし」にそろえる
+        public static IReadOnlyList<string> DefaultAbilityIds(LoadoutDefinition loadout)
+        {
+            if (loadout == null)
+            {
+                throw new ArgumentNullException(nameof(loadout));
+            }
+
+            var abilities = loadout.Abilities;
+            var ids = new string[abilities.Count];
+            for (var i = 0; i < ids.Length; i++)
+            {
+                ids[i] = abilities[i] != null ? abilities[i].Id : AbilitySelection.None;
+            }
+
+            return ids;
+        }
     }
 }

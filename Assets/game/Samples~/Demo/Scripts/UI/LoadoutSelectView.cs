@@ -12,6 +12,7 @@ namespace Shooter.Runtime
         public const string UxmlName = "loadout-select";
 
         private LoadoutSelection _selection;
+        private AbilitySelection _abilities;
         private LoadoutSelectPanel _panel;
         private string _status;
         private bool _statusIsError;
@@ -40,15 +41,18 @@ namespace Shooter.Runtime
 
         public LoadoutSelection Selection => _selection;
 
+        public AbilitySelection Abilities => _abilities;
+
         public LoadoutSelectPanel Panel => _panel;
 
-        public event Action<IReadOnlyList<string>> Confirmed;
+        public event Action<LoadoutChoice> Confirmed;
 
         public event Action Closed;
 
-        public void Open(LoadoutSelection selection)
+        public void Open(LoadoutSelection selection, AbilitySelection abilities = null)
         {
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
+            _abilities = abilities;
             _status = null;
             _statusIsError = false;
             _busy = false;
@@ -64,6 +68,7 @@ namespace Shooter.Runtime
             }
 
             _selection = null;
+            _abilities = null;
             _status = null;
             _busy = false;
             DisposePanel();
@@ -140,7 +145,7 @@ namespace Shooter.Runtime
             }
 
             element.style.display = DisplayStyle.Flex;
-            _panel = new LoadoutSelectPanel(element, _selection);
+            _panel = new LoadoutSelectPanel(element, _selection, null, _abilities);
             _panel.Confirmed += HandleConfirmed;
             _panel.Cancelled += HandleCancelled;
             _panel.ShowStatus(_status, _statusIsError);
@@ -158,7 +163,7 @@ namespace Shooter.Runtime
             _panel = null;
         }
 
-        private void HandleConfirmed(IReadOnlyList<string> weaponIds)
+        private void HandleConfirmed(LoadoutChoice choice)
         {
             var handlers = Confirmed;
             if (handlers == null)
@@ -167,7 +172,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            handlers(weaponIds);
+            handlers(choice);
         }
 
         private void HandleCancelled()

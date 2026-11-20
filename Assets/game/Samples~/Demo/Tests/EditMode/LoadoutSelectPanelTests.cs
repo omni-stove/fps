@@ -17,7 +17,7 @@ namespace Shooter.Tests.EditMode
 
         private VisualElement _container;
         private LoadoutSelectPanel _panel;
-        private readonly List<IReadOnlyList<string>> _confirmed = new List<IReadOnlyList<string>>();
+        private readonly List<LoadoutChoice> _confirmed = new List<LoadoutChoice>();
         private int _cancelled;
 
         private static WeaponSpec Spec(string id, string nameKey, WeaponCategory category)
@@ -161,7 +161,25 @@ namespace Shooter.Tests.EditMode
             Assert.That(_panel.Confirm(), Is.True);
 
             Assert.That(_confirmed.Count(), Is.EqualTo(1));
-            Assert.That(_confirmed[0], Is.EqualTo(new[] { _smg, _handgun }));
+            Assert.That(_confirmed[0].WeaponIds, Is.EqualTo(new[] { _smg, _handgun }));
+            Assert.That(_confirmed[0].AbilityIds, Is.Null, "a panel opened without abilities hands over none");
+        }
+
+        [Test]
+        public void ConfirmAlsoHandsOverTheAbilitiesItWasOpenedWith()
+        {
+            var abilities = new AbilitySelection(new[] { "beacon", "grapple" }, null, new[] { "grapple" });
+            _panel.Dispose();
+            _panel = new LoadoutSelectPanel(_container, Selection(), null, abilities);
+            _panel.Confirmed += ids => _confirmed.Add(ids);
+
+            Assert.That(_panel.Abilities, Is.SameAs(abilities));
+            Assert.That(Rows(), Has.Length.EqualTo(2), "the abilities get no rows yet");
+            Assert.That(_panel.ConfirmRow, Is.EqualTo(2));
+            Assert.That(_panel.Confirm(), Is.True);
+
+            Assert.That(_confirmed[0].WeaponIds, Is.EqualTo(new[] { _rifle, _handgun }));
+            Assert.That(_confirmed[0].AbilityIds, Is.EqualTo(new[] { "grapple", AbilitySelection.None }));
         }
 
         [Test]
@@ -297,7 +315,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(_panel.Cycle(1), Is.False, "the rifle is the only weapon of slot 0 that can be used");
             Assert.That(_panel.Selection.WeaponIds, Is.EqualTo(new[] { _rifle, _handgun }));
             Assert.That(_panel.Confirm(), Is.True);
-            Assert.That(_confirmed[0], Is.EqualTo(new[] { _rifle, _handgun }));
+            Assert.That(_confirmed[0].WeaponIds, Is.EqualTo(new[] { _rifle, _handgun }));
         }
 
         [Test]

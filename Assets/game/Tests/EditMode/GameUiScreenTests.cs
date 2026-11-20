@@ -119,7 +119,7 @@ namespace Shooter.Tests.EditMode
 
         private sealed class FakeLoadoutSelect : ILoadoutSelect
         {
-            public event Action<IReadOnlyList<string>> Confirmed
+            public event Action<LoadoutChoice> Confirmed
             {
                 add { }
                 remove { }
@@ -129,7 +129,7 @@ namespace Shooter.Tests.EditMode
 
             public bool IsOpen => false;
 
-            public void Open(LoadoutSelection selection)
+            public void Open(LoadoutSelection selection, AbilitySelection abilities)
             {
             }
 

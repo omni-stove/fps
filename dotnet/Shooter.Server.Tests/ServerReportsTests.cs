@@ -266,10 +266,27 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheEvidenceIsHeldButNotWrittenYet()
+        {
+            var evidence = new CountingEvidence();
+            Start(evidence: evidence);
+            Join(1);
+            Join(2);
+
+            Report(1, 2, ReportReason.Cheating);
+
+            Assert.That(_reports.Evidence, Is.SameAs(evidence));
+            Assert.That(evidence.Asked, Is.Zero);
+            Assert.That(Lines(), Has.Length.EqualTo(1));
+            Assert.That(Lines()[0], Does.Not.Contain("evidence"));
+        }
+
+        [Test]
         public void TheDefaultsAreFiveMinutesAndReportsJsonl()
         {
             using var reports = new ServerReports(FilePath, () => _time);
 
+            Assert.That(reports.Evidence, Is.Null);
             Assert.That(reports.RepeatSeconds, Is.EqualTo(300d));
             Assert.That(reports.Name, Is.EqualTo("reports"));
             Assert.That(ServerReports.DefaultFileName, Is.EqualTo("reports.jsonl"));
@@ -284,9 +301,9 @@ namespace Shooter.Server.Tests
                 () => ServerReportLog.Record(DateTime.SpecifyKind(_time, DateTimeKind.Local), "m", 1, null, 2, null, ReportReason.Cheating, null));
         }
 
-        private void Start(double repeatSeconds = ServerReports.DefaultRepeatSeconds)
+        private void Start(double repeatSeconds = ServerReports.DefaultRepeatSeconds, IReportEvidence evidence = null)
         {
-            _reports = new ServerReports(FilePath, () => _time, repeatSeconds);
+            _reports = new ServerReports(FilePath, () => _time, repeatSeconds, evidence);
             _reports.Start(_context);
             Assert.That(_log.ToString(), Does.Contain("[Report] writing reports to " + FilePath));
         }
@@ -319,6 +336,17 @@ namespace Shooter.Server.Tests
             using var reader = new StreamReader(stream);
             var text = reader.ReadToEnd();
             return text.Length == 0 ? Array.Empty<string>() : text.TrimEnd('\n').Split('\n');
+        }
+
+        private sealed class CountingEvidence : IReportEvidence
+        {
+            public int Asked { get; private set; }
+
+            public string Describe(int targetId)
+            {
+                Asked++;
+                return "{}";
+            }
         }
     }
 }

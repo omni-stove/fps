@@ -62,6 +62,29 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheCombatAndMovementShareOneCheatSignalsAndTheSnapshotsTakeTheAntiCheatTuning()
+        {
+            var antiCheat = new AntiCheatTuning(
+                new AntiCheatTuning.ConcealSettings(false, 90f, 1f, 0.25f),
+                AntiCheatTuning.ViolationSettings.Default,
+                AntiCheatTuning.StatsSettings.Default,
+                AntiCheatTuning.EvidenceSettings.Default);
+            var tuning = new ServerCombatTuning(antiCheat: antiCheat);
+            Assert.That(ServerLaunch.TryParse(Array.Empty<string>(), _ => null, out var launch, out var parseError), Is.True, parseError);
+
+            Assert.That(
+                ServerModules.Create(launch, Runtime(), _modules, _library.Path, ServerMotorSettings.Default, tuning, null, out var error),
+                Is.True,
+                error);
+
+            var movement = _modules.OfType<ServerMovement>().Single();
+            var combat = _modules.OfType<ServerCombat>().Single();
+            Assert.That(movement.CheatSignals, Is.Not.Null);
+            Assert.That(combat.CheatSignals, Is.SameAs(movement.CheatSignals));
+            Assert.That(_modules.OfType<ServerSnapshots>().Single().AntiCheat, Is.SameAs(antiCheat));
+        }
+
+        [Test]
         public void WithAStashDirectoryTheModulesOpenItAndAnUnusableOneStopsTheStart()
         {
             var stashes = Path.Combine(_roots.Path, "stashes");
@@ -89,7 +112,40 @@ namespace Shooter.Server.Tests
             Assert.That(tuning.Melee, Is.SameAs(MeleeSpec.Default));
             Assert.That(tuning.Streaks, Is.SameAs(StreakSpec.Default));
             Assert.That(tuning.Deployables.Count, Is.Zero);
-            Assert.That(tuning.LogLine, Is.EqualTo("[Server] combat tuning melee=default streaks=default deployables=none"));
+            Assert.That(tuning.AntiCheat, Is.SameAs(AntiCheatTuning.Default));
+            Assert.That(tuning.AntiCheatPath, Is.Null);
+            Assert.That(tuning.LogLine, Is.EqualTo("[Server] combat tuning melee=default streaks=default deployables=none anticheat=default"));
+        }
+
+        [Test]
+        public void TheAntiCheatTuningIsReadFromServerDataAndNamedInTheLogLine()
+        {
+            var tuningDirectory = Path.Combine(_roots.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuningDirectory);
+            var path = Path.GetFullPath(Path.Combine(tuningDirectory, ServerCombatTuning.AntiCheatFileName));
+            File.WriteAllText(path, "{\"conceal\": {\"maxDistance\": 80}}");
+
+            Assert.That(ServerCombatTuning.TryLoad(new[] { _roots.Path }, out var tuning, out var error), Is.True, error);
+
+            Assert.That(tuning.AntiCheat.Conceal.MaxDistance, Is.EqualTo(80f));
+            Assert.That(tuning.AntiCheat.Conceal.Enabled, Is.False);
+            Assert.That(tuning.AntiCheat.Violations, Is.SameAs(AntiCheatTuning.ViolationSettings.Default));
+            Assert.That(tuning.AntiCheatPath, Is.EqualTo(path));
+            Assert.That(tuning.LogLine, Does.EndWith(" anticheat=" + path));
+        }
+
+        [Test]
+        public void AnUnreadableAntiCheatTuningFileStopsTheStart()
+        {
+            var tuningDirectory = Path.Combine(_roots.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuningDirectory);
+            File.WriteAllText(Path.Combine(tuningDirectory, ServerCombatTuning.AntiCheatFileName), "{\"evidence\": {\"seconds\": 0}}");
+
+            Assert.That(ServerCombatTuning.TryLoad(new[] { _roots.Path }, out var tuning, out var error), Is.False);
+
+            Assert.That(tuning, Is.Null);
+            Assert.That(error, Does.StartWith("cannot read anticheat tuning: "));
+            Assert.That(error, Does.Contain("evidence.seconds"));
         }
 
         [Test]
@@ -254,7 +310,12 @@ namespace Shooter.Server.Tests
         private string Create(string libraryDirectory, params string[] args)
         {
             Assert.That(ServerLaunch.TryParse(args, _ => null, out var launch, out var parseError), Is.True, parseError);
-            var runtime = new ServerRuntime(
+            return ServerModules.Create(launch, Runtime(), _modules, libraryDirectory, out var error) ? null : error;
+        }
+
+        private ServerRuntime Runtime()
+        {
+            return new ServerRuntime(
                 TextWriter.Null,
                 TextWriter.Null,
                 name => _environment.TryGetValue(name, out var value) ? value : null,
@@ -262,7 +323,6 @@ namespace Shooter.Server.Tests
                 new[] { _roots.Path },
                 new[] { _roots.Path },
                 () => throw new InvalidOperationException("no transport in this test"));
-            return ServerModules.Create(launch, runtime, _modules, libraryDirectory, out var error) ? null : error;
         }
     }
 }

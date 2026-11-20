@@ -31,6 +31,7 @@ namespace Shooter.Server.Tests
         private ServerMovement _movement;
         private MatchRulesModule _rules;
         private ServerCombat _combat;
+        private ServerCheatSignals _signals;
         private int _inputTick;
         private int _shotIndex;
 
@@ -1020,9 +1021,10 @@ namespace Shooter.Server.Tests
                 new ServerMessenger(_transport),
                 new StubControl(),
                 data);
-            _movement = new ServerMovement(ServerModules.MotorSettingsFrom(data));
+            _signals = new ServerCheatSignals();
+            _movement = new ServerMovement(ServerModules.MotorSettingsFrom(data), signals: _signals);
             _rules = objective == null ? new MatchRulesModule() : new MatchRulesModule((_, _, _) => objective);
-            _combat = new ServerCombat(_rules, _movement);
+            _combat = new ServerCombat(_rules, _movement, null, _signals);
             _host = new ServerHost();
             _host.Register(_movement);
             _host.Register(_rules);

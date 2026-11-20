@@ -28,6 +28,7 @@ namespace Shooter.Server.Tests
         private ServerMatch _match;
         private ServerHost _host;
         private ServerMovement _movement;
+        private ServerCheatSignals _signals;
         private ServerSnapshots _snapshots;
         private ServerContext _context;
         private int _nextInputTick;
@@ -99,6 +100,41 @@ namespace Shooter.Server.Tests
 
             Assert.That(_movement.LastProcessedInputTick(1), Is.EqualTo(budget - 1));
             Assert.That(_log.ToString(), Does.Contain("[Net] dropped input from client=1 tick=" + budget + ": sending faster than the tick rate"));
+        }
+
+        [Test]
+        public void DroppingInputOverTheBudgetIsSignalledForEveryMessage()
+        {
+            Start();
+            var overBudget = new List<int>();
+            var looked = new List<int>();
+            _signals.InputOverBudget += overBudget.Add;
+            _signals.Looked += (player, tick, _, pitch) =>
+            {
+                Assert.That(player, Is.EqualTo(1));
+                Assert.That(pitch, Is.Null);
+                looked.Add(tick);
+            };
+            var budget = (int)ServerMovement.MaxInputBudget;
+            var messages = 0;
+            for (var sent = 0; sent < budget + (InputMessage.MaxFrames * 2); sent += InputMessage.MaxFrames)
+            {
+                var message = new InputMessage();
+                for (var i = 0; i < InputMessage.MaxFrames; i++)
+                {
+                    message.Add(Frame(sent + i, Vector2.Zero));
+                }
+
+                _movement.OnMessage(_connection, message);
+                messages++;
+            }
+
+            var overMessages = messages - (budget / InputMessage.MaxFrames);
+            Assert.That(looked, Has.Count.EqualTo(budget), "only the processed inputs say where the player looks");
+            Assert.That(looked[0], Is.EqualTo(0));
+            Assert.That(looked[budget - 1], Is.EqualTo(budget - 1));
+            Assert.That(overBudget, Has.Count.EqualTo(overMessages), "the throttled warning does not throttle the signal");
+            Assert.That(overBudget, Has.All.EqualTo(1));
 
             _host.Tick(_tickSeconds);
             _movement.OnMessage(_connection, Message(-1, Frame(budget, Vector2.Zero), Frame(budget + 1, Vector2.Zero)));
@@ -696,7 +732,8 @@ namespace Shooter.Server.Tests
                 rules ?? GameRules.Default,
                 defaults.KillPlaneY,
                 _spawn);
-            _movement = new ServerMovement(settings);
+            _signals = new ServerCheatSignals();
+            _movement = new ServerMovement(settings, signals: _signals);
             _snapshots = new ServerSnapshots(settings.Rules, new ISnapshotContributor[] { _movement });
             _host = new ServerHost();
             _host.Register(_movement);

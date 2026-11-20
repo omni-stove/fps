@@ -71,6 +71,13 @@ namespace Shooter.Runtime
 
         public const float CoverShift = 0.2f;
 
+        public const float StandingTop = TorsoBottom + TorsoHeight + HeadDiameter;
+
+        // しゃがみ (CrouchScale) の頭は 1.2m を超え、低い壁 (1m) から出てしまうので、カバーではそれより低い姿勢まで縮める。
+        public const float CoverLowestTop = 1f;
+
+        public const float CoverLowestScale = (CoverLowestTop - HeadDiameter) / (TorsoBottom + TorsoHeight);
+
         public const float BodyKickDistance = 0.08f;
         public const float BodyKickDegrees = 6f;
 
@@ -125,6 +132,24 @@ namespace Shooter.Runtime
             }
 
             return 1f;
+        }
+
+        // 胴だけが縮み頭の大きさは変わらないので、頭のてっぺんは縮め方に比例して動き、度合いを換算せずそのまま割合に使える。
+        public static float CoverStanceScale(PlayerActionState state, StanceGeometry stance, float coverCrouch)
+        {
+            var scale = StanceScale(state, stance);
+            if (!state.IsInCover || state.IsDowned || state.IsProne || !(coverCrouch > 0f))
+            {
+                return scale;
+            }
+
+            var fitted = Mathf.Lerp(1f, CoverLowestScale, Mathf.Clamp01(coverCrouch));
+            return Mathf.Min(scale, fitted);
+        }
+
+        public static float CoverCrouchAmount(bool inCover, bool peeking, float wallHeight)
+        {
+            return CoverCrouch.Amount(inCover, peeking, wallHeight, StandingTop, CoverLowestTop, CoverCrouch.DefaultHeadClearance);
         }
 
         public static void Torso(float stanceScale, out Vector3 position, out Vector3 scale)

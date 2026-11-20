@@ -4,7 +4,7 @@ namespace Shooter.Core
 {
     public readonly struct CoverProbeResult
     {
-        public CoverProbeResult(bool isWall, bool canEnter, CoverHeight height, CoverEdge edges, Vector3 normal, float distance)
+        public CoverProbeResult(bool isWall, bool canEnter, CoverHeight height, CoverEdge edges, Vector3 normal, float distance, float topHeight)
         {
             IsWall = isWall;
             CanEnter = canEnter;
@@ -12,6 +12,7 @@ namespace Shooter.Core
             Edges = edges;
             Normal = normal;
             Distance = distance;
+            TopHeight = topHeight;
         }
 
         public static CoverProbeResult None => default;
@@ -27,6 +28,8 @@ namespace Shooter.Core
         public Vector3 Normal { get; }
 
         public float Distance { get; }
+
+        public float TopHeight { get; }
 
         public bool IsAtLeftEdge => (Edges & CoverEdge.Left) != 0;
 

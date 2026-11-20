@@ -54,6 +54,9 @@ namespace Shooter.Core
 
         public const float DefaultCoverPeekSlideSeconds = 0.15f;
 
+        // 足元の Ray (CharacterCoverSensor.ProbeHeight) に当たる壁はすべて入れるよう、下限は設けない。
+        public const float DefaultCoverMinWallHeight = 0f;
+
         public const float DefaultLadderTopEntryDepth = 0.3f;
 
         public const float DefaultLadderMinApproachDot = 0.5f;
@@ -136,6 +139,8 @@ namespace Shooter.Core
 
         public float CoverPeekSlideSeconds { get; }
 
+        public float CoverMinWallHeight { get; }
+
         // 上の端からつかまったときに少し下から始めるのは、つかまった瞬間に上の端を越えて降り直さないため。
         public float LadderTopEntryDepth { get; }
 
@@ -200,7 +205,8 @@ namespace Shooter.Core
             int airJumps = DefaultAirJumps,
             float airJumpSpeed = DefaultAirJumpSpeed,
             float jumpGraceSeconds = DefaultJumpGraceSeconds,
-            float coverEnterSpeed = DefaultCoverEnterSpeed)
+            float coverEnterSpeed = DefaultCoverEnterSpeed,
+            float coverMinWallHeight = DefaultCoverMinWallHeight)
         {
             if (!(walkSpeed >= 0f) || float.IsInfinity(walkSpeed))
             {
@@ -311,6 +317,7 @@ namespace Shooter.Core
             RequirePositive(coverEnterSpeed, nameof(coverEnterSpeed));
             RequireNotNegative(coverBackHoldSeconds, nameof(coverBackHoldSeconds));
             RequirePositive(coverPeekSlideSeconds, nameof(coverPeekSlideSeconds));
+            RequireNotNegative(coverMinWallHeight, nameof(coverMinWallHeight));
             RequireNotNegative(ladderTopEntryDepth, nameof(ladderTopEntryDepth));
             if (!(ladderMinApproachDot >= -1f && ladderMinApproachDot <= 1f))
             {
@@ -364,6 +371,7 @@ namespace Shooter.Core
             CoverEnterSpeed = coverEnterSpeed;
             CoverBackHoldSeconds = coverBackHoldSeconds;
             CoverPeekSlideSeconds = coverPeekSlideSeconds;
+            CoverMinWallHeight = coverMinWallHeight;
             LadderTopEntryDepth = ladderTopEntryDepth;
             LadderMinApproachDot = ladderMinApproachDot;
             LadderMinApproachSpeed = ladderMinApproachSpeed;

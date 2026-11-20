@@ -99,6 +99,114 @@ namespace Shooter.Tests.EditMode
             return root;
         }
 
+        // 足元 (y = 0) から上端まで wallHeight の壁を、体の前 1 m に置いてカバーへ入る。
+        private CoverController EnterCoverBehind(float wallHeight, out GameObject floor, out GameObject wall)
+        {
+            floor = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            floor.transform.position = new Vector3(0f, -0.5f, 0f);
+            floor.transform.localScale = new Vector3(20f, 1f, 20f);
+            wall = new GameObject("Wall");
+            wall.transform.position = new Vector3(0f, wallHeight / 2f, 1.2f);
+            wall.AddComponent<BoxCollider>().size = new Vector3(4f, wallHeight, 0.4f);
+
+            var cover = _player.AddComponent<CoverController>();
+            cover.Configure(GameRules.Default.WithActions(ActionRules.Default.WithCover(Cover.On)));
+            cover.Initialize(_mover, null, null, null);
+            Physics.SyncTransforms();
+            cover.Tick(true, false, Vector2.zero, DeltaSeconds);
+            Assert.That(cover.IsInCover, Is.True);
+            return cover;
+        }
+
+        [Test]
+        public void InCoverThePlayerCrouchesToTheWallTop()
+        {
+            var cover = EnterCoverBehind(1.5f, out var floor, out var wall);
+            try
+            {
+                Assert.That(_animator.TryBind(), Is.True);
+
+                Assert.That(cover.CoverWallHeight, Is.EqualTo(1.5f).Within(0.01f));
+                var expected = CoverCrouch.Amount(
+                    1.5f, CharacterAnimator.DefaultCoverStandingTop, CharacterAnimator.DefaultCoverLowestTop, CoverCrouch.DefaultHeadClearance);
+                Assert.That(_animator.CoverCrouchAmount(), Is.EqualTo(expected).Within(0.02f));
+                Assert.That(expected, Is.InRange(0.4f, 0.5f), "a 1.5 m wall needs a little less than half of the way down to the lowest pose");
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(wall);
+            }
+        }
+
+        [Test]
+        public void TheCoverTopsCanBeSetFromOutside()
+        {
+            var cover = EnterCoverBehind(1.5f, out var floor, out var wall);
+            try
+            {
+                Assert.That(_animator.TryBind(), Is.True);
+                _animator.CoverStandingTop = 2f;
+                _animator.CoverLowestTop = 1f;
+                _animator.CoverHeadClearance = 0f;
+
+                Assert.That(_animator.CoverCrouchAmount(), Is.EqualTo(0.5f).Within(0.02f));
+                Assert.That(cover.IsInCover, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(wall);
+            }
+        }
+
+        [Test]
+        public void InvalidCoverTopsStandOnceWarned()
+        {
+            EnterCoverBehind(1.5f, out var floor, out var wall);
+            try
+            {
+                Assert.That(_animator.TryBind(), Is.True);
+                _animator.CoverStandingTop = 1f;
+                _animator.CoverLowestTop = 1.2f;
+
+                LogAssert.Expect(LogType.Warning, new Regex(Regex.Escape(CharacterAnimator.LogTag) + ".*カバーの頭の高さ"));
+                Assert.That(_animator.CoverCrouchAmount(), Is.EqualTo(0f));
+                Assert.That(_animator.CoverCrouchAmount(), Is.EqualTo(0f), "the second call does not warn again");
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(wall);
+            }
+        }
+
+        [Test]
+        public void BehindTheLowWallOfTheDemoThePlayerTakesTheLowestPose()
+        {
+            EnterCoverBehind(1f, out var floor, out var wall);
+            try
+            {
+                Assert.That(_animator.TryBind(), Is.True);
+
+                Assert.That(_animator.CoverCrouchAmount(), Is.EqualTo(1f));
+                Assert.That(CharacterAnimator.DefaultCoverLowestTop, Is.LessThanOrEqualTo(1f), "the head hides behind a 1 m wall");
+            }
+            finally
+            {
+                Object.DestroyImmediate(floor);
+                Object.DestroyImmediate(wall);
+            }
+        }
+
+        [Test]
+        public void OutOfCoverThePlayerDoesNotCrouchForAWall()
+        {
+            Assert.That(_animator.TryBind(), Is.True);
+
+            Assert.That(_animator.CoverCrouchAmount(), Is.EqualTo(0f));
+        }
+
         [Test]
         public void BindsThePlayerWhenAPlayerControllerIsOnTheSameObject()
         {

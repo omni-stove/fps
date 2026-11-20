@@ -182,6 +182,7 @@ namespace Shooter.Protocol
             writer.WriteSingle(motor.AirJumpSpeed);
             writer.WriteSingle(motor.JumpGraceSeconds);
             writer.WriteSingle(motor.CoverEnterSpeed);
+            writer.WriteSingle(motor.CoverMinWallHeight);
 
             var swim = settings.Swim;
             writer.WriteSingle(swim.Speed);
@@ -254,6 +255,7 @@ namespace Shooter.Protocol
             var airJumpSpeed = reader.ReadFiniteSingle("air jump speed");
             var jumpGraceSeconds = reader.ReadFiniteSingle("jump grace seconds");
             var coverEnterSpeed = reader.ReadFiniteSingle("cover enter speed");
+            var coverMinWallHeight = reader.ReadFiniteSingle("cover min wall height");
             var swim = new float[3];
             for (var i = 0; i < swim.Length; i++)
             {
@@ -283,7 +285,8 @@ namespace Shooter.Protocol
                         new Shooter.Core.CarryLoadSpec(weightSource, multiplierSource, freeWeight, speedLossPerKg, minWeightMultiplier, gaits),
                         motor[13], motor[14], motor[15], motor[16], motor[17], motor[18],
                         motor[19], motor[20], motor[21], motor[22], motor[23], motor[24], motor[25], motor[26], motor[27], motor[28],
-                        leanSideOffset, leanAngleDegrees, leanSpeed, airJumps, airJumpSpeed, jumpGraceSeconds, coverEnterSpeed),
+                        leanSideOffset, leanAngleDegrees, leanSpeed, airJumps, airJumpSpeed, jumpGraceSeconds, coverEnterSpeed,
+                        coverMinWallHeight),
                     new Shooter.Core.StanceGeometry(stance[0], stance[1], stance[2], stance[3], stance[4], stance[5]),
                     new Shooter.Core.CapsuleMoverSpec(slope, step, skin, layerMask),
                     new Shooter.Core.ProneSpec(prone[0], prone[1], prone[2], prone[3], prone[4], prone[5]),

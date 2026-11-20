@@ -103,6 +103,7 @@ namespace Shooter.Tests.EditMode
                 { CharacterPose.CrouchParameter, AnimatorControllerParameterType.Bool },
                 { CharacterPose.AimParameter, AnimatorControllerParameterType.Bool },
                 { CharacterPose.CoverParameter, AnimatorControllerParameterType.Int },
+                { CharacterPose.CoverCrouchParameter, AnimatorControllerParameterType.Float },
                 { CharacterPose.DownedParameter, AnimatorControllerParameterType.Bool },
                 { CharacterPose.DeadParameter, AnimatorControllerParameterType.Bool },
                 { CharacterPose.WeaponCategoryParameter, AnimatorControllerParameterType.Int },
@@ -137,6 +138,17 @@ namespace Shooter.Tests.EditMode
             Assert.That(locomotion.children[1].motion.name, Is.EqualTo(CharacterRigClips.Walk));
             Assert.That(locomotion.children[2].motion.name, Is.EqualTo(CharacterRigClips.Run));
             Assert.That(locomotion.children[2].threshold, Is.EqualTo(CharacterPose.RunSpeedValue));
+
+            var coverHigh = (BlendTree)State(machine, CharacterRigBuilder.CoverHighState).motion;
+            Assert.That(coverHigh.blendParameter, Is.EqualTo(CharacterPose.CoverCrouchParameter));
+            Assert.That(coverHigh.children, Has.Length.EqualTo(3));
+            Assert.That(coverHigh.children[0].motion.name, Is.EqualTo(CharacterRigClips.CoverHigh));
+            Assert.That(coverHigh.children[0].threshold, Is.EqualTo(0f));
+            Assert.That(coverHigh.children[1].motion.name, Is.EqualTo(CharacterRigClips.CoverMid));
+            Assert.That(coverHigh.children[1].threshold, Is.EqualTo(CharacterRigClips.CoverMidCrouch));
+            Assert.That(coverHigh.children[2].motion.name, Is.EqualTo(CharacterRigClips.CoverLow));
+            Assert.That(coverHigh.children[2].threshold, Is.EqualTo(1f));
+            Assert.That(State(machine, CharacterRigBuilder.CoverLowState).motion, Is.InstanceOf<AnimationClip>(), "a low wall always takes the lowest pose");
         }
 
         [Test]
@@ -253,6 +265,7 @@ namespace Shooter.Tests.EditMode
         [TestCase(CharacterRigClips.CrouchAim)]
         [TestCase(CharacterRigClips.CoverLow)]
         [TestCase(CharacterRigClips.CoverHigh)]
+        [TestCase(CharacterRigClips.CoverMid)]
         [TestCase(CharacterRigClips.Flinch)]
         [TestCase(CharacterRigClips.Kneel)]
         [TestCase(CharacterRigClips.Stumble)]
@@ -275,6 +288,28 @@ namespace Shooter.Tests.EditMode
             Assert.That(standing, Is.GreaterThan(1.5f));
             Assert.That(HeadHeight(CharacterRigClips.Crouch), Is.LessThan(standing - 0.3f));
             Assert.That(HeadHeight(CharacterRigClips.CoverLow), Is.LessThan(HeadHeight(CharacterRigClips.Crouch)));
+        }
+
+        // CharacterAnimator はこの 2 つの高さの間で CoverCrouch を決めるので、既定の値がリグの頭の高さから外れていないかを見る。
+        [Test]
+        public void TheCoverTopsOfTheAnimatorMatchTheRig()
+        {
+            const float headRadius = 0.13f;
+
+            Assert.That(HeadHeight(CharacterRigClips.CoverHigh) + headRadius, Is.EqualTo(CharacterAnimator.DefaultCoverStandingTop).Within(0.05f));
+            Assert.That(HeadHeight(CharacterRigClips.CoverLow) + headRadius, Is.EqualTo(CharacterAnimator.DefaultCoverLowestTop).Within(0.05f));
+        }
+
+        [Test]
+        public void CoverMidSitsBetweenCoverHighAndCoverLowAtItsThreshold()
+        {
+            var high = HeadHeight(CharacterRigClips.CoverHigh);
+            var low = HeadHeight(CharacterRigClips.CoverLow);
+            var mid = HeadHeight(CharacterRigClips.CoverMid);
+
+            Assert.That(mid, Is.LessThan(high));
+            Assert.That(mid, Is.GreaterThan(low));
+            Assert.That((high - mid) / (high - low), Is.EqualTo(CharacterRigClips.CoverMidCrouch).Within(0.08f), "the head drops almost linearly with CoverCrouch");
         }
 
         [Test]

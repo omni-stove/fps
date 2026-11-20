@@ -65,6 +65,8 @@ namespace Shooter.Runtime
 
         public PlayerActionReader Reader => _reader;
 
+        public float CoverCrouch { get; set; }
+
         public ICharacterMotorStateSource MotorSource
         {
             get => CharacterMotorStateSources.IsMissing(_motorSource) ? null : _motorSource;
@@ -203,6 +205,8 @@ namespace Shooter.Runtime
             var feetY = controller != null ? controller.center.y - (controller.height / 2f) : -GameBootstrap.PlayerHeight / 2f;
             var eye = _reader.Rig.Eye;
             var pitch = eye != null ? eye.localRotation : Quaternion.identity;
+            var cover = _reader.Cover;
+            CoverCrouch = PlayerMockPose.CoverCrouchAmount(cover.IsInCover, cover.IsPeeking, cover.CoverWallHeight);
 
             if (TryReadMotor(out var motor, out var leanAngleDegrees))
             {
@@ -399,7 +403,7 @@ namespace Shooter.Runtime
 
             var localMove = transform.InverseTransformDirection(worldVelocity);
             var localNormal = transform.InverseTransformDirection(worldCoverNormal);
-            var targetScale = PlayerMockPose.StanceScale(state, stance);
+            var targetScale = PlayerMockPose.CoverStanceScale(state, stance, CoverCrouch);
             var targetShift = PlayerMockPose.BodyShift(state, localNormal);
             var targetLean = motor.HasValue
                 ? PlayerMockPose.BodyLean(state, localMove, localNormal, motor.Value, leanAngleDegrees)

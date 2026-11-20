@@ -219,6 +219,26 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheMidCoverIsAHighWallLowerThanTheStandingHead()
+        {
+            LevelBox? mid = null;
+            foreach (var cover in TpsRangeSceneBuilder.Covers)
+            {
+                if (cover.Name == TpsRangeSceneBuilder.MidCoverName)
+                {
+                    mid = cover;
+                }
+            }
+
+            Assert.That(mid.HasValue, Is.True);
+            Assert.That(mid.Value.Size.y, Is.EqualTo(TpsRangeSceneBuilder.MidCoverHeight));
+            Assert.That(mid.Value.Size.y, Is.GreaterThanOrEqualTo(MotorSpec.DefaultCoverLowWallHeight), "the player takes it as a high wall");
+            Assert.That(mid.Value.Size.y, Is.LessThan(CharacterAnimator.DefaultCoverStandingTop), "the player crouches to hide the head");
+            Assert.That(mid.Value.Center.y, Is.EqualTo(TpsRangeSceneBuilder.MidCoverHeight / 2f), "it stands on the floor");
+            Assert.That(TpsRangeSceneBuilder.SurfaceIds.ContainsKey(TpsRangeSceneBuilder.MidCoverName), Is.True);
+        }
+
+        [Test]
         public void TheVaultWallCanBeVaultedOrJumped()
         {
             Assert.That(TpsRangeSceneBuilder.VaultWall.Size.y, Is.EqualTo(TpsRangeSceneBuilder.VaultWallHeight));

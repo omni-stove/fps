@@ -23,6 +23,10 @@ namespace Shooter.Editor
         public const string HighCoverName = BootstrapSceneBuilder.HighCoverName;
         public const string LowCoverBackName = "Cover_Low_Back";
         public const string HighPillarName = "Cover_High_Pillar";
+        public const string MidCoverName = "Cover_Mid";
+
+        // 低い壁の境目 (MotorSpec.DefaultCoverLowWallHeight) 以上で立った頭 (約 1.8m) より低くし、高い壁のまま頭を隠すぶんだけしゃがむのを見せる。
+        public const float MidCoverHeight = 1.4f;
         public const string VaultWallName = "VaultWall";
         public const string OpenAreaName = "OpenArea";
         public const string HutName = DestructionTestSceneBuilder.HutName;
@@ -70,6 +74,10 @@ namespace Shooter.Editor
                 HighPillarName,
                 new Vector3(7f, BootstrapSceneBuilder.HighCoverHeight / 2f, 2f),
                 new Vector3(1f, BootstrapSceneBuilder.HighCoverHeight, 1f)),
+            new LevelBox(
+                MidCoverName,
+                new Vector3(3f, MidCoverHeight / 2f, -4f),
+                new Vector3(2f, MidCoverHeight, BootstrapSceneBuilder.CoverThickness)),
         };
 
         public static readonly LevelBox VaultWall = new LevelBox(
@@ -84,6 +92,7 @@ namespace Shooter.Editor
             [HighCoverName] = BootstrapSceneBuilder.CoverSurfaceIds[BootstrapSceneBuilder.HighCoverName],
             [LowCoverBackName] = SurfaceImpactAssetStep.ConcreteId,
             [HighPillarName] = SurfaceImpactAssetStep.MetalId,
+            [MidCoverName] = SurfaceImpactAssetStep.ConcreteId,
             [VaultWallName] = SurfaceImpactAssetStep.WoodId,
             [HutName] = SurfaceImpactAssetStep.WoodId,
         };

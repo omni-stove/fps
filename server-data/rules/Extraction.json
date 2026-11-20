@@ -193,6 +193,7 @@
     "coverBackHoldSeconds": 0.2,
     "coverPeekSlideSeconds": 0.15,
     "coverEnterSpeed": 8,
+    "coverMinWallHeight": 0,
     "ladderTopEntryDepth": 0.3,
     "ladderMinApproachDot": 0.5,
     "ladderMinApproachSpeed": 0.5,

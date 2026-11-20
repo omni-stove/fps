@@ -43,6 +43,64 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheStandingTopIsTheTopOfTheHead()
+        {
+            Assert.That(PlayerMockPose.StandingTop, Is.EqualTo(PlayerMockPose.Head(1f).y + (PlayerMockPose.HeadDiameter / 2f)).Within(Tolerance));
+        }
+
+        // 立った頭のてっぺんは 1.81 m、一番低い姿勢は 1 m。その間の壁では、頭のてっぺんが上端の 0.05 m 下へ来るまで縮む。
+        [TestCase(1.5f)]
+        [TestCase(1.7f)]
+        [TestCase(1.3f)]
+        [TestCase(1.1f)]
+        public void InCoverTheHeadTopSitsJustBelowAMidHeightWall(float wallHeight)
+        {
+            var amount = PlayerMockPose.CoverCrouchAmount(true, false, wallHeight);
+            var scale = PlayerMockPose.CoverStanceScale(State(PlayerActionConditions.InCover), null, amount);
+
+            var headTop = PlayerMockPose.Head(scale).y + (PlayerMockPose.HeadDiameter / 2f);
+            Assert.That(headTop, Is.EqualTo(wallHeight - CoverCrouch.DefaultHeadClearance).Within(Tolerance));
+        }
+
+        [Test]
+        public void InCoverALowWallCrouchesBelowTheCrouchDownToTheLowestPose()
+        {
+            var amount = PlayerMockPose.CoverCrouchAmount(true, false, 0.8f);
+            var scale = PlayerMockPose.CoverStanceScale(State(PlayerActionConditions.InCover | PlayerActionConditions.Crouching), null, amount);
+
+            Assert.That(amount, Is.EqualTo(1f));
+            Assert.That(scale, Is.EqualTo(PlayerMockPose.CoverLowestScale).Within(Tolerance));
+            Assert.That(scale, Is.LessThan(PlayerMockPose.CrouchScale));
+            Assert.That(PlayerMockPose.Head(scale).y + (PlayerMockPose.HeadDiameter / 2f), Is.EqualTo(PlayerMockPose.CoverLowestTop).Within(Tolerance));
+        }
+
+        [Test]
+        public void InCoverAWallAboveTheHeadKeepsStanding()
+        {
+            var amount = PlayerMockPose.CoverCrouchAmount(true, false, 2f);
+
+            Assert.That(amount, Is.EqualTo(0f));
+            Assert.That(PlayerMockPose.CoverStanceScale(State(PlayerActionConditions.InCover), null, amount), Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void PeekingOrOutOfCoverDoesNotCrouchForTheWall()
+        {
+            Assert.That(PlayerMockPose.CoverCrouchAmount(true, true, 1.5f), Is.EqualTo(0f));
+            Assert.That(PlayerMockPose.CoverCrouchAmount(false, false, 1.5f), Is.EqualTo(0f));
+            Assert.That(PlayerMockPose.CoverStanceScale(State(PlayerActionConditions.Grounded), null, 1f), Is.EqualTo(1f), "the amount only applies in cover");
+        }
+
+        [Test]
+        public void DownedOrProneInCoverKeepsItsOwnScale()
+        {
+            Assert.That(PlayerMockPose.CoverStanceScale(State(PlayerActionConditions.InCover | PlayerActionConditions.Downed), null, 1f), Is.EqualTo(1f));
+            Assert.That(
+                PlayerMockPose.CoverStanceScale(State(PlayerActionConditions.InCover | PlayerActionConditions.Prone), null, 1f),
+                Is.EqualTo(PlayerMockPose.ProneScale));
+        }
+
+        [Test]
         public void TorsoStandsOnTheFeet()
         {
             PlayerMockPose.Torso(1f, out var position, out var scale);

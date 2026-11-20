@@ -8,18 +8,30 @@ namespace Shooter.Core
     internal sealed class JsonParser
     {
         // 項目は 2 段までなので、それより深く入れ子にしたものは読む前に断る。
-        private const int _maxDepth = 8;
+        private const int _defaultMaxDepth = 8;
 
         private const char _byteOrderMark = (char)0xFEFF;
 
         private readonly string _text;
+        private readonly int _maxDepth;
         private int _position;
         private int _line = 1;
         private int _lineStart;
 
         public JsonParser(string text)
+            : this(text, _defaultMaxDepth)
         {
+        }
+
+        public JsonParser(string text, int maxDepth)
+        {
+            if (maxDepth < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxDepth), maxDepth, "the nesting limit must be at least 1");
+            }
+
             _text = text;
+            _maxDepth = maxDepth;
         }
 
         public JsonNode ParseDocument()

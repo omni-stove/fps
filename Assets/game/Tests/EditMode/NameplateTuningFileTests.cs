@@ -78,7 +78,7 @@ namespace Shooter.Tests.EditMode
             KitTuning.Reload();
 
             LogAssert.Expect(LogType.Log, "[Tuning] read GameContent 'Broken' (nameplates)");
-            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(@"^\[Tuning\] nameplates JSON .* item 'enemyRange' is invalid: .*; using the default values instead$"));
+            LogAssert.Expect(LogType.Error, new System.Text.RegularExpressions.Regex(@"(?s)^\[Tuning\] nameplates JSON .* item 'enemyRange' is invalid: .*; using the default values instead$"));
             var spec = KitTuning.Nameplates;
 
             Assert.That(spec, Is.SameAs(NameplateSpec.Default));

@@ -74,7 +74,7 @@ namespace Shooter.NetV2
             }
 
             Debug.Log(LoadoutChoiceLog.Prefix + " sending the saved loadout", _context);
-            Send(selection.WeaponIds, 0);
+            Send(selection.WeaponIds, saved.AbilityIds, 0);
         }
 
         public void Apply(SnapshotMessage snapshot, int playerId)
@@ -112,8 +112,8 @@ namespace Shooter.NetV2
             {
                 try
                 {
-                    // 能力はまだサーバーへ送らないので、受け入れられた武器だけを保存する
-                    _store.Save(new LoadoutChoice(pending.WeaponIds));
+                    // 能力はまだサーバーへ送らないが、画面で選んだ能力は残す。選べなかったときは保存済みの能力を消さない
+                    _store.Save(new LoadoutChoice(pending.WeaponIds, pending.AbilityIds ?? LoadSaved()?.AbilityIds));
                 }
                 catch (ArgumentException e)
                 {
@@ -162,7 +162,7 @@ namespace Shooter.NetV2
         private void HandleConfirmed(LoadoutChoice choice)
         {
             // 能力はまだ要求に載せないので、武器だけを送る
-            if (!Send(choice.WeaponIds, _screenSession))
+            if (!Send(choice.WeaponIds, choice.AbilityIds, _screenSession))
             {
                 _view.ShowAnswer(false, "not connected to the match");
                 return;
@@ -201,7 +201,7 @@ namespace Shooter.NetV2
             return id;
         }
 
-        private bool Send(IReadOnlyList<string> weaponIds, int screenSession)
+        private bool Send(IReadOnlyList<string> weaponIds, IReadOnlyList<string> abilityIds, int screenSession)
         {
             _request.CosmeticId = CosmeticToSend();
             _request.WeaponIds.Clear();
@@ -221,7 +221,7 @@ namespace Shooter.NetV2
             }
 
             Debug.Log(LoadoutChoiceLog.Requested(weaponIds), _context);
-            _pending.Enqueue(new Pending(Copy(weaponIds), screenSession));
+            _pending.Enqueue(new Pending(Copy(weaponIds), abilityIds == null ? null : Copy(abilityIds), screenSession));
             return true;
         }
 
@@ -272,13 +272,17 @@ namespace Shooter.NetV2
 
         private readonly struct Pending
         {
-            public Pending(IReadOnlyList<string> weaponIds, int screenSession)
+            public Pending(IReadOnlyList<string> weaponIds, IReadOnlyList<string> abilityIds, int screenSession)
             {
                 WeaponIds = weaponIds;
+                AbilityIds = abilityIds;
                 ScreenSession = screenSession;
             }
 
             public IReadOnlyList<string> WeaponIds { get; }
+
+            // 画面で選んだ能力。選べなかったときは null
+            public IReadOnlyList<string> AbilityIds { get; }
 
             // 自動で送った並びは 0 (画面に出さない)
             public int ScreenSession { get; }

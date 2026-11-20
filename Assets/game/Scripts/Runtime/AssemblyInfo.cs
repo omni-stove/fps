@@ -6,10 +6,10 @@ using System.Runtime.CompilerServices;
 // 飛行機のテスト (Shooter.Aircraft.Tests) は本体のテストと別のアセンブリにあり、テストの間に GameSignals を空に戻す (GameSignals.ResetAll) ため
 [assembly: InternalsVisibleTo("Shooter.Aircraft.Tests")]
 
-// キャンペーンのテスト (Shooter.Campaign.Tests) も本体のテストと別のアセンブリにあり、テストの間に GameSignals とクラウドセーブの登録を空に戻す (GameSignals.ResetAll・CloudSaveBootstrap.ClearRegisteredSlots) ため
+// キャンペーンのテスト (Shooter.Campaign.Tests) も本体のテストと別のアセンブリにあり、テストの間に GameSignals を空に戻す (GameSignals.ResetAll) ため
 [assembly: InternalsVisibleTo("Shooter.Campaign.Tests")]
 
-// 進行のテスト (Shooter.Progression.Tests) も本体のテストと別のアセンブリにあり、テストの間に GameSignals とクラウドセーブの登録を空に戻す (GameSignals.ResetAll・CloudSaveBootstrap.ClearRegisteredSlots) ため
+// 進行のテスト (Shooter.Progression.Tests) も本体のテストと別のアセンブリにあり、テストの間に GameSignals を空に戻す (GameSignals.ResetAll) ため
 [assembly: InternalsVisibleTo("Shooter.Progression.Tests")]
 
 // 既定の UI のテストはサンプル (Shooter.Samples.Tests) にあり、テストの間に GameSignals を空に戻す (GameSignals.ResetAll) ため

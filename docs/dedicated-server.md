@@ -143,6 +143,17 @@ make server-dotnet ARGS="-rules FreeForAll"
   モードの例はどれも近接とキルカムを `On` にしてある (`GunGame` はストリークを `Off`)。この 3 つの規則はスナップショットでクライアントにも届く。
 - 近接・ストリークの調整値は `server-data/tuning/melee.json`・`streaks.json` から読む。クライアントの `Resources/Tuning/` と同じ中身にしておく。
   置ける物 (タレット・盾・囮・ビーコン) は `server-data/tuning/deployables.json` にある種類だけを置かせる。
+- 人ごとに置ける種類 (能力) は 2 枠で、選べる候補はルールの JSON の `loadout.abilities` に書いた `deployables.json` の Id にする
+  (例: `"loadout": { ..., "abilities": ["deploy-beacon"] }`)。項目が無ければ `deployables.json` の全部 (置けない `Drone` を除く) が候補になり、
+  空の並び (`[]`) なら何も置かせない。起動のときに `[Deploy] net abilities=<候補> default=<既定> from=rules|catalog` と出す。
+  - 能力を選んでいない人には、候補の先頭から枠の数だけ (足りない枠は「なし」) を持たせる。
+  - ロードアウトの要求 (`LoadoutRequest`) の能力は武器と一緒に検査し、答えは 1 つだけ返す。候補に無い・同じ種類を 2 枠に書いた・枠の数が違う
+    要求は武器も選ばせずに断り、`[Net] loadout abilities rejected client=<id> reason=...` と出す。受け入れた能力は武器と同じく次の出現から持たせる
+    (`[Net] loadout abilities accepted ...`・`[Deploy] owner=<id> kind=- net equipped abilities=...`)。能力を送らない前の版のクライアントの要求は武器だけを選ぶ。
+  - 持っていない種類を置く要求は `[Deploy] owner=<id> kind=<id> net refused reason=NotEquipped` で断る。
+  - 選んだ能力は次の試合でも残り、抜けると消える。マップやルールを替えると持たせた能力を捨てて次の出現で持たせ直し、
+    替えた先のルールの候補に無い選択は既定に戻す (`[Deploy] owner=<id> kind=- net abilities reset to default: ...`)。
+  - `loadout.abilities` に `deployables.json` に無い Id を書くと、`[Deploy] net kind=<id> is in loadout.abilities of rules <name> but not in the deployable tuning; it is not offered` と出して候補から外す。
 - リスポーンビーコン (置ける物の `role` が `Beacon`) は、ルールの `respawnAnchor` に `Beacon` があるときだけ復活の場所になる。
   倒されて戻る人を `respawnAnchor` の順に試し、置いた本人か味方の、使える中でいちばん後に置いたビーコンの前 (`beacon.spawnDistance`) へ出す
   (`[Beacon] ... used by=<id> ... uses=<残り>/<回数>`・`[Match] spawn player=<id> ... from=Beacon`)。回数 (`beacon.uses`) を使い切るか壊されると消え、拠点に戻る。

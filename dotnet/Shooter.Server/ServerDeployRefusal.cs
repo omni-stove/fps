@@ -7,6 +7,7 @@ namespace Shooter.Server
         CannotAct,
         UnknownType,
         Unusable,
+        NotEquipped,
         OutOfReach,
         LimitReached,
         NoGround,

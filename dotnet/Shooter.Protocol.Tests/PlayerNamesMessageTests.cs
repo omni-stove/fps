@@ -134,7 +134,7 @@ namespace Shooter.Protocol.Tests
         [TestCase(" Ace")]
         [TestCase("Ace\n")]
         [TestCase("A\u0000ce")]
-        [TestCaseSource(nameof(BidiOverrideName))]
+        [TestCaseSource(nameof(_bidiOverrideName))]
         public void ANameTheServerWouldNotSendIsUnreadable(string name)
         {
             var writer = Header(1);
@@ -145,7 +145,7 @@ namespace Shooter.Protocol.Tests
         }
 
         // An attribute argument must be a constant, and a raw U+202E in the source is invisible.
-        private static readonly string[] BidiOverrideName = { "A" + (char)0x202E + "ce" };
+        private static readonly string[] _bidiOverrideName = { "A" + (char)0x202E + "ce" };
 
         [Test]
         public void ANameLongerThanAnyRuleAllowsIsUnreadable()

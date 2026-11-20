@@ -8,7 +8,7 @@ namespace Shooter.Core.Tests
         private const int _max = NetMatchSettings.DefaultMaxDisplayNameLength;
 
         // An attribute argument must be a constant, and a raw U+2028 in the source would end the line.
-        private static readonly string[] SeparatorAndBidiNames =
+        private static readonly string[] _separatorAndBidiNames =
         {
             "A" + (char)0x2028 + "ce",
             "A" + (char)0x2029 + "ce",
@@ -42,7 +42,7 @@ namespace Shooter.Core.Tests
         [TestCase("A\u001Bce")]
         [TestCase("A\u007Fce")]
         [TestCase("A\u0085ce")]
-        [TestCaseSource(nameof(SeparatorAndBidiNames))]
+        [TestCaseSource(nameof(_separatorAndBidiNames))]
         public void ANameWithAControlCharacterIsEmpty(string name)
         {
             Assert.That(PlayerDisplayName.Sanitize(name, _max), Is.Empty);

@@ -134,6 +134,63 @@ namespace Shooter.Server.Tests
             Assert.That(_deployables.Place(1, _decoyId, _alphaFront, 0f), Is.EqualTo(ServerDeployRefusal.None), _log.ToString());
         }
 
+        // Issue の確かめ方と同じ: Ability1 にビーコン・Ability2 に「なし」を選ぶと、次の出現からビーコンだけを置け、ロードアウトの盾は断られる。
+        // クライアントの要求 (NetV2LoadoutChooser が送るものと同じ並び) と置く要求を、知らせとしてホストに渡す
+        [Test]
+        public void ChoosingTheBeaconForAbility1PlacesTheBeaconAndRefusesTheLoadoutShield()
+        {
+            Start(EveryRoleCatalog(), loadoutAbilities: Ids(_shieldId, _beaconId));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] owner=1 kind=- net equipped abilities=deploy-shield,deploy-beacon"));
+
+            ChooseLoadout(1, _beaconId, _noAbility);
+
+            var answers = Answers(1);
+            Assert.That(answers, Has.Count.EqualTo(1));
+            Assert.That(answers[0].Accepted, Is.True, _log.ToString());
+            Assert.That(_log.ToString(), Does.Contain("[Net] loadout abilities accepted client=1 abilities=deploy-beacon,- applies=next-spawn"));
+
+            _combat.DealDamage(2, 1, NetMatchSettings.DefaultMaxHealth, TestRules.RifleId, HitZone.Body, null);
+            Step(_respawnWait);
+            Assert.That(_rules.Session.IsAlive(1), Is.True);
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] owner=1 kind=- net equipped abilities=deploy-beacon,-"));
+
+            Deploy(1, _shieldId, _alphaFront, 90f);
+
+            Assert.That(Rows(1), Is.Empty, "the shield of the loadout is no longer held");
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] owner=1 kind=deploy-shield net refused reason=NotEquipped"));
+
+            Deploy(1, _beaconId, _alphaFront, 90f);
+
+            var rows = Rows(1);
+            Assert.That(rows, Has.Count.EqualTo(1), _log.ToString());
+            Assert.That(rows[0].Kind, Is.EqualTo(DeployableKind.Beacon));
+            Assert.That(rows[0].TypeId, Is.EqualTo(_beaconId));
+            Assert.That(rows[0].OwnerId, Is.EqualTo(1));
+        }
+
+        // 「なし」だけを選ぶと、どの種類も置けない
+        [Test]
+        public void ChoosingNoneForBothSlotsRefusesEveryType()
+        {
+            Start(EveryRoleCatalog(), loadoutAbilities: Ids(_shieldId, _beaconId));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+            ChooseLoadout(1, _noAbility, _noAbility);
+            _combat.DealDamage(2, 1, NetMatchSettings.DefaultMaxHealth, TestRules.RifleId, HitZone.Body, null);
+            Step(_respawnWait);
+
+            Deploy(1, _beaconId, _alphaFront, 90f);
+            Deploy(1, _shieldId, _alphaFront, 90f);
+
+            Assert.That(Rows(1), Is.Empty);
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] owner=1 kind=deploy-beacon net refused reason=NotEquipped"));
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] owner=1 kind=deploy-shield net refused reason=NotEquipped"));
+        }
+
         [Test]
         public void AnAbilityTheRulesDoNotOfferRefusesTheWholeRequest()
         {

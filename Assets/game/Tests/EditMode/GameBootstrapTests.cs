@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Shooter.Core;
@@ -52,6 +53,9 @@ namespace Shooter.Tests.EditMode
             var bootstrap = _host.AddComponent<GameBootstrap>();
             bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
             bootstrap.RulesDefinition = _rules;
+
+            // この端末の装備画面で保存した選択で、テストの武器が替わらないようにする
+            bootstrap.LoadoutPreferences = null;
             LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
             _world = bootstrap.Build();
         }
@@ -456,6 +460,7 @@ namespace Shooter.Tests.EditMode
                 bootstrap.WeaponDefinitions = new[] { _rifle, _handgun };
                 bootstrap.RulesDefinition = _rules;
                 bootstrap.Loadout = loadout;
+                bootstrap.LoadoutPreferences = null;
 
                 Assert.That(bootstrap.AbilityDefinitions, Is.Empty);
                 Assert.That(bootstrap.EffectiveAbilityDefinitions, Is.EqualTo(new AbilityDefinition[] { beacon }));
@@ -503,6 +508,106 @@ namespace Shooter.Tests.EditMode
                 Object.DestroyImmediate(loadout);
                 Object.DestroyImmediate(beacon);
                 Object.DestroyImmediate(wired);
+            }
+        }
+
+        // Issue の確かめ方と同じ: 装備画面で Ability1 にビーコンを選んで保存すると、Guardian のシーン (武器は配線・能力は空) で Ability1 に入る
+        [Test]
+        public void TheSavedChoiceFillsTheOfflinePlayersWeaponsAndAbilitySlots()
+        {
+            using (var scene = new SavedLoadoutScene(_rules))
+            {
+                scene.Store.Save(new LoadoutChoice(
+                    new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }, new[] { SavedLoadoutScene.BeaconId, AbilitySelection.None }));
+
+                var world = scene.Build();
+
+                Assert.That(world.Abilities.Definition(0), Is.SameAs(scene.Beacon), "the beacon is only in the catalog, not in the loadout");
+                Assert.That(world.Abilities.Definition(1), Is.Null);
+                Assert.That(world.Weapon.Definitions, Is.EqualTo(new[] { scene.Assets.Smg, scene.Assets.Handgun }), "the saved weapons replace the wired ones");
+                Assert.That(scene.Bootstrap.PlayerLoadout.RestoredWeapons, Is.True);
+                Assert.That(scene.Bootstrap.PlayerLoadout.RestoredAbilities, Is.True);
+            }
+        }
+
+        [Test]
+        public void SavingNoneInAbility1LeavesNothingToUse()
+        {
+            using (var scene = new SavedLoadoutScene(_rules))
+            {
+                scene.Store.Save(new LoadoutChoice(
+                    new[] { TestWeapons.RifleId, TestWeapons.HandgunId }, new[] { AbilitySelection.None, AbilitySelection.None }));
+
+                var world = scene.Build();
+
+                Assert.That(world.Abilities.Definition(0), Is.Null, "the loadout's shield is not given back");
+                Assert.That(world.Abilities.Definition(1), Is.Null);
+                Assert.That(scene.Bootstrap.PlayerLoadout.RestoredAbilities, Is.True);
+            }
+        }
+
+        [Test]
+        public void WithoutASavedChoiceThePlayerGetsTheLoadoutsAbilities()
+        {
+            using (var scene = new SavedLoadoutScene(_rules))
+            {
+                var world = scene.Build();
+
+                Assert.That(world.Abilities.Definition(0), Is.SameAs(scene.Shield));
+                Assert.That(world.Weapon.Definitions, Is.EqualTo(new[] { scene.Assets.Rifle, scene.Assets.Handgun }));
+                Assert.That(scene.Bootstrap.PlayerLoadout.RestoredWeapons, Is.False);
+                Assert.That(scene.Bootstrap.PlayerLoadout.RestoredAbilities, Is.False);
+            }
+        }
+
+        [Test]
+        public void SavedAbilitiesTheCatalogDoesNotOfferFallBackToTheLoadoutsButTheWeaponsAreStillUsed()
+        {
+            using (var scene = new SavedLoadoutScene(_rules))
+            {
+                scene.Store.Save(new LoadoutChoice(
+                    new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }, new[] { "deploy-missing", AbilitySelection.None }));
+                LogAssert.Expect(LogType.Warning, new System.Text.RegularExpressions.Regex(@"^\[Loadout\] the saved abilities are not used: .*deploy-missing.*; using the scene's abilities$"));
+
+                var world = scene.Build();
+
+                Assert.That(world.Abilities.Definition(0), Is.SameAs(scene.Shield));
+                Assert.That(world.Weapon.Definitions, Is.EqualTo(new[] { scene.Assets.Smg, scene.Assets.Handgun }));
+                Assert.That(scene.Bootstrap.PlayerLoadout.RestoredAbilities, Is.False);
+            }
+        }
+
+        // 射撃場のように能力をシーンに直接つないだシーンは、そのシーンの並びで試させる
+        [Test]
+        public void WiredAbilitiesAreNotReplacedByTheSavedChoice()
+        {
+            using (var scene = new SavedLoadoutScene(_rules))
+            {
+                scene.Store.Save(new LoadoutChoice(
+                    new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }, new[] { SavedLoadoutScene.BeaconId, AbilitySelection.None }));
+                scene.Bootstrap.AbilityDefinitions = new AbilityDefinition[] { scene.Shield };
+
+                var world = scene.Build();
+
+                Assert.That(world.Abilities.Definition(0), Is.SameAs(scene.Shield));
+                Assert.That(world.Weapon.Definitions, Is.EqualTo(new[] { scene.Assets.Rifle, scene.Assets.Handgun }));
+                Assert.That(scene.Bootstrap.PlayerLoadout.RestoredWeapons, Is.False);
+            }
+        }
+
+        [Test]
+        public void WithoutAStoreTheSavedChoiceIsNotRead()
+        {
+            using (var scene = new SavedLoadoutScene(_rules))
+            {
+                scene.Store.Save(new LoadoutChoice(
+                    new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }, new[] { SavedLoadoutScene.BeaconId, AbilitySelection.None }));
+                scene.Bootstrap.LoadoutPreferences = null;
+
+                var world = scene.Build();
+
+                Assert.That(world.Abilities.Definition(0), Is.SameAs(scene.Shield));
+                Assert.That(world.Weapon.Definitions, Is.EqualTo(new[] { scene.Assets.Rifle, scene.Assets.Handgun }));
             }
         }
 
@@ -871,6 +976,76 @@ namespace Shooter.Tests.EditMode
             Object.DestroyImmediate(world.Player);
             Object.DestroyImmediate(world.Light.gameObject);
             Object.DestroyImmediate(world.TargetRoot);
+        }
+
+        // Guardian などのモードのシーンと同じく、武器を配線して能力を空にしたシーン。ロードアウトは盾だけを持ち、カタログは盾とビーコンを持つ
+        private sealed class SavedLoadoutScene : IDisposable
+        {
+            public const string ShieldId = "deploy-shield";
+            public const string BeaconId = "deploy-beacon";
+
+            private readonly GameObject _host;
+            private readonly AbilityCatalogAsset _catalog;
+            private readonly GameContent _content;
+            private BootstrapWorld _world;
+
+            public SavedLoadoutScene(GameRulesDefinition rules)
+            {
+                Assets = new LoadoutTestAssets();
+                Shield = ScriptableObject.CreateInstance<ShieldDeployDefinition>();
+                Shield.name = "DeployShield";
+                Shield.Id = ShieldId;
+                Beacon = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+                Beacon.name = "DeployBeacon";
+                Beacon.Id = BeaconId;
+                Assets.Loadout.SetAbilities(new AbilityDefinition[] { Shield });
+                _catalog = ScriptableObject.CreateInstance<AbilityCatalogAsset>();
+                _catalog.name = "TestAbilities";
+                _catalog.SetAbilities(new AbilityDefinition[] { Shield, Beacon });
+                _content = ScriptableObject.CreateInstance<GameContent>();
+                _content.WeaponCatalog = Assets.Catalog;
+                _content.AbilityCatalog = _catalog;
+                GameContent.Use(_content);
+
+                Store = new LoadoutPreferenceStore("Shooter.Tests.GameBootstrap.Loadout." + Guid.NewGuid().ToString("N"));
+                _host = new GameObject("Bootstrap-SavedLoadout");
+                Bootstrap = _host.AddComponent<GameBootstrap>();
+                Bootstrap.CreatesFloor = false;
+                Bootstrap.WeaponDefinitions = new[] { Assets.Rifle, Assets.Handgun };
+                Bootstrap.RulesDefinition = rules;
+                Bootstrap.Loadout = Assets.Loadout;
+                Bootstrap.LoadoutPreferences = Store;
+            }
+
+            public LoadoutTestAssets Assets { get; }
+
+            public ShieldDeployDefinition Shield { get; }
+
+            public BeaconDeployDefinition Beacon { get; }
+
+            public LoadoutPreferenceStore Store { get; }
+
+            public GameBootstrap Bootstrap { get; }
+
+            public BootstrapWorld Build()
+            {
+                LogAssert.Expect(LogType.Log, GameBootstrap.ReadyLog);
+                _world = Bootstrap.Build();
+                return _world;
+            }
+
+            public void Dispose()
+            {
+                DestroyWorld(_world);
+                Object.DestroyImmediate(_host);
+                GameContent.Use(null);
+                Store.Delete();
+                Object.DestroyImmediate(_content);
+                Object.DestroyImmediate(_catalog);
+                Object.DestroyImmediate(Shield);
+                Object.DestroyImmediate(Beacon);
+                Assets.Dispose();
+            }
         }
 
         [Test]

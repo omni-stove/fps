@@ -8,6 +8,9 @@ namespace Shooter.Core.Tests
 {
     public sealed class NetMatchFileTests
     {
+        private static readonly string[] ExpectedBeacon = { "beacon" };
+        private static readonly string[] RepeatedBeacon = { "beacon", "beacon" };
+
         private const string _rifleId = "6c1f3b2a-8d4e-4f7a-9b0c-2e5d7a1f4c83";
         private const string _handgunId = "b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45";
 
@@ -361,7 +364,7 @@ namespace Shooter.Core.Tests
 
             abilities[0] = "mine";
 
-            Assert.That(file.LoadoutAbilities, Is.EqualTo(new[] { "beacon" }));
+            Assert.That(file.LoadoutAbilities, Is.EqualTo(ExpectedBeacon));
         }
 
         [Test]
@@ -371,7 +374,7 @@ namespace Shooter.Core.Tests
 
             Assert.Throws<ArgumentException>(() => new NetMatchFile(
                 plain.Name, plain.Rules, plain.Settings, plain.LoadoutName, plain.LoadoutRule, plain.LoadoutWeapons, plain.SwitchSeconds,
-                null, null, null, new[] { "beacon", "beacon" }));
+                null, null, null, RepeatedBeacon));
             Assert.Throws<ArgumentException>(() => new NetMatchFile(
                 plain.Name, plain.Rules, plain.Settings, plain.LoadoutName, plain.LoadoutRule, plain.LoadoutWeapons, plain.SwitchSeconds,
                 null, null, null, new[] { "beacon", null }));

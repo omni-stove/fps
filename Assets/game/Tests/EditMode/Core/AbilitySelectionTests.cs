@@ -174,7 +174,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void SlotsCanHaveTheirOwnOptionsAndCount()
         {
-            var options = new[] { new[] { _beacon }, new[] { _mine, _drone }, new string[0] };
+            var options = new[] { new[] { _beacon }, new[] { _mine, _drone }, System.Array.Empty<string>() };
             var selection = new AbilitySelection(options, new[] { _beacon, _drone, string.Empty }, null);
 
             Assert.That(selection.SlotCount, Is.EqualTo(3));

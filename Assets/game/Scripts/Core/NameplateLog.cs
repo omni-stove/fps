@@ -28,6 +28,11 @@ namespace Shooter.Core
             return string.Format(CultureInfo.InvariantCulture, "{0} shown id={1} relation={2} distance={3:0.0}", Tag, id, relation, distance);
         }
 
+        public static string Source(string source)
+        {
+            return Tag + " source=" + (string.IsNullOrWhiteSpace(source) ? "none" : source.Trim());
+        }
+
         public static string Hidden(int id)
         {
             return Tag + " hidden id=" + id.ToString(CultureInfo.InvariantCulture);

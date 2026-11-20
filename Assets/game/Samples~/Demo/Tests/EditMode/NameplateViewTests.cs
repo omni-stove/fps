@@ -125,37 +125,6 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void PublishedTargetsReplaceTheOfflineOnesUntilTheyAreWithdrawn()
-        {
-            var view = Track(new GameObject("OtherHud")).AddComponent<NameplateView>();
-            view.Viewer = _camera;
-            view.Spec = new NameplateSpec(friendlyRange: 60f, enemyRange: 35f);
-            var published = new FakeTargets(
-                new FakeParticipants(new Participant(42, "Online", Team.Alpha, false)),
-                new NameplateTarget(42, _eye + Vector3.forward * 10f, TeamRelation.Friendly, true, false));
-            Assert.That(view.Targets, Is.InstanceOf<OfflineNameplateTargets>());
-
-            GameSignals.NameplateTargets.Publish(published);
-            view.Refresh();
-
-            Assert.That(view.Targets, Is.SameAs(published), "the online match's targets are used once published");
-            Assert.That(view.TryGetPlate(42, out var plate), Is.True);
-            Assert.That(plate.Text, Is.EqualTo("Online"), "the name comes from the published targets' participants");
-
-            GameSignals.NameplateTargets.ClearIfCurrent(published);
-            view.Refresh();
-
-            Assert.That(view.Targets, Is.InstanceOf<OfflineNameplateTargets>(), "after leaving the match the offline targets are back");
-            Assert.That(view.TryGetPlate(42, out _), Is.False);
-
-            var own = new FakeTargets(new FakeParticipants());
-            view.Targets = own;
-            GameSignals.NameplateTargets.Publish(published);
-
-            Assert.That(view.Targets, Is.SameAs(own), "targets set on the view win over published ones");
-        }
-
-        [Test]
         public void TheLocalPlayerTheDeadAndThoseBehindTheCameraAreNotNamed()
         {
             var dead = Spawn("Dead", 0, new Vector3(0f, 0f, 10f));
@@ -317,6 +286,111 @@ namespace Shooter.Tests.EditMode
             Assert.That(found.Single(t => t.Id == IdOf(other)).Relation, Is.EqualTo(TeamRelation.Enemy));
         }
 
+        [Test]
+        public void WhileTheKitPublishesContactsTheViewNamesThemFromTheSignalledRoster()
+        {
+            var contacts = new FakeContacts(
+                new NameplateContact(5, (_eye + Vector3.forward * 10f).ToNumerics(), TeamRelation.Friendly, true, false),
+                new NameplateContact(6, (_eye + Vector3.forward * 12f).ToNumerics(), TeamRelation.Enemy, true, false));
+            GameSignals.Participants.Publish(new FakeParticipants(
+                new Participant(5, "Raven", Team.Alpha, false), new Participant(6, "Crow", Team.Bravo, false)));
+            GameSignals.Nameplates.Publish(contacts);
+
+            LogAssert.Expect(LogType.Log, "[Nameplate] source=SignalNameplateTargets");
+            _view.Refresh();
+
+            Assert.That(_view.Targets, Is.InstanceOf<SignalNameplateTargets>());
+            Assert.That(((SignalNameplateTargets)_view.Targets).Contacts, Is.SameAs(contacts));
+            Assert.That(contacts.Eyes, Is.EqualTo(new[] { _eye.ToNumerics() }), "contacts are gathered from the viewer's eye");
+            Assert.That(_view.TryGetPlate(5, out var plate), Is.True);
+            Assert.That(plate.Text, Is.EqualTo("Raven"), "the online name comes from GameSignals.Participants");
+            Assert.That(_view.TryGetPlate(6, out _), Is.False, "an enemy out of sight is not named, the same as offline");
+        }
+
+        [Test]
+        public void WhenTheKitStopsPublishingContactsTheViewGoesBackToTheOfflineSides()
+        {
+            // オフラインの Id は 1 からの連番で小さい数と重なるので、オンラインの Id は離れた数にする。
+            const int online = 900001;
+            var ally = Spawn("Ally", 0, new Vector3(0f, 0f, 10f));
+            GameSignals.Participants.Publish(new FakeParticipants(new Participant(online, "Raven", Team.Alpha, false)));
+            var contacts = new FakeContacts(
+                new NameplateContact(online, (_eye + Vector3.forward * 10f).ToNumerics(), TeamRelation.Friendly, true, false));
+            GameSignals.Nameplates.Publish(contacts);
+            _view.Refresh();
+            Assert.That(_view.TryGetPlate(online, out _), Is.True);
+            Assert.That(_view.TryGetPlate(IdOf(ally), out _), Is.False, "offline sides are not mixed in while online");
+
+            GameSignals.Nameplates.ClearIfCurrent(contacts);
+            LogAssert.Expect(LogType.Log, "[Nameplate] source=OfflineNameplateTargets");
+            _view.Refresh();
+
+            Assert.That(_view.Targets, Is.InstanceOf<OfflineNameplateTargets>());
+            Assert.That(_view.TryGetPlate(online, out _), Is.False, "the online plate is dropped");
+            Assert.That(_view.TryGetPlate(IdOf(ally), out _), Is.True);
+        }
+
+        [Test]
+        public void ANewlyPublishedContactSourceReplacesThePreviousOne()
+        {
+            var first = new FakeContacts();
+            var second = new FakeContacts();
+            GameSignals.Nameplates.Publish(first);
+            var before = _view.Targets;
+
+            GameSignals.Nameplates.Publish(second);
+
+            Assert.That(_view.Targets, Is.Not.SameAs(before), "a map change publishes a new source");
+            Assert.That(((SignalNameplateTargets)_view.Targets).Contacts, Is.SameAs(second));
+            Assert.That(_view.Targets, Is.SameAs(_view.Targets), "the same source is reused between frames");
+        }
+
+        [Test]
+        public void TargetsSetByTheGameWinOverTheSignal()
+        {
+            var own = new FakeTargets(new FakeParticipants());
+            _view.Targets = own;
+
+            GameSignals.Nameplates.Publish(new FakeContacts());
+
+            Assert.That(_view.Targets, Is.SameAs(own));
+        }
+
+        [Test]
+        public void SignalTargetsCopyEveryContactAndAppendToTheList()
+        {
+            var contacts = new FakeContacts(
+                new NameplateContact(5, new System.Numerics.Vector3(1f, 2f, 3f), TeamRelation.Friendly, true, false),
+                new NameplateContact(6, new System.Numerics.Vector3(4f, 5f, 6f), TeamRelation.Enemy, false, true));
+            var roster = new FakeParticipants();
+            var source = new SignalNameplateTargets(contacts, roster);
+            var found = new List<NameplateTarget> { new NameplateTarget(99, Vector3.zero, TeamRelation.Neutral, true, false) };
+
+            source.CopyTo(_eye, found);
+            source.CopyTo(_eye, found);
+
+            Assert.That(found.Select(t => t.Id), Is.EqualTo(new[] { 99, 5, 6, 5, 6 }), "earlier entries are kept and nothing is left over between calls");
+            Assert.That(found[1].HeadPosition, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(found[1].Relation, Is.EqualTo(TeamRelation.Friendly));
+            Assert.That(found[2].IsAlive, Is.False);
+            Assert.That(found[2].IsInSight, Is.True);
+            Assert.That(source.Participants, Is.SameAs(roster));
+            Assert.Throws<System.ArgumentNullException>(() => source.CopyTo(_eye, null));
+            Assert.Throws<System.ArgumentNullException>(() => new SignalNameplateTargets(null));
+        }
+
+        [Test]
+        public void SignalTargetsReadTheCurrentRosterWhenNoneIsGiven()
+        {
+            var source = new SignalNameplateTargets(new FakeContacts());
+            Assert.That(source.Participants, Is.Null);
+
+            var roster = new FakeParticipants();
+            GameSignals.Participants.Publish(roster);
+
+            Assert.That(source.Participants, Is.SameAs(roster), "the roster is rebuilt with the HUD on each map");
+        }
+
         private GameObject Spawn(string name, int side, Vector3 feet)
         {
             // カプセルは高さ 2 m で原点が中心なので、足元を feet に合わせる。
@@ -373,6 +447,24 @@ namespace Shooter.Tests.EditMode
             {
                 Eyes.Add(eye);
                 targets.AddRange(Items);
+            }
+        }
+
+        private sealed class FakeContacts : INameplateContacts
+        {
+            private readonly NameplateContact[] _items;
+
+            public FakeContacts(params NameplateContact[] items)
+            {
+                _items = items;
+            }
+
+            public List<System.Numerics.Vector3> Eyes { get; } = new List<System.Numerics.Vector3>();
+
+            public void CopyTo(System.Numerics.Vector3 eye, List<NameplateContact> into)
+            {
+                Eyes.Add(eye);
+                into.AddRange(_items);
             }
         }
 

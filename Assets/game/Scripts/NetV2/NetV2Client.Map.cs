@@ -121,20 +121,19 @@ namespace Shooter.NetV2
                 AddRemote(id);
             }
 
-            _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor, _client.TickRate);
-            _hud.BindStatusEffects(_weaponHooks.StatusEffects);
-            _hud.BindInventory(_inventory);
-
-            // 名前は NetV2Hud が GameSignals.Participants に出した名簿からプレイヤー Id で引く。
-            _nameplates = new NetV2NameplateTargets(
+            // 見通しは照準の吸い付き (AttachAimAssist) と同じく地図の当たりと煙で確かめ、名前が見える相手と吸い付く相手を揃える。
+            _nameplates = new ClientNameplateContacts(
                 _client.PlayerId,
                 () => _client.LatestSnapshot,
                 _match.TrySampleRemote,
                 _world.Collision,
                 _client.Motor.Stance,
-                () => GameSignals.Participants.Value,
                 (eye, point) => EnemySenses.IsVisionBlocked(eye.ToUnity(), point.ToUnity()));
-            GameSignals.NameplateTargets.Publish(_nameplates);
+            GameSignals.Nameplates.Publish(_nameplates);
+
+            _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor, _client.TickRate);
+            _hud.BindStatusEffects(_weaponHooks.StatusEffects);
+            _hud.BindInventory(_inventory);
 
             _loadout.Bind(GameUi.LoadoutSelect);
 

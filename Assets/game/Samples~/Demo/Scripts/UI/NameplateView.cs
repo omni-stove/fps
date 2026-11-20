@@ -23,6 +23,7 @@ namespace Shooter.Runtime
         private readonly List<int> _stale = new List<int>();
         private NameplateSpec _spec;
         private INameplateTargets _source;
+        private OfflineNameplateTargets _offline;
 
         public override string ElementName => UxmlName;
 
@@ -34,9 +35,10 @@ namespace Shooter.Runtime
             set => _spec = value ?? throw new ArgumentNullException(nameof(value));
         }
 
+        // 出ている引き先を覚えないのは、ネット対戦はマップを替えるたびに引き先を出し直し、抜けると空に戻すため。
         public INameplateTargets Targets
         {
-            get => _source ?? (_source = new OfflineNameplateTargets());
+            get => _source ?? GameSignals.NameplateTargets.Value ?? (_offline ??= new OfflineNameplateTargets());
             set => _source = value ?? throw new ArgumentNullException(nameof(value));
         }
 
@@ -80,14 +82,15 @@ namespace Shooter.Runtime
         public void Refresh()
         {
             var camera = Viewer != null ? Viewer : PingMarkersView.LocalPlayerCamera();
+            var source = Targets;
             _targets.Clear();
             if (camera != null)
             {
-                Targets.CopyTo(camera.transform.position, _targets);
+                source.CopyTo(camera.transform.position, _targets);
             }
 
             var spec = Spec;
-            var participants = Targets.Participants;
+            var participants = source.Participants;
             var palette = TeamColors.Current;
             foreach (var entry in _entries.Values)
             {

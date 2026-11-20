@@ -25,11 +25,17 @@ namespace Shooter.Core
                 "{0} used by={1} at=({2:0.00}, {3:0.00}, {4:0.00}) uses={5}/{6}",
                 Prefix(ownerId, kindId, serial),
                 Name(userId),
-                at.X,
-                at.Y,
-                at.Z,
+                Clean(at.X),
+                Clean(at.Y),
+                Clean(at.Z),
                 usesLeft,
                 uses);
+        }
+
+        // 向きの計算で出る -0 や極小の負の値が "-0.00" と出ないよう、桁を丸めてから 0 を足して符号を消す。
+        private static float Clean(float v)
+        {
+            return System.MathF.Round(v * 100f) / 100f + 0f;
         }
 
         private static string SideName(Side? side)

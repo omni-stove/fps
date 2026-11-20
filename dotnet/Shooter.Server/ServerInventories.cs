@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using Shooter.Core;
 using Shooter.Protocol;
@@ -13,15 +12,20 @@ namespace Shooter.Server
     {
         public const string LogTag = "[Inventory]";
 
+        // 断った理由のログを出す最短の間隔 (秒)。押し続けてログを埋めないため (ServerLoot と同じ)
+        private const float _refusalLogInterval = 1f;
+
         private readonly MatchRulesModule _rules;
         private readonly ServerCombat _combat;
         private readonly Dictionary<int, Inventory> _inventories = new Dictionary<int, Inventory>();
         private readonly HashSet<int> _dirty = new HashSet<int>();
+        private readonly Dictionary<int, float> _nextRefusalLogTimes = new Dictionary<int, float>();
         private readonly InventoryStateMessage _state = new InventoryStateMessage();
         private ServerContext _context;
         private TextWriter _log;
         private ServerMatch _match;
         private ItemCatalog _catalog;
+        private float _now;
 
         public ServerInventories(MatchRulesModule rules, ServerCombat combat = null)
         {
@@ -40,15 +44,12 @@ namespace Shooter.Server
             _match.PlayerJoined += HandlePlayerJoined;
             _match.PlayerLeft += HandlePlayerLeft;
             _rules.PlayerSpawned += HandlePlayerSpawned;
-            var rule = _catalog.Rule;
-            _log.WriteLine(LogTag + " items=" + Text(_catalog.Items.Count) + " starting=" + Text(_catalog.Starting.Count)
-                + " maxStacks=" + Text(rule.MaxStacks) + " maxWeight=" + Text(rule.MaxWeight)
-                + " grid=" + Text(rule.GridWidth) + "x" + Text(rule.GridHeight) + " rotation=" + (rule.AllowRotation ? "on" : "off")
-                + " carryLoad=" + (rule.CountWeightInCarryLoad ? "on" : "off"));
+            _log.WriteLine(ServerInventoryLog.Started(_catalog));
         }
 
         public void Tick(long tick, float deltaSeconds)
         {
+            _now += deltaSeconds;
             if (_dirty.Count == 0)
             {
                 return;
@@ -101,9 +102,7 @@ namespace Shooter.Server
             switch (request.Action)
             {
                 case InventoryAction.Move:
-                    var moved = inventory.TryMove(request.Handle, request.X, request.Y, request.Rotated);
-                    _log.WriteLine(LogTag + " move owner=" + Text(playerId) + " handle=" + Text(request.Handle) + " to=" + Text(request.X) + ","
-                        + Text(request.Y) + (request.Rotated ? " rotated" : "") + " result=" + moved);
+                    Move(playerId, inventory, request);
                     break;
                 case InventoryAction.Use:
                     Use(playerId, inventory, request.Handle);
@@ -132,6 +131,7 @@ namespace Shooter.Server
             _rules.PlayerSpawned -= HandlePlayerSpawned;
             _inventories.Clear();
             _dirty.Clear();
+            _nextRefusalLogTimes.Clear();
         }
 
         internal Inventory InventoryOf(int playerId)
@@ -213,65 +213,133 @@ namespace Shooter.Server
             _log.WriteLine(taken == null ? ServerInventoryLog.Clear(playerId, count) : ServerInventoryLog.Take(playerId, taken.Count, count));
         }
 
+        // 並べ替えは持っている物を増やしも減らしもしないので、倒れている人や観戦している人にも許す (オフラインの PlayerInventory.Move と同じ)
+        private void Move(int playerId, Inventory inventory, InventoryRequestMessage request)
+        {
+            var moved = inventory.TryMove(request.Handle, request.X, request.Y, request.Rotated);
+            if (moved == InventoryMoveResult.Moved || ShouldLogRefusal(playerId))
+            {
+                _log.WriteLine(ServerInventoryLog.Move(playerId, request.Handle, request.X, request.Y, request.Rotated, moved.ToString()));
+            }
+        }
+
         private void Use(int playerId, Inventory inventory, int handle)
         {
-            var session = _rules.Session;
             ItemSpec item = null;
             if (inventory.TryGetStack(handle, out var stack))
             {
                 inventory.Catalog.TryFind(stack.ItemId, out item);
             }
 
+            var refusal = RefusalOf(playerId);
             if (item != null && item.IsWeapon)
             {
-                var switched = _combat != null && _rules.CanFire(playerId) && _combat.WeaponsOf(playerId).TrySwitch(item.WeaponId);
-                _log.WriteLine(LogTag + " equip owner=" + Text(playerId) + " weapon=" + item.WeaponId + (switched ? string.Empty : " rejected"));
+                Equip(playerId, item.WeaponId, refusal);
                 return;
             }
 
-            ItemUseOutcome outcome;
-            if (!_rules.CanFire(playerId) || session == null)
+            if (refusal != ServerInventoryRefusal.None)
             {
-                outcome = ItemUseOutcome.Rejected(ItemUseRejection.UserDown);
+                RefuseUse(playerId, handle, refusal.ToString());
+                return;
+            }
+
+            var session = _rules.Session;
+            var outcome = ItemUseJudge.Judge(item, new PickupCollector(null, session.GetHealth(playerId), session.MaxHealth));
+            if (!outcome.IsUsed)
+            {
+                RefuseUse(playerId, handle, outcome.Rejection.ToString());
+                return;
+            }
+
+            if (!inventory.TryTake(handle, 1, out _))
+            {
+                RefuseUse(playerId, handle, ItemUseRejection.NoItem.ToString());
+                return;
+            }
+
+            var healed = session.Heal(playerId, outcome.Health);
+            _log.WriteLine(ServerInventoryLog.Used(playerId, item.Id, healed));
+        }
+
+        // 持ち替えの間合い (しまう・抜く秒数) は Loadout.TrySelect が持つので、ここでは持っているかと今の状態だけを見る
+        private void Equip(int playerId, string weaponId, ServerInventoryRefusal refusal)
+        {
+            string reason = null;
+            if (refusal != ServerInventoryRefusal.None)
+            {
+                reason = refusal.ToString();
+            }
+            else if (_combat == null)
+            {
+                reason = "NotHeld";
             }
             else
             {
-                outcome = ItemUseJudge.Judge(item, new PickupCollector(null, session.GetHealth(playerId), session.MaxHealth));
+                var weapons = _combat.WeaponsOf(playerId);
+                if (string.Equals(weapons.CurrentSpec?.Id, weaponId, StringComparison.Ordinal))
+                {
+                    reason = "AlreadyEquipped";
+                }
+                else if (!weapons.TrySwitch(weaponId))
+                {
+                    reason = "NotHeld";
+                }
             }
 
-            if (!outcome.IsUsed)
+            if (reason == null)
             {
-                _log.WriteLine(LogTag + " use owner=" + Text(playerId) + " handle=" + Text(handle) + " rejected=" + outcome.Rejection);
-                return;
+                _log.WriteLine(ServerInventoryLog.Equipped(playerId, weaponId));
             }
-
-            inventory.TryTake(handle, 1, out _);
-            var healed = session.Heal(playerId, outcome.Health);
-            _log.WriteLine(LogTag + " use owner=" + Text(playerId) + " item=" + item.Id + " health=+" + Text(healed));
+            else if (ShouldLogRefusal(playerId))
+            {
+                _log.WriteLine(ServerInventoryLog.EquipRefused(playerId, weaponId, reason));
+            }
         }
 
+        // 頼む数が山より多いときは山の数だけ捨てる。捨てるだけで何も得ないので、断らずに縮める (オフラインと同じ)
         private void Drop(int playerId, Inventory inventory, int handle, int count)
         {
             var weaponId = inventory.WeaponIdOf(handle);
             if (weaponId != null)
             {
-                _log.WriteLine(LogTag + " drop owner=" + Text(playerId) + " weapon=" + weaponId + " rejected=weapon");
+                if (ShouldLogRefusal(playerId))
+                {
+                    _log.WriteLine(ServerInventoryLog.DropWeaponRefused(playerId, weaponId));
+                }
+
                 return;
             }
 
-            if (!_rules.CanFire(playerId) || count <= 0 || !inventory.TryTake(handle, count, out var dropped))
+            var refusal = RefusalOf(playerId);
+            var reason = refusal != ServerInventoryRefusal.None ? refusal.ToString() : count <= 0 ? "Count" : null;
+            if (reason == null && inventory.TryTake(handle, count, out var dropped))
             {
-                _log.WriteLine(LogTag + " drop owner=" + Text(playerId) + " handle=" + Text(handle) + " count=" + Text(count) + " rejected");
+                _log.WriteLine(ServerInventoryLog.Dropped(playerId, dropped.ItemId, dropped.Count));
                 return;
             }
 
-            _log.WriteLine(LogTag + " drop owner=" + Text(playerId) + " item=" + dropped.ItemId + " count=" + Text(dropped.Count) + " discarded");
+            if (ShouldLogRefusal(playerId))
+            {
+                _log.WriteLine(ServerInventoryLog.DropRefused(playerId, handle, count, reason ?? "NoStack"));
+            }
         }
 
         private void Attach(int playerId, Inventory inventory, int handle)
         {
+            var refusal = RefusalOf(playerId);
+            if (refusal != ServerInventoryRefusal.None)
+            {
+                if (ShouldLogRefusal(playerId))
+                {
+                    _log.WriteLine(ServerInventoryLog.Attach(playerId, handle, null, null, null, refusal.ToString()));
+                }
+
+                return;
+            }
+
             var weapons = _combat?.WeaponsOf(playerId);
-            var weaponId = weapons != null && _rules.CanFire(playerId) ? weapons.CurrentSpec?.Id : null;
+            var weaponId = weapons?.CurrentSpec?.Id;
             var result = InventoryAttachments.Attach(
                 inventory,
                 handle,
@@ -280,22 +348,93 @@ namespace Shooter.Server
                 next => SetAttachments(weapons, inventory, weaponId, next),
                 out var itemId,
                 out var replaced);
-            _log.WriteLine(LogTag + " attach owner=" + Text(playerId) + " handle=" + Text(handle) + " item=" + (itemId ?? "-") + " weapon=" + (weaponId ?? "-")
-                + " replaced=" + (replaced ?? "-") + (result == AttachmentRejection.None ? string.Empty : " rejected=" + result));
+            if (result == AttachmentRejection.None)
+            {
+                _log.WriteLine(ServerInventoryLog.Attach(playerId, handle, itemId, weaponId, replaced, null));
+            }
+            else if (ShouldLogRefusal(playerId))
+            {
+                _log.WriteLine(ServerInventoryLog.Attach(playerId, handle, itemId, weaponId, replaced, result.ToString()));
+            }
         }
 
         private void Detach(int playerId, Inventory inventory, int weaponHandle, string itemId)
         {
+            // 届いた Id は送ってきた側の文字列 (改行も入れられる) なので、一覧にある物だけをログに出す (MatchRulesModule.ListedItemId と同じ)
+            var listedItemId = inventory.Catalog.TryFind(itemId, out var listed) ? listed.Id : null;
+            var refusal = RefusalOf(playerId);
+            if (refusal != ServerInventoryRefusal.None)
+            {
+                if (ShouldLogRefusal(playerId))
+                {
+                    _log.WriteLine(ServerInventoryLog.Detach(playerId, null, listedItemId, refusal.ToString()));
+                }
+
+                return;
+            }
+
             var weapons = _combat?.WeaponsOf(playerId);
-            var weaponId = weapons != null && _rules.CanFire(playerId) ? inventory.WeaponIdOf(weaponHandle) : null;
+            var weaponId = weapons != null ? inventory.WeaponIdOf(weaponHandle) : null;
             var result = InventoryAttachments.Detach(
                 inventory,
                 weaponId,
                 weapons != null ? weapons.AttachmentsOf(weaponId) : WeaponAttachments.None,
                 itemId,
                 next => SetAttachments(weapons, inventory, weaponId, next));
-            _log.WriteLine(LogTag + " detach owner=" + Text(playerId) + " weapon=" + (weaponId ?? "-") + " item=" + (string.IsNullOrEmpty(itemId) ? "-" : itemId)
-                + (result == AttachmentRejection.None ? string.Empty : " rejected=" + result));
+            if (result == AttachmentRejection.None)
+            {
+                _log.WriteLine(ServerInventoryLog.Detach(playerId, weaponId, listedItemId, null));
+            }
+            else if (ShouldLogRefusal(playerId))
+            {
+                _log.WriteLine(ServerInventoryLog.Detach(playerId, weaponId, listedItemId, result.ToString()));
+            }
+        }
+
+        // 持ち物を増やす・減らす・付け替える要求は、撃てる人 (MatchRulesModule.CanFire) にだけ許す。断るときは撃てない訳を返す
+        private ServerInventoryRefusal RefusalOf(int playerId)
+        {
+            if (_rules.CanFire(playerId))
+            {
+                return ServerInventoryRefusal.None;
+            }
+
+            var session = _rules.Session;
+            if (session == null || !session.HasPlayer(playerId))
+            {
+                return ServerInventoryRefusal.NotInMatch;
+            }
+
+            if (session.State != GameModeState.Playing)
+            {
+                return ServerInventoryRefusal.NotPlaying;
+            }
+
+            if (!session.IsAlive(playerId))
+            {
+                return ServerInventoryRefusal.Dead;
+            }
+
+            return session.IsDowned(playerId) ? ServerInventoryRefusal.Downed : ServerInventoryRefusal.BetweenRounds;
+        }
+
+        private void RefuseUse(int playerId, int handle, string reason)
+        {
+            if (ShouldLogRefusal(playerId))
+            {
+                _log.WriteLine(ServerInventoryLog.UseRefused(playerId, handle, reason));
+            }
+        }
+
+        private bool ShouldLogRefusal(int playerId)
+        {
+            if (_nextRefusalLogTimes.TryGetValue(playerId, out var next) && _now < next)
+            {
+                return false;
+            }
+
+            _nextRefusalLogTimes[playerId] = _now + _refusalLogInterval;
+            return true;
         }
 
         // 持ち物の武器の重さは武器の値から取るので、武器の値を替えてから揃える
@@ -334,6 +473,7 @@ namespace Shooter.Server
         {
             _inventories.Remove(player.PlayerId);
             _dirty.Remove(player.PlayerId);
+            _nextRefusalLogTimes.Remove(player.PlayerId);
         }
 
         // 戦闘が先に武器を持たせ直している (モジュールの順) ので、その武器を持ち物に置き、最初の予備弾を弾薬で持たせる
@@ -353,21 +493,17 @@ namespace Shooter.Server
                 var weapons = _combat.WeaponsOf(playerId);
                 foreach (var weaponId in inventory.HoldWeapons(weapons.Specs, weapons.AttachmentsOf))
                 {
-                    _log.WriteLine(LogTag + " weapon owner=" + Text(playerId) + " weapon=" + weaponId + " does not fit; held outside the inventory");
+                    _log.WriteLine(ServerInventoryLog.WeaponOutside(playerId, weaponId));
                 }
 
                 var restocked = InventoryWeapons.Restock(inventory, weapons.PooledAmmo());
                 if (restocked > 0)
                 {
-                    _log.WriteLine(LogTag + " restock owner=" + Text(playerId) + " ammo=" + Text(restocked));
+                    _log.WriteLine(ServerInventoryLog.Restock(playerId, restocked));
                 }
             }
 
             _dirty.Add(playerId);
         }
-
-        private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);
-
-        private static string Text(float value) => value.ToString(CultureInfo.InvariantCulture);
     }
 }

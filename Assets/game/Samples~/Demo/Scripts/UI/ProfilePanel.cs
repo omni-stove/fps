@@ -19,6 +19,8 @@ namespace Shooter.Runtime
         public const string AccountStatusClass = "profile__account-status";
         public const string AccountNoticeClass = "profile__account-notice";
         public const string AccountButtonClass = "profile__account-button";
+        public const string NameFieldClass = "profile__name-field";
+        public const string NameNoticeClass = "profile__name-notice";
 
         public const string LevelName = "profile-level";
         public const string TotalXpName = "profile-total-xp";
@@ -30,12 +32,20 @@ namespace Shooter.Runtime
         public const string AccountStatusName = "profile-account-status";
         public const string AccountNoticeName = "profile-account-notice";
         public const string AccountButtonName = "profile-account-button";
+        public const string NameName = "profile-name";
+        public const string NameFieldName = "profile-name-field";
+        public const string NameNoticeName = "profile-name-notice";
 
         private readonly VisualElement _container;
         private readonly ProgressionLedger _ledger;
         private readonly WeaponCatalog _weapons;
         private readonly ItemCatalog _items;
+        private readonly PlayerNameStore _names;
         private readonly Label _title;
+        private readonly VisualElement _name;
+        private readonly Label _nameTitle;
+        private readonly TextField _nameField;
+        private readonly Label _nameNotice;
         private readonly Label _level;
         private readonly Label _totalXp;
         private readonly Label _xpToNext;
@@ -51,27 +61,52 @@ namespace Shooter.Runtime
         private readonly Button _accountButton;
         private readonly VisualElement _navigationRoot;
         private PlayerProfile _profile;
+        private string _savedName;
+        private bool _nameRejected;
         private bool _disposed;
 
-        // アンロックの表は武器とアタッチメントの Id を混ぜて持つので、名前は両方の一覧から引く。どちらも無ければ Id を出す
+        // アンロックの表は武器とアタッチメントの Id を混ぜて持つので、名前は両方の一覧から引く。どちらも無ければ Id を出す。
+        // names が無ければ名前の欄を出さない
         public ProfilePanel(
             VisualElement container,
             ProgressionLedger ledger,
             PlayerProfile profile,
             WeaponCatalog weapons = null,
-            ItemCatalog items = null)
+            ItemCatalog items = null,
+            PlayerNameStore names = null)
         {
             _container = container ?? throw new ArgumentNullException(nameof(container));
             _ledger = ledger ?? throw new ArgumentNullException(nameof(ledger));
             _profile = profile ?? throw new ArgumentNullException(nameof(profile));
             _weapons = weapons;
             _items = items;
+            _names = names;
 
             container.Clear();
             container.AddToClassList(PanelClass);
 
             _title = MakeLabel(TitleClass);
             container.Add(_title);
+
+            _name = new VisualElement { name = NameName };
+            _name.AddToClassList(SectionClass);
+            _nameTitle = MakeLabel(SectionTitleClass);
+            _name.Add(_nameTitle);
+            _nameField = new TextField { name = NameFieldName };
+            _nameField.AddToClassList(NameFieldClass);
+            _name.Add(_nameField);
+            _nameNotice = MakeLabel(NameNoticeClass, NameNoticeName);
+            _name.Add(_nameNotice);
+            container.Add(_name);
+            if (_names != null)
+            {
+                _savedName = _names.Load();
+                _nameField.maxLength = _names.MaxLength;
+                _nameField.SetValueWithoutNotify(_savedName);
+                _nameField.RegisterCallback<FocusOutEvent>(HandleNameFocusOut);
+            }
+
+            SetDisplayed(_name, _names != null);
 
             _level = MakeLabel(LevelClass, LevelName);
             container.Add(_level);
@@ -151,6 +186,43 @@ namespace Shooter.Runtime
 
         public string AccountNoticeText => _accountNotice.style.display != DisplayStyle.None ? _accountNotice.text : null;
 
+        public bool IsNameShown => _name.style.display != DisplayStyle.None;
+
+        public TextField NameField => _nameField;
+
+        public string NameTitleText => _nameTitle.text;
+
+        public string NameHintText => _nameField.textEdition.placeholder;
+
+        public string NameNoticeText => _nameNotice.style.display != DisplayStyle.None ? _nameNotice.text : null;
+
+        // 欄の名前が保存した物と同じなら書かずに true を返す。決まりに合わない名前は保存せず、欄の下に断った理由を出して false を返す
+        public bool CommitName()
+        {
+            if (_disposed || _names == null)
+            {
+                return false;
+            }
+
+            var typed = _nameField.value ?? string.Empty;
+            if (typed == _savedName)
+            {
+                ShowNameRejected(false);
+                return true;
+            }
+
+            if (!_names.TrySave(typed))
+            {
+                ShowNameRejected(true);
+                return false;
+            }
+
+            _savedName = _names.Load();
+            _nameField.SetValueWithoutNotify(_savedName);
+            ShowNameRejected(false);
+            return true;
+        }
+
         // 押せないとき (サービスが無い・サインインの最中) は何もせず false を返す。
         public bool PressAccount()
         {
@@ -170,10 +242,12 @@ namespace Shooter.Runtime
             Refresh();
         }
 
+        // 弾かれた名前でも閉じるのは、戻るの操作で画面から出られなくならないため。弾かれた名前は保存せず前の名前が残る
         public void Cancel()
         {
             if (!_disposed)
             {
+                CommitName();
                 Cancelled?.Invoke();
             }
         }
@@ -187,6 +261,7 @@ namespace Shooter.Runtime
 
             var level = Level;
             _title.text = ProgressionFormat.Title;
+            RefreshName();
             _level.text = ProgressionFormat.Level(level);
             _totalXp.text = ProgressionFormat.TotalXp(_profile.Xp);
             _xpToNext.text = level < _ledger.Spec.MaxLevel
@@ -242,6 +317,41 @@ namespace Shooter.Runtime
             _accountButton.SetEnabled(status.CanSignOut || status.CanSignInWithEpic);
         }
 
+        private void RefreshName()
+        {
+            if (_names == null)
+            {
+                return;
+            }
+
+            _nameTitle.text = ProgressionFormat.NameTitle;
+            _nameField.textEdition.placeholder = ProgressionFormat.NameHint(_names.MaxLength);
+            _nameNotice.text = ProgressionFormat.NameRejected(_names.MaxLength);
+            SetDisplayed(_nameNotice, _nameRejected);
+        }
+
+        private void ShowNameRejected(bool rejected)
+        {
+            _nameRejected = rejected;
+            SetDisplayed(_nameNotice, rejected);
+        }
+
+        private void HandleNameFocusOut(FocusOutEvent evt)
+        {
+            // TextField の中の文字の要素へ移るときにも届くので、そのときは入力の途中として保存しない
+            if (evt.relatedTarget is VisualElement next && _nameField.Contains(next))
+            {
+                return;
+            }
+
+            CommitName();
+        }
+
+        private bool IsNameFocused()
+        {
+            return _nameField.focusController?.focusedElement is VisualElement focused && _nameField.Contains(focused);
+        }
+
         private static AccountStatus CurrentAccountStatus(IAccountControl control)
         {
             return GameSignals.Account.Value ?? control.Status;
@@ -272,6 +382,7 @@ namespace Shooter.Runtime
             _disposed = true;
             GameSignals.Account.Changed -= HandleAccountChanged;
             GameSignals.AccountControl.Changed -= HandleAccountControlChanged;
+            _nameField.UnregisterCallback<FocusOutEvent>(HandleNameFocusOut);
             _navigationRoot.UnregisterCallback<NavigationSubmitEvent>(HandleSubmit, TrickleDown.TrickleDown);
             _navigationRoot.UnregisterCallback<NavigationCancelEvent>(HandleCancel, TrickleDown.TrickleDown);
             _container.Clear();
@@ -326,6 +437,12 @@ namespace Shooter.Runtime
 
         private void FocusBack()
         {
+            // 入力の途中にクラウドからプロフィールが届いても、打っている欄からフォーカスを奪わない
+            if (IsNameFocused())
+            {
+                return;
+            }
+
             _back.Focus();
 
             // パネルに付いた直後は配置が終わっておらず Focus が効かないことがあるので、次の更新でもう一度選ぶ
@@ -346,6 +463,17 @@ namespace Shooter.Runtime
             // フォーカスしている戻るのボタンにも届くと Cancelled が二重に走るので、ここで止める
             evt.StopPropagation();
             _navigationRoot.focusController?.IgnoreEvent(evt);
+            if (IsNameFocused())
+            {
+                // 名前を打ち終えた決定で画面ごと閉じないよう、保存して戻るのボタンへ移すだけにする
+                if (CommitName())
+                {
+                    _back.Focus();
+                }
+
+                return;
+            }
+
             if (_navigationRoot.focusController?.focusedElement == _accountButton)
             {
                 PressAccount();

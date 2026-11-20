@@ -19,6 +19,18 @@ namespace Shooter.Runtime
 
         public static string Locked => GameText.Get("progression.locked");
 
+        public static string NameTitle => GameText.Get("progression.nameTitle");
+
+        public static string NameHint(int maxLength)
+        {
+            return GameText.Format("progression.nameHint", maxLength);
+        }
+
+        public static string NameRejected(int maxLength)
+        {
+            return GameText.Format("progression.nameRejected", maxLength);
+        }
+
         public static string Level(int level)
         {
             return GameText.Format("progression.level", level);

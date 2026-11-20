@@ -62,7 +62,8 @@ namespace Shooter.Core
         }
 
         // char.IsControl (Cc) だけで済ませないのは、行や段落の区切りで HUD の行が崩れ、
-        // 書字方向の上書きで前後のキルフィードの文字の並びが変わるため
+        // 書字方向の上書きで前後のキルフィードの文字の並びが変わるため。
+        // 数値で書くのは、U+2028/2029 を文字リテラルに直接置くと C# が改行と見なしてコンパイルできないため
         private static bool IsRefused(char c)
         {
             if (char.IsControl(c))
@@ -70,23 +71,10 @@ namespace Shooter.Core
                 return true;
             }
 
-            switch (c)
-            {
-                case ' ':
-                case ' ':
-                case '‪':
-                case '‫':
-                case '‬':
-                case '‭':
-                case '‮':
-                case '⁦':
-                case '⁧':
-                case '⁨':
-                case '⁩':
-                    return true;
-                default:
-                    return false;
-            }
+            return c == (char)0x2028
+                || c == (char)0x2029
+                || (c >= (char)0x202A && c <= (char)0x202E)
+                || (c >= (char)0x2066 && c <= (char)0x2069);
         }
 
         private static void RequireMaxLength(int maxLength)

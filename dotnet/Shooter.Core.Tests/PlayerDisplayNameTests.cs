@@ -33,10 +33,10 @@ namespace Shooter.Core.Tests
         [TestCase("A\u001Bce")]
         [TestCase("A\u007Fce")]
         [TestCase("A\u0085ce")]
-        [TestCase("A ce")]
-        [TestCase("A ce")]
-        [TestCase("A‮ce")]
-        [TestCase("A⁦ce")]
+        [TestCase("A" + (char)0x2028 + "ce")]
+        [TestCase("A" + (char)0x2029 + "ce")]
+        [TestCase("A" + (char)0x202E + "ce")]
+        [TestCase("A" + (char)0x2066 + "ce")]
         public void ANameWithAControlCharacterIsEmpty(string name)
         {
             Assert.That(PlayerDisplayName.Sanitize(name, _max), Is.Empty);

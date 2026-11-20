@@ -134,7 +134,7 @@ namespace Shooter.Protocol.Tests
         [TestCase(" Ace")]
         [TestCase("Ace\n")]
         [TestCase("A\u0000ce")]
-        [TestCase("A‮ce")]
+        [TestCase("A" + (char)0x202E + "ce")]
         public void ANameTheServerWouldNotSendIsUnreadable(string name)
         {
             var writer = Header(1);

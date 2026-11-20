@@ -129,7 +129,7 @@ namespace Shooter.Server.Tests
         }
 
         [TestCase("A\nce")]
-        [TestCase("A‮ce")]
+        [TestCase("A" + (char)0x202E + "ce")]
         [TestCase("seventeen_chars__")]
         public void ARefusedDisplayNameStillJoinsWithoutAName(string name)
         {

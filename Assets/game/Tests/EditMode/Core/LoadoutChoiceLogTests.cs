@@ -42,6 +42,24 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void WritesTheAcceptedAbilitiesWithADashForNone()
+        {
+            Assert.That(LoadoutChoiceLog.AcceptedAbilities(3, new[] { "beacon", string.Empty }),
+                Is.EqualTo("[Net] loadout abilities accepted client=3 abilities=beacon,- applies=next-spawn"));
+            Assert.That(LoadoutChoiceLog.AcceptedAbilities(3, Array.Empty<string>()),
+                Is.EqualTo("[Net] loadout abilities accepted client=3 abilities=- applies=next-spawn"));
+            Assert.Throws<ArgumentNullException>(() => LoadoutChoiceLog.AcceptedAbilities(3, null));
+        }
+
+        [Test]
+        public void WritesWhyTheAbilitiesWereRejected()
+        {
+            Assert.That(LoadoutChoiceLog.RejectedAbilities(3, "ability slot 1 names mine, which is not in the deployables"),
+                Is.EqualTo("[Net] loadout abilities rejected client=3 reason=ability slot 1 names mine, which is not in the deployables"));
+            Assert.That(LoadoutChoiceLog.RejectedAbilities(3, null), Is.EqualTo("[Net] loadout abilities rejected client=3 reason=-"));
+        }
+
+        [Test]
         public void WritesTheChosenCosmeticOrADashWhenItIsTakenOff()
         {
             Assert.That(LoadoutChoiceLog.Cosmetic(3, "skin-desert"), Is.EqualTo("[Net] loadout cosmetic client=3 id=skin-desert"));

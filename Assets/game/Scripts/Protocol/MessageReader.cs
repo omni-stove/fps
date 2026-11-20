@@ -53,6 +53,13 @@ namespace Shooter.Protocol
 
             Require(1, "a message version");
             var version = _data.Array[_data.Offset + Position];
+            if (version < message.Version && message is IReadsOlderVersions older && version >= older.OldestReadableVersion)
+            {
+                Position++;
+                older.ReadOlder(this, version);
+                return;
+            }
+
             if (version != message.Version)
             {
                 throw new MessageReadException(

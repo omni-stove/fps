@@ -35,7 +35,7 @@ namespace Shooter.Protocol.Tests
 
             var got = ToServer<LoadoutRequestMessage>(sent);
 
-            Assert.That(LoadoutRequestMessage.CurrentVersion, Is.EqualTo(2));
+            Assert.That(LoadoutRequestMessage.CurrentVersion, Is.EqualTo(3));
             Assert.That(got.WeaponIds.Count, Is.EqualTo(1));
             Assert.That(got.WeaponIds[0], Is.EqualTo("rifle"));
             Assert.That(got.CosmeticId, Is.EqualTo("camo-tiger"));
@@ -51,9 +51,101 @@ namespace Shooter.Protocol.Tests
 
             var got = (LoadoutRequestMessage)_server.Read(writer.AsSegment());
 
-            // Id・版 (2 + 1)、武器の数 (1)、"rifle" (2 + 5)、見た目の Id (2)
-            Assert.That(writer.Length, Is.EqualTo(3 + 1 + 7 + 2));
+            // Id・版 (2 + 1)、武器の数 (1)、"rifle" (2 + 5)、見た目の Id (2)、能力の数 (1)
+            Assert.That(writer.Length, Is.EqualTo(3 + 1 + 7 + 2 + 1));
             Assert.That(got.CosmeticId, Is.Empty);
+            Assert.That(got.AbilityIds.Count, Is.Zero);
+        }
+
+        [Test]
+        public void ALoadoutCarriesTheAbilitiesInSlotOrderWithEmptyIdsForNone()
+        {
+            var sent = new LoadoutRequestMessage();
+            sent.WeaponIds.Add("rifle");
+            sent.AbilityIds.Add("beacon");
+            sent.AbilityIds.Add("");
+
+            var got = ToServer<LoadoutRequestMessage>(sent);
+
+            Assert.That(got.AbilityIds.Count, Is.EqualTo(2));
+            Assert.That(got.AbilityIds[0], Is.EqualTo("beacon"));
+            Assert.That(got.AbilityIds[1], Is.Empty);
+            Assert.That(got.WeaponIds[0], Is.EqualTo("rifle"));
+        }
+
+        [Test]
+        public void AVersion2LoadoutIsReadWithNoAbilities()
+        {
+            var table = MatchMessages.CreateServerTable();
+            var earlier = new LoadoutRequestMessage();
+            earlier.WeaponIds.Add("pistol");
+            earlier.AbilityIds.Add("mine");
+            var first = new MessageWriter();
+            first.WriteMessage(earlier);
+            Assert.That(((LoadoutRequestMessage)table.Read(first.AsSegment())).AbilityIds.Count, Is.EqualTo(1));
+
+            // 版 2 の形: 武器の数、武器の Id、見た目の Id
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.LoadoutRequest);
+            writer.WriteByte(2);
+            writer.WriteByte(1);
+            writer.WriteString("rifle", MatchProtocol.MaxContentIdBytes);
+            writer.WriteString("camo-tiger", MatchProtocol.MaxContentIdBytes);
+
+            var got = (LoadoutRequestMessage)table.Read(writer.AsSegment());
+
+            Assert.That(got.WeaponIds.Count, Is.EqualTo(1));
+            Assert.That(got.WeaponIds[0], Is.EqualTo("rifle"));
+            Assert.That(got.CosmeticId, Is.EqualTo("camo-tiger"));
+            Assert.That(got.AbilityIds.Count, Is.Zero, "the abilities read from the earlier message are cleared");
+        }
+
+        [Test]
+        public void AVersion1LoadoutIsReadWithNoCosmeticAndNoAbilities()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.LoadoutRequest);
+            writer.WriteByte(1);
+            writer.WriteByte(2);
+            writer.WriteString("rifle", MatchProtocol.MaxContentIdBytes);
+            writer.WriteString("pistol", MatchProtocol.MaxContentIdBytes);
+
+            var got = (LoadoutRequestMessage)_server.Read(writer.AsSegment());
+
+            Assert.That(LoadoutRequestMessage.OldestVersion, Is.EqualTo(1));
+            Assert.That(got.WeaponIds.Count, Is.EqualTo(2));
+            Assert.That(got.WeaponIds[1], Is.EqualTo("pistol"));
+            Assert.That(got.CosmeticId, Is.Empty);
+            Assert.That(got.AbilityIds.Count, Is.Zero);
+        }
+
+        [TestCase((byte)0)]
+        [TestCase((byte)4)]
+        public void ALoadoutOfAVersionItCannotReadIsRejected(byte version)
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.LoadoutRequest);
+            writer.WriteByte(version);
+            writer.WriteByte(0);
+            writer.WriteString("", MatchProtocol.MaxContentIdBytes);
+            writer.WriteByte(0);
+
+            var error = Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+
+            Assert.That(error.Message, Does.Contain("version"));
+        }
+
+        [Test]
+        public void AVersion2LoadoutWithTheAbilityCountLeftOverIsRejected()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.LoadoutRequest);
+            writer.WriteByte(2);
+            writer.WriteByte(0);
+            writer.WriteString("", MatchProtocol.MaxContentIdBytes);
+            writer.WriteByte(0);
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
         }
 
         [Test]

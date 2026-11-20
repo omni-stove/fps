@@ -159,7 +159,7 @@ namespace Shooter.Server
             ArgumentNullException.ThrowIfNull(rules);
             var file = new NetMatchFile(
                 File.Name, rules, File.Settings, File.LoadoutName, File.LoadoutRule, File.LoadoutWeapons, File.SwitchSeconds, File.CatalogName,
-                File.Catalog, File.Motor);
+                File.Catalog, File.Motor, File.LoadoutAbilities);
             return new ServerRulesData(
                 Name, file, Ping, Path, PingPath, Grenades, GrenadePath, Bots, BotsPath, Items, ItemsPath, Knockback, KnockbackPath, Assist, AssistPath,
                 _settings, ChatWords, ChatWordsPath, BuyList, EconomyPath, Loot, LootPath, Extraction, ExtractionPath, Stash, StashPath, BattleRoyale, BattleRoyalePath);

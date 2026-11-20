@@ -6,7 +6,7 @@ namespace Shooter.Protocol
     {
         ushort Id { get; }
 
-        // 中身の形を変えたら上げる。違う版のメッセージは読まずに断る。
+        // 中身の形を変えたら上げる。違う版のメッセージは、IReadsOlderVersions で読める前の版のほかは読まずに断る。
         byte Version { get; }
 
         void Write(MessageWriter writer);

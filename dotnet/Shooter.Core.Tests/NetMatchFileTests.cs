@@ -314,6 +314,86 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void WithoutAbilitiesTheFileHasNone()
+        {
+            var text = NetMatchFile.Write(File());
+
+            Assert.That(text, Does.Not.Contain("\"" + NetMatchFile.AbilitiesItem + "\""));
+            Assert.That(NetMatchFile.Parse(text, "TeamDeathmatch.json").LoadoutAbilities, Is.Null);
+        }
+
+        [Test]
+        public void LoadoutAbilitiesReadBackInSlotOrder()
+        {
+            var plain = File();
+            var original = new NetMatchFile(
+                plain.Name, plain.Rules, plain.Settings, plain.LoadoutName, plain.LoadoutRule, plain.LoadoutWeapons, plain.SwitchSeconds,
+                null, null, null, new[] { "beacon", string.Empty });
+
+            var text = NetMatchFile.Write(original);
+            var read = NetMatchFile.Parse(text, "Domination.json");
+
+            Assert.That(NetMatchFile.AbilitiesItem, Is.EqualTo("abilities"));
+            Assert.That(text, Does.Contain("\"abilities\": [\"beacon\", \"\"]"));
+            Assert.That(read.LoadoutAbilities, Is.EqualTo(new[] { "beacon", string.Empty }));
+            Assert.That(NetMatchFile.Write(read), Is.EqualTo(text));
+        }
+
+        [Test]
+        public void AnEmptyAbilityListIsKeptApartFromNoList()
+        {
+            var text = NetMatchFile.Write(File()).Replace("\"weapons\": [\"" + _rifleId, "\"abilities\": [], \"weapons\": [\"" + _rifleId);
+
+            var read = NetMatchFile.Parse(text, "empty.json");
+
+            Assert.That(read.LoadoutAbilities, Is.Not.Null);
+            Assert.That(read.LoadoutAbilities, Is.Empty);
+        }
+
+        [Test]
+        public void TheFileKeepsItsOwnCopyOfTheAbilities()
+        {
+            var plain = File();
+            var abilities = new[] { "beacon" };
+            var file = new NetMatchFile(
+                plain.Name, plain.Rules, plain.Settings, plain.LoadoutName, plain.LoadoutRule, plain.LoadoutWeapons, plain.SwitchSeconds,
+                null, null, null, abilities);
+
+            abilities[0] = "mine";
+
+            Assert.That(file.LoadoutAbilities, Is.EqualTo(new[] { "beacon" }));
+        }
+
+        [Test]
+        public void AbilitiesThatRepeatOrAreNullAreRefused()
+        {
+            var plain = File();
+
+            Assert.Throws<ArgumentException>(() => new NetMatchFile(
+                plain.Name, plain.Rules, plain.Settings, plain.LoadoutName, plain.LoadoutRule, plain.LoadoutWeapons, plain.SwitchSeconds,
+                null, null, null, new[] { "beacon", "beacon" }));
+            Assert.Throws<ArgumentException>(() => new NetMatchFile(
+                plain.Name, plain.Rules, plain.Settings, plain.LoadoutName, plain.LoadoutRule, plain.LoadoutWeapons, plain.SwitchSeconds,
+                null, null, null, new[] { "beacon", null }));
+            Assert.DoesNotThrow(() => new NetMatchFile(
+                plain.Name, plain.Rules, plain.Settings, plain.LoadoutName, plain.LoadoutRule, plain.LoadoutWeapons, plain.SwitchSeconds,
+                null, null, null, new[] { string.Empty, string.Empty }));
+        }
+
+        [TestCase("\"abilities\": \"beacon\", ", "loadout.abilities")]
+        [TestCase("\"abilities\": [1], ", "loadout.abilities[0]")]
+        [TestCase("\"abilities\": [\"beacon\", \"beacon\"], ", "loadout.abilities[1]")]
+        [TestCase("\"abilities\": null, ", "loadout.abilities")]
+        public void BadAbilitiesNameTheItem(string abilities, string item)
+        {
+            var text = NetMatchFile.Write(File()).Replace("\"weapons\": [\"" + _rifleId, abilities + "\"weapons\": [\"" + _rifleId);
+
+            var e = Assert.Throws<ServerDataJsonException>(() => NetMatchFile.Parse(text, "bad.json"));
+
+            Assert.That(e.Item, Is.EqualTo(item));
+        }
+
+        [Test]
         public void EachLoadoutIsFresh()
         {
             var file = File(catalog: new WeaponCatalog(new[] { Rifle(), Handgun() }));

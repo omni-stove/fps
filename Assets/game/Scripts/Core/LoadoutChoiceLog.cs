@@ -43,6 +43,24 @@ namespace Shooter.Core
                 + " reason=" + (string.IsNullOrEmpty(reason) ? "-" : reason);
         }
 
+        // 武器の行と分けるのは、能力だけを断っても武器の選択は受け入れることがあるため。
+        public static string AcceptedAbilities(ulong clientId, IReadOnlyList<string> abilityIds)
+        {
+            if (abilityIds == null)
+            {
+                throw new ArgumentNullException(nameof(abilityIds));
+            }
+
+            return Prefix + " abilities accepted client=" + clientId.ToString(CultureInfo.InvariantCulture)
+                + " abilities=" + Join(abilityIds) + " applies=next-spawn";
+        }
+
+        public static string RejectedAbilities(ulong clientId, string reason)
+        {
+            return Prefix + " abilities rejected client=" + clientId.ToString(CultureInfo.InvariantCulture)
+                + " reason=" + (string.IsNullOrEmpty(reason) ? "-" : reason);
+        }
+
         public static string RequestedCosmetic(string cosmeticId)
         {
             return Prefix + " request cosmetic=" + (string.IsNullOrEmpty(cosmeticId) ? "-" : cosmeticId);

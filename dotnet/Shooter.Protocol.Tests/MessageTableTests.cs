@@ -74,6 +74,20 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void AnOlderVersionIsRejectedUnlessTheMessageReadsOlderVersions()
+        {
+            Assert.That(new ReviveRequestMessage(), Is.Not.InstanceOf<IReadsOlderVersions>());
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.ReviveRequest);
+            writer.WriteByte(ReviveRequestMessage.CurrentVersion - 1);
+            writer.WriteInt32(3);
+
+            var error = Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(writer.AsSegment()));
+
+            Assert.That(error.Message, Does.Contain("version"));
+        }
+
+        [Test]
         public void TrailingBytesAreRejected()
         {
             var writer = new MessageWriter();

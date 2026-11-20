@@ -36,18 +36,18 @@ namespace Shooter.Runtime
                 return null;
             }
 
-            var ids = LoadoutPreference.FromJson(PlayerPrefs.GetString(Key, string.Empty), out var problem);
-            if (ids == null)
+            var choice = LoadoutPreference.FromJson(PlayerPrefs.GetString(Key, string.Empty), out var problem);
+            if (choice == null)
             {
                 Debug.LogWarning($"{LogTag} saved loadout '{Key}': {problem}; choosing from the match's loadout instead");
             }
 
-            return ids;
+            return choice?.WeaponIds;
         }
 
         public void Save(IReadOnlyList<string> weaponIds)
         {
-            PlayerPrefs.SetString(Key, LoadoutPreference.ToJson(weaponIds));
+            PlayerPrefs.SetString(Key, LoadoutPreference.ToJson(new LoadoutChoice(weaponIds)));
             PlayerPrefs.Save();
         }
 

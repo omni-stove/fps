@@ -16,6 +16,7 @@ namespace Shooter.Core
         public const string WeaponsItem = "weapons";
         public const string SwitchSecondsItem = "switchSeconds";
         public const string SlotsItem = "slots";
+        public const string AbilitiesItem = "abilities";
 
         public const string ScoreLimitItem = "scoreLimit";
         public const string TimeLimitSecondsItem = "timeLimitSeconds";
@@ -199,7 +200,7 @@ namespace Shooter.Core
             WallRunEnabledItem, WallRunMaxSecondsItem, WallRunMinSpeedItem, WallRunGravityScaleItem, WallRunJumpOffSpeedItem,
             ParachuteMinOpenHeightItem, ParachuteDescentSpeedItem, ParachuteHorizontalSpeedItem, ParachuteSteerAccelerationItem,
         };
-        private static readonly string[] _loadoutItems = { NameItem, SwitchSecondsItem, SlotsItem, WeaponsItem };
+        private static readonly string[] _loadoutItems = { NameItem, SwitchSecondsItem, SlotsItem, WeaponsItem, AbilitiesItem };
         private static readonly string[] _catalogItems = { NameItem, WeaponsItem };
 
         private static readonly string[] _matchItems =
@@ -267,7 +268,8 @@ namespace Shooter.Core
             float switchSeconds,
             string catalogName,
             WeaponCatalog catalog,
-            NetMotorSettings motor = null)
+            NetMotorSettings motor = null,
+            IReadOnlyList<string> loadoutAbilities = null)
         {
             Motor = motor ?? NetMotorSettings.Default;
             Name = name ?? string.Empty;
@@ -279,6 +281,7 @@ namespace Shooter.Core
             SwitchSeconds = switchSeconds;
             CatalogName = catalog == null ? null : catalogName ?? string.Empty;
             Catalog = catalog;
+            LoadoutAbilities = CopyAbilities(loadoutAbilities);
 
             var objectiveProblem = ObjectiveProblem(Rules, Settings);
             if (objectiveProblem != null)
@@ -310,6 +313,10 @@ namespace Shooter.Core
 
         public WeaponCatalog Catalog { get; }
 
+        // null と空の並びを分けるのは、項目の無いファイルではロードアウトのアセットの能力を使い、空なら能力を持たせないため。
+        // DeployCatalog は別のファイル (deployables) から読むので、ここでは一覧にある Id かを確かめない
+        public IReadOnlyList<string> LoadoutAbilities { get; }
+
         // 試合ごとに作り直すのは、ServerLoadout がプレイヤーごとの選んだ並びと連射の制限を持つため。
         public ServerLoadout CreateLoadout()
         {
@@ -340,6 +347,7 @@ namespace Shooter.Core
             var rule = ReadRule(loadout);
             var loadoutWeapons = Pick(loadout, weapons);
             var switchSeconds = loadout.ReadFloat(SwitchSecondsItem, 0f);
+            var abilities = ReadAbilities(loadout);
 
             var catalogFields = top.Object(CatalogItem, _catalogItems);
             WeaponCatalog catalog = null;
@@ -367,7 +375,8 @@ namespace Shooter.Core
                     switchSeconds,
                     catalogFields?.ReadString(NameItem, string.Empty),
                     catalog,
-                    motor);
+                    motor,
+                    abilities);
             }
             catch (ArgumentException e)
             {
@@ -607,6 +616,11 @@ namespace Shooter.Core
 
             writer.EndArray();
             writer.StringArray(WeaponsItem, Ids(file.LoadoutWeapons));
+            if (file.LoadoutAbilities != null)
+            {
+                writer.StringArray(AbilitiesItem, file.LoadoutAbilities);
+            }
+
             writer.EndObject();
 
             var all = new List<WeaponSpec>(file.LoadoutWeapons);
@@ -1247,6 +1261,53 @@ namespace Shooter.Core
             {
                 throw loadout.Rejected(loadout.ItemPath(SlotsItem), e.Message, e);
             }
+        }
+
+        private static List<string> ReadAbilities(ServerDataJson.Fields loadout)
+        {
+            if (loadout.Find(AbilitiesItem) == null)
+            {
+                return null;
+            }
+
+            var ids = new List<string>();
+            var nodes = loadout.Array(AbilitiesItem);
+            for (var i = 0; i < nodes.Count; i++)
+            {
+                var item = loadout.ElementPath(AbilitiesItem, i);
+                var id = loadout.ToText(item, nodes[i]);
+                if (id.Length > 0 && ids.Contains(id))
+                {
+                    throw loadout.Invalid(item, nodes[i], "names deployable " + id + " again; each ability slot needs a different one");
+                }
+
+                ids.Add(id);
+            }
+
+            return ids;
+        }
+
+        // 枠を「なし」にする空の Id を断らないのは、保存した選択 (LoadoutPreference) と同じ書き方で枠を飛ばせるようにするため
+        private static IReadOnlyList<string> CopyAbilities(IReadOnlyList<string> abilities)
+        {
+            if (abilities == null)
+            {
+                return null;
+            }
+
+            var copy = new List<string>(abilities.Count);
+            for (var i = 0; i < abilities.Count; i++)
+            {
+                var id = abilities[i] ?? throw new ArgumentException("ability slot " + i + " is null; use an empty id for none", nameof(abilities));
+                if (id.Length > 0 && copy.Contains(id))
+                {
+                    throw new ArgumentException("ability slot " + i + " names deployable " + id + " again", nameof(abilities));
+                }
+
+                copy.Add(id);
+            }
+
+            return copy.AsReadOnly();
         }
 
         private static List<WeaponSpec> Pick(ServerDataJson.Fields owner, Dictionary<string, WeaponSpec> weapons)

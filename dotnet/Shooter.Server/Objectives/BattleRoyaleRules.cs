@@ -750,9 +750,10 @@ namespace Shooter.Server
 
                         // 中身で武器を持ったら行き先が変わるので、次に聞かれたときに決め直す
                         _botPlans.Remove(playerId);
+                        break;
                     }
 
-                    break;
+                    // 高さや見通しで断られた箱で止まると、次の箱を開けられなくなる
                 }
             }
         }

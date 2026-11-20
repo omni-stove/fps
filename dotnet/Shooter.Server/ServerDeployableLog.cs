@@ -22,6 +22,13 @@ namespace Shooter.Server
             return DeployLog.Prefix(Owner(playerId), knownTypeId) + " net refused reason=" + reason;
         }
 
+        // 戻らない回数 (rechargeSeconds が 0) を使い切ると待ちは無限なので、数の代わりに never と書く
+        public static string NotReady(int playerId, string typeId, ServerDeployRefusal reason, int charges, int maxCharges, float waitSeconds)
+        {
+            var wait = float.IsFinite(waitSeconds) ? waitSeconds.ToString("0.00", CultureInfo.InvariantCulture) : "never";
+            return Refused(playerId, typeId, reason) + " charges=" + Text(charges) + "/" + Text(maxCharges) + " wait=" + wait;
+        }
+
         public static string Owner(int playerId)
         {
             return Text(playerId);

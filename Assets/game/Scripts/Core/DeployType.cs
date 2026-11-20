@@ -14,7 +14,8 @@ namespace Shooter.Core
             string weaponId = null,
             DecoySpec decoy = null,
             BeaconSpec beacon = null,
-            DroneSpec drone = null)
+            DroneSpec drone = null,
+            AbilitySpec ability = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -87,6 +88,7 @@ namespace Shooter.Core
             Decoy = decoy;
             Beacon = beacon;
             Drone = drone;
+            Ability = ability ?? AbilitySpec.Default;
         }
 
         public string Id { get; }
@@ -104,6 +106,8 @@ namespace Shooter.Core
         public BeaconSpec Beacon { get; }
 
         public DroneSpec Drone { get; }
+
+        public AbilitySpec Ability { get; }
 
         // DeploySpec.Default は盾の形と数なので、タレット・囮・ビーコン・ドローンは各 Spec の既定の形と数に置き換える (DeployAbilityDefinition の派生と同じ)。
         public static DeploySpec DefaultDeploy(DeployRole role)

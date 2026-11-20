@@ -157,21 +157,25 @@ namespace Shooter.Server
         private void CountHeadshot(Watched player, int victimId, HitZone zone)
         {
             var head = zone == HitZone.Head;
-            if (player.CountedSerial == player.ShotSerial && player.CountedVictim == victimId)
+            if (player.CountedSerial != player.ShotSerial)
             {
-                if (!head || player.CountedHead)
+                player.CountedSerial = player.ShotSerial;
+                player.Counted.Clear();
+            }
+
+            if (player.Counted.TryGetValue(victimId, out var countedHead))
+            {
+                if (!head || countedHead)
                 {
                     return;
                 }
 
                 player.Heads++;
-                player.CountedHead = true;
+                player.Counted[victimId] = true;
             }
             else
             {
-                player.CountedSerial = player.ShotSerial;
-                player.CountedVictim = victimId;
-                player.CountedHead = head;
+                player.Counted[victimId] = head;
                 player.Hits++;
                 if (head)
                 {
@@ -478,9 +482,7 @@ namespace Shooter.Server
 
             public int CountedSerial { get; set; } = -1;
 
-            public int CountedVictim { get; set; }
-
-            public bool CountedHead { get; set; }
+            public Dictionary<int, bool> Counted { get; } = new Dictionary<int, bool>();
 
             public bool HasYaw { get; set; }
 

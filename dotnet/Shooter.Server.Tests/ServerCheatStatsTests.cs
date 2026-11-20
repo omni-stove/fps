@@ -108,6 +108,20 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void ThePelletsOfOneShotThatAlternateBetweenTwoTargetsCountOncePerTarget()
+        {
+            Start(Stats());
+
+            _signals.RaiseShotAccepted(1, Vector3.Zero, Vector3.UnitX, 0f);
+            _signals.RaiseHit(1, 2, HitZone.Head, 0f);
+            _signals.RaiseHit(1, 3, HitZone.Body, 0f);
+            _signals.RaiseHit(1, 2, HitZone.Head, 0f);
+            _signals.RaiseHit(1, 3, HitZone.Body, 0f);
+
+            Assert.That(Suspicions(), Is.Empty, "one shot is two hits, fewer than minSamples=3");
+        }
+
+        [Test]
         public void TheSameMetricIsWrittenOncePerWindowAndAgainInTheNextWindow()
         {
             Start(Stats(windowSeconds: 1f));
@@ -552,7 +566,7 @@ namespace Shooter.Server.Tests
             return _log.ToString()
                 .Split('\n')
                 .Select(line => line.TrimEnd('\r'))
-                .Where(line => line.StartsWith("{", StringComparison.Ordinal))
+                .Where(line => line.StartsWith('{'))
                 .ToList();
         }
     }

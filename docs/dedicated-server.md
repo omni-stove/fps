@@ -108,6 +108,9 @@ make server-dotnet ARGS="-rules FreeForAll"
   ログの `[Loot] seed=` の種が同じなら同じ中身になる。表に無い `table` の箱は空のまま開く (`[Loot] table=... is not in loot.json`)。
   箱を開けられるのは、届く距離 (`reach`) の内に立つ生きている人で、目的が開けることを許すときだけ。断った理由は `[Loot] open ... refused=` に出る。
   箱を置くのは箱を開ける目的 (`BattleRoyale`・`Extraction`) の試合だけで、ほかの目的では箱のあるマップでも `[Loot] placed boxes=0 map=... (objective ... opens no boxes)` になる。
+- 持ち物の使う・捨てる・付け外し・持ち物からの持ち替えは、撃てる人 (試合中で、生きていてダウンしておらず、ラウンドの合間でない人) にだけ許す。
+  断った理由は `[Inventory] use|drop|attach|detach|equip ... rejected=` に出し (`Dead`・`Downed`・`BetweenRounds`・`NotPlaying`・`NotInMatch` か、`Full`・`NotHeld` などの中身の理由)、
+  同じ人の断りは 1 秒に 1 行にする。並べ替え (`move`) は持ち物を増やしも減らしもしないので、倒れている間も許す。一覧に無い Id はログに出さず `-` にする。
 - `Extraction` の目的 (`server-data/rules/Extraction.json`) は持ち物庫をアカウントごとにディスクに置くので、`--stash-dir <フォルダ>` を付けて立てる。
   付けないと `[Server] the Extraction rules keep each account's stash on disk; pass --stash-dir ...` で終了コード 3 になる (プレイリストの項目にあっても同じ)。
   試合の途中で次のルールを Extraction に替えようとしたときも、同じ理由を添えて替えずに断る。

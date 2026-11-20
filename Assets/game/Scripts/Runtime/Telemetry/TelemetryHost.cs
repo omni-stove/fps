@@ -17,6 +17,13 @@ namespace Shooter.Runtime
 
         public ClientTelemetry Telemetry { get; private set; }
 
+        // ドメインの再読み込みを切った Play で、前の Play やテストのホストへの参照が残らないようにする。
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnPlay()
+        {
+            _instance = null;
+        }
+
         // 専用サーバーの記録は ServerTelemetry が持つ。ここで足すと送り元が client の行が混ざるため、サーバーのビルドでは置かない
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void InstallOnLoad()

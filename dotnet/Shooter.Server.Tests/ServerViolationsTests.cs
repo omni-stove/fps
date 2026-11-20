@@ -200,7 +200,7 @@ namespace Shooter.Server.Tests
         [Test]
         public void OnlyRejectionsWhileDodgingOrVaultingAreLeftOut()
         {
-            foreach (ShotRejection reason in Enum.GetValues(typeof(ShotRejection)))
+            foreach (ShotRejection reason in Enum.GetValues<ShotRejection>())
             {
                 var counted = reason != ShotRejection.Dodging && reason != ShotRejection.Vaulting;
                 Assert.That(ServerViolations.IsCounted(reason), Is.EqualTo(counted), reason.ToString());

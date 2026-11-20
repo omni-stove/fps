@@ -333,7 +333,7 @@ namespace Shooter.Core
             var top = new ServerDataJson.Fields(source, _kind, root, string.Empty, _topItems);
 
             var rulesNode = top.Find(RulesItem);
-            var rules = rulesNode == null ? GameRules.Default : GameRulesJson.FromNode(rulesNode, source, RulesItem + ".");
+            var rules = rulesNode == null ? GameRules.Default : GameRulesJson.FromNode(rulesNode, source, RulesItem);
             var settings = ReadSettings(top.Object(MatchItem, _matchItems));
             var objectiveProblem = ObjectiveProblem(rules, settings);
             if (objectiveProblem != null)

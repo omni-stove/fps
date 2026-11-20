@@ -9,6 +9,7 @@ namespace Shooter.Core.Tests
     {
         private static readonly string[] _ids = { "a", "b" };
         private static readonly float[] _floats = { 0.5f, 2f };
+        private static readonly JsonNodeKind[] _kinds = { JsonNodeKind.Array, JsonNodeKind.Null };
 
         [Test]
         public void EmptyWriterIsAnEmptyObject()
@@ -116,6 +117,66 @@ namespace Shooter.Core.Tests
             var text = JsonWriter.FloatText(value);
 
             Assert.That(float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture), Is.EqualTo(value));
+        }
+
+        [Test]
+        public void WritesDoublesAndEnumArrays()
+        {
+            var writer = new JsonWriter();
+            writer.Double("d", 0.1);
+            writer.Double("whole", 2.0);
+            writer.EnumArray("kinds", _kinds);
+            writer.EnumArray("none", System.Array.Empty<JsonNodeKind>());
+
+            Assert.That(
+                writer.Finish(),
+                Is.EqualTo(
+                    "{\n"
+                    + "  \"d\": 0.1,\n"
+                    + "  \"whole\": 2,\n"
+                    + "  \"kinds\": [\"Array\", \"Null\"],\n"
+                    + "  \"none\": []\n"
+                    + "}\n"));
+        }
+
+        [TestCase(1.0 / 3.0)]
+        [TestCase(0.1 + 0.2)]
+        [TestCase(double.MaxValue)]
+        [TestCase(double.Epsilon)]
+        [TestCase(-1.5e-300)]
+        public void DoubleTextReadsBackToTheSameDouble(double value)
+        {
+            var text = JsonWriter.DoubleText(value);
+
+            Assert.That(double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture), Is.EqualTo(value));
+        }
+
+        [Test]
+        public void NodeTextWritesTheTreeOnOneLineKeepingNumbersAsWritten()
+        {
+            var root = new JsonParser("{\n  \"a\": [1.50, -2e3, true, false, null, \"q\\\"x\\n\"],\n  \"b\": {},\n  \"c\": []\n}").ParseDocument();
+
+            Assert.That(
+                JsonWriter.NodeText(root),
+                Is.EqualTo("{\"a\": [1.50, -2e3, true, false, null, \"q\\\"x\\n\"], \"b\": {}, \"c\": []}"));
+        }
+
+        [Test]
+        public void NodeTextReadsBackToTheSameTree()
+        {
+            var text = JsonWriter.NodeText(new JsonParser("{\"rules\": {\"actions\": {\"cover\": \"On\"}, \"playerMaxHealth\": 150}}").ParseDocument());
+
+            var root = new JsonParser(text).ParseDocument();
+
+            Assert.That(root.Members[0].Key, Is.EqualTo("rules"));
+            Assert.That(root.Members[0].Value.Members[0].Value.Members[0].Value.Text, Is.EqualTo("On"));
+            Assert.That(root.Members[0].Value.Members[1].Value.Text, Is.EqualTo("150"));
+        }
+
+        [Test]
+        public void NodeTextNeedsANode()
+        {
+            Assert.Throws<System.ArgumentNullException>(() => JsonWriter.NodeText(null));
         }
 
         [Test]

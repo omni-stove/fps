@@ -56,7 +56,7 @@ namespace Shooter.Core
             // Apply でも断るが、書き戻した文書の位置ではなく一覧の JSON の中の位置で示すため、一番上の項目名はここで確かめる。
             entry.Object(RulesItem, GameRulesJson.ItemNames);
 
-            var mutator = new GameRulesMutator(id, GameRulesJson.WriteNode(rulesNode), entry.Source);
+            var mutator = new GameRulesMutator(id, JsonWriter.NodeText(rulesNode), entry.Source);
             try
             {
                 mutator.Apply(_checkBase);

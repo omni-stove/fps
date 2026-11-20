@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Text;
 
 namespace Shooter.Core
 {
     public static class GameRulesJson
     {
         public const string ActionsItem = "actions";
+
+        private const string _kind = "game rules JSON";
+
+        // ルールの JSON は列挙の誤りに受け付ける名前を並べて知らせてきたので、その文のまま読む。
+        private static readonly ServerDataJson.Wording _wording = new ServerDataJson.Wording("known items here are", true);
 
         public const string FriendlyFireItem = "friendlyFire";
         public const string RespawnModeItem = "respawnMode";
@@ -165,32 +168,28 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(text));
             }
 
-            var source = string.IsNullOrWhiteSpace(sourceName) ? "(unnamed game rules JSON)" : sourceName;
-
-            JsonNode root;
-            try
-            {
-                root = new JsonParser(text).ParseDocument();
-            }
-            catch (FormatException e)
-            {
-                throw new GameRulesJsonException(source, null, $"game rules JSON '{source}' is not valid JSON: {e.Message}", e);
-            }
-
-            return FromNode(root, source, string.Empty, baseRules);
+            var source = ServerDataJson.SourceOf(sourceName, _kind);
+            return Rethrown(() => Read(ServerDataJson.ParseDocument(text, source, _kind), source, string.Empty, baseRules));
         }
 
-        internal static GameRules FromNode(JsonNode root, string source, string prefix)
+        // path は root を置いた項目の名前 (試合のファイルなら "rules") で、エラーの項目名の頭に付ける。
+        internal static GameRules FromNode(JsonNode root, string source, string path)
         {
-            return FromNode(root, source, prefix, GameRules.Default);
+            return Rethrown(() => Read(root, source, path, GameRules.Default));
         }
 
-        private static GameRules FromNode(JsonNode root, string source, string prefix, GameRules defaults)
+        // 呼ぶ側 (GameRulesOverride・MutatorJson・MissionDefinition) は GameRulesJsonException を待つので、共通の読み手の例外を包み直す。
+        private static T Rethrown<T>(Func<T> read)
         {
-            var top = new Fields(source, root, prefix, ItemNames);
+            return ServerDataJson.Rethrown(read, e => new GameRulesJsonException(e.SourceName, e.Item, e.Message, e.InnerException ?? e));
+        }
 
-            var actions = ReadActions(source, top, prefix, defaults.Actions);
-            var zoneDamage = ReadZoneDamage(source, top, prefix, defaults.ZoneDamage);
+        private static GameRules Read(JsonNode root, string source, string path, GameRules defaults)
+        {
+            var top = new ServerDataJson.Fields(source, _kind, root, path, ItemNames, _wording);
+
+            var actions = ReadActions(top, defaults.Actions);
+            var zoneDamage = ReadZoneDamage(top, defaults.ZoneDamage);
 
             try
             {
@@ -226,7 +225,7 @@ namespace Shooter.Core
             }
             catch (ArgumentException e)
             {
-                throw Rejected(source, prefix, e);
+                throw Rejected(top, e);
             }
         }
 
@@ -238,7 +237,7 @@ namespace Shooter.Core
             }
 
             var actions = rules.Actions;
-            var writer = new Writer();
+            var writer = new JsonWriter();
             writer.Enum(FriendlyFireItem, rules.FriendlyFire);
             writer.Enum(RespawnModeItem, rules.RespawnMode);
             writer.Float(WaveIntervalSecondsItem, rules.WaveIntervalSeconds);
@@ -306,80 +305,14 @@ namespace Shooter.Core
             return writer.Finish();
         }
 
-        // 一覧の JSON (MutatorJson) の中に書いたルールの一部を、Parse に渡せる 1 つの文書として取り出すために、読んだ木を字句のまま書き戻す。
-        internal static string WriteNode(JsonNode node)
+        private static ActionRules ReadActions(ServerDataJson.Fields top, ActionRules defaults)
         {
-            if (node == null)
-            {
-                throw new ArgumentNullException(nameof(node));
-            }
-
-            var builder = new StringBuilder();
-            AppendNode(builder, node);
-            return builder.ToString();
-        }
-
-        private static void AppendNode(StringBuilder builder, JsonNode node)
-        {
-            switch (node.Kind)
-            {
-                case JsonNodeKind.Object:
-                    builder.Append('{');
-                    for (var i = 0; i < node.Members.Count; i++)
-                    {
-                        if (i > 0)
-                        {
-                            builder.Append(", ");
-                        }
-
-                        builder.Append(JsonWriter.Quote(node.Members[i].Key)).Append(": ");
-                        AppendNode(builder, node.Members[i].Value);
-                    }
-
-                    builder.Append('}');
-                    return;
-                case JsonNodeKind.Array:
-                    builder.Append('[');
-                    for (var i = 0; i < node.Elements.Count; i++)
-                    {
-                        if (i > 0)
-                        {
-                            builder.Append(", ");
-                        }
-
-                        AppendNode(builder, node.Elements[i]);
-                    }
-
-                    builder.Append(']');
-                    return;
-                case JsonNodeKind.String:
-                    builder.Append(JsonWriter.Quote(node.Text));
-                    return;
-                case JsonNodeKind.Number:
-                    builder.Append(node.Text);
-                    return;
-                case JsonNodeKind.True:
-                    builder.Append("true");
-                    return;
-                case JsonNodeKind.False:
-                    builder.Append("false");
-                    return;
-                default:
-                    builder.Append("null");
-                    return;
-            }
-        }
-
-        private static ActionRules ReadActions(string source, Fields top, string topPrefix, ActionRules defaults)
-        {
-            var node = top.ReadNested(ActionsItem);
-            if (node == null)
+            var fields = top.Object(ActionsItem, ActionItemNames);
+            if (fields == null)
             {
                 return defaults;
             }
 
-            var prefix = topPrefix + ActionsItem + ".";
-            var fields = new Fields(source, node, prefix, ActionItemNames);
             try
             {
                 return new ActionRules(
@@ -417,20 +350,18 @@ namespace Shooter.Core
             }
             catch (ArgumentException e)
             {
-                throw Rejected(source, prefix, e);
+                throw Rejected(fields, e);
             }
         }
 
-        private static ZoneDamageMultipliers ReadZoneDamage(string source, Fields top, string topPrefix, ZoneDamageMultipliers defaults)
+        private static ZoneDamageMultipliers ReadZoneDamage(ServerDataJson.Fields top, ZoneDamageMultipliers defaults)
         {
-            var node = top.ReadNested(ZoneDamageItem);
-            if (node == null)
+            var fields = top.Object(ZoneDamageItem, ZoneDamageItemNames);
+            if (fields == null)
             {
                 return defaults;
             }
 
-            var prefix = topPrefix + ZoneDamageItem + ".";
-            var fields = new Fields(source, node, prefix, ZoneDamageItemNames);
             try
             {
                 return new ZoneDamageMultipliers(
@@ -441,332 +372,16 @@ namespace Shooter.Core
             }
             catch (ArgumentException e)
             {
-                throw Rejected(source, prefix, e);
+                throw Rejected(fields, e);
             }
         }
 
         // GameRules と ActionRules と ZoneDamageMultipliers は引数名を ParamName に入れて投げ、引数名は項目名と同じなので、そのまま項目名として返せる。
-        private static GameRulesJsonException Rejected(string source, string prefix, ArgumentException e)
+        private static ServerDataJsonException Rejected(ServerDataJson.Fields fields, ArgumentException e)
         {
-            var item = string.IsNullOrEmpty(e.ParamName) ? null : prefix + e.ParamName;
-            var where = item == null ? string.Empty : $" item '{item}'";
-            return new GameRulesJsonException(source, item, $"game rules JSON '{source}'{where} is invalid: {e.Message}", e);
+            return fields.Rejected(string.IsNullOrEmpty(e.ParamName) ? null : fields.ItemPath(e.ParamName), e.Message, e);
         }
 
-        private sealed class Fields
-        {
-            private static readonly char[] _nonIntegerMarks = { '.', 'e', 'E' };
-
-            private readonly string _source;
-            private readonly string _prefix;
-            private readonly Dictionary<string, JsonNode> _values = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
-
-            public Fields(string source, JsonNode node, string prefix, IReadOnlyList<string> known)
-            {
-                _source = source;
-                _prefix = prefix;
-
-                if (node.Kind != JsonNodeKind.Object)
-                {
-                    var what = prefix.Length == 0 ? "the top level" : $"item '{prefix.TrimEnd('.')}'";
-                    throw new GameRulesJsonException(
-                        source,
-                        prefix.Length == 0 ? null : prefix.TrimEnd('.'),
-                        $"game rules JSON '{source}': {what} must be an object, but is {node.Describe()} ({node.Position})");
-                }
-
-                var knownSet = new HashSet<string>(known, StringComparer.Ordinal);
-                foreach (var member in node.Members)
-                {
-                    if (!knownSet.Contains(member.Key))
-                    {
-                        throw new GameRulesJsonException(
-                            source,
-                            prefix + member.Key,
-                            $"game rules JSON '{source}': unknown item '{prefix + member.Key}' ({member.Value.Position}); "
-                            + $"known items here are {string.Join(", ", known)}");
-                    }
-
-                    _values.Add(member.Key, member.Value);
-                }
-            }
-
-            public JsonNode ReadNested(string name)
-            {
-                return Find(name);
-            }
-
-            public float ReadFloat(string name, float fallback)
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                Require(node, name, JsonNodeKind.Number, "a number");
-
-                // 2 進の float の最も近い値を直接選ぶ (double を経ると丸めが 2 度起きて C# の float リテラルと 1 ビットずれうる)。
-                // 大きすぎる値は無限大になる環境と例外になる環境があり、無限大なら GameRules の検査が項目名付きで断る。
-                try
-                {
-                    return float.Parse(node.Text, NumberStyles.Float, CultureInfo.InvariantCulture);
-                }
-                catch (OverflowException e)
-                {
-                    throw Invalid(name, node, "is too large for a 32-bit float", e);
-                }
-            }
-
-            public double ReadDouble(string name, double fallback)
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                Require(node, name, JsonNodeKind.Number, "a number");
-
-                // 大きすぎる値は無限大になる環境と例外になる環境があり、無限大なら ZoneDamageMultipliers の検査が項目名付きで断る。
-                try
-                {
-                    return double.Parse(node.Text, NumberStyles.Float, CultureInfo.InvariantCulture);
-                }
-                catch (OverflowException e)
-                {
-                    throw Invalid(name, node, "is too large for a 64-bit float", e);
-                }
-            }
-
-            public int ReadInt(string name, int fallback)
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                Require(node, name, JsonNodeKind.Number, "a whole number");
-                if (node.Text.IndexOfAny(_nonIntegerMarks) >= 0)
-                {
-                    throw Invalid(name, node, "must be a whole number without a fraction or exponent");
-                }
-
-                if (!int.TryParse(node.Text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value))
-                {
-                    throw Invalid(name, node, "is out of the 32-bit integer range");
-                }
-
-                return value;
-            }
-
-            public bool ReadBool(string name, bool fallback)
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                if (node.Kind == JsonNodeKind.True)
-                {
-                    return true;
-                }
-
-                if (node.Kind == JsonNodeKind.False)
-                {
-                    return false;
-                }
-
-                throw Invalid(name, node, $"must be true or false, but is {node.Describe()}");
-            }
-
-            public T ReadEnum<T>(string name, T fallback)
-                where T : struct, Enum
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                return MatchEnum<T>(name, node);
-            }
-
-            // 空の配列と重なりはここで断らず、ルールの検査に任せて項目名付きで断らせる。
-            public IReadOnlyList<T> ReadEnumArray<T>(string name, IReadOnlyList<T> fallback)
-                where T : struct, Enum
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                Require(node, name, JsonNodeKind.Array, "an array of the names " + string.Join(", ", System.Enum.GetNames(typeof(T))));
-                var values = new T[node.Elements.Count];
-                for (var i = 0; i < values.Length; i++)
-                {
-                    values[i] = MatchEnum<T>(name, node.Elements[i]);
-                }
-
-                return values;
-            }
-
-            private T MatchEnum<T>(string name, JsonNode node)
-                where T : struct, Enum
-            {
-                var names = System.Enum.GetNames(typeof(T));
-                Require(node, name, JsonNodeKind.String, "one of the names " + string.Join(", ", names));
-
-                // 数字の文字列や大文字小文字違いも Enum.TryParse は通してしまうので、定義済みの名前と完全に一致するものだけを受け付ける。
-                foreach (var candidate in names)
-                {
-                    if (string.Equals(candidate, node.Text, StringComparison.Ordinal))
-                    {
-                        return (T)System.Enum.Parse<T>(candidate);
-                    }
-                }
-
-                throw Invalid(name, node, $"\"{node.Text}\" is not one of {string.Join(", ", names)}");
-            }
-
-            private JsonNode Find(string name)
-            {
-                if (!_values.TryGetValue(name, out var node))
-                {
-                    return null;
-                }
-
-                if (node.Kind == JsonNodeKind.Null)
-                {
-                    throw Invalid(name, node, "must not be null; leave the item out to use the default");
-                }
-
-                return node;
-            }
-
-            private void Require(JsonNode node, string name, JsonNodeKind kind, string expected)
-            {
-                if (node.Kind != kind)
-                {
-                    throw Invalid(name, node, $"must be {expected}, but is {node.Describe()}");
-                }
-            }
-
-            private GameRulesJsonException Invalid(string name, JsonNode node, string problem, Exception inner = null)
-            {
-                var item = _prefix + name;
-                return new GameRulesJsonException(
-                    _source, item, $"game rules JSON '{_source}' item '{item}' {problem} ({node.Position})", inner);
-            }
-        }
-
-        // 項目名と列挙の名前は英数字だけなので、文字列の逃がしはしない。
-        private sealed class Writer
-        {
-            private readonly StringBuilder _builder = new StringBuilder("{");
-            private int _depth = 1;
-            private bool _first = true;
-
-            public void Enum<T>(string name, T value)
-                where T : struct, System.Enum
-            {
-                Raw(name, "\"" + value.ToString() + "\"");
-            }
-
-            public void EnumArray<T>(string name, IReadOnlyList<T> values)
-                where T : struct, System.Enum
-            {
-                var text = new StringBuilder("[");
-                for (var i = 0; i < values.Count; i++)
-                {
-                    if (i > 0)
-                    {
-                        text.Append(", ");
-                    }
-
-                    text.Append('"').Append(values[i].ToString()).Append('"');
-                }
-
-                Raw(name, text.Append(']').ToString());
-            }
-
-            public void Float(string name, float value)
-            {
-                // Unity の Mono は "R" でも読み直して別の値になる字句を返すことがあるので、そのときは必ず戻る 9 桁で書く。
-                var text = value.ToString("R", CultureInfo.InvariantCulture);
-                if (float.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture) != value)
-                {
-                    text = value.ToString("G9", CultureInfo.InvariantCulture);
-                }
-
-                Raw(name, text);
-            }
-
-            public void Double(string name, double value)
-            {
-                // Float と同じく、"R" が読み直して別の値になる字句を返したときは必ず戻る 17 桁で書く。
-                var text = value.ToString("R", CultureInfo.InvariantCulture);
-                if (double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture) != value)
-                {
-                    text = value.ToString("G17", CultureInfo.InvariantCulture);
-                }
-
-                Raw(name, text);
-            }
-
-            public void Int(string name, int value)
-            {
-                Raw(name, value.ToString(CultureInfo.InvariantCulture));
-            }
-
-            public void Bool(string name, bool value)
-            {
-                Raw(name, value ? "true" : "false");
-            }
-
-            public void BeginObject(string name)
-            {
-                Raw(name, "{");
-                _depth++;
-                _first = true;
-            }
-
-            public void EndObject()
-            {
-                _depth--;
-                NewLine();
-                _builder.Append('}');
-                _first = false;
-            }
-
-            public string Finish()
-            {
-                _depth = 0;
-                NewLine();
-                _builder.Append('}').Append('\n');
-                return _builder.ToString();
-            }
-
-            private void Raw(string name, string value)
-            {
-                if (!_first)
-                {
-                    _builder.Append(',');
-                }
-
-                NewLine();
-                _builder.Append('"').Append(name).Append("\": ").Append(value);
-                _first = false;
-            }
-
-            private void NewLine()
-            {
-                _builder.Append('\n').Append(' ', _depth * 2);
-            }
-        }
     }
 
     public sealed class GameRulesJsonException : Exception

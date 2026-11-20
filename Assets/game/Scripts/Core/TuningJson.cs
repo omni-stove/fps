@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 
 namespace Shooter.Core
 {
@@ -93,6 +92,8 @@ namespace Shooter.Core
         private const string _pingKind = "ping JSON";
         private const string _knockbackKind = "knockback JSON";
         private const string _botsKind = "bots JSON";
+
+        private static readonly ServerDataJson.Wording _flatWording = new ServerDataJson.Wording("known items are", false);
 
         public static IReadOnlyList<string> GrenadeItemNames { get; } = new[]
         {
@@ -197,7 +198,7 @@ namespace Shooter.Core
         // GrenadeTypesItem も CarriedItem も無いオブジェクトは、種類が 1 つだった頃の形として、その 1 種類だけを持つ並びに読む。
         public static GrenadeCatalog ParseGrenades(string text, string sourceName)
         {
-            var source = SourceOf(sourceName, _grenadeKind);
+            var source = ServerDataJson.SourceOf(sourceName, _grenadeKind);
             return Translated(() =>
             {
                 var root = ServerDataJson.ParseDocument(text, source, _grenadeKind);
@@ -238,15 +239,37 @@ namespace Shooter.Core
 
         public static GrenadeSpec ParseGrenade(string text, string sourceName)
         {
-            var source = SourceOf(sourceName, _grenadeKind);
+            var source = ServerDataJson.SourceOf(sourceName, _grenadeKind);
             return Translated(() => ReadGrenade(
                 new ServerDataJson.Fields(source, _grenadeKind, ServerDataJson.ParseDocument(text, source, _grenadeKind), string.Empty, GrenadeItemNames)));
         }
 
         public static PingSpec ParsePing(string text, string sourceName)
         {
-            var source = SourceOf(sourceName, _pingKind);
-            var fields = Fields.Read(text, source, _pingKind, PingItemNames);
+            return ParseFlat(text, sourceName, _pingKind, PingItemNames, ReadPing);
+        }
+
+        public static KnockbackSpec ParseKnockback(string text, string sourceName)
+        {
+            return ParseFlat(text, sourceName, _knockbackKind, KnockbackItemNames, ReadKnockback);
+        }
+
+        public static NetBotSpec ParseBots(string text, string sourceName)
+        {
+            return ParseFlat(text, sourceName, _botsKind, BotItemNames, ReadBots);
+        }
+
+        // 入れ子を持たない調整値の JSON は、知らない項目のエラーを以前から "known items are" と書いてきたので、その文のまま読む。
+        internal static T ParseFlat<T>(
+            string text, string sourceName, string kind, IReadOnlyList<string> known, Func<ServerDataJson.Fields, T> read)
+        {
+            var source = ServerDataJson.SourceOf(sourceName, kind);
+            return Translated(() => read(
+                new ServerDataJson.Fields(source, kind, ServerDataJson.ParseDocument(text, source, kind), string.Empty, known, _flatWording)));
+        }
+
+        private static PingSpec ReadPing(ServerDataJson.Fields fields)
+        {
             var defaults = PingSpec.Default;
             try
             {
@@ -259,14 +282,13 @@ namespace Shooter.Core
             }
             catch (ArgumentException e)
             {
-                throw Rejected(source, _pingKind, PingItemNames, e);
+                throw Rejected(fields.Source, _pingKind, PingItemNames, e);
             }
         }
 
-        public static KnockbackSpec ParseKnockback(string text, string sourceName)
+        private static KnockbackSpec ReadKnockback(ServerDataJson.Fields fields)
         {
-            var source = SourceOf(sourceName, _knockbackKind);
-            var fields = Fields.Read(text, source, _knockbackKind, KnockbackItemNames);
+            var source = fields.Source;
             var defaults = KnockbackSpec.Default;
             var explosion = ReadForce(fields, source, defaults.Explosion, ExplosionSpeedItem, ExplosionUpwardRatioItem, ExplosionWeightFactorItem);
             var melee = ReadForce(fields, source, defaults.Melee, MeleeSpeedItem, MeleeUpwardRatioItem, MeleeWeightFactorItem);
@@ -293,10 +315,9 @@ namespace Shooter.Core
             }
         }
 
-        public static NetBotSpec ParseBots(string text, string sourceName)
+        private static NetBotSpec ReadBots(ServerDataJson.Fields fields)
         {
-            var source = SourceOf(sourceName, _botsKind);
-            var fields = Fields.Read(text, source, _botsKind, BotItemNames);
+            var source = fields.Source;
             var defaults = NetBotSpec.Default;
             var brain = defaults.Brain;
             var input = defaults.Input;
@@ -444,19 +465,10 @@ namespace Shooter.Core
             }
         }
 
-        // 種類の並びは入れ子を持つので ServerDataJson で読み、呼ぶ側には今までどおり TuningJsonException で知らせる。
-        // 値の検査で断ったときは、元の ArgumentException を中に残す。
+        // 呼ぶ側には今までどおり TuningJsonException で知らせる。値の検査で断ったときの ArgumentException など、元の原因があればそれを中に残す。
         private static T Translated<T>(Func<T> read)
         {
-            try
-            {
-                return read();
-            }
-            catch (ServerDataJsonException e)
-            {
-                var inner = e.InnerException is ArgumentException rejected ? (Exception)rejected : e;
-                throw new TuningJsonException(e.SourceName, e.Item, e.Message, inner);
-            }
+            return ServerDataJson.Rethrown(read, e => new TuningJsonException(e.SourceName, e.Item, e.Message, e.InnerException ?? e));
         }
 
         private static bool HasMember(JsonNode node, string name)
@@ -487,7 +499,7 @@ namespace Shooter.Core
 
         // KnockbackForce の引数名 (speed など) は種類を持たないので、どの種類の項目かをここで添える。
         private static KnockbackForce ReadForce(
-            Fields fields, string source, KnockbackForce defaults, string speedItem, string upwardRatioItem, string weightFactorItem)
+            ServerDataJson.Fields fields, string source, KnockbackForce defaults, string speedItem, string upwardRatioItem, string weightFactorItem)
         {
             try
             {
@@ -520,11 +532,6 @@ namespace Shooter.Core
             }
         }
 
-        internal static string SourceOf(string sourceName, string kind)
-        {
-            return string.IsNullOrWhiteSpace(sourceName) ? "(unnamed " + kind + ")" : sourceName;
-        }
-
         // Spec は引数名を ParamName に入れて投げ、引数名は項目名と同じなので、そのまま項目名として返せる。
         // 内側の ExplosionDamage など、項目に無い名前で投げられたときは項目に結び付けない。
         internal static TuningJsonException Rejected(string source, string kind, IReadOnlyList<string> known, ArgumentException e)
@@ -546,182 +553,6 @@ namespace Shooter.Core
         {
             var where = item == null ? string.Empty : $" item '{item}'";
             return new TuningJsonException(source, item, $"{kind} '{source}'{where} is invalid: {e.Message}", e);
-        }
-
-        internal sealed class Fields
-        {
-            private static readonly char[] _nonIntegerMarks = { '.', 'e', 'E' };
-
-            private readonly string _source;
-            private readonly string _kind;
-            private readonly Dictionary<string, JsonNode> _values =
-                new Dictionary<string, JsonNode>(StringComparer.Ordinal);
-
-            private Fields(string source, string kind)
-            {
-                _source = source;
-                _kind = kind;
-            }
-
-            public static Fields Read(string text, string source, string kind, IReadOnlyList<string> known)
-            {
-                if (text == null)
-                {
-                    throw new ArgumentNullException(nameof(text));
-                }
-
-                JsonNode root;
-                try
-                {
-                    root = new JsonParser(text).ParseDocument();
-                }
-                catch (FormatException e)
-                {
-                    throw new TuningJsonException(source, null, $"{kind} '{source}' is not valid JSON: {e.Message}", e);
-                }
-
-                if (root.Kind != JsonNodeKind.Object)
-                {
-                    throw new TuningJsonException(
-                        source, null, $"{kind} '{source}': the top level must be an object, but is {root.Describe()} ({root.Position})");
-                }
-
-                var fields = new Fields(source, kind);
-                var knownSet = new HashSet<string>(known, StringComparer.Ordinal);
-                foreach (var member in root.Members)
-                {
-                    if (!knownSet.Contains(member.Key))
-                    {
-                        throw new TuningJsonException(
-                            source,
-                            member.Key,
-                            $"{kind} '{source}': unknown item '{member.Key}' ({member.Value.Position}); "
-                            + $"known items are {string.Join(", ", known)}");
-                    }
-
-                    fields._values.Add(member.Key, member.Value);
-                }
-
-                return fields;
-            }
-
-            public float ReadFloat(string name, float fallback)
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                Require(node, name, "a number");
-
-                // GameRulesJson と同じく double を経ずに float へ直す。無限大になる大きすぎる値は Spec の検査が項目名付きで断る。
-                try
-                {
-                    return float.Parse(node.Text, NumberStyles.Float, CultureInfo.InvariantCulture);
-                }
-                catch (OverflowException e)
-                {
-                    throw Invalid(name, node, "is too large for a 32-bit float", e);
-                }
-            }
-
-            public int ReadInt(string name, int fallback)
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                Require(node, name, "a whole number");
-                if (node.Text.IndexOfAny(_nonIntegerMarks) >= 0)
-                {
-                    throw Invalid(name, node, "must be a whole number without a fraction or exponent");
-                }
-
-                if (!int.TryParse(node.Text, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var value))
-                {
-                    throw Invalid(name, node, "is out of the 32-bit integer range");
-                }
-
-                return value;
-            }
-
-            public bool Has(string name)
-            {
-                return _values.ContainsKey(name);
-            }
-
-            public T ReadEnum<T>(string name, T fallback)
-                where T : struct, Enum
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                if (node.Kind != JsonNodeKind.String)
-                {
-                    throw Invalid(name, node, $"must be a string, but is {node.Describe()}");
-                }
-
-                // 数を名前として書いたもの ("1") を Enum.TryParse は通すので、名前だけを受け付ける。
-                foreach (var value in Enum.GetNames(typeof(T)))
-                {
-                    if (string.Equals(value, node.Text, StringComparison.Ordinal))
-                    {
-                        return Enum.Parse<T>(value);
-                    }
-                }
-
-                throw Invalid(name, node, $"must be one of {string.Join(", ", Enum.GetNames(typeof(T)))}, but is \"{node.Text}\"");
-            }
-
-            public bool ReadBool(string name, bool fallback)
-            {
-                var node = Find(name);
-                if (node == null)
-                {
-                    return fallback;
-                }
-
-                if (node.Kind != JsonNodeKind.True && node.Kind != JsonNodeKind.False)
-                {
-                    throw Invalid(name, node, $"must be true or false, but is {node.Describe()}");
-                }
-
-                return node.Kind == JsonNodeKind.True;
-            }
-
-            private JsonNode Find(string name)
-            {
-                if (!_values.TryGetValue(name, out var node))
-                {
-                    return null;
-                }
-
-                if (node.Kind == JsonNodeKind.Null)
-                {
-                    throw Invalid(name, node, "must not be null; leave the item out to use the default");
-                }
-
-                return node;
-            }
-
-            private void Require(JsonNode node, string name, string expected)
-            {
-                if (node.Kind != JsonNodeKind.Number)
-                {
-                    throw Invalid(name, node, $"must be {expected}, but is {node.Describe()}");
-                }
-            }
-
-            private TuningJsonException Invalid(string name, JsonNode node, string problem, Exception inner = null)
-            {
-                return new TuningJsonException(_source, name, $"{_kind} '{_source}' item '{name}' {problem} ({node.Position})", inner);
-            }
         }
     }
 

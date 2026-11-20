@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using Shooter.Core;
@@ -44,6 +46,28 @@ namespace Shooter.NetV2
         public static string Gone(int deployableId, string typeId)
         {
             return $"{DeployLog.Tag} net gone id={deployableId} kind={Name(typeId)}";
+        }
+
+        // 枠の順に、その枠で置く種類を並べる。置く物でない枠と「なし」の枠は -
+        public static string Slots(IReadOnlyList<string> typeIds)
+        {
+            if (typeIds == null)
+            {
+                throw new ArgumentNullException(nameof(typeIds));
+            }
+
+            var names = new string[typeIds.Count];
+            for (var i = 0; i < names.Length; i++)
+            {
+                names[i] = Name(typeIds[i]);
+            }
+
+            return $"{DeployLog.Tag} net slots kinds={(names.Length > 0 ? string.Join(",", names) : "-")}";
+        }
+
+        public static string SlotsNotResolved(string reason)
+        {
+            return $"{DeployLog.Tag} net slots emptied: the accepted abilities cannot be looked up in the ability catalog: {(string.IsNullOrEmpty(reason) ? "-" : reason)}";
         }
 
         private static string Name(string id)

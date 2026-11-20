@@ -4,6 +4,7 @@
     "references": [
         "Shooter.Core",
         "Shooter.Runtime",
+        "Shooter.Services",
         "Shooter.Editor",
         "Unity.InputSystem"
     ],

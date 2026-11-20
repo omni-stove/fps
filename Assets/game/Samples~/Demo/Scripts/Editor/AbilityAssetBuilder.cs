@@ -122,22 +122,107 @@ namespace Shooter.Editor
 
         public static string BeaconAbilityPath => Folder + "/DeployBeacon.asset";
 
+        public static string AbilityCatalogPath => Folder + "/AbilityCatalog.asset";
+
+        // 装備画面に出す順。何もしない能力 (NullAbilityId) は試すためだけのものなので載せない。
+        public static IReadOnlyList<string> CatalogAbilityIds => new[]
+        {
+            BeaconAbilityId,
+            VisionGogglesAbilityId,
+            DroneAbilityId,
+            ShieldAbilityId,
+            TurretAbilityId,
+            DecoyAbilityId,
+            MineAbilityId,
+            RemoteChargeAbilityId,
+            DistractionAbilityId,
+            GrappleAbilityId,
+        };
+
         // タレットは武器のアセットを、ビーコンは装備 (WeaponAssetBuilder.LoadoutPath) を指すので、WeaponAssetBuilder.Build の後に走らせる (無ければ例外で止まる)。
+        // -executeMethod Shooter.Editor.AbilityAssetBuilder.Build でも呼べるよう、引数の無い public static にしておく。
         [MenuItem(MenuPath)]
         public static void Build()
         {
             BuildAt(NullAbilityPath);
-            BuildShieldAt(ShieldAbilityPath);
-            BuildGrappleAt(GrappleAbilityPath);
-            BuildTurretAt(TurretAbilityPath);
-            BuildDecoyAt(DecoyAbilityPath);
-            BuildMineAt(MineAbilityPath);
-            BuildRemoteChargeAt(RemoteChargeAbilityPath);
-            BuildDistractionAt(DistractionAbilityPath);
-            BuildVisionGogglesAt(VisionGogglesAbilityPath);
-            BuildDroneAt(DroneAbilityPath);
+            var shield = BuildShieldAt(ShieldAbilityPath);
+            var grapple = BuildGrappleAt(GrappleAbilityPath);
+            var turret = BuildTurretAt(TurretAbilityPath);
+            var decoy = BuildDecoyAt(DecoyAbilityPath);
+            var mine = BuildMineAt(MineAbilityPath);
+            var remoteCharge = BuildRemoteChargeAt(RemoteChargeAbilityPath);
+            var distraction = BuildDistractionAt(DistractionAbilityPath);
+            var goggles = BuildVisionGogglesAt(VisionGogglesAbilityPath);
+            var drone = BuildDroneAt(DroneAbilityPath);
             var beacon = BuildBeaconAt(BeaconAbilityPath);
             EquipInLoadoutAt(WeaponAssetBuilder.LoadoutPath, beacon, BeaconLoadoutSlot);
+            BuildCatalogAt(
+                AbilityCatalogPath,
+                new AbilityDefinition[] { beacon, goggles, drone, shield, turret, decoy, mine, remoteCharge, distraction, grapple });
+        }
+
+        // 一覧を並べ替えたり足したりしても参照しているシーンや GameContent が切れないよう、既存のカタログは GUID を保って中身だけ入れ替える。
+        public static AbilityCatalogAsset BuildCatalogAt(string path, IReadOnlyList<AbilityDefinition> abilities)
+        {
+            if (abilities == null)
+            {
+                throw new ArgumentNullException(nameof(abilities));
+            }
+
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+
+            // CreateOrUpdateAsset は既存のアセットを書き換えてから投げることがあるので、保存してあるカタログを崩さないよう別の入れ物で先に確かめる。
+            RequireValidCatalog(System.IO.Path.GetFileNameWithoutExtension(path), abilities);
+            SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'));
+            var catalog = SceneBuildHelpers.CreateOrUpdateAsset<AbilityCatalogAsset>(path, c => c.SetAbilities(abilities));
+            Debug.Log($"{LogTag} saved '{path}' with [{string.Join(", ", catalog.ToIds())}]");
+            return catalog;
+        }
+
+        // 手で並べ替えた一覧を射撃場やメニューを作り直すたびに消さないよう、あれば中身は上書きしない。
+        public static AbilityCatalogAsset LoadOrBuildCatalog()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<AbilityCatalogAsset>(AbilityCatalogPath);
+            if (existing != null)
+            {
+                existing.ToIds();
+                return existing;
+            }
+
+            Debug.Log($"{LogTag} '{AbilityCatalogPath}' is missing; building it");
+            return BuildCatalogAt(AbilityCatalogPath, LoadOrBuildCatalogAbilities());
+        }
+
+        public static IReadOnlyList<AbilityDefinition> LoadOrBuildCatalogAbilities()
+        {
+            return new AbilityDefinition[]
+            {
+                LoadOrBuildBeaconAbility(),
+                LoadOrBuildVisionGogglesAbility(),
+                LoadOrBuildDroneAbility(),
+                LoadOrBuildShieldAbility(),
+                LoadOrBuildTurretAbility(),
+                LoadOrBuildDecoyAbility(),
+                LoadOrBuildMineAbility(),
+                LoadOrBuildRemoteChargeAbility(),
+                LoadOrBuildDistractionAbility(),
+                LoadOrBuildGrappleAbility(),
+            };
+        }
+
+        private static void RequireValidCatalog(string name, IReadOnlyList<AbilityDefinition> abilities)
+        {
+            var probe = ScriptableObject.CreateInstance<AbilityCatalogAsset>();
+            try
+            {
+                probe.name = name;
+                probe.SetAbilities(abilities);
+                probe.ToIds();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(probe);
+            }
         }
 
         public static BeaconDeployDefinition BuildBeaconAt(string path)

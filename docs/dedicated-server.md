@@ -146,11 +146,21 @@ make server-dotnet ARGS="-rules FreeForAll"
   種類ごとの `maxCharges`・`rechargeSeconds`・`cooldownSeconds` (Unity の能力のアセットの回数・戻り・間隔と同じ値にする) で人ごとに置ける回数と間隔を数え、
   使い切ると `[Deploy] ... refused reason=NoCharges charges=0/<回数> wait=<秒>`、間隔の内なら `reason=CoolingDown` で断る。回数は出現し直すと満ちる。
   サーバー側のアンチチートの調整値 (見えない相手を送らない `conceal`・違反の累積 `violations`・統計の検知 `stats`・通報の証拠 `evidence`) は
-  `server-data/tuning/anticheat.json` から読み、起動の `[Server] combat tuning ... anticheat=<ファイル>` に出す。どれも既定は `enabled` が `false` で、試合の挙動は変えない。
-  `conceal.enabled` を `true` にすると、受け取る人の味方 (FFA は本人、BR は分隊) の生きている誰の目からも地形に遮られる・`maxDistance` より遠い敵の行に
-  `Concealed` を立て、位置・速度・向き・姿勢・武器・乗っている座席を空にして送る。名簿・スコア・体力・ダウン・チームはそのまま送る。
-  見え始める前に送るため、体の横と上に `marginDistance` ずらした点も見て、最後に見えてから `marginSeconds` の間は見えているとみなす。
-  クライアントは `Concealed` の相手の体を描かず、ロックオン・照準の補助・名札の対象から外し、見え直した tick から補間をやり直す。
+  `server-data/tuning/anticheat.json` から読み、起動の `[Server] combat tuning ... anticheat=<ファイル>` に出す。どれも既定は `enabled` が `false` で、試合の挙動を変えない。
+  - `conceal.enabled` を `true` にすると、受け取る人の味方 (FFA は本人、BR は分隊) の生きている誰の目からも地形に遮られる・`maxDistance` より遠い敵の行に
+    `Concealed` を立て、位置・速度・向き・姿勢・武器・乗っている座席を空にして送る。名簿・スコア・体力・ダウン・チームはそのまま送る。
+    見え始める前に送るため、体の横と上に `marginDistance` ずらした点も見て、最後に見えてから `marginSeconds` の間は見えているとみなす。
+    クライアントは `Concealed` の相手の体を描かず、ロックオン・照準の補助・名札の対象から外し、見え直した tick から補間をやり直す。
+  - `violations.enabled` を `true` にすると、拒否された射撃と予算を超えた入力を人ごとに直近 `windowSeconds` 秒で数え、
+    `shotRejectionLimit`・`overBudgetLimit` を超えた人を EAC と同じ理由 (`shooter:rejected:anti-cheat`) で切る。
+    切るときに `[AntiCheat] violations kicking id=<id>: reason=ShotRejected|InputOverBudget count=<数> limit=<上限> window=<秒>s` と出す。
+    回避・乗り越えの最中に撃って断られた分 (`Dodging`・`Vaulting`) と Bot は数えず、抜けた人の数は忘れる。
+    起動のときに `[AntiCheat] violations on window=...` か `[AntiCheat] violations off ...` と出す。
+  - `stats.enabled` を `true` にすると、人 (Bot は除く) ごとに `stats.windowSeconds` の時間窓で射撃と視線を数え、閾値を超えた指標を
+    `{"type":"cheat-stats","playerId":"1","productUserId":"...","metric":"headshotRatio","value":"0.9","threshold":"0.6","windowSeconds":"120","samples":"12"}` のような 1 行の JSON でログに出す (キックはしない)。
+    指標は `headshotRatio` (命中のうち頭の率が `headshotRatio` より高い)・`reactionMs` (相手が見え始めてから当てるまでの平均が `minReactionMs` より短い)・
+    `snapDegreesPerTick` (1 tick の横の向きの差が `snapDegreesPerTick` より大きい)・`wallTrackSeconds` (見えない相手へ `wallTrackSeconds` より長く向き続けた) の 4 つで、
+    率と平均は時間窓の中の数が `minSamples` に届くまで比べない。同じ人の同じ指標は時間窓ごとに 1 回だけ出し、起動のときに `[CheatStats] collecting ...` と閾値を出す。
 - 人ごとに置ける種類 (能力) は 2 枠で、選べる候補はルールの JSON の `loadout.abilities` に書いた `deployables.json` の Id にする
   (例: `"loadout": { ..., "abilities": ["deploy-beacon"] }`)。項目が無ければ `deployables.json` の全部 (置けない `Drone` を除く) が候補になり、
   空の並び (`[]`) なら何も置かせない。起動のときに `[Deploy] net abilities=<候補> default=<既定> from=rules|catalog` と出す。
@@ -161,6 +171,7 @@ make server-dotnet ARGS="-rules FreeForAll"
   - 持っていない種類を置く要求は `[Deploy] owner=<id> kind=<id> net refused reason=NotEquipped` で断る。
   - 選んだ能力は次の試合でも残り、抜けると消える。マップやルールを替えると持たせた能力を捨てて次の出現で持たせ直し、
     替えた先のルールの候補に無い選択は既定に戻す (`[Deploy] owner=<id> kind=- net abilities reset to default: ...`)。
+  - `make export-server-rules` は、ロードアウトの既定の能力を先に、GameContent の能力のカタログ (`AbilityCatalog`、無ければロードアウトの能力) の残りを後に並べ、`deployables.json` にあってドローンでない Id だけを `loadout.abilities` に書く。`deployables.json` の Id を変えたら書き出し直す。
   - `loadout.abilities` に `deployables.json` に無い Id を書くと、`[Deploy] net kind=<id> is in loadout.abilities of rules <name> but not in the deployable tuning; it is not offered` と出して候補から外す。
 - 箱を開ける要求は、水平の届く距離に加えて足元と箱の高さの差が 2 m 以内で、体から箱までの線が壁に遮られないときだけ受ける
   (`[Loot] open ... refused=OutOfReach`・`refused=OutOfSight`)。ストリークの要求は `streaks.json` の報酬の表に無い Id を `reason=UnknownReward` で断る。

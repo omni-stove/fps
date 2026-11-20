@@ -3,6 +3,8 @@
     "rootNamespace": "Shooter.Editor",
     "references": [
         "Shooter.Core",
+        "Shooter.Core.World",
+        "Shooter.Core.Navigation",
         "Shooter.Runtime",
         "Unity.AI.Navigation"
     ],

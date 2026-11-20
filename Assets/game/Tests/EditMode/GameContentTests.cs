@@ -517,6 +517,34 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void FillEmptyFillsTheOnlyAbilityCatalogAndLeavesTwoEmpty()
+        {
+            var catalog = Track(ScriptableObject.CreateInstance<AbilityCatalogAsset>());
+            var content = Track(ScriptableObject.CreateInstance<GameContent>());
+
+            var left = GameContentAssets.FillEmpty(
+                content, t => t == typeof(AbilityCatalogAsset) ? new Object[] { catalog } : new Object[0], _ => new TextAsset[0]);
+
+            Assert.That(content.AbilityCatalog, Is.SameAs(catalog));
+            Assert.That(left, Does.Not.Contain("AbilityCatalog"));
+
+            var other = Track(ScriptableObject.CreateInstance<AbilityCatalogAsset>());
+            var ambiguous = Track(ScriptableObject.CreateInstance<GameContent>());
+            left = GameContentAssets.FillEmpty(
+                ambiguous, t => t == typeof(AbilityCatalogAsset) ? new Object[] { catalog, other } : new Object[0], _ => new TextAsset[0]);
+
+            Assert.That(ambiguous.AbilityCatalog, Is.Null);
+            Assert.That(left, Does.Contain("AbilityCatalog"));
+
+            var kept = Track(ScriptableObject.CreateInstance<GameContent>());
+            kept.AbilityCatalog = other;
+            GameContentAssets.FillEmpty(
+                kept, t => t == typeof(AbilityCatalogAsset) ? new Object[] { catalog } : new Object[0], _ => new TextAsset[0]);
+
+            Assert.That(kept.AbilityCatalog, Is.SameAs(other), "a filled slot is kept");
+        }
+
+        [Test]
         public void FillEmptyFillsTheNewModeDefinitions()
         {
             var content = Track(ScriptableObject.CreateInstance<GameContent>());

@@ -5,6 +5,7 @@
         "Shooter.Core",
         "Shooter.Campaign.Core",
         "Shooter.Runtime",
+        "Shooter.Services",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],

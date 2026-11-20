@@ -416,6 +416,10 @@ namespace Shooter.NetV2
                 Voice = replay ? null : NetV2Eos.CreateVoiceSession(_matchLobby?.LobbyId, log),
                 VoiceLobbyId = replay ? null : _matchLobby?.LobbyId,
                 Abilities = _weapons.Loadout != null ? _weapons.Loadout.Abilities : Array.Empty<AbilityDefinition>(),
+                AbilityCatalog = GameContent.Pick(c => c.AbilityCatalog),
+
+                // 再生では選択を送る相手がおらず答えも届かないので、枠を差し替える元をつながない
+                Loadout = replay ? null : _loadout,
                 Replay = replay,
                 ReplayFreeSpeed = () => KitTuning.Replay.FreeSpeed,
                 LootVisuals = LootVisuals,

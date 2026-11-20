@@ -41,6 +41,11 @@ namespace Shooter.Editor
         public const string SupplyDropsFileName = "supply-drops.json";
         public const string RedeployFileName = "redeploy.json";
 
+        // サーバーの ServerDeployables.CatalogFileName と同じ名前にする。手で書くファイルなので、書き出さずに読むだけにする
+        public const string DeployablesFileName = "deployables.json";
+
+        public static string DeployablesPath => Path.Combine(ProjectRoot, TuningFolder, DeployablesFileName);
+
         public const string AllDefaultsJson = "{}\n";
 
         // 試合の設定 (NetMatch) の並びに無くても、Demo のネットのマップ (NetBattleRoyale) で遊べるよう必ず書き出すモードのルール。
@@ -161,6 +166,12 @@ namespace Shooter.Editor
 
         public static IReadOnlyList<string> WriteRules(string directory, NetMatchDefinition match, IReadOnlyList<GameRulesDefinition> rules)
         {
+            return WriteRules(directory, match, rules, LoadDeployables(DeployablesPath));
+        }
+
+        public static IReadOnlyList<string> WriteRules(
+            string directory, NetMatchDefinition match, IReadOnlyList<GameRulesDefinition> rules, DeployCatalog deployables)
+        {
             if (match == null)
             {
                 throw new ArgumentNullException(nameof(match));
@@ -169,6 +180,20 @@ namespace Shooter.Editor
             if (rules == null)
             {
                 throw new ArgumentNullException(nameof(rules));
+            }
+
+            if (deployables == null)
+            {
+                throw new ArgumentNullException(nameof(deployables));
+            }
+
+            // ロードアウトが無いときは ToFile が理由を添えて断るので、ここでは組まずに進める
+            var loadout = NetMatchDefinition.PickLoadout(match);
+            IReadOnlyList<string> abilities = null;
+            if (loadout != null)
+            {
+                abilities = ToLoadoutAbilities(loadout, GameContent.Pick(c => c.AbilityCatalog), deployables);
+                Debug.Log(LogTag + " loadout.abilities = [" + string.Join(", ", abilities) + "] from '" + loadout.name + "'");
             }
 
             var motor = match.ToMotor();
@@ -183,7 +208,7 @@ namespace Shooter.Editor
                     throw new InvalidOperationException(LogTag + " two rules are named " + asset.name + "; rename one of " + AssetDatabase.GetAssetPath(asset));
                 }
 
-                var file = ToFile(match, asset, motor);
+                var file = ToFile(match, asset, motor, abilities);
                 var output = Path.Combine(directory, asset.name + NetMatchFile.Extension);
                 File.WriteAllText(output, NetMatchFile.Write(file));
                 written.Add(output);
@@ -192,7 +217,9 @@ namespace Shooter.Editor
             return written;
         }
 
-        public static NetMatchFile ToFile(NetMatchDefinition match, GameRulesDefinition asset, NetMotorSettings motor)
+        // loadoutAbilities が null なら loadout.abilities を書かない (サーバーは deployables.json の全部を候補にする)
+        public static NetMatchFile ToFile(
+            NetMatchDefinition match, GameRulesDefinition asset, NetMotorSettings motor, IReadOnlyList<string> loadoutAbilities = null)
         {
             if (match == null)
             {
@@ -239,13 +266,119 @@ namespace Shooter.Editor
                     loadout.SwitchSeconds,
                     catalog != null ? catalog.name : null,
                     catalog != null ? catalog.ToCatalog() : null,
-                    motor);
+                    motor,
+                    loadoutAbilities);
             }
             catch (ArgumentException e) when (e.ParamName == "settings")
             {
                 throw new InvalidOperationException(
                     LogTag + " rules " + AssetDatabase.GetAssetPath(asset) + " cannot be played with " + AssetDatabase.GetAssetPath(match) + ": " + e.Message, e);
             }
+            catch (ArgumentException e) when (e.ParamName == "abilities")
+            {
+                throw new InvalidOperationException(
+                    LogTag + " the ability slots of '" + loadout.name + "' cannot be written to " + asset.name + NetMatchFile.Extension + ": " + e.Message, e);
+            }
+        }
+
+        // サーバーもファイルが無ければ何も置かせない (ServerDeployables.TryLoadCatalog) ので、それに合わせて空の一覧にする
+        public static DeployCatalog LoadDeployables(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("path must not be blank", nameof(path));
+            }
+
+            if (!File.Exists(path))
+            {
+                Debug.Log(LogTag + " " + path + " is missing, so the server places nothing and loadout.abilities is written empty");
+                return DeployCatalog.Empty;
+            }
+
+            try
+            {
+                return DeployCatalogJson.Parse(File.ReadAllText(path), path);
+            }
+            catch (TuningJsonException e)
+            {
+                throw new InvalidOperationException(LogTag + " cannot read the deployables the server places: " + e.Message, e);
+            }
+        }
+
+        // ドローンは一覧にあってもサーバーが飛ばさない (ServerDeployables.DroneUnsupported) ので、置けるものに数えない
+        public static bool IsPlaceableOnline(DeployCatalog deployables, string abilityId)
+        {
+            if (deployables == null)
+            {
+                throw new ArgumentNullException(nameof(deployables));
+            }
+
+            return !string.IsNullOrEmpty(abilityId)
+                && deployables.TryGet(abilityId, out var type)
+                && type.Role != DeployRole.Drone;
+        }
+
+        // サーバーは loadout.abilities を選べる候補として読み、選んでいない人には先頭から枠の数だけを持たせるので、
+        // 装備画面 (LoadoutSelectionAssets.TryCreateAbilities) と同じ AbilitySelection で組んだ既定の枠を先に並べてから、残りの候補を足す。
+        // カタログの無いゲームは能力を選ばせないので、ロードアウトの能力だけを候補にする
+        public static IReadOnlyList<string> ToLoadoutAbilities(LoadoutDefinition loadout, AbilityCatalogAsset catalog, DeployCatalog deployables)
+        {
+            if (loadout == null)
+            {
+                throw new ArgumentNullException(nameof(loadout));
+            }
+
+            if (deployables == null)
+            {
+                throw new ArgumentNullException(nameof(deployables));
+            }
+
+            var defaults = LoadoutSelectionAssets.DefaultAbilityIds(loadout);
+            IReadOnlyList<string> offered;
+            if (catalog != null)
+            {
+                try
+                {
+                    offered = catalog.ToIds();
+                }
+                catch (AbilityDefinitionException e)
+                {
+                    throw new InvalidOperationException(LogTag + " the ability catalog cannot be offered online: " + e.Message, e);
+                }
+            }
+            else
+            {
+                var ids = new List<string>(defaults.Count);
+                foreach (var id in defaults)
+                {
+                    if (!string.IsNullOrEmpty(id) && !ids.Contains(id))
+                    {
+                        ids.Add(id);
+                    }
+                }
+
+                offered = ids;
+            }
+
+            var selection = new AbilitySelection(offered, null, defaults, id => IsPlaceableOnline(deployables, id), AbilityHost.SlotCount);
+            var candidates = new List<string>(offered.Count);
+            foreach (var id in selection.AbilityIds)
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    candidates.Add(id);
+                }
+            }
+
+            foreach (var id in offered)
+            {
+                if (IsPlaceableOnline(deployables, id) && !candidates.Contains(id))
+                {
+                    candidates.Add(id);
+                }
+            }
+
+            return candidates;
         }
 
         public static IReadOnlyList<string> ExportPoints(string directory)

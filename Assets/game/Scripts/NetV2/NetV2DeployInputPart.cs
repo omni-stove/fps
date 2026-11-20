@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.NetV2
 {
-    // オフラインの AbilityHost と同じく、ロードアウトの能力の並びの n 番目を Ability(n+1) の入力で使う。置く物の能力だけを
+    // オフラインの AbilityHost と同じく、能力の並び (つないだときはロードアウトの能力、受け入れられた後はその選択) の n 番目を Ability(n+1) の入力で使う。置く物の能力だけを
     // 置く要求 (NetV2DeployablesPart.Deploy) にし、それ以外の能力はサーバーが扱わないので押しても何もしない
     public sealed class NetV2DeployInputPart : INetV2ClientPart
     {
@@ -19,6 +19,9 @@ namespace Shooter.NetV2
         private readonly Func<int, bool> _slotPressed;
         private readonly Func<bool> _canAct;
         private InputAction[] _actions;
+        private NetV2LoadoutChooser _chooser;
+        private AbilityCatalogAsset _catalog;
+        private Action<string> _log;
         private bool _abilitiesOn;
         private bool _disposed;
 
@@ -83,6 +86,27 @@ namespace Shooter.NetV2
             _slots = CopySlots(slots ?? throw new ArgumentNullException(nameof(slots)));
         }
 
+        // 受け入れられた能力の選択が出るたびに、catalog で引いた定義で枠を差し替える。受け入れられるまではつないだときの枠のまま。
+        // 選んだ選択を持つ側 (NetV2LoadoutChooser) は部品より長く生きるので、Dispose で外す
+        internal void Follow(NetV2LoadoutChooser chooser, AbilityCatalogAsset catalog, Action<string> log)
+        {
+            if (chooser == null)
+            {
+                throw new ArgumentNullException(nameof(chooser));
+            }
+
+            Unfollow();
+            if (_disposed)
+            {
+                return;
+            }
+
+            _chooser = chooser;
+            _catalog = catalog;
+            _log = log ?? (line => Debug.Log(line));
+            _chooser.AbilitiesAccepted += HandleAbilitiesAccepted;
+        }
+
         public bool Handle(IMessage message)
         {
             return false;
@@ -127,6 +151,47 @@ namespace Shooter.NetV2
         public void Dispose()
         {
             _disposed = true;
+            Unfollow();
+        }
+
+        // サーバーは受け入れた能力を持たせているので、引けなかった枠に前の種類を残すと断られる要求を送ることになる。だから枠を空にする
+        private void HandleAbilitiesAccepted(IReadOnlyList<string> abilityIds)
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            IReadOnlyList<DeployAbilityDefinition> slots;
+            try
+            {
+                slots = SlotsOf(abilityIds, _catalog);
+            }
+            catch (AbilityDefinitionException e)
+            {
+                _log(ClientDeployLog.SlotsNotResolved(e.Message));
+                slots = new DeployAbilityDefinition[SlotCount];
+            }
+
+            SetSlots(slots);
+            var kinds = new string[_slots.Count];
+            for (var i = 0; i < kinds.Length; i++)
+            {
+                kinds[i] = _slots[i] != null ? _slots[i].Id : null;
+            }
+
+            _log(ClientDeployLog.Slots(kinds));
+        }
+
+        private void Unfollow()
+        {
+            if (_chooser != null)
+            {
+                _chooser.AbilitiesAccepted -= HandleAbilitiesAccepted;
+            }
+
+            _chooser = null;
+            _catalog = null;
         }
 
         // 渡した側が後から並びを書き換えても、差し替えたとき (SetSlots) 以外に枠が変わらないよう写しを持つ

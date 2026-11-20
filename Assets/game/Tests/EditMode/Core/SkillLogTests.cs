@@ -35,13 +35,6 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void TheAdoptedLineShowsTheProfileRatingAndTheKeptRating()
-        {
-            Assert.That(SkillLog.AdoptedLegacy(1234, 1234), Is.EqualTo("[Skill] took the profile rating 1234 as rating=1234"));
-            Assert.That(SkillLog.AdoptedLegacy(2500, 2000), Is.EqualTo("[Skill] took the profile rating 2500 as rating=2000"));
-        }
-
-        [Test]
         public void RejectsMissingValues()
         {
             Assert.Throws<ArgumentNullException>(() => SkillLog.Configured(null));

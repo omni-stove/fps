@@ -5,7 +5,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class CampaignSaveSlotsTests
     {
-        [TestCase("campaign", true)]
+        [TestCase("campaign", false)]
         [TestCase("campaign-Campaign01", true)]
         [TestCase("campaign-Mission_02-b", true)]
         [TestCase("campaign-", false)]

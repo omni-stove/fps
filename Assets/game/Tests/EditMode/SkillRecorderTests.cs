@@ -171,85 +171,6 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void ALegacyRatingIsTakenAndSavedWhenThereIsNoSkillSave()
-        {
-            _recorder.Install();
-
-            LogAssert.Expect(LogType.Log, "[Skill] took the profile rating 1234 as rating=1234");
-            LogAssert.Expect(LogType.Log, "[Skill] saved rating=1234");
-            var adopted = _recorder.AdoptLegacy(1234);
-
-            Assert.That(adopted, Is.True);
-            Assert.That(_recorder.Rating, Is.EqualTo(1234));
-            Assert.That(_storage.Text(SkillRecorder.Slot), Is.EqualTo("{\"version\":1,\"rating\":1234}"));
-
-            Assert.That(_recorder.AdoptLegacy(900), Is.False, "the skill save written by the first adoption wins");
-            Assert.That(_recorder.Rating, Is.EqualTo(1234));
-        }
-
-        [Test]
-        public void ALegacyRatingDoesNothingWhenThereIsASkillSave()
-        {
-            _storage.Write(SkillRecorder.Slot, new SkillSave(1176).ToJson());
-            _recorder.Install();
-            var writes = _storage.WriteCount;
-
-            Assert.That(_recorder.AdoptLegacy(1234), Is.False);
-            Assert.That(_recorder.Rating, Is.EqualTo(1176));
-            Assert.That(_storage.Text(SkillRecorder.Slot), Is.EqualTo("{\"version\":1,\"rating\":1176}"));
-            Assert.That(_storage.WriteCount, Is.EqualTo(writes));
-        }
-
-        [Test]
-        public void ALegacyRatingDoesNothingWhenTheSkillSaveIsBroken()
-        {
-            _storage.Write(SkillRecorder.Slot, "not json");
-            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Skill\] skill save rejected: "));
-            LogAssert.Expect(LogType.Warning, "[Skill] kept the rejected skill save in slot=skill-rejected");
-            _recorder.Install();
-
-            Assert.That(_recorder.AdoptLegacy(1234), Is.False, "the skill slot is there, so the profile rating is older");
-            Assert.That(_recorder.Rating, Is.EqualTo(1000));
-        }
-
-        [Test]
-        public void ALegacyRatingIsKeptInsideTheConfiguredBounds()
-        {
-            var recorder = new SkillRecorder(_storage, new SkillSpec(1000, 32f, 100, 2000));
-            try
-            {
-                recorder.Install();
-
-                LogAssert.Expect(LogType.Log, "[Skill] took the profile rating 2500 as rating=2000");
-                recorder.AdoptLegacy(2500);
-
-                Assert.That(recorder.Rating, Is.EqualTo(2000));
-                Assert.That(_storage.Text(SkillRecorder.Slot), Is.EqualTo("{\"version\":1,\"rating\":2000}"));
-            }
-            finally
-            {
-                recorder.Uninstall();
-            }
-        }
-
-        [Test]
-        public void ALegacyRatingThatCannotBeSavedIsWrittenAfterTheNextMatch()
-        {
-            _recorder.Install();
-            _storage.FailWrites = true;
-
-            LogAssert.Expect(LogType.Error, "[Skill] could not save the rating: disk full");
-            Assert.That(_recorder.AdoptLegacy(1234), Is.True);
-            Assert.That(_recorder.Rating, Is.EqualTo(1234));
-            Assert.That(_storage.Has(SkillRecorder.Slot), Is.False);
-
-            _storage.FailWrites = false;
-            CombatEvents.RaiseMatchFinished(new MatchResult(MatchOutcome.Won, 3, 0, 30));
-
-            Assert.That(_storage.Text(SkillRecorder.Slot), Is.EqualTo("{\"version\":1,\"rating\":1234}"), "an unrated match still writes what was not saved");
-        }
-
-        [Test]
         public void AFailedSaveIsLoggedAndWrittenWithTheNextMatch()
         {
             _recorder.Install();
@@ -326,7 +247,6 @@ namespace Shooter.Tests.EditMode
             Assert.That(_recorder.IsInstalled, Is.False);
             Assert.That(_recorder.Rating, Is.EqualTo(1000));
             Assert.That(_storage.WriteCount, Is.Zero);
-            Assert.Throws<InvalidOperationException>(() => _recorder.AdoptLegacy(1234));
             Assert.Throws<InvalidOperationException>(() => _recorder.Save());
         }
 
@@ -387,8 +307,6 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => new SkillRecorder(_storage, null));
             Assert.Throws<ArgumentNullException>(() => SkillBootstrap.Install((SkillRecorder)null));
             Assert.Throws<ArgumentNullException>(() => SkillBootstrap.Install((ISaveStorage)null));
-            _recorder.Install();
-            Assert.Throws<ArgumentOutOfRangeException>(() => _recorder.AdoptLegacy(-1));
         }
     }
 }

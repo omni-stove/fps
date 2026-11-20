@@ -16,8 +16,18 @@ namespace Shooter.Server
         // 物資投下と倒れた人の箱の届く距離。オフラインの LootContainer.DefaultReach と同じ
         public const float DefaultDropReach = 1.6f;
 
+        // 届く距離はオフラインの LootContainer.IsInReach と同じく水平に測るが、上下の階の箱を床越しに開けさせないよう、
+        // 足元と箱の高さの差にも上限を置く (ServerDeployables.MaxVerticalReach と同じ考え)
+        public const float MaxVerticalReach = 2f;
+
+        // 射線の終点は箱の載る床の面に当たらないよう、箱の原点 (底面) より少し上にする
+        public const float SightLift = 0.1f;
+
         // 目的の物 (旗・爆弾・台車) は 0 から振るので、同じスナップショットの並びで重ならないよう離れた所から振る
         internal const int FirstItemId = 1 << 24;
+
+        // 箱の見た目の当たりと箱の載る床を、箱の真上のこの高さから探す
+        private const float _ownProbeHeight = 1f;
 
         // 断った理由のログを出す最短の間隔 (秒)。押し続けてログを埋めないため
         private const float _refusalLogInterval = 1f;
@@ -326,6 +336,7 @@ namespace Shooter.Server
                 : !_rules.CanFire(playerId) ? InteractVerdict.Refused(InteractRefusal.CannotAct)
                 : box.Opened ? InteractVerdict.Refused(InteractRefusal.AlreadyOpened)
                 : !IsInReach(box, playerId) ? InteractVerdict.Refused(InteractRefusal.OutOfReach)
+                : !IsInSight(box, playerId) ? InteractVerdict.Refused(InteractRefusal.OutOfSight)
                 : _rules.Objective?.Interact(playerId, itemId) ?? InteractVerdict.Refused(InteractRefusal.NotInteractable);
             if (!verdict.IsAccepted)
             {
@@ -510,7 +521,36 @@ namespace Shooter.Server
 
         private bool IsInReach(Box box, int playerId)
         {
-            return _context.Bodies.TryGet(playerId, out var body) && HorizontalDistanceSquared(box.Position, body.Position) <= box.Reach * box.Reach;
+            if (!_context.Bodies.TryGet(playerId, out var body) || !body.HasSpawned)
+            {
+                return false;
+            }
+
+            var feet = body.Position.Y + body.Shape.BottomY;
+            return HorizontalDistanceSquared(box.Position, body.Position) <= box.Reach * box.Reach
+                && MathF.Abs(box.Position.Y - feet) <= MaxVerticalReach;
+        }
+
+        // 体から箱までの線が最初に当たる物が箱そのもの (見た目の当たりか、箱の載る床) なら見えているとする。
+        // 地点ファイルの箱は当たりの Id を持たず、見た目の形もゲームごとに違うので、箱の真上から下ろした線が最初に当たる物を箱の物とみなす
+        private bool IsInSight(Box box, int playerId)
+        {
+            if (!_context.Bodies.TryGet(playerId, out var body))
+            {
+                return false;
+            }
+
+            var from = body.Center;
+            var line = box.Position + new Vector3(0f, SightLift, 0f) - from;
+            var distance = line.Length();
+            if (!(distance > 1e-4f) || !_context.World.Raycast(from, line / distance, distance, ServerHitboxes.RaycastLayers, out var hit))
+            {
+                return true;
+            }
+
+            var probe = box.Position + new Vector3(0f, _ownProbeHeight, 0f);
+            return _context.World.Raycast(probe, -Vector3.UnitY, _ownProbeHeight + MaxVerticalReach, ServerHitboxes.RaycastLayers, out var own)
+                && own.ColliderId == hit.ColliderId;
         }
 
         private void RefuseLog(int itemId, int playerId, InteractRefusal refusal)

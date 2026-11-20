@@ -15,8 +15,7 @@ namespace Shooter.Core
             var slot = CampaignSaveSlots.For(missionId);
             save = null;
             problem = null;
-            if (!storage.TryRead(slot, out var text)
-                && !(CampaignSaveSlots.ReadsLegacy(missionId) && storage.TryRead(CampaignSaveSlots.Legacy, out text)))
+            if (!storage.TryRead(slot, out var text))
             {
                 return false;
             }
@@ -49,14 +48,7 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(storage));
             }
 
-            var slot = CampaignSaveSlots.For(missionId);
-            storage.Delete(slot);
-
-            // 古いスロットが残っていると、CampaignRunner はそこから再開してしまう。
-            if (CampaignSaveSlots.ReadsLegacy(missionId))
-            {
-                storage.Delete(CampaignSaveSlots.Legacy);
-            }
+            storage.Delete(CampaignSaveSlots.For(missionId));
         }
     }
 }

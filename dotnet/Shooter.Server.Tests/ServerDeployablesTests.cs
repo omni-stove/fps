@@ -489,13 +489,16 @@ namespace Shooter.Server.Tests
             Assert.That(error, Does.StartWith("cannot read deployable tuning: ").And.Contain("types[0].role"));
         }
 
-        private static DeployCatalog Catalog(TurretSpec turret = null, DecoySpec decoy = null, DeploySpec shield = null)
+        // 回数と間隔を確かめるテストのほかは、続けて置いても回数で断られないよう、送れる数より多い回数と間隔 0 の枠にする
+        private static DeployCatalog Catalog(TurretSpec turret = null, DecoySpec decoy = null, DeploySpec shield = null, AbilitySpec shieldAbility = null)
         {
+            var free = new AbilitySpec(SnapshotMessage.MaxDeployables + 1, 0f, 0f, 0f);
             return new DeployCatalog(new[]
             {
-                new DeployType(_turretId, DeployRole.Turret, DeployType.DefaultDeploy(DeployRole.Turret), turret ?? TurretSpec.Default, TestRules.RifleId),
-                new DeployType(_shieldId, DeployRole.Shield, shield ?? DeployType.DefaultDeploy(DeployRole.Shield)),
-                new DeployType(_decoyId, DeployRole.Decoy, DeployType.DefaultDeploy(DeployRole.Decoy), decoy: decoy ?? DecoySpec.Default),
+                new DeployType(
+                    _turretId, DeployRole.Turret, DeployType.DefaultDeploy(DeployRole.Turret), turret ?? TurretSpec.Default, TestRules.RifleId, ability: free),
+                new DeployType(_shieldId, DeployRole.Shield, shield ?? DeployType.DefaultDeploy(DeployRole.Shield), ability: shieldAbility ?? free),
+                new DeployType(_decoyId, DeployRole.Decoy, DeployType.DefaultDeploy(DeployRole.Decoy), decoy: decoy ?? DecoySpec.Default, ability: free),
             });
         }
 

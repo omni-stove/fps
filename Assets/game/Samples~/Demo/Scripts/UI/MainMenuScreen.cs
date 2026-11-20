@@ -108,6 +108,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("The weapons that can be chosen online (Assets/game/Weapons/WeaponCatalog.asset). Empty uses the GameContent one")]
         private WeaponCatalogAsset _catalog;
 
+        [SerializeField, Tooltip("The abilities that can be chosen on the loadout screen. Empty uses the GameContent one; with neither, no abilities are offered")]
+        private AbilityCatalogAsset _abilityCatalog;
+
         [SerializeField, Tooltip("The campaign missions (Assets/game/Missions/MissionCatalog.asset). Empty uses the GameContent one")]
         private MissionCatalog _missions;
 
@@ -174,6 +177,12 @@ namespace Shooter.Runtime
             set => _catalog = value;
         }
 
+        public AbilityCatalogAsset AbilityCatalog
+        {
+            get => _abilityCatalog;
+            set => _abilityCatalog = value;
+        }
+
         public MissionCatalog Missions
         {
             get => _missions;
@@ -183,6 +192,8 @@ namespace Shooter.Runtime
         public LoadoutDefinition EffectiveLoadout => GameContent.Pick(_loadout, c => c.Loadout);
 
         public WeaponCatalogAsset EffectiveCatalog => GameContent.Pick(_catalog, c => c.WeaponCatalog);
+
+        public AbilityCatalogAsset EffectiveAbilityCatalog => GameContent.Pick(_abilityCatalog, c => c.AbilityCatalog);
 
         public MissionCatalog EffectiveMissions => GameContent.Pick(_missions, c => c.Missions as MissionCatalog);
 
@@ -577,18 +588,26 @@ namespace Shooter.Runtime
 
             var progression = Progression;
             Func<string, bool> isAvailable = progression != null ? progression.IsUnlocked : (Func<string, bool>)null;
+            var saved = _loadoutStore.Load();
+            var loadout = EffectiveLoadout;
             if (!LoadoutSelectionAssets.TryCreate(
-                    EffectiveLoadout, EffectiveCatalog, _loadoutStore.Load(), null, out var selection, out var error, isAvailable))
+                    loadout, EffectiveCatalog, saved?.WeaponIds, null, out var selection, out var error, isAvailable))
             {
                 Debug.LogWarning(LoadoutPreferenceStore.LogTag + " cannot open the loadout screen: " + error, this);
                 ShowNotice(LoadoutUnavailableNotice(error));
                 return;
             }
 
+            // 能力の一覧が壊れていても武器は選べるよう、能力を選ばせずに開く
+            if (!LoadoutSelectionAssets.TryCreateAbilities(loadout, EffectiveAbilityCatalog, saved?.AbilityIds, out var abilities, out error))
+            {
+                Debug.LogWarning(LoadoutPreferenceStore.LogTag + " the loadout screen does not offer abilities: " + error, this);
+            }
+
             ShowNotice(null);
             SetDisplayed(_loadoutSlot, true);
             SetButtonsEnabled(false);
-            _loadoutPanel = new LoadoutSelectPanel(_loadoutSlot, selection, progression?.Ledger);
+            _loadoutPanel = new LoadoutSelectPanel(_loadoutSlot, selection, progression?.Ledger, abilities);
             _loadoutPanel.Confirmed += SaveLoadout;
             _loadoutPanel.Cancelled += CloseLoadout;
         }
@@ -866,11 +885,13 @@ namespace Shooter.Runtime
             }
         }
 
-        private void SaveLoadout(IReadOnlyList<string> weaponIds)
+        private void SaveLoadout(LoadoutChoice choice)
         {
+            var weaponIds = choice.WeaponIds;
             try
             {
-                _loadoutStore.Save(weaponIds);
+                // 能力はまだ装備画面で選ばせないので、武器だけを保存する
+                _loadoutStore.Save(new LoadoutChoice(weaponIds));
             }
             catch (ArgumentException e)
             {

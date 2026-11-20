@@ -36,11 +36,6 @@ namespace Shooter.Core
                 LogTag, previous, rating, outcome, opponents);
         }
 
-        public static string AdoptedLegacy(int legacy, int rating)
-        {
-            return string.Format(CultureInfo.InvariantCulture, "{0} took the profile rating {1} as rating={2}", LogTag, legacy, rating);
-        }
-
         public static string Rejected(string reason)
         {
             return LogTag + " skill save rejected: " + reason;

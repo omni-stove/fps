@@ -170,9 +170,16 @@ namespace Shooter.Server
                 return ServerStreakRefusal.NotInMatch;
             }
 
+            // 報酬の Id はクライアントが送った文字なので、この試合の報酬の表に無い Id はログの行を崩さないよう載せない
+            var known = Spec.FindReward(rewardId)?.Id;
             if (!IsEnabled)
             {
-                return Refuse(playerId, rewardId, ServerStreakRefusal.RuleOff);
+                return Refuse(playerId, known, ServerStreakRefusal.RuleOff);
+            }
+
+            if (known == null)
+            {
+                return Refuse(playerId, null, ServerStreakRefusal.UnknownReward);
             }
 
             if (!_rules.CanFire(playerId) || !_bodies.TryGet(playerId, out var body))

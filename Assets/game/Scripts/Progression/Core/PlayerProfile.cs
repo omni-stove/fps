@@ -98,23 +98,6 @@ namespace Shooter.Core
             int playSeconds,
             IReadOnlyList<string> achievements,
             IReadOnlyDictionary<CosmeticKind, string> cosmetics)
-            : this(xp, kills, deaths, matches, wins, assists, headshots, meleeKills, playSeconds, achievements, cosmetics, null)
-        {
-        }
-
-        private PlayerProfile(
-            int xp,
-            int kills,
-            int deaths,
-            int matches,
-            int wins,
-            int assists,
-            int headshots,
-            int meleeKills,
-            int playSeconds,
-            IReadOnlyList<string> achievements,
-            IReadOnlyDictionary<CosmeticKind, string> cosmetics,
-            int? legacyRating)
         {
             RequireNonNegative(xp, nameof(xp));
             RequireNonNegative(kills, nameof(kills));
@@ -125,11 +108,6 @@ namespace Shooter.Core
             RequireNonNegative(headshots, nameof(headshots));
             RequireNonNegative(meleeKills, nameof(meleeKills));
             RequireNonNegative(playSeconds, nameof(playSeconds));
-            if (legacyRating.HasValue)
-            {
-                RequireNonNegative(legacyRating.Value, _ratingKey);
-            }
-
             if (wins > matches)
             {
                 throw new ArgumentOutOfRangeException(
@@ -144,7 +122,6 @@ namespace Shooter.Core
             Matches = matches;
             Wins = wins;
             Assists = assists;
-            LegacyRating = legacyRating;
             Headshots = headshots;
             MeleeKills = meleeKills;
             PlaySeconds = playSeconds;
@@ -165,10 +142,6 @@ namespace Shooter.Core
         public int Matches { get; }
 
         public int Wins { get; }
-
-        // 版 3 から 5 の保存にあったレートで、それ以外の版と組み立てたプロフィールでは null。書き出さず、比べもしないのは、
-        // レートを SkillRecorder が持つようになり、ここに残すと 2 か所に別の値が残るため。読み込んだ側が SkillRecorder に渡す。
-        public int? LegacyRating { get; }
 
         public int Headshots { get; }
 
@@ -320,7 +293,11 @@ namespace Shooter.Core
             var deaths = ReadInt(root, _deathsKey);
             var matches = ReadInt(root, _matchesKey);
             var wins = ReadInt(root, _winsKey);
-            int? legacyRating = version >= 3 && version <= 5 ? ReadInt(root, _ratingKey) : (int?)null;
+            // 版 3 から 5 の rating は確かめてから捨てる。レートは SkillRecorder が skill のスロットに持つので、ここに持つと 2 か所に別の値が残る。
+            if (version >= 3 && version <= 5 && ReadInt(root, _ratingKey) < 0)
+            {
+                throw new FormatException($"invalid profile data: {_ratingKey} must not be negative");
+            }
 
             // 版 3 までは内訳と遊んだ時間を数えていないので 0 から始め、実績は次に条件を確かめたときに今の数から解き直す。
             var headshots = version < 4 ? 0 : ReadInt(root, _headshotsKey);
@@ -332,7 +309,7 @@ namespace Shooter.Core
             var cosmetics = version < 5 ? null : ReadCosmetics(root, _cosmeticsKey);
             try
             {
-                return new PlayerProfile(xp, kills, deaths, matches, wins, assists, headshots, meleeKills, playSeconds, achievements, cosmetics, legacyRating);
+                return new PlayerProfile(xp, kills, deaths, matches, wins, assists, headshots, meleeKills, playSeconds, achievements, cosmetics);
             }
             catch (ArgumentException e)
             {

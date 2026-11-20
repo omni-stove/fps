@@ -65,7 +65,6 @@ namespace Shooter.Runtime
             CombatEvents.MatchFinished += OnMatchFinished;
             IsInstalled = true;
             SetProfile(loaded);
-            HandOverLegacyRating(loaded);
         }
 
         // 保存先の中身が外から替わったとき (クラウドセーブが他の端末の新しいプロフィールを採ったとき) に呼ぶ。
@@ -80,18 +79,6 @@ namespace Shooter.Runtime
             var loaded = _store.Load();
             Debug.Log(ProgressionLog.Loaded(loaded, Ledger.LevelOf(loaded)));
             SetProfile(loaded);
-            HandOverLegacyRating(loaded);
-        }
-
-        // 版 5 までのプロフィールにあったレートは次の保存で消えるので、その前にレートの記録係へ渡す。
-        // 記録係はレートのスロットがまだ無いときだけ受け取るので、毎回渡しても前に引き継いだ値や試合で動いた値を戻さない。
-        private static void HandOverLegacyRating(PlayerProfile profile)
-        {
-            var skill = SkillBootstrap.Current;
-            if (profile.LegacyRating.HasValue && skill != null && skill.IsInstalled)
-            {
-                skill.AdoptLegacy(profile.LegacyRating.Value);
-            }
         }
 
         public void Change(Func<PlayerProfile, PlayerProfile> change)

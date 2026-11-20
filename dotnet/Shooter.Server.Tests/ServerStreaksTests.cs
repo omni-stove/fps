@@ -300,6 +300,24 @@ namespace Shooter.Server.Tests
             Assert.That(_log.ToString(), Does.Contain(ServerStreakLog.Refused(1, StreakSpec.AirstrikeRewardId, nameof(ServerStreakRefusal.NotReady))));
         }
 
+        // 送られた文字は改行を含んでもログに載せず、表に無い Id として断る。持っている報酬はそのまま使える
+        [Test]
+        public void ARewardIdNotInTheTableIsRefusedWithoutWritingItToTheLog()
+        {
+            Start(Rules(), Spec(uavKills: 1, airstrikeKills: 3));
+            JoinTwoTeams(4);
+            Kill(1, 2);
+            var forged = "uav\n[Streak] id=net2 used reward=airstrike";
+
+            Assert.That(Use(1, forged), Is.EqualTo(ServerStreakRefusal.UnknownReward));
+
+            Assert.That(_streaks.StatusOf(1).Value.ReadyCount, Is.EqualTo(1), "the held UAV is kept");
+            Assert.That(_log.ToString(), Does.Contain(ServerStreakLog.Refused(1, null, nameof(ServerStreakRefusal.UnknownReward))));
+            Assert.That(_log.ToString(), Does.Not.Contain(forged));
+            Assert.That(_log.ToString(), Does.Not.Contain("id=net2 used"));
+            Assert.That(Use(1, StreakSpec.UavRewardId), Is.EqualTo(ServerStreakRefusal.None), _log.ToString());
+        }
+
         [Test]
         public void AHeldRewardCanBeUsedBeforeOneEarnedEarlier()
         {

@@ -58,7 +58,7 @@ namespace Shooter.NetV2
                 return;
             }
 
-            if (!LoadoutSelectionAssets.TryCreate(_weapons.Loadout, _weapons.Catalog, saved, null, out var selection, out var reason))
+            if (!LoadoutSelectionAssets.TryCreate(_weapons.Loadout, _weapons.Catalog, saved.WeaponIds, null, out var selection, out var reason))
             {
                 Debug.LogWarning(LoadoutChoiceLog.Prefix + " the saved loadout is not sent: " + reason, _context);
                 SendCosmeticOnly();
@@ -112,7 +112,8 @@ namespace Shooter.NetV2
             {
                 try
                 {
-                    _store.Save(pending.WeaponIds);
+                    // 能力はまだサーバーへ送らないので、受け入れられた武器だけを保存する
+                    _store.Save(new LoadoutChoice(pending.WeaponIds));
                 }
                 catch (ArgumentException e)
                 {
@@ -140,19 +141,28 @@ namespace Shooter.NetV2
                 return;
             }
 
-            if (!LoadoutSelectionAssets.TryCreate(_weapons.Loadout, _weapons.Catalog, LoadSaved(), _equipped, out var selection, out var error))
+            var saved = LoadSaved();
+            if (!LoadoutSelectionAssets.TryCreate(_weapons.Loadout, _weapons.Catalog, saved?.WeaponIds, _equipped, out var selection, out var error))
             {
                 Debug.LogWarning(LoadoutChoiceLog.Prefix + " cannot show the loadout screen: " + error, _context);
                 return;
             }
 
+            // 能力の一覧が壊れていても武器は選べるよう、能力を選ばせずに開く
+            if (!LoadoutSelectionAssets.TryCreateAbilities(
+                    _weapons.Loadout, GameContent.Pick(c => c.AbilityCatalog), saved?.AbilityIds, out var abilities, out error))
+            {
+                Debug.LogWarning(LoadoutChoiceLog.AbilitiesNotOffered(error), _context);
+            }
+
             _screenSession++;
-            _view.Open(selection);
+            _view.Open(selection, abilities);
         }
 
-        private void HandleConfirmed(IReadOnlyList<string> weaponIds)
+        private void HandleConfirmed(LoadoutChoice choice)
         {
-            if (!Send(weaponIds, _screenSession))
+            // 能力はまだ要求に載せないので、武器だけを送る
+            if (!Send(choice.WeaponIds, _screenSession))
             {
                 _view.ShowAnswer(false, "not connected to the match");
                 return;
@@ -215,7 +225,7 @@ namespace Shooter.NetV2
             return true;
         }
 
-        private IReadOnlyList<string> LoadSaved()
+        private LoadoutChoice LoadSaved()
         {
             try
             {

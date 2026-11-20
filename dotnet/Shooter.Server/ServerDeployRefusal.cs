@@ -8,6 +8,8 @@ namespace Shooter.Server
         UnknownType,
         Unusable,
         NotEquipped,
+        NoCharges,
+        CoolingDown,
         OutOfReach,
         LimitReached,
         NoGround,

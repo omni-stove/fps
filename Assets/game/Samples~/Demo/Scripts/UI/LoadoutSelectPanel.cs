@@ -41,6 +41,7 @@ namespace Shooter.Runtime
 
         private readonly VisualElement _container;
         private readonly LoadoutSelection _selection;
+        private readonly AbilitySelection _abilities;
         private readonly ProgressionLedger _ledger;
         private readonly List<VisualElement> _rows = new List<VisualElement>();
         private readonly List<List<Button>> _options = new List<List<Button>>();
@@ -51,10 +52,12 @@ namespace Shooter.Runtime
         private bool _busy;
         private bool _disposed;
 
-        public LoadoutSelectPanel(VisualElement container, LoadoutSelection selection, ProgressionLedger ledger = null)
+        // 能力はまだ行に出さず、開いたときの選択をそのまま Confirmed に添える。
+        public LoadoutSelectPanel(VisualElement container, LoadoutSelection selection, ProgressionLedger ledger = null, AbilitySelection abilities = null)
         {
             _container = container ?? throw new ArgumentNullException(nameof(container));
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
+            _abilities = abilities;
 
             // 使えるかは selection の述語が決める。ledger から使えるかを引き直すと述語と食い違いうるので、鍵に添えるレベルを引くのにだけ使う
             _ledger = ledger;
@@ -98,11 +101,13 @@ namespace Shooter.Runtime
             RefreshAll();
         }
 
-        public event Action<IReadOnlyList<string>> Confirmed;
+        public event Action<LoadoutChoice> Confirmed;
 
         public event Action Cancelled;
 
         public LoadoutSelection Selection => _selection;
+
+        public AbilitySelection Abilities => _abilities;
 
         public VisualElement Container => _container;
 
@@ -174,7 +179,7 @@ namespace Shooter.Runtime
                 return false;
             }
 
-            Confirmed?.Invoke(_selection.WeaponIds);
+            Confirmed?.Invoke(new LoadoutChoice(_selection.WeaponIds, _abilities?.AbilityIds));
             return true;
         }
 

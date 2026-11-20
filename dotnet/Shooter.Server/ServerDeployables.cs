@@ -17,7 +17,12 @@ namespace Shooter.Server
 
         internal const string DroneUnsupported = "a Drone is piloted only offline; the dedicated server does not fly drones or send them yet";
 
+        // 持ち主は手元の時計で回数と間隔を数えてから送るので、届くまでの揺れで少し早く着いた要求は断らない (ServerPlayerWeapons.ChargeArrivalToleranceSeconds と同じ考え)
+        public const float UseArrivalToleranceSeconds = 0.2f;
+
         private const float _rejectWarningInterval = 1f;
+
+        private const float _spendSlackSeconds = 1e-4f;
 
         private readonly MatchRulesModule _rules;
         private readonly ServerCombat _combat;
@@ -27,6 +32,8 @@ namespace Shooter.Server
         private readonly SortedDictionary<int, Placed> _placed = new SortedDictionary<int, Placed>();
         private readonly Dictionary<(int Owner, string TypeId), DeployRoster<Placed>> _rosters =
             new Dictionary<(int Owner, string TypeId), DeployRoster<Placed>>();
+        // 種類ごとに数えるのは、オフラインで置ける物 1 つが能力の枠 1 つ (DeployAbilityDefinition) で、枠ごとに回数を持つため
+        private readonly Dictionary<(int Owner, string TypeId), AbilitySlot> _slots = new Dictionary<(int Owner, string TypeId), AbilitySlot>();
         private readonly Dictionary<string, WeaponSpec> _turretWeapons = new Dictionary<string, WeaponSpec>(StringComparer.Ordinal);
         private readonly HashSet<string> _unusable = new HashSet<string>(StringComparer.Ordinal);
         private readonly List<Placed> _scratch = new List<Placed>();
@@ -85,6 +92,13 @@ namespace Shooter.Server
         public void Tick(long tick, float deltaSeconds)
         {
             _now += deltaSeconds;
+            if (deltaSeconds > 0f && !float.IsInfinity(deltaSeconds))
+            {
+                foreach (var slot in _slots.Values)
+                {
+                    slot.Tick(deltaSeconds);
+                }
+            }
 
             // 撃った弾で他の置いた物が壊れて一覧が変わっても進め続けられるよう、写してから回す
             _scratch.Clear();
@@ -140,6 +154,7 @@ namespace Shooter.Server
             _rules.PlayerSpawned -= HandlePlayerSpawned;
             _placed.Clear();
             _rosters.Clear();
+            _slots.Clear();
             _beacons.Clear();
         }
 
@@ -271,6 +286,19 @@ namespace Shooter.Server
                 return Refuse(playerId, type.Id, ServerDeployRefusal.NotEquipped);
             }
 
+            // オフラインの能力の枠は置く前に回数と間隔で止めるので、置けるかを調べる前に断る。回数は置けたときにだけ減らす
+            var slot = SlotOf(playerId, type);
+            if (!slot.CanStart && !(slot.SecondsUntilReady <= UseArrivalToleranceSeconds))
+            {
+                var waiting = slot.Block == AbilityUseBlock.Cooldown && slot.Charges > 0 ? ServerDeployRefusal.CoolingDown : ServerDeployRefusal.NoCharges;
+                if (CanWarn())
+                {
+                    _log.WriteLine(ServerDeployableLog.NotReady(playerId, type.Id, waiting, slot.Charges, slot.Spec.MaxCharges, slot.SecondsUntilReady));
+                }
+
+                return waiting;
+            }
+
             if (!IsFinite(position) || !float.IsFinite(yaw))
             {
                 return Refuse(playerId, type.Id, ServerDeployRefusal.NoGround);
@@ -326,6 +354,7 @@ namespace Shooter.Server
                 return Refuse(playerId, type.Id, ServerDeployRefusal.LimitReached);
             }
 
+            Spend(slot);
             var placed = new Placed(NextId(), type, playerId, _rules.Session.GetTeam(playerId), point, facing, spec.MaxHealth);
             if (type.Role == DeployRole.Turret)
             {
@@ -555,6 +584,31 @@ namespace Shooter.Server
             return roster;
         }
 
+        private AbilitySlot SlotOf(int playerId, DeployType type)
+        {
+            var key = (playerId, type.Id);
+            if (!_slots.TryGetValue(key, out var slot))
+            {
+                slot = new AbilitySlot(type.Ability);
+                _slots.Add(key, slot);
+            }
+
+            return slot;
+        }
+
+        // 揺れの分だけ早く着いた要求は、待ちを先に進めてから使う。置く物は効果がその場で出るので、使い始めた枠をすぐ終える。
+        // 待ちにわずかに足すのは、戻りの秒を足し戻した値が丸めで戻りの秒に届かず、回数が戻らないまま置かせないため
+        private static void Spend(AbilitySlot slot)
+        {
+            if (!slot.CanStart)
+            {
+                slot.Tick(slot.SecondsUntilReady + _spendSlackSeconds);
+            }
+
+            slot.TryStart();
+            slot.End();
+        }
+
         private void TickDecoy(Placed placed, float deltaSeconds)
         {
             var calls = placed.Decoy.Tick(deltaSeconds);
@@ -628,6 +682,31 @@ namespace Shooter.Server
             {
                 _rosters.Remove(key);
             }
+
+            RemoveSlots(owner);
+        }
+
+        // オフラインの AbilityHost が体力を戻すたびに枠を満たすのと同じく、出現し直した人は回数を満たして始める
+        private void HandlePlayerSpawned(int playerId)
+        {
+            RemoveSlots(playerId);
+        }
+
+        private void RemoveSlots(int owner)
+        {
+            var keys = new List<(int Owner, string TypeId)>();
+            foreach (var key in _slots.Keys)
+            {
+                if (key.Owner == owner)
+                {
+                    keys.Add(key);
+                }
+            }
+
+            foreach (var key in keys)
+            {
+                _slots.Remove(key);
+            }
         }
 
         // 置いた位置は前のマップの当たりの上なので、新しいマップへ持ち込まない
@@ -640,6 +719,7 @@ namespace Shooter.Server
         private void HandleMatchStarted()
         {
             RemoveAll(_ => true, DeployRemoval.Discarded);
+            _slots.Clear();
         }
 
         private bool LetsThrough(int shooterId, Placed placed)

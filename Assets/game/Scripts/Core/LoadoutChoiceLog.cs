@@ -61,6 +61,11 @@ namespace Shooter.Core
                 + " reason=" + (string.IsNullOrEmpty(reason) ? "-" : reason);
         }
 
+        public static string AbilitiesNotOffered(string reason)
+        {
+            return Prefix + " the loadout screen does not offer abilities: " + (string.IsNullOrEmpty(reason) ? "-" : reason);
+        }
+
         public static string RequestedCosmetic(string cosmeticId)
         {
             return Prefix + " request cosmetic=" + (string.IsNullOrEmpty(cosmeticId) ? "-" : cosmeticId);

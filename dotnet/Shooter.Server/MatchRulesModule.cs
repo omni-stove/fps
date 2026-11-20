@@ -101,6 +101,7 @@ namespace Shooter.Server
             PreparePings(rules);
             PrepareIdle(rules);
             PrepareChat(settings, _data.ChatWords);
+            PrepareNames(settings);
             PrepareMapVote();
             PrepareVoteKick();
             PrepareEconomy();
@@ -231,6 +232,7 @@ namespace Shooter.Server
             StopObjective();
             StopMapVote();
             StopVoteKick();
+            StopNames();
             _nextData = null;
             _session = null;
         }
@@ -392,6 +394,7 @@ namespace Shooter.Server
             PingPlayerJoined(player);
             IdlePlayerJoined(playerId);
             ObjectivePlayerJoined(playerId);
+            NamesPlayerJoined(player);
             VoicePlayerJoined(player);
             VoteKickPlayerJoined(player);
             EconomyPlayerJoined(playerId);
@@ -411,6 +414,7 @@ namespace Shooter.Server
             _objective.PlayerLeft(playerId);
             ChatPlayerLeft(playerId);
             SpectatePlayerLeft(playerId);
+            NamesPlayerLeft(player);
             VoicePlayerLeft(player);
             VoteKickPlayerLeft(playerId);
             EconomyPlayerLeft(playerId);

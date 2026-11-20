@@ -14,7 +14,7 @@ namespace Shooter.Net.Tests
         // 本物の一覧 (BlockListStore.DefaultKey) を壊さないよう、テストだけのキーに保存する。
         private const string BlocksKey = "Shooter.Tests.NetV2ClientParts.Blocks";
 
-        private const int VoiceIndex = 17;
+        private const int VoiceIndex = 18;
 
         private readonly List<string> _logs = new List<string>();
         private readonly List<string> _decided = new List<string>();
@@ -81,6 +81,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2WeatherPart),
                 typeof(NetV2LootPart),
                 typeof(NetV2ZonePart),
+                typeof(NetV2PlayerNamesPart),
                 typeof(NetV2ReportPart),
                 typeof(NetV2VoteKickPart),
                 typeof(NetV2BuyPart),
@@ -110,6 +111,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2WeatherPart),
                 typeof(NetV2LootPart),
                 typeof(NetV2ZonePart),
+                typeof(NetV2PlayerNamesPart),
                 typeof(NetV2ReportPart),
                 typeof(NetV2VoteKickPart),
                 typeof(NetV2BuyPart),
@@ -143,6 +145,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2WeatherPart),
                 typeof(NetV2LootPart),
                 typeof(NetV2ZonePart),
+                typeof(NetV2PlayerNamesPart),
                 typeof(NetV2ReplayViewPart),
             }));
             Assert.That(_parts.OfType<NetV2ReportPart>(), Is.Empty, "a replay has no server to send a report to");
@@ -368,6 +371,34 @@ namespace Shooter.Net.Tests
 
             Assert.That(clipTaker, Is.InstanceOf<NetV2KillCamPart>());
             Assert.That(killTaker, Is.Null);
+        }
+
+        [Test]
+        public void TheNameRosterIsTakenIntoTheNamesOfTheContext()
+        {
+            var context = Context(null);
+            var names = new ClientPlayerNames();
+            context.Names = names;
+            _parts = NetV2ClientParts.Create(context);
+            var roster = new PlayerNamesMessage();
+            roster.Add(2, "Alice");
+
+            var taker = _parts.FirstOrDefault(part => part.Handle(roster));
+
+            Assert.That(taker, Is.InstanceOf<NetV2PlayerNamesPart>());
+            Assert.That(((NetV2PlayerNamesPart)taker).Names, Is.SameAs(names));
+            Assert.That(names.NameOf(2), Is.EqualTo("Alice"));
+        }
+
+        [Test]
+        public void WithoutNamesInTheContextThePartKeepsItsOwn()
+        {
+            var context = Context(null);
+            context.Names = null;
+
+            _parts = NetV2ClientParts.Create(context);
+
+            Assert.That(_parts.OfType<NetV2PlayerNamesPart>().Single().Names, Is.Not.Null);
         }
 
         [Test]

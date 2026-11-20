@@ -54,6 +54,20 @@ namespace Shooter.Net.Tests
             Assert.That(_changes, Is.EqualTo(2));
         }
 
+        [Test]
+        public void AGivenRosterIsTheOneFilled()
+        {
+            var shared = new ClientPlayerNames();
+            var part = new NetV2PlayerNamesPart(shared);
+
+            part.Handle(Roster((3, "Alice")));
+
+            Assert.That(part.Names, Is.SameAs(shared));
+            Assert.That(shared.NameOf(3), Is.EqualTo("Alice"));
+            part.Dispose();
+            Assert.That(shared.Count, Is.Zero);
+        }
+
         private static PlayerNamesMessage Roster(params (int PlayerId, string Name)[] entries)
         {
             var message = new PlayerNamesMessage();

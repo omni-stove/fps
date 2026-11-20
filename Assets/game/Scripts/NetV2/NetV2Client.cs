@@ -39,6 +39,7 @@ namespace Shooter.NetV2
         private readonly List<int> _goneGrenades = new List<int>();
         private readonly List<INetV2ClientPart> _parts = new List<INetV2ClientPart>();
         private readonly ClientMapChange _mapChange = new ClientMapChange();
+        private readonly ClientPlayerNames _names = new ClientPlayerNames();
         private GrenadeCarrier _grenadeCarrier;
         private string _loadingMap;
         private string _joinCode;
@@ -399,7 +400,7 @@ namespace Shooter.NetV2
 
         private void StartClient(IMatchTransport transport, string version, Action<string> log, bool replay)
         {
-            _client = new MatchClient(transport, version, _deviceKey, "", BuildExtras, log);
+            _client =new MatchClient(transport, version, _deviceKey, new PlayerNameStore().Load(), BuildExtras, log);
             _client.Accepted += HandleAccepted;
             _client.SnapshotReceived += HandleSnapshot;
             _client.MessageReceived += HandleMessage;
@@ -411,6 +412,7 @@ namespace Shooter.NetV2
                 ControlPointPosition = ControlPointPosition,
                 MapDecided = _mapChange.Decide,
                 LocalPlayer = () => _local,
+                Names = _names,
 
                 // 再生には相手がおらず、ボイスの部屋も無いので、声の部品を作らない
                 Voice = replay ? null : NetV2Eos.CreateVoiceSession(_matchLobby?.LobbyId, log),

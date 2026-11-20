@@ -14,6 +14,7 @@ namespace Shooter.NetV2
         private readonly Func<Component> _cameraOwner;
         private readonly Action<string> _log;
         private readonly float _speed;
+        private readonly ClientPlayerNames _names;
         private ClientKillCam _killCam;
         private KillCamStatus? _published;
         private Component _viewOwner;
@@ -21,9 +22,11 @@ namespace Shooter.NetV2
         private bool _disposed;
 
         // 自分の Id は承認されるまで決まらず、部品はつなぐ前に作られるので、作るのは最初に届いたときにする
-        public NetV2KillCamPart(MatchClient client, float speed = 1f, Func<Component> cameraOwner = null, Action<string> log = null)
+        public NetV2KillCamPart(
+            MatchClient client, float speed = 1f, Func<Component> cameraOwner = null, Action<string> log = null, ClientPlayerNames names = null)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
+            _names = names ?? new ClientPlayerNames();
             if (!KillCamPlayback.IsValidSpeed(speed))
             {
                 throw new ArgumentOutOfRangeException(nameof(speed), speed, "speed must be positive and finite");
@@ -59,7 +62,7 @@ namespace Shooter.NetV2
                     if (killCam.IsPlaying && killCam.Status.HasValue)
                     {
                         _log(KillCamLog.Replaying(
-                            NetV2Client.LogTag, BotRoster.KillFeedName(clip.KillerId), killCam.Status.Value.DurationSeconds, _speed));
+                            NetV2Client.LogTag, _names.NameOf(clip.KillerId), killCam.Status.Value.DurationSeconds, _speed));
                     }
 
                     return true;
@@ -119,7 +122,7 @@ namespace Shooter.NetV2
 
         private ClientKillCam Ensure()
         {
-            return _killCam ??= new ClientKillCam(_client.PlayerId, _speed);
+            return _killCam ??= new ClientKillCam(_client.PlayerId, _speed, _names);
         }
 
         // 他の側が後から出した値まで消さないよう、自分が出した値のときだけ消す

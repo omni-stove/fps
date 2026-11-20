@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3119236dc85a3c489793f3e7db982ef, type: 3}
+  m_Name: SearchAndDestroy
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.SearchAndDestroyDefinition
+  _roundSeconds: 120
+  _plantSeconds: 3
+  _defuseSeconds: 5
+  _fuseSeconds: 30
+  _winsToWin: 4
+  _preparationSeconds: 5
+  _swapEveryRounds: 2
+  _bombPickupRadius: 1.5
+  _defuseRadius: 2
+  _economy: {fileID: 11400000, guid: 74c6da65b21244ba89899290f8b030bd, type: 2}

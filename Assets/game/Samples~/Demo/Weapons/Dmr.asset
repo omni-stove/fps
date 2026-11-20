@@ -14,6 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
   _id: 8e9139d0-8779-4ec7-af73-198c0289f616
   _nameKey: weapon.dmr
+  _description: 
   _category: 3
   _fireMode: 1
   _magazineSize: 15
@@ -27,13 +28,6 @@ MonoBehaviour:
   _falloffMinMultiplier: 0.7
   _explosionRadius: 0
   _adsFieldOfView: 35
-  _sight:
-    _enabled: 1
-    _reticleId: duplex
-    _scopeOverlay: 1
-    _eyeViewInThirdPerson: 1
-    _aimedInProgress: 0.9
-    _visionMode: 0
   _blindFireSpreadDegrees: 10
   _activeReloadWindowStart: 0.5
   _activeReloadWindowLength: 0.15
@@ -48,11 +42,226 @@ MonoBehaviour:
   _hasAdsMoveSpreadDegrees: 1
   _adsMoveSpreadDegrees: 1.2
   _shotNoiseRadius: 50
+  _weight: 4.5
+  _moveSpeedMultiplier: 1
+  _hasDrawSeconds: 0
+  _drawSeconds: 0
+  _holsterSeconds: 0
+  _burst:
+    _enabled: 0
+    _roundsPerBurst: 3
+    _roundIntervalSeconds: 0.08
+  _charge:
+    _enabled: 0
+    _chargeSeconds: 1
+    _minChargeFraction: 0.25
+    _fullChargeDamageMultiplier: 2
+    _firesWhenFull: 0
+    _firesBelowMin: 0
+    _fullChargeSpeedMultiplier: 1
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.8
+      _fullPitch: 1.4
+      _startVolume: 1
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _spinUp:
+    _enabled: 0
+    _spinUpSeconds: 1
+    _startIntervalMultiplier: 3
+    _spinDownSeconds: 0.5
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.5
+      _fullPitch: 1
+      _startVolume: 0.3
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _cycle:
+    _enabled: 0
+    _cycleSeconds: 1
+    _leavesAds: 1
+    _sound: {fileID: 0}
+  _ammoKind: 0
+  _reloadStyle: 0
+  _reloadSecondsPerRound: 0
+  _heat:
+    _heatPerShot: 0.1
+    _coolPerSecond: 0.5
+    _coolDelaySeconds: 0.25
+    _overheatSeconds: 1.5
+  _delivery: 0
+  _pelletCount: 1
+  _pelletSpreadDegrees: 0
+  _roundRadius: 0
+  _penetration:
+    _enabled: 0
+    _maxPenetrations: 1
+    _damageMultiplierPerPenetration: 0.7
+    _maxThickness: 0.5
+    _materials: []
+  _ricochet:
+    _enabled: 0
+    _maxBounces: 1
+    _maxGrazingAngleDegrees: 30
+    _damageMultiplierPerBounce: 0.6
+  _projectile:
+    _speed: 60
+    _gravityMultiplier: 1
+    _lifetimeSeconds: 5
+    _onWorldHit: 0
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+    _stuckSeconds: 10
+  _homing:
+    _enabled: 0
+    _lockOnSeconds: 1
+    _lockOnConeDegrees: 15
+    _turnDegreesPerSecond: 120
+    _lockingSound: {fileID: 0}
+    _lockedSound: {fileID: 0}
+  _beam:
+    _tickSeconds: 0.1
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _spray:
+    _tickSeconds: 0.1
+    _coneDegrees: 10
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _explosion:
+    _enabled: 0
+    _maxDamage: 100
+    _radius: 5
+    _fullDamageRadius: 1
+    _structureDamageAtCenter: 0
+    _detonation: 0
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _statusEffect:
+    _enabled: 0
+    _kindId: burn
+    _durationSeconds: 3
+    _tickSeconds: 0.5
+    _damagePerTick: 5
+    _visualId: 
+  _areaEffect:
+    _enabled: 0
+    _radius: 4
+    _durationSeconds: 6
+    _tickSeconds: 1
+    _damagePerTick: 5
+    _statusEffect:
+      _enabled: 0
+      _kindId: burn
+      _durationSeconds: 3
+      _tickSeconds: 0.5
+      _damagePerTick: 5
+      _visualId: 
+    _visualId: 
+  _extraZoomLevels: []
+  _breathHold:
+    _enabled: 0
+    _maxHoldSeconds: 4
+    _recoverSeconds: 2
+    _swayMultiplier: 0.2
+  _swayDegrees: 0
+  _sight:
+    _enabled: 1
+    _reticleId: duplex
+    _scopeOverlay: 1
+    _eyeViewInThirdPerson: 1
+    _aimedInProgress: 0.9
+    _visionMode: 0
   _ammoTypes:
   - _id: fc94eae2-4def-40b1-b0e6-97e8199f9e0f
     _nameKey: ammo.dmr.standard
     _overridesRound: 0
+    _round:
+      _delivery: 0
+      _range: 100
+      _pelletCount: 1
+      _pelletSpreadDegrees: 0
+      _radius: 0
+      _penetration:
+        _enabled: 0
+        _maxPenetrations: 1
+        _damageMultiplierPerPenetration: 0.7
+        _maxThickness: 0.5
+        _materials: []
+      _ricochet:
+        _enabled: 0
+        _maxBounces: 1
+        _maxGrazingAngleDegrees: 30
+        _damageMultiplierPerBounce: 0.6
+      _projectile:
+        _speed: 60
+        _gravityMultiplier: 1
+        _lifetimeSeconds: 5
+        _onWorldHit: 0
+        _visualId: 
+        _visual: {fileID: 0}
+        _sound: {fileID: 0}
+        _stuckSeconds: 10
+      _homing:
+        _enabled: 0
+        _lockOnSeconds: 1
+        _lockOnConeDegrees: 15
+        _turnDegreesPerSecond: 120
+        _lockingSound: {fileID: 0}
+        _lockedSound: {fileID: 0}
+      _beam:
+        _tickSeconds: 0.1
+        _visualId: 
+        _visual: {fileID: 0}
+        _sound: {fileID: 0}
+      _spray:
+        _tickSeconds: 0.1
+        _coneDegrees: 10
+        _visualId: 
+        _visual: {fileID: 0}
+        _sound: {fileID: 0}
     _overridesImpact: 0
+    _impact:
+      _damage: 25
+      _falloffStart: 3.4028235e+38
+      _falloffEnd: 3.4028235e+38
+      _falloffMinMultiplier: 1
+      _structureRadius: 0
+      _explosion:
+        _enabled: 0
+        _maxDamage: 100
+        _radius: 5
+        _fullDamageRadius: 1
+        _structureDamageAtCenter: 0
+        _detonation: 0
+        _visual: {fileID: 0}
+        _sound: {fileID: 0}
+      _statusEffect:
+        _enabled: 0
+        _kindId: burn
+        _durationSeconds: 3
+        _tickSeconds: 0.5
+        _damagePerTick: 5
+        _visualId: 
+      _areaEffect:
+        _enabled: 0
+        _radius: 4
+        _durationSeconds: 6
+        _tickSeconds: 1
+        _damagePerTick: 5
+        _statusEffect:
+          _enabled: 0
+          _kindId: burn
+          _durationSeconds: 3
+          _tickSeconds: 0.5
+          _damagePerTick: 5
+          _visualId: 
+        _visualId: 
   - _id: cd18145a-6ef1-4c48-b912-07779fcb97e6
     _nameKey: ammo.dmr.armorPiercing
     _overridesRound: 1
@@ -67,6 +276,39 @@ MonoBehaviour:
         _maxPenetrations: 2
         _damageMultiplierPerPenetration: 0.75
         _maxThickness: 0.5
+        _materials: []
+      _ricochet:
+        _enabled: 0
+        _maxBounces: 1
+        _maxGrazingAngleDegrees: 30
+        _damageMultiplierPerBounce: 0.6
+      _projectile:
+        _speed: 60
+        _gravityMultiplier: 1
+        _lifetimeSeconds: 5
+        _onWorldHit: 0
+        _visualId: 
+        _visual: {fileID: 0}
+        _sound: {fileID: 0}
+        _stuckSeconds: 10
+      _homing:
+        _enabled: 0
+        _lockOnSeconds: 1
+        _lockOnConeDegrees: 15
+        _turnDegreesPerSecond: 120
+        _lockingSound: {fileID: 0}
+        _lockedSound: {fileID: 0}
+      _beam:
+        _tickSeconds: 0.1
+        _visualId: 
+        _visual: {fileID: 0}
+        _sound: {fileID: 0}
+      _spray:
+        _tickSeconds: 0.1
+        _coneDegrees: 10
+        _visualId: 
+        _visual: {fileID: 0}
+        _sound: {fileID: 0}
     _overridesImpact: 1
     _impact:
       _damage: 36
@@ -74,3 +316,47 @@ MonoBehaviour:
       _falloffEnd: 100
       _falloffMinMultiplier: 0.7
       _structureRadius: 0
+      _explosion:
+        _enabled: 0
+        _maxDamage: 100
+        _radius: 5
+        _fullDamageRadius: 1
+        _structureDamageAtCenter: 0
+        _detonation: 0
+        _visual: {fileID: 0}
+        _sound: {fileID: 0}
+      _statusEffect:
+        _enabled: 0
+        _kindId: burn
+        _durationSeconds: 3
+        _tickSeconds: 0.5
+        _damagePerTick: 5
+        _visualId: 
+      _areaEffect:
+        _enabled: 0
+        _radius: 4
+        _durationSeconds: 6
+        _tickSeconds: 1
+        _damagePerTick: 5
+        _statusEffect:
+          _enabled: 0
+          _kindId: burn
+          _durationSeconds: 3
+          _tickSeconds: 0.5
+          _damagePerTick: 5
+          _visualId: 
+        _visualId: 
+  _shield:
+    _enabled: 0
+    _blockArcDegrees: 120
+    _width: 0.6
+    _height: 1.2
+    _moveSpeedMultiplier: 0.8
+    _bashDamage: 40
+    _bashReach: 1.6
+    _bashArcDegrees: 90
+    _bashSwingSeconds: 0.6
+    _bashCooldownSeconds: 0.5
+    _bashImpactSeconds: 0.25
+    _bashLungeDistance: 0.5
+    _prefab: {fileID: 0}

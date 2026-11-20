@@ -21,3 +21,5 @@ MonoBehaviour:
     _displayNameKey: campaign.mission.Campaign02.name
     _scenePath: Assets/Samples/ShooterKitDemo/Scenes/Campaign02.unity
     _definition: {fileID: 11400000, guid: 0537e70efe2a044de89b99ace201631b, type: 2}
+  _reloadDelaySeconds: 3
+  _savedNoticeSeconds: 2.5

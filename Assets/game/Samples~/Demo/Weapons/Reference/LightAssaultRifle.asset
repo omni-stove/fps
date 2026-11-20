@@ -170,4 +170,25 @@ MonoBehaviour:
     _recoverSeconds: 2
     _swayMultiplier: 0.2
   _swayDegrees: 0
+  _sight:
+    _enabled: 0
+    _reticleId: 
+    _scopeOverlay: 0
+    _eyeViewInThirdPerson: 0
+    _aimedInProgress: 0.9
+    _visionMode: 0
   _ammoTypes: []
+  _shield:
+    _enabled: 0
+    _blockArcDegrees: 120
+    _width: 0.6
+    _height: 1.2
+    _moveSpeedMultiplier: 0.8
+    _bashDamage: 40
+    _bashReach: 1.6
+    _bashArcDegrees: 90
+    _bashSwingSeconds: 0.6
+    _bashCooldownSeconds: 0.5
+    _bashImpactSeconds: 0.25
+    _bashLungeDistance: 0.5
+    _prefab: {fileID: 0}

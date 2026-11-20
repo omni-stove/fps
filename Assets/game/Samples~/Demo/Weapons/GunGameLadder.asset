@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c25c786a382c4236f2ede842008f5f53, type: 3}
+  m_Name: GunGameLadder
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.GunGameLadderDefinition
+  _tiers:
+  - {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}
+  - {fileID: 11400000, guid: c1fd8f0c7f1f24f53b46d1d1ab74859c, type: 2}
+  - {fileID: 11400000, guid: d96f9ac9ccfb14f6b9303123108fd62a, type: 2}
+  _meleeWeapons:
+  - {fileID: 11400000, guid: c81d87d1c875e4f6d9b1f5a6cd8f32ba, type: 2}
+  _demotesOnMelee: 1
+  _timeLimitSeconds: 600
+  _respawnSeconds: 2

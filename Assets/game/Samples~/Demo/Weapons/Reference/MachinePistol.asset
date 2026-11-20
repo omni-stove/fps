@@ -28,13 +28,6 @@ MonoBehaviour:
   _falloffMinMultiplier: 0.85
   _explosionRadius: 0
   _adsFieldOfView: 53.32
-  _sight:
-    _enabled: 1
-    _reticleId: holo
-    _scopeOverlay: 0
-    _eyeViewInThirdPerson: 0
-    _aimedInProgress: 0.9
-    _visionMode: 0
   _blindFireSpreadDegrees: 6
   _activeReloadWindowStart: 0.5
   _activeReloadWindowLength: 0.15
@@ -53,6 +46,7 @@ MonoBehaviour:
   _moveSpeedMultiplier: 1
   _hasDrawSeconds: 1
   _drawSeconds: 0.75
+  _holsterSeconds: 0
   _burst:
     _enabled: 0
     _roundsPerBurst: 3
@@ -176,4 +170,25 @@ MonoBehaviour:
     _recoverSeconds: 2
     _swayMultiplier: 0.2
   _swayDegrees: 0
+  _sight:
+    _enabled: 1
+    _reticleId: holo
+    _scopeOverlay: 0
+    _eyeViewInThirdPerson: 0
+    _aimedInProgress: 0.9
+    _visionMode: 0
   _ammoTypes: []
+  _shield:
+    _enabled: 0
+    _blockArcDegrees: 120
+    _width: 0.6
+    _height: 1.2
+    _moveSpeedMultiplier: 0.8
+    _bashDamage: 40
+    _bashReach: 1.6
+    _bashArcDegrees: 90
+    _bashSwingSeconds: 0.6
+    _bashCooldownSeconds: 0.5
+    _bashImpactSeconds: 0.25
+    _bashLungeDistance: 0.5
+    _prefab: {fileID: 0}

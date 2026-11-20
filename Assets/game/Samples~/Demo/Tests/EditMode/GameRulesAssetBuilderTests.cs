@@ -1069,6 +1069,44 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => GameRulesAssetBuilder.LoadOrBuildFeatureRules(path, null));
         }
 
+        [Test]
+        public void LoadOrBuildRulesAtCreatesAMissingModeOnceAndKeepsEditedValues()
+        {
+            var path = _folder + "/" + GameRulesAssetBuilder.CaptureTheFlagName + ".asset";
+
+            var built = GameRulesAssetBuilder.LoadOrBuildRulesAt(_folder, path);
+            Assert.That(built, Is.SameAs(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path)));
+            Assert.That(built.ToRules().Actions.Downed, Is.EqualTo(Downed.Off), "CaptureTheFlagActions turns downed off");
+
+            GameRulesAssetBuilder.Configure(built, GameRulesAssetBuilder.CaptureTheFlagRules().WithFallDamage(FallDamage.On));
+            var loaded = GameRulesAssetBuilder.LoadOrBuildRulesAt(_folder, path);
+
+            Assert.That(loaded, Is.SameAs(built));
+            Assert.That(loaded.ToRules().FallDamage, Is.EqualTo(FallDamage.On), "an existing asset is not overwritten");
+        }
+
+        [Test]
+        public void LoadOrBuildRulesAtRefusesAMissingPathThatIsNotAMode()
+        {
+            var path = _folder + "/Unknown.asset";
+
+            var error = Assert.Throws<InvalidOperationException>(() => GameRulesAssetBuilder.LoadOrBuildRulesAt(_folder, path));
+
+            Assert.That(error.Message, Does.Contain(GameRulesAssetBuilder.MenuPath));
+            Assert.That(AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path), Is.Null);
+        }
+
+        [Test]
+        public void ModeNameOfFindsTheModeByItsPathInTheFolder()
+        {
+            Assert.That(GameRulesAssetBuilder.ModeNameOf(_folder, _folder + "/CaptureTheFlag.asset"), Is.EqualTo("CaptureTheFlag"));
+            Assert.That(GameRulesAssetBuilder.ModeNameOf(_folder + "/", _folder + "/Horde.asset"), Is.EqualTo("Horde"));
+            Assert.That(GameRulesAssetBuilder.ModeNameOf(_folder, _folder + "/TeamDeathmatch.asset"), Is.Null, "TDM is built by BuildAt");
+            Assert.That(GameRulesAssetBuilder.ModeNameOf(_folder, _folder + "/Sub/Horde.asset"), Is.Null);
+            Assert.That(GameRulesAssetBuilder.ModeNameOf(_folder, _folder + "/horde.asset"), Is.Null, "names are case sensitive");
+            Assert.That(GameRulesAssetBuilder.ModeNameOf(GameRulesAssetBuilder.Folder, GameRulesAssetBuilder.CaptureTheFlagPath), Is.EqualTo("CaptureTheFlag"));
+        }
+
         private static string[] ToArray(System.Collections.Generic.IReadOnlyList<string> list)
         {
             var array = new string[list.Count];

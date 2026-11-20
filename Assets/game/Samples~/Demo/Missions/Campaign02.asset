@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 908fb49db7fa84e0eadfbeadebef1d80, type: 3}
   m_Name: Campaign02
   m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.MissionDefinition
+  _id: Campaign02
   _displayNameKey: campaign.mission.Campaign02.name
   _objectives:
   - _id: enter_building
@@ -37,3 +38,4 @@ MonoBehaviour:
     _optional: 0
     _prerequisites:
     - kill_reinforcements
+  _rulesOverride: 

@@ -539,8 +539,25 @@ namespace Shooter.Editor
         // ゲーム側で調整した値を残すよう、既にあれば値は変えない。
         public static GameRulesDefinition LoadOrBuildModeRules(string name)
         {
-            var path = ModeRulesPath(name);
+            return LoadOrBuildRulesAt(Folder, ModeRulesPath(name));
+        }
+
+        public static GameRulesDefinition LoadOrBuildRules(string path)
+        {
+            return LoadOrBuildRulesAt(Folder, path);
+        }
+
+        // モードのルールでない path は作り方が決まらないので、LoadRules と同じく無ければ止める。
+        public static GameRulesDefinition LoadOrBuildRulesAt(string folder, string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
             if (AssetDatabase.LoadAssetAtPath<GameRulesDefinition>(path) != null)
+            {
+                return LoadRules(path);
+            }
+
+            var name = ModeNameOf(folder, path);
+            if (name == null)
             {
                 return LoadRules(path);
             }
@@ -549,6 +566,20 @@ namespace Shooter.Editor
             var built = SceneBuildHelpers.CreateOrUpdateAsset<GameRulesDefinition>(path, d => Configure(d, rules));
             Debug.Log($"{LogTag} saved '{path}'");
             return built;
+        }
+
+        public static string ModeNameOf(string folder, string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+            foreach (var mode in ModeNames)
+            {
+                if (string.Equals(ModeRulesPath(folder, mode), path, StringComparison.Ordinal))
+                {
+                    return mode;
+                }
+            }
+
+            return null;
         }
 
         public static GameRulesDefinition[] BuildModesAt(string folder)

@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02b5eda23b124b7d60fc5d1894c6e6be, type: 3}
+  m_Name: CaptureTheFlag
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.CaptureTheFlagDefinition
+  _scoreLimit: 3
+  _timeLimitSeconds: 600
+  _respawnSeconds: 5
+  _pickupRadius: 1.5
+  _captureRadius: 2
+  _returnSeconds: 20
+  _pointsPerCapture: 1
+  _botPlanIntervalSeconds: 0.5
+  _botAttackShare: 0.5

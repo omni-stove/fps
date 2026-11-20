@@ -17,14 +17,417 @@ MonoBehaviour:
     _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
     _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
     _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
   - _weaponId: b4e2a9d7-3c16-4a58-8f2e-7d0b9c6a1e45
     _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
     _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
     _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
   - _weaponId: e7a3c5d1-2f84-4b69-a0d3-5c8e1b7f2a96
     _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
     _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
     _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 96be789a-f7e0-4512-b796-2492d70a4a1b
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 5b2af293-a0d8-45cb-af68-8c63628c80d1
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 9795f821-8fac-4c4f-90f8-c0a80841de96
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 0a90a121-a287-4aae-8fcf-885ddf59da79
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 7639c28b-90a0-40e4-9def-64cbfaa472b1
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 8e9139d0-8779-4ec7-af73-198c0289f616
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 9c8df409-3662-4df2-b50e-81fdc51d2623
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 06f065a8-b76b-492e-b409-852d85722496
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 5b8e2f47-c1d9-4a36-9e70-3f6a8d2b1c54
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 78afe32d-bf3f-459c-98b8-8c238290913f
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 4d8e2a6f-1b3c-4e5d-9f7a-8c0b2d4e6f13
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: a9ae4aeb-607f-41a8-875f-2e8deed9bfa6
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: ffe5619d-2694-4ce3-a388-c0d2b026c2a4
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 591ab705-3cf6-4a0d-aa88-d19e6f367408
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 07e1b9a8-f64c-4474-bc38-dbf14d66b135
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 4884db7f-db3a-4f82-a822-82df01491735
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 59bee024-01d3-40b2-93a9-fe3dfb6b4f45
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 07895118-2fb7-4b50-aa16-8f8afef0fc79
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: bf8d80f4-5043-4ecf-8ecb-6ab2c7a1ab64
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: c60edf2f-2afc-422c-97f2-c0bed85d2039
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 8ea177bd-a3ae-4984-ad92-f1f4a4dde742
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 25974cbc-c194-4f98-b22d-c9d34c3ba6e4
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 343b6024-75f2-4d68-8ac6-d31fad86aa47
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 6c95cc3b-c27d-468c-bb6c-e84188171f67
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 22aa5dd0-fdba-4900-9daa-5869cb9a6262
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: f05e1048-c628-4e36-bbd3-5fea65e35595
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 9b4f8184-b97e-4bbd-bd01-ea55ff3a229f
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 2f9fcfb4-cacb-4fe1-a325-327eaa1c4c8d
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 99dae863-8e9c-4cb7-9b8d-6dbfbf66beef
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: e59d8e50-d434-4061-968d-de919b96fe36
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 4d125980-c0c4-4872-8ef0-a8e9198ab64b
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: e4f9661c-dbad-429a-b7a6-ab9cafa47d6a
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: cf9d33f4-8e39-41cf-9d38-00a92fed35ad
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 886fa55c-c980-4d7b-ad90-d16e5a872c7f
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 7875b62b-86b5-4af7-bc20-27f643d3c4fe
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 6b1ce288-952f-4ead-b23b-337df82d3a02
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 7f8258fd-a401-403b-93d2-60a22a69cb0b
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: a9ea0da7-d5a2-4754-8658-f172f0bb1ae5
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 4b42f966-c0b8-430c-99aa-a6544cc97431
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: bf33ede9-55f0-479c-ab15-77cadae90535
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 9db67405-6954-4587-8f37-436b9ed68d53
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: b9daae5b-9015-46cf-b104-6f9a9ba9c623
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 28e92fe5-5b1b-44c7-a8ee-80521adff062
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: c17f182c-308a-4c2f-b23b-f8d0ce0afd74
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 6b3eb731-5d48-4278-89ba-ebd92b7309df
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: e250274d-82be-401c-a098-2ee06295b582
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 4708d6a0-356e-41b1-ab4c-3eecfae248ef
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: f717ab18-ce5d-4680-98e5-780c10a8b781
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: bc443423-7f93-439b-a628-d79f839b2afc
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 9e587bf9-004e-4bde-9c83-0292614d6b83
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 06f2938c-846f-460a-a51a-de952f74c962
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 3f6a210b-819a-40fe-9a71-5acbf6a9fa9a
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 05e08bbf-1757-464a-a142-8dcdd0c86ba9
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: b1e55e1f-f9a2-4c60-bdd8-b4a313cb2583
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: f8d44ede-2228-425e-a408-1d01a5ed5648
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 51713158-d2a5-4f24-a93e-001501c10fe3
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 87354932-530d-4c00-ad07-20e9de06f0a4
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: aa7e7cf5-6840-4b20-b0ec-ae5d1dfb9c5c
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: bd0ceb9a-0501-4e9c-9a07-25a8062d5abe
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: e2680d20-0aa4-4a9c-baeb-31430634d792
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 7770a9a9-46e8-4905-91c3-b7efdb926788
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: a21e791d-cf45-4f05-981d-17480c5a791b
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 8aff3a2b-30c6-4303-b3a0-89f22c9cfda2
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 1ba867d1-d198-4f06-bdbe-572cfde9dc3c
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 30a00b4b-12b2-4754-bbe3-0641cddfbd74
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: c1f6ce08-79a8-4d20-a16a-6eb6cee0256d
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: c352e8a4-540b-4e67-b6e7-b515ac2c47a5
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 58d2fae2-5578-49da-85a3-2edfc02a9d01
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 72543ccc-e394-48a9-af57-6ccf7d600cc9
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 1962ad25-8df7-4de7-9443-aea170e5b4a9
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: c5171e80-7b9c-44f0-bdd5-3e4fdd67f585
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 029ebfb0-2bf4-477c-99a4-7895a98061ad
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 9af48a98-9098-49f2-aa1c-4ca5276b7135
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 53e2e431-e5aa-4abf-9daa-cb761501f8ca
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 2f3825b8-dac2-4744-8025-d2909cbb57d4
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: 43c9c224-dfea-463d-a411-fd0f6c37824d
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 057635c9-2994-4251-bb0c-a413948a4252
+    _fire: {fileID: 8300000, guid: c13e04f24c201441aa7d67f0607e00ad, type: 3}
+    _reload: {fileID: 8300000, guid: 0cfed8c398ca44f4094637c2ede3eec2, type: 3}
+    _muzzleFlash: {fileID: 8272439612659559172, guid: d00662096e61448a58fdb596c8fe7b51, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 4004515282050334505, guid: 968bedad60d4743958609c2b98684dc4, type: 3}
+  - _weaponId: 148acbfc-9d35-4c65-96fc-36bea468eaa4
+    _fire: {fileID: 8300000, guid: 19db006fbeacd49c695be783bda29f7a, type: 3}
+    _reload: {fileID: 8300000, guid: 789d43783faea46a7ab9d9714b4c55b8, type: 3}
+    _muzzleFlash: {fileID: 481416457761880966, guid: b8afe076319c647aebcea5e565e85954, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 1520885235774290056, guid: c9ff5f09232bb4faf9df8c0221cb4718, type: 3}
+  - _weaponId: 5e8225fc-9291-4aab-a56d-301e3c507983
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
+  - _weaponId: cb422bbe-41c7-4358-8c22-c3a20d906554
+    _fire: {fileID: 8300000, guid: 46ad2758b15874a2fa6e56b165a6def4, type: 3}
+    _reload: {fileID: 8300000, guid: 82d8ebb37b26d40af9416957b29207ac, type: 3}
+    _muzzleFlash: {fileID: 2452634096301800382, guid: 7dd09826cd68247ca8f1e02c65c0bce3, type: 3}
+    _thirdPersonMuzzleFlash: {fileID: 5727455726979951997, guid: 3bee38425d50e4e34bfca29ddd94fa6b, type: 3}
   _impactSound: {fileID: 8300000, guid: f12a9d7e25814445bbb3a78ff0ea1e62, type: 3}
   _impactSpark: {fileID: 3655127799983906801, guid: 92fe6558dac7f4109aff47e829738f54, type: 3}
   _tracer: {fileID: 3363131383333097025, guid: 9549dda9d358e4476b9bcd02c464fca0, type: 3}
@@ -36,3 +439,4 @@ MonoBehaviour:
   _hitMarkerSound: {fileID: 0}
   _killMarkerSound: {fileID: 0}
   _hitMarkerVolume: 0.4
+  _maxImpactSoundsPerFrame: 2

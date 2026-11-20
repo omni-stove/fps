@@ -1,0 +1,24 @@
+{
+  "tables": [
+    {
+      "id": "demo-supplies",
+      "rolls": 2,
+      "entries": [
+        { "itemId": "31d5979e-6067-49d9-b70c-fdcf44dc77d1", "weight": 4, "minCount": 1, "maxCount": 3 },
+        { "itemId": "02e07a84-f063-4b41-8f63-17a410a3d069", "weight": 3, "minCount": 15, "maxCount": 30 },
+        { "itemId": "212170da-0998-4fa9-9457-761c75a2a797", "weight": 3, "minCount": 15, "maxCount": 30 },
+        { "itemId": "61dd226a-156c-4060-ab8f-5dbed8cb7f4f", "weight": 1, "minCount": 1, "maxCount": 1 }
+      ]
+    },
+    {
+      "id": "demo-valuables",
+      "rolls": 1,
+      "entries": [
+        { "itemId": "6879cab0-d2cd-4ace-b51a-cc882b7c8aa9", "weight": 1, "minCount": 1, "maxCount": 1 },
+        { "itemId": "542515db-5705-497c-8fe6-076a6709131b", "weight": 2, "minCount": 1, "maxCount": 1 },
+        { "itemId": "249ee778-6b2b-47a2-ba53-4515b8aab625", "weight": 2, "minCount": 1, "maxCount": 1 },
+        { "itemId": "61dd226a-156c-4060-ab8f-5dbed8cb7f4f", "weight": 2, "minCount": 1, "maxCount": 1 }
+      ]
+    }
+  ]
+}

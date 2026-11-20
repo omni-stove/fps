@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2fa08a80334852d087977503c3c078ee, type: 3}
+  m_Name: Horde
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.HordeDefinition
+  _startingCurrency: 50
+  _killReward: 10
+  _killRewardPerWave: 2
+  _purchasesOnlyBetweenWaves: 1
+  _killScore: 1
+  _buildCost: 30
+  _repairCostPerPiece: 4
+  _interactRadius: 4.5
+  _enemySideId: 1
+  _alertInterval: 3
+  _minSpawnDistance: 8
+  _corpseSeconds: 5
+  _waveCount: 5
+  _restSeconds: 20
+  _firstEnemyCount: 4
+  _enemiesPerWave: 2
+  _firstStrength: 1
+  _strengthPerWave: 0.2
+  _maxStrength: 2.5
+  _maxAlive: 6

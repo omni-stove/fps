@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/MainMenu.unity
+    guid: 558656a754d17440cafbb8f65c82806d
+  - enabled: 1
     path: Assets/Samples/ShooterKitDemo/Scenes/Bootstrap.unity
     guid: bf68c1de5df3446cfaa1313d0b731725
   - enabled: 1
@@ -59,6 +62,45 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Samples/ShooterKitDemo/Scenes/KillConfirmed.unity
     guid: b45dd118b13af435c9f30718cb1ea9cb
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/CaptureTheFlag.unity
+    guid: 4a3324ebad1ab4f7c88bea087376aafd
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Domination.unity
+    guid: 9d5a73d262b144fd985b23838fa3b68d
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Hardpoint.unity
+    guid: 87bed1269fce1416d884f1359668eec6
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/SearchAndDestroy.unity
+    guid: 9d92158737b30435f925694bf3be0152
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Execution.unity
+    guid: a75c1ca56725f40d3a2dc0c5ad80f640
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/GunGame.unity
+    guid: f12ede376cfeb45afa01b9f5724df0e9
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Infected.unity
+    guid: af2b7950692fb47ddb9fc177a5567331
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Horde.unity
+    guid: e543431bfa5bf48acb2a667eb9718d19
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Guardian.unity
+    guid: efa7d5def0ea04a6a89a3ec64d578129
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Extraction.unity
+    guid: d4960750dd7df443dab48d0bed6c7f64
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/BattleRoyale.unity
+    guid: 43762175422d44dcabd286ba8ab18eb4
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/Payload.unity
+    guid: 5c64453aff6e04a018d1d9774736fcc0
+  - enabled: 1
+    path: Assets/Samples/ShooterKitDemo/Scenes/NetBattleRoyale.unity
+    guid: fa95189f855ec4a8cbbef4228cde2e21
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

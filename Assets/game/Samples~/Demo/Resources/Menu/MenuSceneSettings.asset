@@ -15,5 +15,4 @@ MonoBehaviour:
   _mainMenu: MainMenu
   _range: Bootstrap
   _campaign: Campaign01
-  _net: NetTest
   _sceneRoot: Assets/Samples/ShooterKitDemo

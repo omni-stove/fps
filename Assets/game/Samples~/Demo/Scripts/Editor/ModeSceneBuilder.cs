@@ -174,7 +174,7 @@ namespace Shooter.Editor
             var playerWeapons = WeaponAssetBuilder.LoadPlayerLoadout();
             var catalog = WeaponAssetBuilder.LoadCatalog();
             var botWeapon = WeaponAssetBuilder.FindInCatalog(catalog, BotsRootName, BotWeaponId);
-            var rules = GameRulesAssetBuilder.LoadRules(RulesPath);
+            var rules = GameRulesAssetBuilder.LoadOrBuildRules(RulesPath);
 
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(Path.GetDirectoryName(navMeshDataPath));

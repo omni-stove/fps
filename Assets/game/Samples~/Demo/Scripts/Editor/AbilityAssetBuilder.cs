@@ -79,6 +79,15 @@ namespace Shooter.Editor
         public const float DroneAbilityCooldownSeconds = 1f;
         public const float DroneAbilityWindupSeconds = 0f;
 
+        public const string BeaconAbilityId = "deploy-beacon";
+        public const int BeaconAbilityMaxCharges = 1;
+        public const float BeaconAbilityRechargeSeconds = 45f;
+        public const float BeaconAbilityCooldownSeconds = 1f;
+        public const float BeaconAbilityWindupSeconds = 0f;
+
+        // 装備の Ability1 の枠。ほかの枠は空けたままにし、ゲームが入れた能力を上書きしない。
+        public const int BeaconLoadoutSlot = 0;
+
         public const string GrappleAbilityId = "grapple";
         public const int GrappleMaxCharges = 2;
         public const float GrappleRechargeSeconds = 8f;
@@ -111,7 +120,9 @@ namespace Shooter.Editor
 
         public static string DroneAbilityPath => Folder + "/DeployDrone.asset";
 
-        // タレットは武器のアセットを指すので、WeaponAssetBuilder.Build の後に走らせる (武器が無ければ例外で止まる)。
+        public static string BeaconAbilityPath => Folder + "/DeployBeacon.asset";
+
+        // タレットは武器のアセットを、ビーコンは装備 (WeaponAssetBuilder.LoadoutPath) を指すので、WeaponAssetBuilder.Build の後に走らせる (無ければ例外で止まる)。
         [MenuItem(MenuPath)]
         public static void Build()
         {
@@ -125,6 +136,65 @@ namespace Shooter.Editor
             BuildDistractionAt(DistractionAbilityPath);
             BuildVisionGogglesAt(VisionGogglesAbilityPath);
             BuildDroneAt(DroneAbilityPath);
+            var beacon = BuildBeaconAt(BeaconAbilityPath);
+            EquipInLoadoutAt(WeaponAssetBuilder.LoadoutPath, beacon, BeaconLoadoutSlot);
+        }
+
+        public static BeaconDeployDefinition BuildBeaconAt(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+            SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(path)?.Replace('\\', '/'));
+            var ability = SceneBuildHelpers.CreateOrUpdateAsset<BeaconDeployDefinition>(path, ConfigureBeacon);
+            Debug.Log($"{LogTag} saved '{path}'");
+            return ability;
+        }
+
+        // 手で調整した値を射撃場を作り直すたびに消さないよう、あれば中身は上書きしない。
+        public static BeaconDeployDefinition LoadOrBuildBeaconAbility()
+        {
+            var existing = AssetDatabase.LoadAssetAtPath<BeaconDeployDefinition>(BeaconAbilityPath);
+            if (existing != null)
+            {
+                existing.ToSpec();
+                existing.ToDeploySpec();
+                existing.ToBeaconSpec();
+                return existing;
+            }
+
+            Debug.Log($"{LogTag} '{BeaconAbilityPath}' is missing; building it");
+            return BuildBeaconAt(BeaconAbilityPath);
+        }
+
+        // 装備の武器の並びは WeaponAssetBuilder が持つので、ここは能力の枠の 1 つだけを差し替え、ほかの枠の中身は残す。
+        public static LoadoutDefinition EquipInLoadoutAt(string loadoutPath, AbilityDefinition ability, int slot)
+        {
+            if (ability == null)
+            {
+                throw new ArgumentNullException(nameof(ability));
+            }
+
+            if (slot < 0 || slot >= AbilityHost.SlotCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(slot), slot, $"slot must be between 0 and {AbilityHost.SlotCount - 1}");
+            }
+
+            // 枠に入れたときに分かる不正な値を、装備を保存する前に止める。
+            ability.ToSpec();
+            ability.CreateAbility();
+
+            var loadout = WeaponAssetBuilder.LoadLoadout(loadoutPath);
+            var abilities = new List<AbilityDefinition>(loadout.Abilities);
+            while (abilities.Count <= slot)
+            {
+                abilities.Add(null);
+            }
+
+            abilities[slot] = ability;
+            loadout.SetAbilities(abilities);
+            EditorUtility.SetDirty(loadout);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"{LogTag} equipped '{ability.Id}' in ability slot {slot} of '{AssetDatabase.GetAssetPath(loadout)}'");
+            return loadout;
         }
 
         public static VisionGogglesDefinition BuildVisionGogglesAt(string path)
@@ -573,6 +643,31 @@ namespace Shooter.Editor
             ability.ToSpec();
             ability.ToDeploySpec();
             ability.ToDroneSpec();
+        }
+
+        // 回数・復活させる位置・形はキットの既定 (BeaconSpec.Default*) のまま。見た目 (Prefab) は空にし、柱と灯の仮の形をコードで作る。
+        private static void ConfigureBeacon(BeaconDeployDefinition ability)
+        {
+            ability.Id = BeaconAbilityId;
+            ability.MaxCharges = BeaconAbilityMaxCharges;
+            ability.RechargeSeconds = BeaconAbilityRechargeSeconds;
+            ability.CooldownSeconds = BeaconAbilityCooldownSeconds;
+            ability.WindupSeconds = BeaconAbilityWindupSeconds;
+            ability.MaxActive = BeaconSpec.DefaultMaxActive;
+            ability.Overflow = Shooter.Core.DeploySpec.DefaultOverflow;
+            ability.MaxHealth = BeaconSpec.DefaultMaxHealth;
+            ability.MaxRange = Shooter.Core.DeploySpec.DefaultMaxRange;
+            ability.MaxSlopeDegrees = Shooter.Core.DeploySpec.DefaultMaxSlopeDegrees;
+            ability.MaxStepHeight = Shooter.Core.DeploySpec.DefaultMaxStepHeight;
+            ability.Size = new Vector3(BeaconSpec.DefaultWidth, BeaconSpec.DefaultHeight, BeaconSpec.DefaultDepth);
+            ability.Prefab = null;
+            ability.PreviewPrefab = null;
+            ability.NameKey = BeaconSpec.DefaultNameKey;
+            ability.Uses = BeaconSpec.DefaultUses;
+            ability.SpawnDistance = BeaconSpec.DefaultSpawnDistance;
+            ability.ToSpec();
+            ability.ToDeploySpec();
+            ability.ToBeaconSpec();
         }
 
         // 貼ったときの音はキットに無いので空のまま。ゲームが音と見た目 (Prefab) を差し込む。

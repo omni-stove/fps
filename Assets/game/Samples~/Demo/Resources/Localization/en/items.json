@@ -34,6 +34,7 @@
   "deployable.mine": "Mine",
   "deployable.remoteCharge": "C4",
   "deployable.reconDrone": "Recon Drone",
+  "deployable.beacon": "Respawn Beacon",
   "ability.visionGoggles": "Vision Goggles",
   "weapon.riotShield": "Riot Shield",
   "item.thermalScope": "Thermal scope",

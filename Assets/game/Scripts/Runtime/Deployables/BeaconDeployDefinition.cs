@@ -14,6 +14,9 @@ namespace Shooter.Runtime
 
         public const float PoleThicknessFraction = 0.5f;
 
+        [SerializeField, Tooltip("名前を引く表 (Localization の items.json) のキー。空なら名前は Id")]
+        private string _nameKey = BeaconSpec.DefaultNameKey;
+
         [SerializeField, Min(1), Tooltip("このビーコンから復活できる回数。使い切ると消える")]
         private int _uses = BeaconSpec.DefaultUses;
 
@@ -27,6 +30,14 @@ namespace Shooter.Runtime
             MaxHealth = BeaconSpec.DefaultMaxHealth;
             Size = new Vector3(BeaconSpec.DefaultWidth, BeaconSpec.DefaultHeight, BeaconSpec.DefaultDepth);
         }
+
+        public string NameKey
+        {
+            get => _nameKey;
+            set => _nameKey = value;
+        }
+
+        public override string DisplayNameKey => _nameKey != null ? _nameKey.Trim() : string.Empty;
 
         public int Uses
         {

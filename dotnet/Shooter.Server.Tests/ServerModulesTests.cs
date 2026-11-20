@@ -41,10 +41,10 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void WithoutRegisterLobbyAddsTheMatchAndCombatModulesAndSnapshotsLast()
+        public void WithoutRegisterLobbyAddsTheMatchAndCombatModulesThenTheSnapshotsThenTheAntiCheatChecks()
         {
             Assert.That(Create(_library.Path), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(14));
+            Assert.That(_modules, Has.Count.EqualTo(15));
             Assert.That(_modules[0], Is.InstanceOf<ServerAntiCheat>());
             Assert.That(((ServerAntiCheat)_modules[0]).Enabled, Is.False);
             Assert.That(_modules[1], Is.InstanceOf<ServerMovement>());
@@ -58,9 +58,34 @@ namespace Shooter.Server.Tests
             Assert.That(_modules[9], Is.InstanceOf<ServerStreaks>());
             Assert.That(_modules[10], Is.InstanceOf<ServerDeployables>());
             Assert.That(_modules[11], Is.InstanceOf<ServerKillCam>());
-            Assert.That(_modules[12], Is.InstanceOf<ServerViolations>());
-            Assert.That(((ServerViolations)_modules[12]).Enabled, Is.False);
-            Assert.That(_modules[13], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[12], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(((ServerSnapshots)_modules[12]).AntiCheat.Conceal.Enabled, Is.True, "concealing is on by default");
+            Assert.That(_modules[13], Is.InstanceOf<ServerViolations>());
+            Assert.That(((ServerViolations)_modules[13]).Enabled, Is.True, "the violations are counted by default");
+            Assert.That(_modules[14], Is.InstanceOf<ServerCheatStats>());
+        }
+
+        [Test]
+        public void WithEveryAntiCheatCheckOffTheStatsAreNotAddedAndTheViolationsStayOff()
+        {
+            var antiCheat = new AntiCheatTuning(
+                new AntiCheatTuning.ConcealSettings(false, 150f, 1.5f, 0.5f),
+                new AntiCheatTuning.ViolationSettings(false, 30f, 60, 120),
+                new AntiCheatTuning.StatsSettings(false, 120f, 0.6f, 120f, 45f, 1.5f, 10),
+                new AntiCheatTuning.EvidenceSettings(false, 30f));
+            var tuning = new ServerCombatTuning(antiCheat: antiCheat);
+            Assert.That(ServerLaunch.TryParse(Array.Empty<string>(), _ => null, out var launch, out var parseError), Is.True, parseError);
+
+            Assert.That(
+                ServerModules.Create(launch, Runtime(), _modules, _library.Path, ServerMotorSettings.Default, tuning, null, out var error),
+                Is.True,
+                error);
+
+            Assert.That(_modules, Has.Count.EqualTo(14));
+            Assert.That(_modules[12], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[13], Is.InstanceOf<ServerViolations>());
+            Assert.That(((ServerViolations)_modules[13]).Enabled, Is.False);
+            Assert.That(_modules.OfType<ServerCheatStats>(), Is.Empty);
         }
 
         [Test]
@@ -70,7 +95,7 @@ namespace Shooter.Server.Tests
             var antiCheat = new AntiCheatTuning(
                 new AntiCheatTuning.ConcealSettings(false, 90f, 1f, 0.25f),
                 violations,
-                AntiCheatTuning.StatsSettings.Default,
+                new AntiCheatTuning.StatsSettings(false, 120f, 0.6f, 120f, 45f, 1.5f, 10),
                 AntiCheatTuning.EvidenceSettings.Default);
             var tuning = new ServerCombatTuning(antiCheat: antiCheat);
             Assert.That(ServerLaunch.TryParse(Array.Empty<string>(), _ => null, out var launch, out var parseError), Is.True, parseError);
@@ -91,7 +116,7 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void WithTheStatsOnTheCheatStatsComeRightAfterTheSnapshots()
+        public void WithTheStatsOnTheCheatStatsComeRightAfterTheSnapshotsAndTheViolations()
         {
             var stats = new AntiCheatTuning.StatsSettings(true, 60f, 0.5f, 100f, 40f, 2f, 5);
             var antiCheat = new AntiCheatTuning(
@@ -108,7 +133,8 @@ namespace Shooter.Server.Tests
                 error);
 
             Assert.That(_modules, Has.Count.EqualTo(15));
-            Assert.That(_modules[13], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[12], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[13], Is.InstanceOf<ServerViolations>());
             Assert.That(_modules[14], Is.InstanceOf<ServerCheatStats>());
             Assert.That(((ServerCheatStats)_modules[14]).Stats, Is.SameAs(stats));
         }
@@ -134,9 +160,23 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void DisabledEvidenceAddsNoModuleAndTheReportsHaveNone()
+        public void TheDefaultTuningHoldsEvidenceForTheReports()
         {
             CreateWithReports(ServerCombatTuning.Default);
+
+            var held = _modules.OfType<ServerReportEvidence>().Single();
+            Assert.That(held.Settings, Is.SameAs(AntiCheatTuning.EvidenceSettings.Default));
+            Assert.That(_modules.OfType<ServerReports>().Single().Evidence, Is.SameAs(held));
+        }
+
+        [Test]
+        public void DisabledEvidenceAddsNoModuleAndTheReportsHaveNone()
+        {
+            CreateWithReports(new ServerCombatTuning(antiCheat: new AntiCheatTuning(
+                AntiCheatTuning.ConcealSettings.Default,
+                AntiCheatTuning.ViolationSettings.Default,
+                AntiCheatTuning.StatsSettings.Default,
+                new AntiCheatTuning.EvidenceSettings(false, 30f))));
 
             Assert.That(_modules.OfType<ServerReportEvidence>(), Is.Empty);
             Assert.That(_modules.OfType<ServerReports>().Single().Evidence, Is.Null);
@@ -204,7 +244,7 @@ namespace Shooter.Server.Tests
             Assert.That(ServerCombatTuning.TryLoad(new[] { _roots.Path }, out var tuning, out var error), Is.True, error);
 
             Assert.That(tuning.AntiCheat.Conceal.MaxDistance, Is.EqualTo(80f));
-            Assert.That(tuning.AntiCheat.Conceal.Enabled, Is.False);
+            Assert.That(tuning.AntiCheat.Conceal.Enabled, Is.True, "an omitted enabled keeps the default");
             Assert.That(tuning.AntiCheat.Violations, Is.SameAs(AntiCheatTuning.ViolationSettings.Default));
             Assert.That(tuning.AntiCheatPath, Is.EqualTo(path));
             Assert.That(tuning.LogLine, Does.EndWith(" anticheat=" + path));
@@ -313,9 +353,9 @@ namespace Shooter.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777"), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(15));
-            Assert.That(_modules[14], Is.InstanceOf<ServerLobbyModule>());
-            Assert.That(((ServerLobbyModule)_modules[14]).Region, Is.Null);
+            Assert.That(_modules, Has.Count.EqualTo(16));
+            Assert.That(_modules[15], Is.InstanceOf<ServerLobbyModule>());
+            Assert.That(((ServerLobbyModule)_modules[15]).Region, Is.Null);
         }
 
         [Test]
@@ -329,7 +369,7 @@ namespace Shooter.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777", "--region", "europe"), Is.Null);
-            Assert.That(((ServerLobbyModule)_modules[14]).Region, Is.EqualTo("europe"));
+            Assert.That(((ServerLobbyModule)_modules[15]).Region, Is.EqualTo("europe"));
         }
 
         [Test]

@@ -125,15 +125,15 @@ namespace Shooter.Server
             modules.Add(deployables);
             modules.Add(new ServerKillCam(rules, combat));
 
-            // 違反の累積は出来事を受けるたびに数え、切るのは tick の後なので、どこに置いても同じ。試合の状態を変えるモジュールの後にまとめる
-            modules.Add(new ServerViolations(signals, tuning.AntiCheat.Violations));
-
             // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足すので、ルールの直後
             modules.Add(new ServerSnapshots(
                 motorSettings.Rules,
                 new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables },
                 tuning.AntiCheat,
                 rules));
+
+            // 違反の累積は出来事を受けるたびに数え、切るのは tick の後なので、試合の状態を変えない。通報・統計と同じくスナップショットより後
+            modules.Add(new ServerViolations(signals, tuning.AntiCheat.Violations));
 
             // 統計の検知は、移動・戦闘・Bot がこの tick に動かした後の位置で見えるかを決めるので、それらより後。
             // 試合の状態を変えず、切っているときは見えるかの判定 (毎 tick の線) に手間をかけないよう、登録もしない

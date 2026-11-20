@@ -1,18 +1,18 @@
 {
   "conceal": {
-    "enabled": false,
+    "enabled": true,
     "maxDistance": 150,
     "marginDistance": 1.5,
     "marginSeconds": 0.5
   },
   "violations": {
-    "enabled": false,
+    "enabled": true,
     "windowSeconds": 30,
     "shotRejectionLimit": 60,
     "overBudgetLimit": 120
   },
   "stats": {
-    "enabled": false,
+    "enabled": true,
     "windowSeconds": 120,
     "headshotRatio": 0.6,
     "minReactionMs": 120,
@@ -21,7 +21,7 @@
     "minSamples": 10
   },
   "evidence": {
-    "enabled": false,
+    "enabled": true,
     "seconds": 30,
     "maxFilesPerMinute": 10
   }

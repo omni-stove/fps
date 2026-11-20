@@ -536,7 +536,7 @@ namespace Shooter.Server.Tests
             _host.Register(_rules);
             _host.Register(combat);
             _host.Register(_bots);
-            _host.Register(new ServerSnapshots(rules, new ISnapshotContributor[] { _movement, _rules, combat }));
+            _host.Register(new ServerSnapshots(rules, new ISnapshotContributor[] { _movement, _rules, combat }, TestAntiCheat.Off));
             _host.Start(_context);
         }
 

@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Numerics;
+using System.Text.Json.Nodes;
 using System.Threading;
 using NUnit.Framework;
 using Shooter.Core;
@@ -37,6 +38,7 @@ namespace Shooter.NetV2.Tests
         public void SetUp()
         {
             _root = ServerDataCopy();
+            TurnOffConcealing(_root);
             _stop = new StopSignal();
             _output = new StringWriter();
             _synchronizedOutput = TextWriter.Synchronized(_output);
@@ -464,6 +466,16 @@ namespace Shooter.NetV2.Tests
             }
 
             return root;
+        }
+
+        // 2 人は敵どうしで、対戦マップの出現の位置から互いが見えるかは地形で決まる。ここで見るのは予測と補間なので、
+        // 見えない相手を空にする仕組み (Shooter.Server.Tests の AntiCheatEndToEndTests で確かめる) だけを写しの側で切る
+        private static void TurnOffConcealing(string root)
+        {
+            var path = Path.Combine(root, "server-data", "tuning", "anticheat.json");
+            var tuning = JsonNode.Parse(File.ReadAllText(path)).AsObject();
+            tuning["conceal"]["enabled"] = false;
+            File.WriteAllText(path, tuning.ToJsonString());
         }
 
         private static string RepositoryRoot()

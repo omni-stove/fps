@@ -28,14 +28,32 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
-        public void EveryFeatureIsOffByDefault()
+        public void EveryFeatureIsOnByDefault()
         {
             var tuning = AntiCheatTuning.Default;
 
+            Assert.That(tuning.Conceal.Enabled, Is.True);
+            Assert.That(tuning.Violations.Enabled, Is.True);
+            Assert.That(tuning.Stats.Enabled, Is.True);
+            Assert.That(tuning.Evidence.Enabled, Is.True);
+        }
+
+        [Test]
+        public void EachFeatureCanBeTurnedOffOnItsOwn()
+        {
+            var tuning = AntiCheatTuningJson.Parse(
+                "{\"conceal\": {\"enabled\": false}, \"violations\": {\"enabled\": false},"
+                + " \"stats\": {\"enabled\": false}, \"evidence\": {\"enabled\": false}}",
+                "anticheat.json");
+
             Assert.That(tuning.Conceal.Enabled, Is.False);
+            Assert.That(tuning.Conceal.MaxDistance, Is.EqualTo(AntiCheatTuning.ConcealSettings.DefaultMaxDistance));
             Assert.That(tuning.Violations.Enabled, Is.False);
+            Assert.That(tuning.Violations.ShotRejectionLimit, Is.EqualTo(AntiCheatTuning.ViolationSettings.DefaultShotRejectionLimit));
             Assert.That(tuning.Stats.Enabled, Is.False);
+            Assert.That(tuning.Stats.MinSamples, Is.EqualTo(AntiCheatTuning.StatsSettings.DefaultMinSamples));
             Assert.That(tuning.Evidence.Enabled, Is.False);
+            Assert.That(tuning.Evidence.Seconds, Is.EqualTo(AntiCheatTuning.EvidenceSettings.DefaultSeconds));
         }
 
         [Test]
@@ -112,15 +130,15 @@ namespace Shooter.Core.Tests
             Assert.That(tuning.Conceal.MaxDistance, Is.EqualTo(AntiCheatTuning.ConcealSettings.DefaultMaxDistance));
             Assert.That(tuning.Conceal.MarginDistance, Is.EqualTo(AntiCheatTuning.ConcealSettings.DefaultMarginDistance));
             Assert.That(tuning.Conceal.MarginSeconds, Is.EqualTo(AntiCheatTuning.ConcealSettings.DefaultMarginSeconds));
-            Assert.That(tuning.Violations.Enabled, Is.False);
+            Assert.That(tuning.Violations.Enabled, Is.True);
             Assert.That(tuning.Violations.ShotRejectionLimit, Is.EqualTo(3));
             Assert.That(tuning.Violations.WindowSeconds, Is.EqualTo(AntiCheatTuning.ViolationSettings.DefaultWindowSeconds));
             Assert.That(tuning.Violations.OverBudgetLimit, Is.EqualTo(AntiCheatTuning.ViolationSettings.DefaultOverBudgetLimit));
-            Assert.That(tuning.Stats.Enabled, Is.False);
+            Assert.That(tuning.Stats.Enabled, Is.True);
             Assert.That(tuning.Stats.HeadshotRatio, Is.EqualTo(AntiCheatTuning.StatsSettings.DefaultHeadshotRatio));
             Assert.That(tuning.Stats.MinReactionMs, Is.EqualTo(AntiCheatTuning.StatsSettings.DefaultMinReactionMs));
             Assert.That(tuning.Stats.MinSamples, Is.EqualTo(AntiCheatTuning.StatsSettings.DefaultMinSamples));
-            Assert.That(tuning.Evidence.Enabled, Is.False);
+            Assert.That(tuning.Evidence.Enabled, Is.True);
             Assert.That(tuning.Evidence.Seconds, Is.EqualTo(10f));
             Assert.That(tuning.Evidence.MaxFilesPerMinute, Is.EqualTo(10));
         }

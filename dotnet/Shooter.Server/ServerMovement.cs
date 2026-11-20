@@ -64,6 +64,21 @@ namespace Shooter.Server
             _context.Bodies.DownedChanged += HandleDownedChanged;
             _context.Match.MapChanged += HandleMapChanged;
             _context.Match.RulesChanged += HandleRulesChanged;
+            if (_signals != null)
+            {
+                _signals.ShotAccepted += HandleShotAccepted;
+            }
+        }
+
+        // 撃った向きの pitch は人の体 (Mover) に覚える。抜けると体ごと消えるので、番号を使い回す次の人へ残らない
+        private void HandleShotAccepted(int shooterId, Vector3 origin, Vector3 direction, float shotTick)
+        {
+            if (BotRoster.IsBotId(shooterId) || !_byPlayer.TryGetValue(shooterId, out var mover))
+            {
+                return;
+            }
+
+            mover.ShotPitch = ServerCheatSignals.PitchOf(direction);
         }
 
         // 体の寸法と移動の値はクライアントの予測と同じ NetPlayer.prefab の値なので替えず、ルール (落下ダメージ・使える動き) だけを替える
@@ -203,6 +218,11 @@ namespace Shooter.Server
                 _context.Bodies.DownedChanged -= HandleDownedChanged;
                 _context.Match.MapChanged -= HandleMapChanged;
                 _context.Match.RulesChanged -= HandleRulesChanged;
+            }
+
+            if (_signals != null)
+            {
+                _signals.ShotAccepted -= HandleShotAccepted;
             }
 
             _byConnection.Clear();
@@ -440,8 +460,11 @@ namespace Shooter.Server
                 mover.InputBudget -= 1f;
                 Apply(mover, frame);
 
-                // Bot の入力 (ApplyBotInput) は出さない。サーバーが作る向きを検知に数えても意味が無いため
-                _signals?.RaiseLooked(mover.Player.PlayerId, frame.Tick, mover.Yaw, null);
+                // Bot の入力 (ApplyBotInput) は出さない。サーバーが作る向きを検知に数えても意味が無いため。
+                // 撃った pitch は 1 つの入力にだけ載せる。続く入力にも載せると、撃っていない間の縦の向きを古い値で偽るため
+                var pitch = mover.ShotPitch;
+                mover.ShotPitch = null;
+                _signals?.RaiseLooked(mover.Player.PlayerId, frame.Tick, mover.Yaw, pitch);
             }
         }
 
@@ -510,6 +533,9 @@ namespace Shooter.Server
             if (_byPlayer.TryGetValue(body.PlayerId, out var mover))
             {
                 mover.Yaw = body.Yaw;
+
+                // 出現し直すとサーバーが向きを決め直すので、その前に撃った縦の向きを次の入力に載せない
+                mover.ShotPitch = null;
                 Teleport(body.PlayerId, body.Position);
             }
         }
@@ -659,6 +685,8 @@ namespace Shooter.Server
             public float InputBudget { get; set; }
 
             public float Yaw { get; set; }
+
+            public float? ShotPitch { get; set; }
 
             public bool Aiming { get; set; }
 

@@ -17,8 +17,17 @@ namespace Shooter.Server
 
         public event Action<int> InputOverBudget;
 
-        // 入力は pitch を送らないので、移動から出すときは pitch を null にする。送るようにすると通信の形が変わる
+        // 入力は pitch を送らないので、pitch は直前に受け付けた射撃の向きから求め (PitchOf)、その後の最初の入力の 1 つにだけ載せ、他は null にする。
+        // 入力に pitch を足すと通信の形が変わるため。射撃の tick は見ていた相手の時刻 (描画の tick) で入力の tick と時計が違うので、tick では合わせない
         public event Action<int, int, float, float?> Looked;
+
+        // yaw と同じくラジアンで、上を向くと正、水平で 0 にする (VehicleWeaponAim.TryToAngles と同じ向き)。
+        // 長さで割らずに Atan2 で求めるのは、射撃の向きが正規化されて届くとは限らないため
+        internal static float PitchOf(Vector3 direction)
+        {
+            var flat = MathF.Sqrt((direction.X * direction.X) + (direction.Z * direction.Z));
+            return MathF.Atan2(direction.Y, flat);
+        }
 
         internal void RaiseShotAccepted(int shooterId, Vector3 origin, Vector3 direction, float shotTick)
         {

@@ -217,7 +217,7 @@ namespace Shooter.Editor
             return written;
         }
 
-        // loadoutAbilities が null なら loadout.abilities を書かない (サーバーはロードアウトのアセットの能力のままにする)
+        // loadoutAbilities が null なら loadout.abilities を書かない (サーバーは deployables.json の全部を候補にする)
         public static NetMatchFile ToFile(
             NetMatchDefinition match, GameRulesDefinition asset, NetMotorSettings motor, IReadOnlyList<string> loadoutAbilities = null)
         {
@@ -291,7 +291,7 @@ namespace Shooter.Editor
 
             if (!File.Exists(path))
             {
-                Debug.Log(LogTag + " " + path + " is missing, so the server places nothing and every loadout.abilities slot is written empty");
+                Debug.Log(LogTag + " " + path + " is missing, so the server places nothing and loadout.abilities is written empty");
                 return DeployCatalog.Empty;
             }
 
@@ -318,8 +318,8 @@ namespace Shooter.Editor
                 && type.Role != DeployRole.Drone;
         }
 
-        // 装備画面 (LoadoutSelectionAssets.TryCreateAbilities) と同じ AbilitySelection で組むのは、
-        // カタログに無い能力・同じ能力の 2 つ目・枠の数を超える分を、クライアントと同じ決まりで「なし」にするため。
+        // サーバーは loadout.abilities を選べる候補として読み、選んでいない人には先頭から枠の数だけを持たせるので、
+        // 装備画面 (LoadoutSelectionAssets.TryCreateAbilities) と同じ AbilitySelection で組んだ既定の枠を先に並べてから、残りの候補を足す。
         // カタログの無いゲームは能力を選ばせないので、ロードアウトの能力だけを候補にする
         public static IReadOnlyList<string> ToLoadoutAbilities(LoadoutDefinition loadout, AbilityCatalogAsset catalog, DeployCatalog deployables)
         {
@@ -361,7 +361,24 @@ namespace Shooter.Editor
             }
 
             var selection = new AbilitySelection(offered, null, defaults, id => IsPlaceableOnline(deployables, id), AbilityHost.SlotCount);
-            return selection.AbilityIds;
+            var candidates = new List<string>(offered.Count);
+            foreach (var id in selection.AbilityIds)
+            {
+                if (!string.IsNullOrEmpty(id))
+                {
+                    candidates.Add(id);
+                }
+            }
+
+            foreach (var id in offered)
+            {
+                if (IsPlaceableOnline(deployables, id) && !candidates.Contains(id))
+                {
+                    candidates.Add(id);
+                }
+            }
+
+            return candidates;
         }
 
         public static IReadOnlyList<string> ExportPoints(string directory)

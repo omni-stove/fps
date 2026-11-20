@@ -129,65 +129,65 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
-        public void TheLoadoutSlotsKeepOnlyAbilitiesTheCatalogOffersAndTheServerPlaces()
+        public void TheLoadoutDefaultsComeFirstThenTheOtherCatalogAbilitiesTheServerPlaces()
         {
-            var loadout = Loadout(_beacon, _goggles);
+            var loadout = Loadout(_shield, _goggles);
             var catalog = Catalog(_beacon, _goggles, _drone, _shield);
 
             var abilities = ServerRulesExporter.ToLoadoutAbilities(loadout, catalog, _deployables);
 
-            Assert.That(abilities, Is.EqualTo(new[] { "deploy-beacon", string.Empty }), "the goggles are not placed by the server");
+            Assert.That(abilities, Is.EqualTo(new[] { "deploy-shield", "deploy-beacon" }), "the goggles and the drone are not placed by the server");
         }
 
         [Test]
-        public void ADroneInTheLoadoutIsLeftEmptyAndTheOtherSlotKeepsItsPlace()
+        public void ADroneInTheLoadoutIsLeftOut()
         {
             var abilities = ServerRulesExporter.ToLoadoutAbilities(Loadout(_drone, _shield), Catalog(_drone, _shield), _deployables);
 
-            Assert.That(abilities, Is.EqualTo(new[] { string.Empty, "deploy-shield" }));
+            Assert.That(abilities, Is.EqualTo(new[] { "deploy-shield" }));
         }
 
         [Test]
-        public void AnAbilityTheCatalogDoesNotOfferIsLeftEmpty()
+        public void AnAbilityTheCatalogDoesNotOfferIsLeftOut()
         {
             var abilities = ServerRulesExporter.ToLoadoutAbilities(Loadout(_beacon, _shield), Catalog(_shield), _deployables);
 
-            Assert.That(abilities, Is.EqualTo(new[] { string.Empty, "deploy-shield" }), "the menu would not offer the beacon either");
+            Assert.That(abilities, Is.EqualTo(new[] { "deploy-shield" }), "the menu would not offer the beacon either");
         }
 
         [Test]
-        public void WithoutACatalogTheLoadoutAbilitiesAreWrittenAndPaddedToTheSlotCount()
+        public void WithoutACatalogOnlyTheLoadoutAbilitiesAreWritten()
         {
             Assert.That(AbilityHost.SlotCount, Is.EqualTo(2));
 
             var abilities = ServerRulesExporter.ToLoadoutAbilities(Loadout(_beacon), null, _deployables);
 
-            Assert.That(abilities, Is.EqualTo(new[] { "deploy-beacon", string.Empty }));
+            Assert.That(abilities, Is.EqualTo(new[] { "deploy-beacon" }));
         }
 
         [Test]
-        public void EmptyRepeatedAndExtraSlotsAreWrittenAsTheMenuWouldChooseThem()
+        public void EmptyRepeatedAndExtraSlotsAreLeftOutAsTheMenuWouldChooseThem()
         {
             Assert.That(
                 ServerRulesExporter.ToLoadoutAbilities(Loadout(null, _beacon), null, _deployables),
-                Is.EqualTo(new[] { string.Empty, "deploy-beacon" }));
+                Is.EqualTo(new[] { "deploy-beacon" }), "the server never lists an empty Id as a candidate");
             Assert.That(
                 ServerRulesExporter.ToLoadoutAbilities(Loadout(_beacon, _beacon), null, _deployables),
-                Is.EqualTo(new[] { "deploy-beacon", string.Empty }), "one ability cannot fill two slots");
+                Is.EqualTo(new[] { "deploy-beacon" }), "one ability cannot fill two slots");
             Assert.That(
                 ServerRulesExporter.ToLoadoutAbilities(Loadout(_beacon, _shield, _drone), null, _deployables),
                 Is.EqualTo(new[] { "deploy-beacon", "deploy-shield" }), "a slot past AbilityHost.SlotCount is dropped");
             Assert.That(
                 ServerRulesExporter.ToLoadoutAbilities(Loadout(), null, _deployables),
-                Is.EqualTo(new[] { string.Empty, string.Empty }));
+                Is.Empty);
         }
 
         [Test]
-        public void WithoutAnythingToPlaceEverySlotIsEmpty()
+        public void WithoutAnythingToPlaceTheListIsEmpty()
         {
             var abilities = ServerRulesExporter.ToLoadoutAbilities(Loadout(_beacon, _shield), Catalog(_beacon, _shield), DeployCatalog.Empty);
 
-            Assert.That(abilities, Is.EqualTo(new[] { string.Empty, string.Empty }));
+            Assert.That(abilities, Is.Empty);
         }
 
         [Test]
@@ -220,7 +220,7 @@ namespace Shooter.Net.Tests
             var file = NetMatchFile.Parse(text, written[0]);
             Assert.That(text, Does.Contain("\"" + NetMatchFile.AbilitiesItem + "\": ["));
             Assert.That(file.LoadoutAbilities, Is.EqualTo(expected));
-            Assert.That(file.LoadoutAbilities.Count, Is.EqualTo(AbilityHost.SlotCount));
+            Assert.That(file.LoadoutAbilities, Has.No.Member(string.Empty).And.No.Member("deploy-drone"));
         }
 
         [Test]
@@ -238,14 +238,14 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
-        public void WithNothingToPlaceTheRulesFilesStillListEveryEmptySlot()
+        public void WithNothingToPlaceTheRulesFilesWriteAnEmptyList()
         {
             var match = NetSceneBuilder.LoadOrBuildMatch();
 
             var written = ServerRulesExporter.WriteRules(_directory, match, new[] { Rules("TeamDeathmatch") }, DeployCatalog.Empty);
 
             var file = NetMatchFile.Parse(File.ReadAllText(written[0]), written[0]);
-            Assert.That(file.LoadoutAbilities, Is.EqualTo(new[] { string.Empty, string.Empty }), "an empty slot gives no ability, unlike a missing list");
+            Assert.That(file.LoadoutAbilities, Is.Not.Null.And.Empty, "an empty list places nothing, unlike a missing list");
             Assert.Throws<ArgumentNullException>(() => ServerRulesExporter.WriteRules(_directory, match, new[] { Rules("Other") }, null));
         }
 

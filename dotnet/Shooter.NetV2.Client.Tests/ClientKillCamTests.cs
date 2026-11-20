@@ -38,6 +38,32 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheKillerIsNamedFromTheNameRoster()
+        {
+            var names = new ClientPlayerNames();
+            var roster = new PlayerNamesMessage();
+            roster.Add(_killer, "Alice");
+            names.Apply(roster);
+            _killCam = new ClientKillCam(_self, 1f, names);
+            _killCam.Apply(Killed(_killer, _self, _rifleId));
+
+            _killCam.Apply(Clip(_killer, _self, 2f));
+
+            Assert.That(_killCam.Status, Is.EqualTo(new KillCamStatus("Alice", _rifleId, 2f, 0f, 1f)));
+        }
+
+        [Test]
+        public void AKillerMissingFromTheRosterIsNamedByTheIdName()
+        {
+            var bot = BotRoster.FirstBotPlayerId;
+            _killCam = new ClientKillCam(_self, 1f, new ClientPlayerNames());
+
+            _killCam.Apply(Clip(bot, _self, 2f));
+
+            Assert.That(_killCam.Status.Value.KillerName, Is.EqualTo(BotRoster.KillFeedName(bot)));
+        }
+
+        [Test]
         public void AClipForSomeoneElseIsIgnored()
         {
             Assert.That(_killCam.Apply(Clip(_killer, 5, 2f)), Is.False);

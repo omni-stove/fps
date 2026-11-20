@@ -515,6 +515,45 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void TheParticipantsTakeTheNamesFromTheServerRoster()
+        {
+            var names = new ClientPlayerNames();
+            var roster = new PlayerNamesMessage();
+            roster.Add(_localId, "Alice");
+            roster.Add(42, "Bob");
+            names.Apply(roster);
+            var hud = NetV2Hud.Create(_localId, 100, _ => null, names: names);
+            _created.Add(hud.gameObject);
+
+            hud.Apply(Snapshot(MatchObjective.None));
+            var participants = hud.Participants;
+
+            Assert.That(participants.TryGet(_localId, out var local), Is.True);
+            Assert.That(local, Is.EqualTo(new Participant(_localId, "Alice", Team.Bravo, true)));
+            Assert.That(participants.TryGet(42, out var gone), Is.True);
+            Assert.That(gone, Is.EqualTo(new Participant(42, "Bob", null, false)), "someone not in the snapshot keeps the roster name");
+            Assert.That(participants.TryGet(_otherId, out var other), Is.True);
+            Assert.That(other.Name, Is.EqualTo(BotRoster.KillFeedName(_otherId)), "someone missing from the roster keeps the id name");
+        }
+
+        [Test]
+        public void ANameThatArrivesLaterIsShownFromTheNextSnapshot()
+        {
+            var names = new ClientPlayerNames();
+            var hud = NetV2Hud.Create(_localId, 100, _ => null, names: names);
+            _created.Add(hud.gameObject);
+            hud.Apply(Snapshot(MatchObjective.None));
+            var roster = new PlayerNamesMessage();
+            roster.Add(_otherId, "Carol");
+
+            names.Apply(roster);
+            hud.Apply(Snapshot(MatchObjective.None));
+
+            Assert.That(hud.Participants.TryGet(_otherId, out var other), Is.True);
+            Assert.That(other.Name, Is.EqualTo("Carol"));
+        }
+
+        [Test]
         public void ClearSignalsTakesBackOnlyWhatItPublished()
         {
             var snapshot = Snapshot(MatchObjective.Domination);

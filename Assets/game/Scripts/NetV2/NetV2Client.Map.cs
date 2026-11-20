@@ -131,7 +131,7 @@ namespace Shooter.NetV2
                 (eye, point) => EnemySenses.IsVisionBlocked(eye.ToUnity(), point.ToUnity()));
             GameSignals.Nameplates.Publish(_nameplates);
 
-            _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor, _client.TickRate);
+            _hud = NetV2Hud.Create(_client.PlayerId, _client.MaxHealth, _weapons.OwnSpecFor, _client.TickRate, _names);
             _hud.BindStatusEffects(_weaponHooks.StatusEffects);
             _hud.BindInventory(_inventory);
 

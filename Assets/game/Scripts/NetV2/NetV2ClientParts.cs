@@ -44,6 +44,9 @@ namespace Shooter.NetV2
 
         public BlockListStore Blocks { get; set; } = new BlockListStore();
 
+        // NetV2PlayerNamesPart が埋め、キルカメラと HUD が同じものを引く。null なら部品の中で作る
+        public ClientPlayerNames Names { get; set; } = new ClientPlayerNames();
+
         // null ならオフラインと同じ Resources の調整値 (melee・streaks の JSON) を使う
         public MeleeSpec Melee { get; set; }
 
@@ -89,6 +92,7 @@ namespace Shooter.NetV2
             }
 
             var client = context.Client;
+            var names = new NetV2PlayerNamesPart(context.Names);
             var blocks = new NetV2BlockPart(
                 client, context.VoiceRoster, context.Blocks ?? new BlockListStore(), context.Voice == null, context.Log);
             var deployables = new NetV2DeployablesPart(
@@ -113,7 +117,7 @@ namespace Shooter.NetV2
                 new NetV2MeleePart(client, context.Melee, context.LocalPlayer, context.Log),
                 deployables,
                 deployInput,
-                new NetV2KillCamPart(client, context.KillCamSpeed, context.LocalPlayer, context.Log),
+                new NetV2KillCamPart(client, context.KillCamSpeed, context.LocalPlayer, context.Log, names.Names),
 
                 // 天候と時刻もスナップショットの MatchRulesSync で届くので、マップを替えるたびにシーンの空へ当て直す
                 new NetV2WeatherPart(context.Weather, context.Log),
@@ -127,6 +131,7 @@ namespace Shooter.NetV2
                     () => LocalPositionOf(context.LocalPlayer),
                     log: context.Log),
                 new NetV2ZonePart(context.ZoneLook),
+                names,
             };
 
             if (context.Replay)

@@ -20,6 +20,7 @@ namespace Shooter.NetV2
         private readonly List<ControlPointStatus> _controlPoints = new List<ControlPointStatus>();
         private readonly List<ScoreboardEntry> _scoreboard = new List<ScoreboardEntry>();
         private Roster _roster;
+        private ClientPlayerNames _names = new ClientPlayerNames();
         private int _localId;
         private int _maxHealth = 1;
         private bool _shown;
@@ -115,7 +116,13 @@ namespace Shooter.NetV2
         // ポーズを開いても対戦は止まらないので、GameSignals.PauseTimeMode は PauseTimeMode.KeepRunning にする。
         // 武器の値を引く口を受け取るのは、溜め・熱・弾薬の種類を出すかを武器の値で決めるため (WeaponSync は無い項目にも 0 を運ぶ)。
         // tick の速さは、制限時間の無い Battle Royale の経った時間をスナップショットの tick から数えるのに使う。
-        public static NetV2Hud Create(int localPlayerId, int maxHealth, Func<string, WeaponSpec> findWeapon, int tickRate = TickClock.DefaultTickRate)
+        // 名簿を HUD の中で作らずに受け取るのは、マップを替えるたびに HUD を作り直しても、先に届いた名前を失わないため
+        public static NetV2Hud Create(
+            int localPlayerId,
+            int maxHealth,
+            Func<string, WeaponSpec> findWeapon,
+            int tickRate = TickClock.DefaultTickRate,
+            ClientPlayerNames names = null)
         {
             if (findWeapon == null)
             {
@@ -124,6 +131,7 @@ namespace Shooter.NetV2
 
             var netHud = new GameObject(ObjectName).AddComponent<NetV2Hud>();
             netHud._localId = localPlayerId;
+            netHud._names = names ?? new ClientPlayerNames();
             netHud._maxHealth = Math.Max(1, maxHealth);
             netHud._findWeapon = findWeapon;
             netHud._roster = new Roster(netHud);
@@ -170,7 +178,7 @@ namespace Shooter.NetV2
             for (var i = 0; i < snapshot.Players.Count; i++)
             {
                 var playerId = snapshot.Players[i].PlayerId;
-                _participants.Set(new Participant(playerId, BotRoster.KillFeedName(playerId), snapshot.Players[i].Team, playerId == _localId));
+                _participants.Set(new Participant(playerId, _names.NameOf(playerId), snapshot.Players[i].Team, playerId == _localId));
                 if (snapshot.Players[i].PlayerId == _localId)
                 {
                     own = i;
@@ -891,7 +899,7 @@ namespace Shooter.NetV2
             {
                 if (!_owner._participants.TryGet(id, out participant))
                 {
-                    participant = new Participant(id, BotRoster.KillFeedName(id), null, id == _owner._localId);
+                    participant = new Participant(id, _owner._names.NameOf(id), null, id == _owner._localId);
                 }
 
                 return true;

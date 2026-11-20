@@ -4,8 +4,14 @@ namespace Shooter.NetV2
 {
     public sealed class NetV2PlayerNamesPart : INetV2ClientPart
     {
-        private readonly ClientPlayerNames _names = new ClientPlayerNames();
+        private readonly ClientPlayerNames _names;
         private bool _disposed;
+
+        // 名簿を外から渡せるのは、HUD とキルカメラが部品の並びを探さずに同じ名簿を引けるようにするため
+        public NetV2PlayerNamesPart(ClientPlayerNames names = null)
+        {
+            _names = names ?? new ClientPlayerNames();
+        }
 
         public ClientPlayerNames Names => _names;
 

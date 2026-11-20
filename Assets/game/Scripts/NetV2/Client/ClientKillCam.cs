@@ -10,13 +10,14 @@ namespace Shooter.NetV2
     {
         private readonly int _localPlayerId;
         private readonly float _speed;
+        private readonly ClientPlayerNames _names;
         private KillCamPlayback _playback;
         private int _killedBy = -1;
         private string _killedWith = string.Empty;
         private int _newestTick = -1;
         private bool _seenDead;
 
-        public ClientKillCam(int localPlayerId, float speed = 1f)
+        public ClientKillCam(int localPlayerId, float speed = 1f, ClientPlayerNames names = null)
         {
             if (!KillCamPlayback.IsValidSpeed(speed))
             {
@@ -25,6 +26,7 @@ namespace Shooter.NetV2
 
             _localPlayerId = localPlayerId;
             _speed = speed;
+            _names = names ?? new ClientPlayerNames();
         }
 
         public KillCamStatus? Status { get; private set; }
@@ -72,7 +74,7 @@ namespace Shooter.NetV2
             _playback = playback;
             _seenDead = false;
             KillerId = clip.KillerId;
-            return SetStatus(new KillCamStatus(BotRoster.KillFeedName(clip.KillerId), weaponId, playback.Clip.Duration, 0f, _speed));
+            return SetStatus(new KillCamStatus(_names.NameOf(clip.KillerId), weaponId, playback.Clip.Duration, 0f, _speed));
         }
 
         // 送り直しの遅れで前の tick のスナップショット (まだ生きている) が後から届いても止めないよう、倒れた姿を一度見てから生き返ったときに止める

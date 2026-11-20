@@ -34,6 +34,11 @@ namespace Shooter.Server.Tests
 
         public int DeltaSnapshots { get; private set; }
 
+        // 最後に届いた名前の名簿。表は読むたびに同じ物を上書きするので、届いたその場で写す
+        public Dictionary<int, string> Names { get; } = new Dictionary<int, string>();
+
+        public int NameRosters { get; private set; }
+
         public static ushort FreePort()
         {
             using (var probe = new UdpClient(new IPEndPoint(IPAddress.Loopback, 0)))
@@ -67,13 +72,18 @@ namespace Shooter.Server.Tests
         }
 
         public void SendRequest(
-            string version, string key = "device1", ushort protocol = MatchProtocol.Version, string partyId = "", string joinCode = "")
+            string version,
+            string key = "device1",
+            ushort protocol = MatchProtocol.Version,
+            string partyId = "",
+            string joinCode = "",
+            string displayName = "tester")
         {
             Send(new ConnectRequestMessage
             {
                 ClientVersion = version,
                 RejoinKey = key,
-                DisplayName = "tester",
+                DisplayName = displayName,
                 ProtocolVersion = protocol,
                 PartyId = partyId,
                 JoinCode = joinCode,
@@ -99,6 +109,11 @@ namespace Shooter.Server.Tests
                         break;
                 }
             }
+        }
+
+        public void Disconnect(string reason)
+        {
+            _transport.Disconnect(_server, reason);
         }
 
         public void Dispose()
@@ -131,6 +146,15 @@ namespace Shooter.Server.Tests
                     break;
                 case SnapshotMessage snapshot:
                     Keep(snapshot);
+                    break;
+                case PlayerNamesMessage names:
+                    NameRosters++;
+                    Names.Clear();
+                    for (var i = 0; i < names.Count; i++)
+                    {
+                        Names[names.PlayerId(i)] = names.Name(i);
+                    }
+
                     break;
             }
         }

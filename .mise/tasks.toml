@@ -122,11 +122,11 @@ description = "Run the nightly workflow's steps locally: EditMode tests, the smo
 run = "bash scripts/nightly-local.sh"
 
 [comments-extract]
-description = "Print each comment block of the tracked .cs files under the given paths with its id and the next lines, for judging keep / delete / rewrite (docs/comment-cleanup.md)"
+description = "Print each comment block of the tracked .cs files under the given paths with its id and the next lines, for judging keep / delete / rewrite"
 run = "bash scripts/comments.sh extract"
 
 [comments-apply]
-description = "Apply a decisions file of keep / delete / rewrite to the comment blocks extract printed (docs/comment-cleanup.md)"
+description = "Apply a decisions file of keep / delete / rewrite to the comment blocks extract printed"
 run = "bash scripts/comments.sh apply"
 
 [comments-verify]

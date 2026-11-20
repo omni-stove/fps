@@ -127,6 +127,9 @@ namespace Shooter.Runtime
         // 相手の体に陣営 (SideMember) が付かない画面 (ネット対戦) だけが出す。空ならネームプレートはオフラインの引き先で集める。
         public static GameSignal<INameplateTargets> NameplateTargets { get; } = new GameSignal<INameplateTargets>(nameof(NameplateTargets));
 
+        // 値で毎回出さず集める口で出すのは、相手が補間で毎フレーム動き、見通しも目の位置で変わるため。空ならオフラインの集め方を使う。
+        public static GameSignal<INameplateContacts> Nameplates { get; } = new GameSignal<INameplateContacts>(nameof(Nameplates));
+
         // 本体のプロパティにしないのは、本体が型を知らない他のアセンブリ (追加の乗り物など) の signal も、ここの signal と一緒に ResetAll で空へ戻すため。
         public static GameSignal<T> Create<T>(string name)
         {
@@ -195,6 +198,7 @@ namespace Shooter.Runtime
             Drone.Reset();
             NetStats.Reset();
             NameplateTargets.Reset();
+            Nameplates.Reset();
             foreach (var reset in _createdResets)
             {
                 reset();

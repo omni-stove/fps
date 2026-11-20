@@ -107,10 +107,10 @@ namespace Shooter.Server.Tests
                 Is.True,
                 error);
 
-            Assert.That(_modules, Has.Count.EqualTo(14));
-            Assert.That(_modules[12], Is.InstanceOf<ServerSnapshots>());
-            Assert.That(_modules[13], Is.InstanceOf<ServerCheatStats>());
-            Assert.That(((ServerCheatStats)_modules[13]).Stats, Is.SameAs(stats));
+            Assert.That(_modules, Has.Count.EqualTo(15));
+            Assert.That(_modules[13], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[14], Is.InstanceOf<ServerCheatStats>());
+            Assert.That(((ServerCheatStats)_modules[14]).Stats, Is.SameAs(stats));
         }
 
         [Test]

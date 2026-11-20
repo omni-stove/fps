@@ -38,7 +38,7 @@ namespace Shooter.Editor
         private static readonly string _economyPlayerPrefix = EconomyLog.Tag + " player=";
         private static readonly string _boughtPart = " bought item=";
         private static readonly string _roundRewardPart = " round ";
-        private static readonly string _roundEndPrefix = SearchAndDestroyText.Tag + " round_end ";
+        private static readonly string _roundEndPrefix = SearchAndDestroyLog.Tag + " round_end ";
 
         private static readonly List<string> _errors = new List<string>();
         private static Step _step;

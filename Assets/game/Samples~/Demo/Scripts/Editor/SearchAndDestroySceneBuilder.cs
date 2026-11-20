@@ -47,7 +47,7 @@ namespace Shooter.Editor
 
         public static string SiteObjectName(int index)
         {
-            return "BombSite-" + Shooter.Core.SearchAndDestroyText.SiteName(index);
+            return "BombSite-" + Shooter.Core.BombSiteName.Of(index);
         }
 
         protected override ModeRunnerBase AddRunner(GameObject host, ModeSceneContext context)

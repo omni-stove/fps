@@ -304,10 +304,20 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheLogTextCountsTiersFromOne()
         {
-            Assert.That(GunGameText.Promote(0, 1, 3, "Launcher"), Is.EqualTo("[Mode] gungame promote player=0 tier=2/3 weapon=Launcher"));
-            Assert.That(GunGameText.Demote(2, 0, 3, "Rifle"), Is.EqualTo("[Mode] gungame demote player=2 tier=1/3 weapon=Rifle"));
-            Assert.That(GunGameText.Equip(1, 0, 3, string.Empty), Is.EqualTo("[Mode] gungame equip player=1 tier=1/3 weapon=-"));
-            Assert.That(GunGameText.Finish(0, "Handgun"), Is.EqualTo("[Mode] gungame finish player=0 weapon=Handgun"));
+            Assert.That(GunGameLog.Promote(0, 1, 3, "Launcher"), Is.EqualTo("[Mode] gungame promote player=0 tier=2/3 weapon=Launcher"));
+            Assert.That(GunGameLog.Demote(2, 0, 3, "Rifle"), Is.EqualTo("[Mode] gungame demote player=2 tier=1/3 weapon=Rifle"));
+            Assert.That(GunGameLog.Equip(1, 0, 3, string.Empty), Is.EqualTo("[Mode] gungame equip player=1 tier=1/3 weapon=-"));
+            Assert.That(GunGameLog.Finish(0, "Handgun"), Is.EqualTo("[Mode] gungame finish player=0 weapon=Handgun"));
+        }
+
+        [Test]
+        public void TheDisplayedTierCountsFromOneAndStopsAtTheLast()
+        {
+            Assert.That(GunGameDisplayedTier.Of(-1, 3), Is.EqualTo(1));
+            Assert.That(GunGameDisplayedTier.Of(0, 3), Is.EqualTo(1));
+            Assert.That(GunGameDisplayedTier.Of(2, 3), Is.EqualTo(3));
+            Assert.That(GunGameDisplayedTier.Of(3, 3), Is.EqualTo(3));
+            Assert.That(GunGameDisplayedTier.Of(7, 3), Is.EqualTo(3));
         }
 
         private static GunGameLadder Ladder(bool demotesOnMelee)

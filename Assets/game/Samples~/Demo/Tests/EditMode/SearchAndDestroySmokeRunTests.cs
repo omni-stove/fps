@@ -30,7 +30,7 @@ namespace Shooter.Tests.EditMode
                 Is.EqualTo(SearchAndDestroySmokeRun.LineKind.RoundReward),
                 "a drawn round pays too");
             Assert.That(
-                SearchAndDestroySmokeRun.Classify(SearchAndDestroyText.RoundEndLog(1, Side.Alpha, RoundEndReason.DefendersEliminated, 1, 0)),
+                SearchAndDestroySmokeRun.Classify(SearchAndDestroyLog.RoundEndLog(1, Side.Alpha, RoundEndReason.DefendersEliminated, 1, 0)),
                 Is.EqualTo(SearchAndDestroySmokeRun.LineKind.RoundEnded));
         }
 
@@ -46,9 +46,9 @@ namespace Shooter.Tests.EditMode
             Assert.That(SearchAndDestroySmokeRun.Classify(EconomyLog.KillReward(1, 2, 300, 1100)), Is.EqualTo(SearchAndDestroySmokeRun.LineKind.Other));
             Assert.That(SearchAndDestroySmokeRun.Classify(EconomyLog.Equipped(0, 2)), Is.EqualTo(SearchAndDestroySmokeRun.LineKind.Other));
             Assert.That(
-                SearchAndDestroySmokeRun.Classify(SearchAndDestroyText.RoundLog(1, Side.Alpha, Side.Bravo)),
+                SearchAndDestroySmokeRun.Classify(SearchAndDestroyLog.RoundLog(1, Side.Alpha, Side.Bravo)),
                 Is.EqualTo(SearchAndDestroySmokeRun.LineKind.Other));
-            Assert.That(SearchAndDestroySmokeRun.Classify(SearchAndDestroyText.EndedLog(Side.Alpha)), Is.EqualTo(SearchAndDestroySmokeRun.LineKind.Other));
+            Assert.That(SearchAndDestroySmokeRun.Classify(SearchAndDestroyLog.EndedLog(Side.Alpha)), Is.EqualTo(SearchAndDestroySmokeRun.LineKind.Other));
         }
 
         [Test]

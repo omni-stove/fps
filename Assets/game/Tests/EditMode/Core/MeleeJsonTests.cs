@@ -165,6 +165,30 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ErrorMessagesKeepTheirWording()
+        {
+            var unknown = Assert.Throws<TuningJsonException>(() => MeleeJson.Parse("{\"dmg\": 10}", "m"));
+            Assert.That(unknown.Message, Does.StartWith("melee JSON 'm': unknown item 'dmg' (line 1, column "));
+            Assert.That(unknown.Message, Does.Contain("; known items are damage, reach, "));
+
+            var notNumber = Assert.Throws<TuningJsonException>(() => MeleeJson.Parse("{\"reach\": \"far\"}", "m"));
+            Assert.That(notNumber.Message, Does.StartWith("melee JSON 'm' item 'reach' must be a number, but is the string \"far\" ("));
+
+            var notBool = Assert.Throws<TuningJsonException>(() => MeleeJson.Parse("{\"finisherInterruptible\": 1}", "m"));
+            Assert.That(notBool.Message, Does.StartWith("melee JSON 'm' item 'finisherInterruptible' must be true or false, but is the number 1 ("));
+
+            var fraction = Assert.Throws<TuningJsonException>(() => MeleeJson.Parse("{\"damage\": 12.5}", "m"));
+            Assert.That(fraction.Message, Does.StartWith("melee JSON 'm' item 'damage' must be a whole number without a fraction or exponent ("));
+
+            var nullItem = Assert.Throws<TuningJsonException>(() => MeleeJson.Parse("{\"reach\": null}", "m"));
+            Assert.That(nullItem.Message, Does.StartWith("melee JSON 'm' item 'reach' must not be null; leave the item out to use the default ("));
+
+            var broken = Assert.Throws<TuningJsonException>(() => MeleeJson.Parse("{", "m"));
+            Assert.That(broken.Message, Does.StartWith("melee JSON 'm' is not valid JSON: "));
+            Assert.That(broken.InnerException, Is.InstanceOf<FormatException>());
+        }
+
+        [Test]
         public void BrokenJsonIsRejectedWithoutAnItem()
         {
             var e = Assert.Throws<TuningJsonException>(() => MeleeJson.Parse("{", null));

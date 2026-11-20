@@ -778,6 +778,59 @@ namespace Shooter.Core.Tests
             Assert.That(e.Message, Is.EqualTo("game rules JSON 'Rules/Test.json' is not valid JSON: expected ',' at line 3, column 3"));
         }
 
+        [Test]
+        public void ItemErrorMessagesKeepTheirWording()
+        {
+            var notText = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"streaks\": 1}", _source));
+            Assert.That(notText.Item, Is.EqualTo("streaks"));
+            Assert.That(notText.Message, Does.StartWith("game rules JSON 'Rules/Test.json' item 'streaks' must be one of the names "));
+            Assert.That(notText.Message, Does.Contain(", but is the number 1 (line 1, column "));
+
+            var unknownName = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"streaks\": \"Sometimes\"}", _source));
+            Assert.That(unknownName.Message, Does.StartWith("game rules JSON 'Rules/Test.json' item 'streaks' \"Sometimes\" is not one of "));
+
+            var notArray = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"respawnAnchor\": \"Base\"}", _source));
+            Assert.That(notArray.Item, Is.EqualTo("respawnAnchor"));
+            Assert.That(notArray.Message, Does.StartWith("game rules JSON 'Rules/Test.json' item 'respawnAnchor' must be an array of the names "));
+
+            var badElement = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"respawnAnchor\": [\"Nowhere\"]}", _source));
+            Assert.That(badElement.Item, Is.EqualTo("respawnAnchor"));
+            Assert.That(badElement.Message, Does.StartWith("game rules JSON 'Rules/Test.json' item 'respawnAnchor' \"Nowhere\" is not one of "));
+
+            var unknownItem = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"actions\": {\"sprint\": \"On\"}}", _source));
+            Assert.That(unknownItem.Message, Does.StartWith("game rules JSON 'Rules/Test.json': unknown item 'actions.sprint' (line 1, column "));
+            Assert.That(unknownItem.Message, Does.Contain("; known items here are downed, downedBleedoutSeconds, "));
+
+            var notObject = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"zoneDamage\": 2}", _source));
+            Assert.That(notObject.Item, Is.EqualTo("zoneDamage"));
+            Assert.That(notObject.Message, Does.StartWith("game rules JSON 'Rules/Test.json': item 'zoneDamage' must be an object, but is the number 2 ("));
+
+            var nullItem = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"zoneDamage\": {\"head\": null}}", _source));
+            Assert.That(nullItem.Item, Is.EqualTo("zoneDamage.head"));
+            Assert.That(nullItem.Message, Does.StartWith("game rules JSON 'Rules/Test.json' item 'zoneDamage.head' must not be null; leave the item out to use the default ("));
+        }
+
+        [Test]
+        public void RejectedValuesKeepTheArgumentExceptionInside()
+        {
+            var e = Assert.Throws<GameRulesJsonException>(() => GameRulesJson.Parse("{\"actions\": {\"grenadeCount\": -1}}", _source));
+
+            Assert.That(e.Item, Is.EqualTo("actions.grenadeCount"));
+            Assert.That(e.Message, Does.StartWith("game rules JSON 'Rules/Test.json' item 'actions.grenadeCount' is invalid: "));
+            Assert.That(e.InnerException, Is.InstanceOf<ArgumentException>());
+        }
+
+        [Test]
+        public void WriteKeepsItsLayout()
+        {
+            var written = GameRulesJson.Write(GameRules.Default);
+
+            Assert.That(written, Does.StartWith("{\n  \"friendlyFire\": \""));
+            Assert.That(written, Does.Contain(",\n  \"actions\": {\n    \"downed\": \""));
+            Assert.That(written, Does.Contain(",\n  \"zoneDamage\": {\n    \"head\": "));
+            Assert.That(written, Does.EndWith("\"]\n}\n"));
+        }
+
         [TestCase("[]")]
         [TestCase("\"rules\"")]
         [TestCase("null")]

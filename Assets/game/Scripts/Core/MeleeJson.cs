@@ -50,8 +50,11 @@ namespace Shooter.Core
 
         public static MeleeSpec Parse(string text, string sourceName)
         {
-            var source = TuningJson.SourceOf(sourceName, _kind);
-            var fields = TuningJson.Fields.Read(text, source, _kind, ItemNames);
+            return TuningJson.ParseFlat(text, sourceName, _kind, ItemNames, Read);
+        }
+
+        private static MeleeSpec Read(ServerDataJson.Fields fields)
+        {
             var defaults = MeleeSpec.Default;
             try
             {
@@ -76,7 +79,7 @@ namespace Shooter.Core
             }
             catch (ArgumentException e)
             {
-                throw TuningJson.Rejected(source, _kind, ItemNames, e);
+                throw TuningJson.Rejected(fields.Source, _kind, ItemNames, e);
             }
         }
     }

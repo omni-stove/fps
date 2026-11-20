@@ -371,5 +371,46 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentNullException>(() => TuningJson.ParseGrenade(null, "g"));
             Assert.Throws<ArgumentNullException>(() => TuningJson.ParsePing(null, "p"));
         }
+
+        [Test]
+        public void FlatTuningErrorMessagesKeepTheirWording()
+        {
+            var unknown = Assert.Throws<TuningJsonException>(() => TuningJson.ParsePing("{\"lifetime\": 3}", "ping.json"));
+            Assert.That(unknown.Message, Does.StartWith("ping JSON 'ping.json': unknown item 'lifetime' (line 1, column "));
+            Assert.That(unknown.Message, Does.Contain("; known items are lifetimeSeconds, maxMarkers, "));
+
+            var notNumber = Assert.Throws<TuningJsonException>(() => TuningJson.ParseKnockback("{\"gravity\": \"down\"}", "k"));
+            Assert.That(notNumber.Item, Is.EqualTo("gravity"));
+            Assert.That(notNumber.Message, Does.StartWith("knockback JSON 'k' item 'gravity' must be a number, but is the string \"down\" ("));
+
+            var notText = Assert.Throws<TuningJsonException>(() => TuningJson.ParseBots("{\"archetype\": 1}", "b"));
+            Assert.That(notText.Item, Is.EqualTo("archetype"));
+            Assert.That(notText.Message, Does.StartWith("bots JSON 'b' item 'archetype' must be a string, but is the number 1 ("));
+
+            var unknownName = Assert.Throws<TuningJsonException>(() => TuningJson.ParseBots("{\"archetype\": \"Nobody\"}", "b"));
+            Assert.That(unknownName.Message, Does.StartWith("bots JSON 'b' item 'archetype' must be one of "));
+            Assert.That(unknownName.Message, Does.Contain(", but is \"Nobody\" ("));
+
+            var notObject = Assert.Throws<TuningJsonException>(() => TuningJson.ParsePing("[]", "p"));
+            Assert.That(notObject.Item, Is.Null);
+            Assert.That(notObject.Message, Is.EqualTo("ping JSON 'p': the top level must be an object, but is an array (line 1, column 1)"));
+        }
+
+        [Test]
+        public void TheGrenadeListKeepsItsNestedWording()
+        {
+            var e = Assert.Throws<TuningJsonException>(() => TuningJson.ParseGrenade("{\"fuse\": 1}", "g"));
+
+            Assert.That(e.Message, Does.Contain("; known items here are id, nameKey, "));
+        }
+
+        [Test]
+        public void ARejectedPingValueKeepsTheArgumentExceptionInside()
+        {
+            var e = Assert.Throws<TuningJsonException>(() => TuningJson.ParsePing("{\"maxMarkers\": 0}", "p"));
+
+            Assert.That(e.Item, Is.EqualTo("maxMarkers"));
+            Assert.That(e.InnerException, Is.InstanceOf<ArgumentException>());
+        }
     }
 }

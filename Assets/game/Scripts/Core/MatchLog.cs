@@ -132,9 +132,15 @@ namespace Shooter.Core
         private static string SpawnAt(int playerId, System.Numerics.Vector3 p)
         {
             return Tag + " spawn player=" + playerId.ToString(CultureInfo.InvariantCulture)
-                + " at=(" + p.X.ToString("F2", CultureInfo.InvariantCulture)
-                + ", " + p.Y.ToString("F2", CultureInfo.InvariantCulture)
-                + ", " + p.Z.ToString("F2", CultureInfo.InvariantCulture) + ")";
+                + " at=(" + Clean(p.X).ToString("F2", CultureInfo.InvariantCulture)
+                + ", " + Clean(p.Y).ToString("F2", CultureInfo.InvariantCulture)
+                + ", " + Clean(p.Z).ToString("F2", CultureInfo.InvariantCulture) + ")";
+        }
+
+        // 向きの計算で出る -0 や極小の負の値が "-0.00" と出ないよう、桁を丸めてから 0 を足して符号を消す。
+        private static float Clean(float v)
+        {
+            return MathF.Round(v * 100f) / 100f + 0f;
         }
 
         public static string SoloState(Match match)

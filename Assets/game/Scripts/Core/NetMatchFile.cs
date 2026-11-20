@@ -393,7 +393,7 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(file));
             }
 
-            var writer = new ServerDataJson.Writer();
+            var writer = new JsonWriter();
             writer.String(NameItem, file.Name);
             writer.Embed(RulesItem, GameRulesJson.Write(file.Rules));
 
@@ -611,7 +611,7 @@ namespace Shooter.Core
                 var names = new List<string>();
                 foreach (var category in slot)
                 {
-                    names.Add(ServerDataJson.Writer.Quote(category.ToString()));
+                    names.Add(JsonWriter.Quote(category.ToString()));
                 }
 
                 writer.Element("[" + string.Join(", ", names) + "]");
@@ -1243,7 +1243,7 @@ namespace Shooter.Core
             {
                 var item = loadout.ElementPath(SlotsItem, i);
                 var node = nodes[i];
-                if (node.Kind != GameRulesJson.NodeKind.Array)
+                if (node.Kind != JsonNodeKind.Array)
                 {
                     throw loadout.Invalid(item, node, "must be an array of weapon categories, but is " + node.Describe());
                 }

@@ -25,8 +25,8 @@ namespace Shooter.Core
             }
 
             var changes = new List<string>(GameRulesDebugDraft.Changes(before, after));
-            var from = new GameRulesJson.Parser(GameRulesJson.Write(before)).ParseDocument();
-            var to = new GameRulesJson.Parser(GameRulesJson.Write(after)).ParseDocument();
+            var from = new JsonParser(GameRulesJson.Write(before)).ParseDocument();
+            var to = new JsonParser(GameRulesJson.Write(after)).ParseDocument();
             AddChanges(string.Empty, from, to, changes);
             return changes;
         }
@@ -75,13 +75,13 @@ namespace Shooter.Core
             return $"{LogTag} skipped id={id}: no mutator has this id; known ids are {list}";
         }
 
-        private static void AddChanges(string prefix, GameRulesJson.Node from, GameRulesJson.Node to, List<string> changes)
+        private static void AddChanges(string prefix, JsonNode from, JsonNode to, List<string> changes)
         {
             foreach (var member in from.Members)
             {
                 var other = Member(to, member.Key);
                 var path = prefix + member.Key;
-                if (member.Value.Kind == GameRulesJson.NodeKind.Object && other != null && other.Kind == GameRulesJson.NodeKind.Object)
+                if (member.Value.Kind == JsonNodeKind.Object && other != null && other.Kind == JsonNodeKind.Object)
                 {
                     AddChanges(path + ".", member.Value, other, changes);
                     continue;
@@ -101,7 +101,7 @@ namespace Shooter.Core
             }
         }
 
-        private static GameRulesJson.Node Member(GameRulesJson.Node node, string key)
+        private static JsonNode Member(JsonNode node, string key)
         {
             foreach (var member in node.Members)
             {
@@ -114,11 +114,11 @@ namespace Shooter.Core
             return null;
         }
 
-        private static string Text(GameRulesJson.Node node)
+        private static string Text(JsonNode node)
         {
             switch (node.Kind)
             {
-                case GameRulesJson.NodeKind.Array:
+                case JsonNodeKind.Array:
                     var builder = new StringBuilder("[");
                     for (var i = 0; i < node.Elements.Count; i++)
                     {
@@ -131,11 +131,11 @@ namespace Shooter.Core
                     }
 
                     return builder.Append(']').ToString();
-                case GameRulesJson.NodeKind.True:
+                case JsonNodeKind.True:
                     return "true";
-                case GameRulesJson.NodeKind.False:
+                case JsonNodeKind.False:
                     return "false";
-                case GameRulesJson.NodeKind.Null:
+                case JsonNodeKind.Null:
                     return "null";
                 default:
                     return node.Text;

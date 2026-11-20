@@ -91,7 +91,7 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(structures));
             }
 
-            var writer = new ServerDataJson.Writer();
+            var writer = new JsonWriter();
             writer.BeginArray(StructuresItem);
             foreach (var layout in structures.Structures)
             {

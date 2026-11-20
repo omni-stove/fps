@@ -247,7 +247,7 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(spec));
             }
 
-            var writer = new ServerDataJson.Writer();
+            var writer = new JsonWriter();
             Write(writer, spec);
             return writer.Finish();
         }
@@ -267,12 +267,12 @@ namespace Shooter.Core
 
             // 名前を出さない武器を null で書いていた頃の JSON も、書かないのと同じに読む。
             var nameKeyNode = fields.FindRaw(NameKeyItem);
-            var nameKey = nameKeyNode == null || nameKeyNode.Kind == GameRulesJson.NodeKind.Null
+            var nameKey = nameKeyNode == null || nameKeyNode.Kind == JsonNodeKind.Null
                 ? string.Empty
                 : fields.ToText(fields.ItemPath(NameKeyItem), nameKeyNode);
 
             var drawNode = fields.FindRaw(DrawSecondsItem);
-            float? drawSeconds = drawNode == null || drawNode.Kind == GameRulesJson.NodeKind.Null
+            float? drawSeconds = drawNode == null || drawNode.Kind == JsonNodeKind.Null
                 ? (float?)null
                 : fields.ToFloat(fields.ItemPath(DrawSecondsItem), drawNode);
 
@@ -303,7 +303,7 @@ namespace Shooter.Core
             }
         }
 
-        internal static void Write(ServerDataJson.Writer writer, WeaponSpec spec)
+        internal static void Write(JsonWriter writer, WeaponSpec spec)
         {
             writer.String(IdItem, spec.Id);
             writer.String(NameKeyItem, spec.NameKey);
@@ -405,7 +405,7 @@ namespace Shooter.Core
                 cycle));
         }
 
-        private static void WriteTrigger(ServerDataJson.Writer writer, TriggerSpec trigger)
+        private static void WriteTrigger(JsonWriter writer, TriggerSpec trigger)
         {
             writer.Enum(FireModeItem, trigger.FireMode);
             writer.Float(FireIntervalItem, trigger.FireInterval);
@@ -465,7 +465,7 @@ namespace Shooter.Core
                 heat));
         }
 
-        private static void WriteAmmo(ServerDataJson.Writer writer, AmmoSpec ammo)
+        private static void WriteAmmo(JsonWriter writer, AmmoSpec ammo)
         {
             writer.Enum(AmmoKindItem, ammo.Kind);
             writer.Int(MagazineSizeItem, ammo.MagazineSize);
@@ -538,7 +538,7 @@ namespace Shooter.Core
             return materials;
         }
 
-        private static void WriteRound(ServerDataJson.Writer writer, RoundSpec round)
+        private static void WriteRound(JsonWriter writer, RoundSpec round)
         {
             writer.Enum(DeliveryItem, round.Delivery);
             writer.Float(RangeItem, round.Range);
@@ -669,7 +669,7 @@ namespace Shooter.Core
 
             var item = owner.ItemPath(name);
             var node = owner.Find(name);
-            if (node.Kind == GameRulesJson.NodeKind.String)
+            if (node.Kind == JsonNodeKind.String)
             {
                 if (string.Equals(node.Text, NoFalloff, StringComparison.Ordinal))
                 {
@@ -685,7 +685,7 @@ namespace Shooter.Core
                 falloff.RequireFloat(StartDistanceItem), falloff.RequireFloat(EndDistanceItem), falloff.RequireFloat(MinMultiplierItem)));
         }
 
-        private static void WriteImpact(ServerDataJson.Writer writer, ImpactSpec impact)
+        private static void WriteImpact(JsonWriter writer, ImpactSpec impact)
         {
             writer.Int(DamageItem, impact.Damage);
             WriteFalloff(writer, impact.Falloff);
@@ -736,7 +736,7 @@ namespace Shooter.Core
             }
         }
 
-        private static void WriteFalloff(ServerDataJson.Writer writer, DamageFalloff falloff)
+        private static void WriteFalloff(JsonWriter writer, DamageFalloff falloff)
         {
             var none = DamageFalloff.None;
             if (falloff.StartDistance == none.StartDistance && falloff.EndDistance == none.EndDistance && falloff.MinMultiplier == none.MinMultiplier)
@@ -752,7 +752,7 @@ namespace Shooter.Core
             writer.EndObject();
         }
 
-        private static void WriteStatusEffect(ServerDataJson.Writer writer, StatusEffectSpec statusEffect)
+        private static void WriteStatusEffect(JsonWriter writer, StatusEffectSpec statusEffect)
         {
             writer.String(StatusKindItem, statusEffect.KindId);
             writer.Float(DurationSecondsItem, statusEffect.DurationSeconds);
@@ -761,7 +761,7 @@ namespace Shooter.Core
             WriteVisualId(writer, statusEffect.VisualId);
         }
 
-        private static void WriteVisualId(ServerDataJson.Writer writer, string visualId)
+        private static void WriteVisualId(JsonWriter writer, string visualId)
         {
             if (visualId.Length > 0)
             {
@@ -804,7 +804,7 @@ namespace Shooter.Core
             {
                 // 覗き込みの視野角を 1 つだけ持っていた頃の JSON。null は「共通の初期値」の意味で書けた。
                 var raw = owner.FindRaw(name);
-                if (raw.Kind == GameRulesJson.NodeKind.Null)
+                if (raw.Kind == JsonNodeKind.Null)
                 {
                     return null;
                 }
@@ -828,7 +828,7 @@ namespace Shooter.Core
             return levels;
         }
 
-        private static void WriteAim(ServerDataJson.Writer writer, AimSpec aim)
+        private static void WriteAim(JsonWriter writer, AimSpec aim)
         {
             writer.Float(HipSpreadDegreesItem, aim.HipSpreadDegrees);
             writer.Float(AdsSpreadDegreesItem, aim.AdsSpreadDegrees);

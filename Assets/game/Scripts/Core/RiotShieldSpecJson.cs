@@ -53,7 +53,7 @@ namespace Shooter.Core
             }
         }
 
-        public static void Write(ServerDataJson.Writer writer, RiotShieldSpec shield)
+        public static void Write(JsonWriter writer, RiotShieldSpec shield)
         {
             if (writer == null)
             {

@@ -41,7 +41,7 @@ namespace Shooter.Core
             }
         }
 
-        public static void Write(ServerDataJson.Writer writer, SightSpec sight)
+        public static void Write(JsonWriter writer, SightSpec sight)
         {
             if (writer == null)
             {

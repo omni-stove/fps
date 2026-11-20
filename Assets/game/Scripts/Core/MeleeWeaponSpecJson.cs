@@ -62,7 +62,7 @@ namespace Shooter.Core
             }
         }
 
-        public static void Write(ServerDataJson.Writer writer, MeleeWeaponSpec melee)
+        public static void Write(JsonWriter writer, MeleeWeaponSpec melee)
         {
             if (writer == null)
             {
@@ -99,7 +99,7 @@ namespace Shooter.Core
             writer.EndObject();
         }
 
-        private static void WriteSwing(ServerDataJson.Writer writer, string item, MeleeSpec swing)
+        private static void WriteSwing(JsonWriter writer, string item, MeleeSpec swing)
         {
             writer.BeginObject(item);
             writer.Int(MeleeJson.DamageItem, swing.Damage);

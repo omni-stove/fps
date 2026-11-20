@@ -102,7 +102,7 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(ladders));
             }
 
-            var writer = new ServerDataJson.Writer();
+            var writer = new JsonWriter();
             writer.BeginArray(LaddersItem);
             foreach (var ladder in ladders.Ladders)
             {

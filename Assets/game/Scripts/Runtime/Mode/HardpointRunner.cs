@@ -265,7 +265,7 @@ namespace Shooter.Runtime
 
             _loggedStatus = status;
             _loggedHolder = holder;
-            Debug.Log(HardpointText.StatusLog(_hardpoint.ActivePoint, status, holder), this);
+            Debug.Log(HardpointLog.StatusLog(_hardpoint.ActivePoint, status, holder), this);
             ShowZones();
         }
 
@@ -282,7 +282,7 @@ namespace Shooter.Runtime
 
         private void OnPointMoved(int previous, int next)
         {
-            Debug.Log(HardpointText.MovedLog(previous, next), this);
+            Debug.Log(HardpointLog.MovedLog(previous, next), this);
             LogScore();
 
             // 移った先にいる人はまだ調べていないので、次の Tick で調べるまで誰もいないことにする。

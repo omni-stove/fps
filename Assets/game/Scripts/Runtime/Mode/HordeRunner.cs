@@ -148,7 +148,7 @@ namespace Shooter.Runtime
             }
 
             var schedule = _horde.Schedule;
-            Debug.Log(HordeText.ResultLog(_horde.IsVictory, schedule.WaveNumber, schedule.WaveCount), this);
+            Debug.Log(HordeLog.ResultLog(_horde.IsVictory, schedule.WaveNumber, schedule.WaveCount), this);
             StopWaves();
         }
 
@@ -224,19 +224,19 @@ namespace Shooter.Runtime
             var cost = target.CostOf(action, pieces.Count);
             if (pieces.Count == 0)
             {
-                Debug.Log(HordeText.DeniedLog(action, target.name, HordePurchaseVerdict.NothingToDo, cost, _horde.Currency), target);
+                Debug.Log(HordeLog.DeniedLog(action, target.name, HordePurchaseVerdict.NothingToDo, cost, _horde.Currency), target);
                 return HordePurchaseVerdict.NothingToDo;
             }
 
             var verdict = _horde.TryPurchase(cost);
             if (verdict != HordePurchaseVerdict.Ok)
             {
-                Debug.Log(HordeText.DeniedLog(action, target.name, verdict, cost, _horde.Currency), target);
+                Debug.Log(HordeLog.DeniedLog(action, target.name, verdict, cost, _horde.Currency), target);
                 return verdict;
             }
 
             var restored = target.Restore(action, pieces);
-            Debug.Log(HordeText.PurchasedLog(action, target.name, restored, cost, _horde.Currency), target);
+            Debug.Log(HordeLog.PurchasedLog(action, target.name, restored, cost, _horde.Currency), target);
             RefreshHud();
             return HordePurchaseVerdict.Ok;
         }
@@ -274,7 +274,7 @@ namespace Shooter.Runtime
             var reward = _horde.ReportEnemyKilled();
             if (reward > 0)
             {
-                Debug.Log(HordeText.EarnedLog(waveNumber, reward, _horde.Currency), this);
+                Debug.Log(HordeLog.EarnedLog(waveNumber, reward, _horde.Currency), this);
             }
 
             RefreshHud();
@@ -391,12 +391,12 @@ namespace Shooter.Runtime
 
         private void OnWaveStarted(int number, Wave wave)
         {
-            Debug.Log(HordeText.WaveStartedLog(number, _horde.Schedule.WaveCount, wave.EnemyCount), this);
+            Debug.Log(HordeLog.WaveStartedLog(number, _horde.Schedule.WaveCount, wave.EnemyCount), this);
         }
 
         private void OnWaveCleared(int number)
         {
-            Debug.Log(HordeText.WaveClearedLog(number, _horde.Currency, _horde.Respawn.WaitingCount), this);
+            Debug.Log(HordeLog.WaveClearedLog(number, _horde.Currency, _horde.Respawn.WaitingCount), this);
             RefreshHud();
         }
 

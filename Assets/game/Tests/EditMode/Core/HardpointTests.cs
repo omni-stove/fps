@@ -218,9 +218,9 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheLogTextNamesThePointsByLetter()
         {
-            Assert.That(HardpointText.MovedLog(3, 0), Is.EqualTo("[Mode] hardpoint moved from=D to=A"));
-            Assert.That(HardpointText.StatusLog(1, HardpointStatus.Held, Side.Bravo), Is.EqualTo("[Mode] hardpoint point=B status=Held holder=1"));
-            Assert.That(HardpointText.StatusLog(1, HardpointStatus.Contested, null), Is.EqualTo("[Mode] hardpoint point=B status=Contested holder=-"));
+            Assert.That(HardpointLog.MovedLog(3, 0), Is.EqualTo("[Mode] hardpoint moved from=D to=A"));
+            Assert.That(HardpointLog.StatusLog(1, HardpointStatus.Held, Side.Bravo), Is.EqualTo("[Mode] hardpoint point=B status=Held holder=1"));
+            Assert.That(HardpointLog.StatusLog(1, HardpointStatus.Contested, null), Is.EqualTo("[Mode] hardpoint point=B status=Contested holder=-"));
         }
 
         private static Hardpoint Create(

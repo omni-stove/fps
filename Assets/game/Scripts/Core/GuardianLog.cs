@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    public static class GuardianText
+    public static class GuardianLog
     {
         public static string LeaderChosenLog(Side side, int playerId)
         {

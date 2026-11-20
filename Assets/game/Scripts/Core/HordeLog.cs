@@ -2,7 +2,7 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    public static class HordeText
+    public static class HordeLog
     {
         public static string WaveStartedLog(int number, int? waveCount, int enemyCount)
         {

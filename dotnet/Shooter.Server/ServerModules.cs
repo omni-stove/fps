@@ -125,6 +125,9 @@ namespace Shooter.Server
             modules.Add(deployables);
             modules.Add(new ServerKillCam(rules, combat));
 
+            // 違反の累積は出来事を受けるたびに数え、切るのは tick の後なので、どこに置いても同じ。試合の状態を変えるモジュールの後にまとめる
+            modules.Add(new ServerViolations(signals, tuning.AntiCheat.Violations));
+
             // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足すので、ルールの直後
             modules.Add(new ServerSnapshots(
                 motorSettings.Rules,

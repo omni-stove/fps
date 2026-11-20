@@ -140,6 +140,10 @@ make server-dotnet ARGS="-rules FreeForAll"
   モードの例はどれも近接とキルカムを `On` にしてある (`GunGame` はストリークを `Off`)。この 3 つの規則はスナップショットでクライアントにも届く。
 - 近接・ストリークの調整値は `server-data/tuning/melee.json`・`streaks.json` から読む。クライアントの `Resources/Tuning/` と同じ中身にしておく。
   置ける物 (タレット・盾・囮・ビーコン) は `server-data/tuning/deployables.json` にある種類だけを置かせる。
+  種類ごとの `maxCharges`・`rechargeSeconds`・`cooldownSeconds` (Unity の能力のアセットの回数・戻り・間隔と同じ値にする) で人ごとに置ける回数と間隔を数え、
+  使い切ると `[Deploy] ... refused reason=NoCharges charges=0/<回数> wait=<秒>`、間隔の内なら `reason=CoolingDown` で断る。回数は出現し直すと満ちる。
+- 箱を開ける要求は、水平の届く距離に加えて足元と箱の高さの差が 2 m 以内で、体から箱までの線が壁に遮られないときだけ受ける
+  (`[Loot] open ... refused=OutOfReach`・`refused=OutOfSight`)。ストリークの要求は `streaks.json` の報酬の表に無い Id を `reason=UnknownReward` で断る。
 - リスポーンビーコン (置ける物の `role` が `Beacon`) は、ルールの `respawnAnchor` に `Beacon` があるときだけ復活の場所になる。
   倒されて戻る人を `respawnAnchor` の順に試し、置いた本人か味方の、使える中でいちばん後に置いたビーコンの前 (`beacon.spawnDistance`) へ出す
   (`[Beacon] ... used by=<id> ... uses=<残り>/<回数>`・`[Match] spawn player=<id> ... from=Beacon`)。回数 (`beacon.uses`) を使い切るか壊されると消え、拠点に戻る。

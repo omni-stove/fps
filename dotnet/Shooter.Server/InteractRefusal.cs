@@ -7,6 +7,7 @@ namespace Shooter.Server
         CannotAct,
         UnknownItem,
         OutOfReach,
+        OutOfSight,
         AlreadyOpened,
     }
 }

@@ -11,7 +11,8 @@ namespace Shooter.Core.Tests
 
         private static readonly string[] _expectedTypeItemNames =
         {
-            "id", "role", "maxActive", "overflow", "maxHealth", "maxRange", "maxSlopeDegrees", "maxStepHeight", "width", "height", "depth", "turret", "decoy", "beacon", "drone",
+            "id", "role", "maxActive", "overflow", "maxHealth", "maxRange", "maxSlopeDegrees", "maxStepHeight", "width", "height", "depth",
+            "maxCharges", "rechargeSeconds", "cooldownSeconds", "turret", "decoy", "beacon", "drone",
         };
 
         private static readonly string[] _expectedTurretItemNames =
@@ -34,6 +35,7 @@ namespace Shooter.Core.Tests
             var catalog = DeployCatalogJson.Parse(
                 "{\"types\": [{\"id\": \"deploy-turret\", \"role\": \"Turret\", \"maxActive\": 2, \"overflow\": \"Refuse\", \"maxHealth\": 90,"
                 + " \"maxRange\": 5, \"maxSlopeDegrees\": 20, \"maxStepHeight\": 0.3, \"width\": 1, \"height\": 1.5, \"depth\": 0.9,"
+                + " \"maxCharges\": 3, \"rechargeSeconds\": 12, \"cooldownSeconds\": 0.5,"
                 + " \"turret\": {\"weaponId\": \"" + _rifleId + "\", \"rounds\": 40, \"lifetimeSeconds\": 25, \"sightRange\": 15,"
                 + " \"turnDegreesPerSecond\": 180, \"aimToleranceDegrees\": 3}},"
                 + " {\"id\": \"deploy-decoy\", \"role\": \"Decoy\", \"decoy\": {\"lifetimeSeconds\": 12, \"callIntervalSeconds\": 1.5, \"callRadius\": 8}}]}",
@@ -52,6 +54,10 @@ namespace Shooter.Core.Tests
             Assert.That(turret.Deploy.Width, Is.EqualTo(1f));
             Assert.That(turret.Deploy.Height, Is.EqualTo(1.5f));
             Assert.That(turret.Deploy.Depth, Is.EqualTo(0.9f));
+            Assert.That(turret.Ability.MaxCharges, Is.EqualTo(3));
+            Assert.That(turret.Ability.RechargeSeconds, Is.EqualTo(12f));
+            Assert.That(turret.Ability.CooldownSeconds, Is.EqualTo(0.5f));
+            Assert.That(turret.Ability.WindupSeconds, Is.EqualTo(0f));
             Assert.That(turret.WeaponId, Is.EqualTo(_rifleId));
             Assert.That(turret.Turret.Rounds, Is.EqualTo(40));
             Assert.That(turret.Turret.LifetimeSeconds, Is.EqualTo(25f));
@@ -155,6 +161,9 @@ namespace Shooter.Core.Tests
             Assert.That(shield.Deploy.Width, Is.EqualTo(2f));
             Assert.That(shield.Deploy.Height, Is.EqualTo(1.4f));
             Assert.That(shield.Deploy.Depth, Is.EqualTo(0.2f));
+            Assert.That(shield.Ability.MaxCharges, Is.EqualTo(1));
+            Assert.That(shield.Ability.RechargeSeconds, Is.EqualTo(10f));
+            Assert.That(shield.Ability.CooldownSeconds, Is.EqualTo(1f));
 
             var decoy = catalog.All[2];
             Assert.That(decoy.Deploy.MaxActive, Is.EqualTo(1));
@@ -209,7 +218,13 @@ namespace Shooter.Core.Tests
                 () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"t\", \"role\": \"Turret\", \"turret\": {\"weaponId\": \"w\", \"rounds\": 0}}]}", _source));
             var decoy = Assert.Throws<TuningJsonException>(
                 () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"d\", \"role\": \"Decoy\", \"decoy\": {\"callRadius\": -1}}]}", _source));
+            var charges = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"s\", \"role\": \"Shield\", \"maxCharges\": 0}]}", _source));
+            var cooldown = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"s\", \"role\": \"Shield\", \"cooldownSeconds\": -1}]}", _source));
 
+            Assert.That(charges.Item, Is.EqualTo("types[0].maxCharges"));
+            Assert.That(cooldown.Item, Is.EqualTo("types[0].cooldownSeconds"));
             Assert.That(shape.Item, Is.EqualTo("types[0].maxHealth"));
             Assert.That(shape.InnerException, Is.InstanceOf<ArgumentException>());
             Assert.That(turret.Item, Is.EqualTo("types[0].turret.rounds"));

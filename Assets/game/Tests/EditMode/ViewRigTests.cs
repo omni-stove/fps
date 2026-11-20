@@ -1115,7 +1115,6 @@ namespace Shooter.Tests.EditMode
             return offset;
         }
 
-        // この端末のプレイヤーの三人称で、右肩に落ち着いた状態にする。
         [Test]
         public void AScopeInThirdPersonKeepsWhatTheCrosshairCoveredUnderIt()
         {
@@ -1234,6 +1233,7 @@ namespace Shooter.Tests.EditMode
             return hit.point;
         }
 
+        // この端末のプレイヤーの三人称で、右肩に落ち着いた状態にする。
         private void InitializeLocalThirdPerson()
         {
             _rig.Initialize(_eye, _camera);

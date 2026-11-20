@@ -121,6 +121,9 @@ namespace Shooter.Runtime
 
         public static GameSignal<DroneStatus?> Drone { get; } = new GameSignal<DroneStatus?>(nameof(Drone));
 
+        // 測る相手 (サーバー) がいるネット対戦の接続中だけ出し、切れたら空に戻す。UI は空を「回線の表示なし」として隠す。
+        public static GameSignal<NetStatsSignal?> NetStats { get; } = new GameSignal<NetStatsSignal?>(nameof(NetStats));
+
         // 本体のプロパティにしないのは、本体が型を知らない他のアセンブリ (追加の乗り物など) の signal も、ここの signal と一緒に ResetAll で空へ戻すため。
         public static GameSignal<T> Create<T>(string name)
         {
@@ -187,6 +190,7 @@ namespace Shooter.Runtime
             BuySender.Reset();
             Vision.Reset();
             Drone.Reset();
+            NetStats.Reset();
             foreach (var reset in _createdResets)
             {
                 reset();

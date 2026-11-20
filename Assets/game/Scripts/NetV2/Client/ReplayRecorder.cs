@@ -21,7 +21,8 @@ namespace Shooter.NetV2
     // 試合中と同じ部品がそのまま動くため (送る側は再生しないので、届いた側だけ残す)。
     // ファイルは承認 (ConnectAcceptedMessage) が届いてから書き始める。マップ・自分の Id・tick の速さが承認で決まり、
     // 承認されなかった接続は残しても再生できないため。それまでの知らせは届いた時刻と一緒に覚えておく。
-    public sealed class ReplayRecorder : IMatchTransport
+    // IConnectionLoss を持つのは、挟んだことで中の通信路が測るロスを MatchClient から読めなくしないため。中が測れなければ false を返す。
+    public sealed class ReplayRecorder : IMatchTransport, IConnectionLoss
     {
         public const int DefaultMaxPendingEvents = 512;
 
@@ -120,6 +121,12 @@ namespace Shooter.NetV2
         public bool TryGetRoundTripTime(ConnectionId connection, out int milliseconds)
         {
             return _inner.TryGetRoundTripTime(connection, out milliseconds);
+        }
+
+        public bool TryGetLossPercent(ConnectionId connection, out int percent)
+        {
+            percent = 0;
+            return _inner is IConnectionLoss loss && loss.TryGetLossPercent(connection, out percent);
         }
 
         public bool TryReceive(out TransportEvent transportEvent)

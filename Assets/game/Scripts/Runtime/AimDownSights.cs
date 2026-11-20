@@ -165,8 +165,9 @@ namespace Shooter.Runtime
         {
             ReadCycleMagnification();
             ReadHoldBreath();
+            // IsPressed だけで見ないのは、macOS で Shift (ダッシュ) を離したときなどに押していた覗き込みが取り消されるため (HeldInput)。
             Tick(
-                _aimAction.IsPressed(),
+                HeldInput.IsHeld(_aimAction),
                 _aimAction.WasPressedThisFrame(),
                 InputDeviceKinds.Of(_aimAction, _device),
                 Time.deltaTime);

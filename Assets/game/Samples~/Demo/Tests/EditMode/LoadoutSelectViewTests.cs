@@ -199,6 +199,56 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheAbilitySlotsAreNamedFromTheViewsCatalogAndFollowTheLanguage()
+        {
+            var beacon = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            var catalog = ScriptableObject.CreateInstance<AbilityCatalogAsset>();
+            beacon.Id = "beacon";
+            catalog.SetAbilities(new AbilityDefinition[] { beacon });
+            try
+            {
+                _view.AbilityCatalog = catalog;
+                Assert.That(_view.EffectiveAbilityCatalog, Is.SameAs(catalog));
+                var received = new List<LoadoutChoice>();
+                _view.Confirmed += choice => received.Add(choice);
+                _view.Open(LoadoutSelectPanelTests.Selection(), new AbilitySelection(new[] { "beacon" }, null, null));
+
+                Assert.That(_view.Panel.AbilityCatalog, Is.SameAs(catalog));
+                Assert.That(_view.Panel.AbilitySlotCount, Is.EqualTo(2));
+                Assert.That(_view.Panel.AbilityName(0), Is.EqualTo("なし"));
+                Assert.That(_view.Panel.CycleAbility(0, 1), Is.True);
+                Assert.That(_view.Panel.AbilityName(0), Is.EqualTo("リスポーンビーコン"));
+
+                Localizer.Apply(GameLanguage.English);
+
+                Assert.That(_view.Panel.AbilityName(0), Is.EqualTo("Respawn Beacon"), "the rebuilt screen keeps the chosen ability");
+                Assert.That(_view.Panel.AbilityName(1), Is.EqualTo("None"));
+                Assert.That(
+                    _view.Element.Query<Label>(className: LoadoutSelectPanel.SlotTitleClass).ToList().Select(l => l.text),
+                    Is.EqualTo(new[] { "Slot 1", "Slot 2", "Ability 1", "Ability 2" }));
+
+                Assert.That(_view.Panel.Confirm(), Is.True);
+                Assert.That(received[0].AbilityIds, Is.EqualTo(new[] { "beacon", AbilitySelection.None }));
+            }
+            finally
+            {
+                Localizer.Apply(GameLanguage.Japanese);
+                Object.DestroyImmediate(beacon);
+                Object.DestroyImmediate(catalog);
+            }
+        }
+
+        [Test]
+        public void ASelectionWithoutAbilitiesShowsNoAbilitySlots()
+        {
+            _view.Open(LoadoutSelectPanelTests.Selection());
+
+            Assert.That(_view.Panel.AbilitySlotCount, Is.Zero);
+            Assert.That(_view.Panel.AbilityCatalog, Is.Null);
+            Assert.That(_view.Element.Query<VisualElement>(className: LoadoutSelectPanel.AbilitySlotClass).ToList(), Is.Empty);
+        }
+
+        [Test]
         public void TheDefaultLoadoutSelectDoesNothingWithoutAView()
         {
             _view.Unbind();

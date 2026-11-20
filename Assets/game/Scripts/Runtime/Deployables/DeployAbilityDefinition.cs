@@ -181,8 +181,6 @@ namespace Shooter.Runtime
             return 0;
         }
 
-        public virtual string DisplayNameKey => string.Empty;
-
         // 足元が原点、前が +Z で、spec の大きさに収める。置けるかの判定がこの大きさで調べるため。
         protected abstract GameObject CreatePlaceholder(DeploySpec spec);
 

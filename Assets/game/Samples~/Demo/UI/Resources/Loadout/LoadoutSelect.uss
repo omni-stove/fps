@@ -143,6 +143,55 @@
     color: rgba(255, 255, 255, 0.5);
 }
 
+/* 能力の枠。武器の行と同じ枠線と強調を使い、中は前後のボタンで今の能力を挟む。 */
+.loadout-select__ability-picker {
+    flex-direction: row;
+    align-items: center;
+}
+
+.loadout-select__ability-step {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    padding: 0;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgb(255, 255, 255);
+    font-size: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.loadout-select__ability-step:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.loadout-select__ability-step:focus {
+    border-color: rgb(255, 255, 255);
+}
+
+.loadout-select__ability-step:disabled {
+    opacity: 0.4;
+}
+
+.loadout-select__ability-name {
+    min-width: 240px;
+    margin: 0 12px;
+    padding: 0;
+    font-size: 24px;
+    color: rgb(255, 196, 64);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/* 「なし」を選んでいる枠。能力を選んだ枠と見分けられるよう薄くする。 */
+.loadout-select__ability-name--none {
+    color: rgba(255, 255, 255, 0.5);
+    -unity-font-style: normal;
+}
+
 .loadout-select__confirm {
     height: 56px;
     margin: 8px 0 0 0;

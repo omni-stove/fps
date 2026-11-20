@@ -17,6 +17,12 @@ namespace Shooter.Runtime
 
         public static string NoOption => GameText.Get("loadout.noOption");
 
+        public static string NoAbility => GameText.Get("loadout.abilityNone");
+
+        public static string PreviousAbility => GameText.Get("loadout.abilityPrevious");
+
+        public static string NextAbility => GameText.Get("loadout.abilityNext");
+
         public static string SlotTitle(int slot)
         {
             if (slot < 0)
@@ -25,6 +31,16 @@ namespace Shooter.Runtime
             }
 
             return GameText.Format("loadout.slot", slot + 1);
+        }
+
+        public static string AbilitySlotTitle(int slot)
+        {
+            if (slot < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(slot), slot, "slot must not be negative");
+            }
+
+            return GameText.Format("loadout.abilitySlot", slot + 1);
         }
 
         public static string Rejected(string reason)

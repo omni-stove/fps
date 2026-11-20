@@ -29,6 +29,17 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void AbilitySlotTitlesCountFromOneAndNoneHasAName()
+        {
+            Assert.That(LoadoutFormat.AbilitySlotTitle(0), Is.EqualTo("能力 1"));
+            Assert.That(LoadoutFormat.AbilitySlotTitle(1), Is.EqualTo("能力 2"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => LoadoutFormat.AbilitySlotTitle(-1));
+            Assert.That(LoadoutFormat.NoAbility, Is.EqualTo("なし"));
+            Assert.That(LoadoutFormat.PreviousAbility, Is.EqualTo("<"));
+            Assert.That(LoadoutFormat.NextAbility, Is.EqualTo(">"));
+        }
+
+        [Test]
         public void RejectedAddsTheReasonWhenThereIsOne()
         {
             Assert.That(LoadoutFormat.Rejected("slot 0 is empty"), Is.EqualTo("選べません: slot 0 is empty"));

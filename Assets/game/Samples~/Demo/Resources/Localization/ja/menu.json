@@ -49,6 +49,10 @@
   "loadout.saved": "ロードアウトを保存しました。オンラインに入ると送ります",
   "loadout.noOption": "選べる武器がありません",
   "loadout.slot": "スロット {0}",
+  "loadout.abilitySlot": "能力 {0}",
+  "loadout.abilityNone": "なし",
+  "loadout.abilityPrevious": "<",
+  "loadout.abilityNext": ">",
   "loadout.rejected": "選べません",
   "loadout.rejectedWithReason": "選べません: {0}"
 }

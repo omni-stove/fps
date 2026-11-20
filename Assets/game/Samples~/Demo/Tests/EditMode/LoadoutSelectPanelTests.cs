@@ -14,6 +14,11 @@ namespace Shooter.Tests.EditMode
         private const string _handgun = "00000000-0000-4000-8000-000000000002";
         private const string _smg = "00000000-0000-4000-8000-000000000003";
         private const string _pistol = "00000000-0000-4000-8000-000000000004";
+        private const string _beaconId = "beacon";
+        private const string _grappleId = "grapple";
+        private const string _beaconJa = "リスポーンビーコン";
+
+        private readonly List<UnityEngine.Object> _created = new List<UnityEngine.Object>();
 
         private VisualElement _container;
         private LoadoutSelectPanel _panel;
@@ -57,6 +62,13 @@ namespace Shooter.Tests.EditMode
         public void TearDown()
         {
             _panel.Dispose();
+            foreach (var created in _created)
+            {
+                UnityEngine.Object.DestroyImmediate(created);
+            }
+
+            _created.Clear();
+            Localizer.Apply(GameLanguage.Japanese);
         }
 
         private VisualElement[] Rows()
@@ -165,21 +177,240 @@ namespace Shooter.Tests.EditMode
             Assert.That(_confirmed[0].AbilityIds, Is.Null, "a panel opened without abilities hands over none");
         }
 
-        [Test]
-        public void ConfirmAlsoHandsOverTheAbilitiesItWasOpenedWith()
+        // ビーコンは表示名のキーを持ち、grapple はキーを持たないので Id で出る。既定の能力は 1 つ目の枠の grapple だけ
+        private AbilitySelection OpenWithAbilities(IReadOnlyList<string> preferred = null, bool withCatalog = true)
         {
-            var abilities = new AbilitySelection(new[] { "beacon", "grapple" }, null, new[] { "grapple" });
+            var abilities = new AbilitySelection(new[] { _beaconId, _grappleId }, preferred, new[] { _grappleId });
             _panel.Dispose();
-            _panel = new LoadoutSelectPanel(_container, Selection(), null, abilities);
+            _panel = new LoadoutSelectPanel(_container, Selection(), null, abilities, withCatalog ? AbilityCatalog() : null);
             _panel.Confirmed += ids => _confirmed.Add(ids);
+            return abilities;
+        }
+
+        private AbilityCatalogAsset AbilityCatalog()
+        {
+            var beacon = UnityEngine.ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            beacon.Id = _beaconId;
+            var grapple = UnityEngine.ScriptableObject.CreateInstance<NullAbilityDefinition>();
+            grapple.Id = _grappleId;
+            var catalog = UnityEngine.ScriptableObject.CreateInstance<AbilityCatalogAsset>();
+            catalog.SetAbilities(new AbilityDefinition[] { beacon, grapple });
+            _created.Add(beacon);
+            _created.Add(grapple);
+            _created.Add(catalog);
+            return catalog;
+        }
+
+        private VisualElement[] AbilityRows()
+        {
+            return _container.Query<VisualElement>(className: LoadoutSelectPanel.AbilitySlotClass).ToList().ToArray();
+        }
+
+        [Test]
+        public void WithoutAbilitiesThereAreNoAbilityRows()
+        {
+            Assert.That(_panel.AbilitySlotCount, Is.Zero);
+            Assert.That(AbilityRows(), Is.Empty);
+            Assert.That(_panel.ConfirmRow, Is.EqualTo(2));
+            Assert.Throws<ArgumentOutOfRangeException>(() => _panel.AbilityName(0));
+            Assert.That(_panel.CycleAbility(0, 1), Is.False);
+        }
+
+        [Test]
+        public void TheAbilityRowsComeBelowTheWeaponsWithTheirTitlesAndCurrentAbility()
+        {
+            var abilities = OpenWithAbilities();
 
             Assert.That(_panel.Abilities, Is.SameAs(abilities));
-            Assert.That(Rows(), Has.Length.EqualTo(2), "the abilities get no rows yet");
-            Assert.That(_panel.ConfirmRow, Is.EqualTo(2));
+            Assert.That(_panel.AbilitySlotCount, Is.EqualTo(2));
+            Assert.That(Rows(), Has.Length.EqualTo(4), "the ability rows share the slot look");
+            var abilityRows = AbilityRows();
+            Assert.That(abilityRows, Has.Length.EqualTo(2));
+            Assert.That(Rows()[2], Is.SameAs(abilityRows[0]), "the abilities come after the weapons");
+            Assert.That(abilityRows[0].Q<Label>(className: LoadoutSelectPanel.SlotTitleClass).text, Is.EqualTo("能力 1"));
+            Assert.That(abilityRows[1].Q<Label>(className: LoadoutSelectPanel.SlotTitleClass).text, Is.EqualTo("能力 2"));
+            Assert.That(_panel.AbilityRow(0), Is.EqualTo(2));
+            Assert.That(_panel.AbilityRow(1), Is.EqualTo(3));
+            Assert.That(_panel.ConfirmRow, Is.EqualTo(4));
+
+            Assert.That(_panel.AbilityName(0), Is.EqualTo(_grappleId), "an ability without a name key shows its id");
+            Assert.That(_panel.AbilityName(1), Is.EqualTo("なし"));
+            Assert.That(abilityRows[1].Q<Label>(className: LoadoutSelectPanel.AbilityNameClass).ClassListContains(LoadoutSelectPanel.NoAbilityClass), Is.True);
+            Assert.That(abilityRows[0].Q<Label>(className: LoadoutSelectPanel.AbilityNameClass).ClassListContains(LoadoutSelectPanel.NoAbilityClass), Is.False);
+            Assert.That(_panel.AbilityPreviousButton(0).text, Is.EqualTo("<"));
+            Assert.That(_panel.AbilityNextButton(0).text, Is.EqualTo(">"));
+            Assert.That(_panel.AbilityNextButton(0).enabledSelf, Is.True);
+        }
+
+        [Test]
+        public void StartsFromTheSavedAbilities()
+        {
+            OpenWithAbilities(new[] { AbilitySelection.None, _beaconId });
+
+            Assert.That(_panel.AbilityName(0), Is.EqualTo("なし"));
+            Assert.That(_panel.AbilityName(1), Is.EqualTo(_beaconJa));
+        }
+
+        [Test]
+        public void CycleOnAnAbilityRowGoesThroughNoneAndTheAbilities()
+        {
+            var abilities = OpenWithAbilities();
+            _panel.MoveFocus(2);
+            Assert.That(_panel.FocusRow, Is.EqualTo(_panel.AbilityRow(0)));
+            Assert.That(AbilityRows()[0].ClassListContains(LoadoutSelectPanel.FocusedSlotClass), Is.True);
+
+            Assert.That(_panel.Cycle(1), Is.True);
+            Assert.That(_panel.AbilityName(0), Is.EqualTo("なし"), "after the last ability comes none");
+            Assert.That(_panel.Cycle(1), Is.True);
+            Assert.That(_panel.AbilityName(0), Is.EqualTo(_beaconJa));
+            Assert.That(_panel.Cycle(-1), Is.True);
+            Assert.That(_panel.AbilityName(0), Is.EqualTo("なし"));
+            Assert.That(_panel.Cycle(-1), Is.True);
+            Assert.That(_panel.AbilityName(0), Is.EqualTo(_grappleId), "going back from none wraps to the last ability");
+
+            Assert.That(abilities.AbilityIds, Is.EqualTo(new[] { _grappleId, AbilitySelection.None }));
+            Assert.That(_panel.Selection.WeaponIds, Is.EqualTo(new[] { _rifle, _handgun }), "the weapons do not move");
+        }
+
+        [Test]
+        public void AnAbilityChosenInTheOtherSlotIsSkipped()
+        {
+            OpenWithAbilities();
+            _panel.MoveFocus(3);
+            Assert.That(_panel.FocusRow, Is.EqualTo(_panel.AbilityRow(1)));
+
+            Assert.That(_panel.Cycle(1), Is.True);
+            Assert.That(_panel.AbilityName(1), Is.EqualTo(_beaconJa));
+            Assert.That(_panel.Cycle(1), Is.True);
+            Assert.That(_panel.AbilityName(1), Is.EqualTo("なし"), "grapple is in slot 1 already");
+        }
+
+        [Test]
+        public void TheStepButtonsCycleTheirSlotAndFocusItsRow()
+        {
+            OpenWithAbilities();
+
+            Assert.That(_panel.CycleAbility(1, 1), Is.True);
+
+            Assert.That(_panel.FocusRow, Is.EqualTo(_panel.AbilityRow(1)));
+            Assert.That(AbilityRows()[1].ClassListContains(LoadoutSelectPanel.FocusedSlotClass), Is.True);
+            Assert.That(Rows()[0].ClassListContains(LoadoutSelectPanel.FocusedSlotClass), Is.False);
+            Assert.That(_panel.AbilityName(1), Is.EqualTo(_beaconJa));
+
+            Assert.That(_panel.CycleAbility(0, -1), Is.True);
+            Assert.That(_panel.FocusRow, Is.EqualTo(_panel.AbilityRow(0)));
+            Assert.That(_panel.AbilityName(0), Is.EqualTo("なし"));
+
+            Assert.That(_panel.CycleAbility(2, 1), Is.False);
+            Assert.That(_panel.CycleAbility(-1, 1), Is.False);
+        }
+
+        [Test]
+        public void ConfirmHandsOverTheChosenAbilitiesWithTheWeapons()
+        {
+            OpenWithAbilities();
+            _panel.Select(0, 1);
+            _panel.CycleAbility(0, 1);
+            _panel.CycleAbility(1, 1);
+
             Assert.That(_panel.Confirm(), Is.True);
 
-            Assert.That(_confirmed[0].WeaponIds, Is.EqualTo(new[] { _rifle, _handgun }));
-            Assert.That(_confirmed[0].AbilityIds, Is.EqualTo(new[] { "grapple", AbilitySelection.None }));
+            Assert.That(_confirmed, Has.Count.EqualTo(1));
+            Assert.That(_confirmed[0].WeaponIds, Is.EqualTo(new[] { _smg, _handgun }));
+            Assert.That(_confirmed[0].AbilityIds, Is.EqualTo(new[] { AbilitySelection.None, _beaconId }));
+        }
+
+        [Test]
+        public void TheConfirmRowComesAfterTheAbilitiesAndSubmitMovesThrough()
+        {
+            OpenWithAbilities();
+
+            _panel.MoveFocus(4);
+            Assert.That(_panel.FocusRow, Is.EqualTo(_panel.ConfirmRow));
+            Assert.That(_panel.Cycle(1), Is.False, "the confirm row has nothing to cycle");
+            _panel.MoveFocus(-1);
+            Assert.That(_panel.FocusRow, Is.EqualTo(_panel.AbilityRow(1)));
+            _panel.MoveFocus(2);
+            Assert.That(_panel.FocusRow, Is.EqualTo(0), "moving down from confirm wraps to the first weapon slot");
+        }
+
+        [Test]
+        public void BusyDisablesTheAbilityButtons()
+        {
+            OpenWithAbilities();
+
+            _panel.SetBusy(true);
+            Assert.That(_panel.AbilityPreviousButton(0).enabledSelf, Is.False);
+            Assert.That(_panel.AbilityNextButton(1).enabledSelf, Is.False);
+            Assert.That(_panel.CycleAbility(0, 1), Is.False);
+            Assert.That(_panel.AbilityName(0), Is.EqualTo(_grappleId));
+
+            _panel.SetBusy(false);
+            Assert.That(_panel.AbilityPreviousButton(0).enabledSelf, Is.True);
+            Assert.That(_panel.AbilityNextButton(1).enabledSelf, Is.True);
+            Assert.That(_panel.CycleAbility(0, 1), Is.True);
+        }
+
+        [Test]
+        public void ASlotWithOnlyNoneCannotBeCycled()
+        {
+            var abilities = new AbilitySelection(Array.Empty<string>(), null, null);
+            _panel.Dispose();
+            _panel = new LoadoutSelectPanel(_container, Selection(), null, abilities);
+
+            Assert.That(_panel.AbilityName(0), Is.EqualTo("なし"));
+            Assert.That(_panel.AbilityPreviousButton(0).enabledSelf, Is.False);
+            Assert.That(_panel.AbilityNextButton(0).enabledSelf, Is.False);
+            Assert.That(_panel.CycleAbility(0, 1), Is.False);
+
+            _panel.SetBusy(true);
+            _panel.SetBusy(false);
+            Assert.That(_panel.AbilityNextButton(0).enabledSelf, Is.False, "leaving busy keeps it disabled");
+        }
+
+        [Test]
+        public void WithoutACatalogTheAbilityIdIsShown()
+        {
+            OpenWithAbilities(new[] { _beaconId, _grappleId }, false);
+
+            Assert.That(_panel.AbilityCatalog, Is.Null);
+            Assert.That(_panel.AbilityName(0), Is.EqualTo(_beaconId));
+        }
+
+        [Test]
+        public void AnAbilityMissingFromTheCatalogShowsItsId()
+        {
+            var abilities = new AbilitySelection(new[] { "unknown" }, new[] { "unknown", AbilitySelection.None }, null);
+            _panel.Dispose();
+            _panel = new LoadoutSelectPanel(_container, Selection(), null, abilities, AbilityCatalog());
+
+            Assert.That(_panel.AbilityName(0), Is.EqualTo("unknown"));
+        }
+
+        [Test]
+        public void TheAbilityTextsFollowTheLanguage()
+        {
+            Localizer.Apply(GameLanguage.English);
+            OpenWithAbilities(new[] { _beaconId, AbilitySelection.None });
+
+            var abilityRows = AbilityRows();
+            Assert.That(abilityRows[0].Q<Label>(className: LoadoutSelectPanel.SlotTitleClass).text, Is.EqualTo("Ability 1"));
+            Assert.That(abilityRows[1].Q<Label>(className: LoadoutSelectPanel.SlotTitleClass).text, Is.EqualTo("Ability 2"));
+            Assert.That(_panel.AbilityName(0), Is.EqualTo("Respawn Beacon"));
+            Assert.That(_panel.AbilityName(1), Is.EqualTo("None"));
+        }
+
+        [Test]
+        public void TheAbilityTextsHaveTheSameKeysInEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var table = Localizer.TableOf(language);
+                foreach (var key in new[] { "loadout.abilitySlot", "loadout.abilityNone", "loadout.abilityPrevious", "loadout.abilityNext" })
+                {
+                    Assert.That(table.Contains(key), Is.True, $"{GameLanguages.Code(language)}: {key}");
+                }
+            }
         }
 
         [Test]

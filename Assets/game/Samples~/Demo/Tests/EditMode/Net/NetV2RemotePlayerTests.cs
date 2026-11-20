@@ -75,6 +75,33 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void ConcealingHidesTheBodyButKeepsTheRoot()
+        {
+            _remote.SetConcealed(true);
+
+            Assert.That(_remote.IsConcealed, Is.True);
+            Assert.That(_remote.Body.gameObject.activeSelf, Is.False);
+            Assert.That(_remote.gameObject.activeSelf, Is.True, "effects on the root keep running while hidden");
+
+            _remote.SetConcealed(false);
+
+            Assert.That(_remote.IsConcealed, Is.False);
+            Assert.That(_remote.Body.gameObject.activeSelf, Is.True);
+        }
+
+        [Test]
+        public void ABodySwappedWhileConcealedStaysHidden()
+        {
+            _remote.SetConcealed(true);
+
+            _remote.ShowCosmetic(Desert);
+
+            Assert.That(_remote.Body.gameObject.activeSelf, Is.False);
+            _remote.SetConcealed(false);
+            Assert.That(_remote.Body.gameObject.activeSelf, Is.True);
+        }
+
+        [Test]
         public void TheSameIdIsNotLookedUpAgain()
         {
             _remote.ShowCosmetic(Desert);

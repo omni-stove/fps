@@ -246,7 +246,9 @@ namespace Shooter.NetV2
                 track.Record(snapshot.Tick, row.Position, row.Rotation);
                 track.TypeId = row.TypeId ?? string.Empty;
                 var carrier = row.HasStuckTo ? snapshot.Players.IndexOf(row.StuckToId) : -1;
-                if (carrier < 0)
+
+                // 隠れた人の位置は空なので、そこからのずれを取らずにグレネードの位置をそのまま使う
+                if (carrier < 0 || snapshot.Players[carrier].Concealed)
                 {
                     track.HasCarrier = false;
                     continue;

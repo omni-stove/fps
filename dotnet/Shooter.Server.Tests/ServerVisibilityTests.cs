@@ -140,6 +140,35 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void AGroupIsKnownByItsLeaderAndAnyEyeOfItIsEnough()
+        {
+            var visibility = new ServerVisibility(Wall(), Conceal(marginDistance: 0f, marginSeconds: 1f));
+            var target = Hidden();
+            var targetEye = target + new Vector3(0f, 0.6f, 0f);
+            var squad = new[] { _eye, new Vector3(9f, 1.6f, 0f) };
+
+            Assert.That(visibility.CanSeeAsGroup(4, squad, 7, target, targetEye, 0d), Is.True);
+            Assert.That(visibility.CanSeeAsGroup(4, new[] { _eye }, 7, target, targetEye, 0.5d), Is.True, "the group keeps it for the margin seconds");
+            Assert.That(visibility.CanSeeAsGroup(5, new[] { _eye }, 7, target, targetEye, 0.5d), Is.False, "another group does not share it");
+            Assert.That(See(visibility, (Team)4, 7, target, 0.5d), Is.False, "a team with the same number does not share it");
+            Assert.That(visibility.CanSeeAsGroup(6, Array.Empty<Vector3>(), 7, Open(), Open(), 0d), Is.False, "a group with nobody alive sees nothing");
+            Assert.Throws<ArgumentNullException>(() => visibility.CanSeeAsGroup(4, null, 7, Open(), Open(), 0d));
+        }
+
+        [Test]
+        public void ForgettingTheLeaderDropsWhatTheGroupSaw()
+        {
+            var visibility = new ServerVisibility(Wall(), Conceal(marginDistance: 0f, marginSeconds: 1f));
+            var target = Hidden();
+            var targetEye = target + new Vector3(0f, 0.6f, 0f);
+            visibility.CanSeeAsGroup(4, new[] { new Vector3(9f, 1.6f, 0f) }, 7, target, targetEye, 0d);
+
+            visibility.Forget(4);
+
+            Assert.That(visibility.CanSeeAsGroup(4, new[] { _eye }, 7, target, targetEye, 0.2d), Is.False);
+        }
+
+        [Test]
         public void ForgettingAPlayerDropsWhatWasSeenOfThemAndByThem()
         {
             var visibility = new ServerVisibility(Wall(), Conceal(marginDistance: 0f, marginSeconds: 1f));

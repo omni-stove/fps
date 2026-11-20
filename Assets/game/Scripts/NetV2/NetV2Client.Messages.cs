@@ -362,6 +362,12 @@ namespace Shooter.NetV2
         {
             foreach (var pair in _remotes)
             {
+                if (pair.Value == null)
+                {
+                    continue;
+                }
+
+                pair.Value.SetConcealed(_match.IsConcealed(pair.Key));
                 if (_match.TrySampleRemote(pair.Key, out var pose))
                 {
                     pair.Value.Show(pose);

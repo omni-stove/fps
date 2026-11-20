@@ -29,6 +29,8 @@ namespace Shooter.NetV2
 
         public bool IsParachuting { get; private set; }
 
+        public bool IsConcealed { get; private set; }
+
         public Transform Body => _body;
 
         // スナップショットが載せてきた見た目の Id。体を替えられなかった (カタログに無い・絵が無い) ときも Id は残し、同じ Id で引き直さない。
@@ -89,9 +91,25 @@ namespace Shooter.NetV2
             Debug.Log(CosmeticLog.RemoteWorn(PlayerId, id, skin != null ? skin.name : null), this);
         }
 
+        // ルートではなく体だけを止めるのは、隠れている間も射撃や状態の演出 (WeaponPresentation など) がルートで動き続けるため
+        public void SetConcealed(bool concealed)
+        {
+            if (IsConcealed == concealed)
+            {
+                return;
+            }
+
+            IsConcealed = concealed;
+            _body.gameObject.SetActive(!concealed);
+
+            // 隠れる前の傾きから寄せると、離れた場所で見え直した体が前の姿から倒れ込んで見えるので、見え直したらそのまま置く
+            _snapTilt = true;
+        }
+
         private void SetBody(Transform body)
         {
             _body = body;
+            body.gameObject.SetActive(!IsConcealed);
             _standingScale = body.localScale;
             _standingY = body.localPosition.y;
             if (_stance != PlayerStance.Standing)

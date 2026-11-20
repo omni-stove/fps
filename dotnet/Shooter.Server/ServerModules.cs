@@ -129,7 +129,8 @@ namespace Shooter.Server
             modules.Add(new ServerSnapshots(
                 motorSettings.Rules,
                 new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables },
-                tuning.AntiCheat));
+                tuning.AntiCheat,
+                rules));
 
             // 通報・統計・テレメトリは試合の状態を変えず、ルールが出したキルと試合の始まり・終わりを読むだけなので、スナップショットより後でよい
             if (!TryAddRecords(launch, runtime, libraryDirectory, rules, modules, out error))

@@ -64,6 +64,13 @@ namespace Shooter.NetV2
                     _tracks.Add(row.PlayerId, track);
                 }
 
+                // 隠れた行の位置は空なので記録に入れず、見え直した tick から記録し直す (ClientMatch と同じ)
+                if (row.Concealed)
+                {
+                    track.Clear();
+                    continue;
+                }
+
                 track.Record(snapshot.Tick, RemotePose.From(row));
             }
 

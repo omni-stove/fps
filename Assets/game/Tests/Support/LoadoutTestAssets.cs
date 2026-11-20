@@ -16,17 +16,23 @@ namespace Shooter.Tests.EditMode
 
         public LoadoutTestAssets()
         {
-            var rifle = Weapon("Rifle", TestWeapons.RifleSpec());
-            var handgun = Weapon("Handgun", TestWeapons.HandgunSpec());
-            var smg = Weapon("SMG", new WeaponSpec(
+            Rifle = Weapon("Rifle", TestWeapons.RifleSpec());
+            Handgun = Weapon("Handgun", TestWeapons.HandgunSpec());
+            Smg = Weapon("SMG", new WeaponSpec(
                 SmgId, "SMG", WeaponCategory.SubmachineGun, FireMode.Auto, 25, 100, 0.07f, 2f, 18, 60f, DamageFalloff.None));
 
             Loadout = Create<LoadoutDefinition>("TestLoadout");
-            WeaponAssets.Configure(Loadout, TestWeapons.LoadoutSlots(rifle, handgun), LoadoutDefinition.DefaultSwitchSeconds);
+            WeaponAssets.Configure(Loadout, TestWeapons.LoadoutSlots(Rifle, Handgun), LoadoutDefinition.DefaultSwitchSeconds);
 
             Catalog = Create<WeaponCatalogAsset>("TestCatalog");
-            WeaponAssets.Configure(Catalog, new[] { rifle, smg, handgun });
+            WeaponAssets.Configure(Catalog, new[] { Rifle, Smg, Handgun });
         }
+
+        public WeaponDefinition Rifle { get; }
+
+        public WeaponDefinition Handgun { get; }
+
+        public WeaponDefinition Smg { get; }
 
         public LoadoutDefinition Loadout { get; }
 

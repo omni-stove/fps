@@ -145,6 +145,17 @@ make server-dotnet ARGS="-rules FreeForAll"
   置ける物 (タレット・盾・囮・ビーコン) は `server-data/tuning/deployables.json` にある種類だけを置かせる。
   種類ごとの `maxCharges`・`rechargeSeconds`・`cooldownSeconds` (Unity の能力のアセットの回数・戻り・間隔と同じ値にする) で人ごとに置ける回数と間隔を数え、
   使い切ると `[Deploy] ... refused reason=NoCharges charges=0/<回数> wait=<秒>`、間隔の内なら `reason=CoolingDown` で断る。回数は出現し直すと満ちる。
+- 人ごとに置ける種類 (能力) は 2 枠で、選べる候補はルールの JSON の `loadout.abilities` に書いた `deployables.json` の Id にする
+  (例: `"loadout": { ..., "abilities": ["deploy-beacon"] }`)。項目が無ければ `deployables.json` の全部 (置けない `Drone` を除く) が候補になり、
+  空の並び (`[]`) なら何も置かせない。起動のときに `[Deploy] net abilities=<候補> default=<既定> from=rules|catalog` と出す。
+  - 能力を選んでいない人には、候補の先頭から枠の数だけ (足りない枠は「なし」) を持たせる。
+  - ロードアウトの要求 (`LoadoutRequest`) の能力は武器と一緒に検査し、答えは 1 つだけ返す。候補に無い・同じ種類を 2 枠に書いた・枠の数が違う
+    要求は武器も選ばせずに断り、`[Net] loadout abilities rejected client=<id> reason=...` と出す。受け入れた能力は武器と同じく次の出現から持たせる
+    (`[Net] loadout abilities accepted ...`・`[Deploy] owner=<id> kind=- net equipped abilities=...`)。能力を送らない前の版のクライアントの要求は武器だけを選ぶ。
+  - 持っていない種類を置く要求は `[Deploy] owner=<id> kind=<id> net refused reason=NotEquipped` で断る。
+  - 選んだ能力は次の試合でも残り、抜けると消える。マップやルールを替えると持たせた能力を捨てて次の出現で持たせ直し、
+    替えた先のルールの候補に無い選択は既定に戻す (`[Deploy] owner=<id> kind=- net abilities reset to default: ...`)。
+  - `loadout.abilities` に `deployables.json` に無い Id を書くと、`[Deploy] net kind=<id> is in loadout.abilities of rules <name> but not in the deployable tuning; it is not offered` と出して候補から外す。
 - 箱を開ける要求は、水平の届く距離に加えて足元と箱の高さの差が 2 m 以内で、体から箱までの線が壁に遮られないときだけ受ける
   (`[Loot] open ... refused=OutOfReach`・`refused=OutOfSight`)。ストリークの要求は `streaks.json` の報酬の表に無い Id を `reason=UnknownReward` で断る。
 - リスポーンビーコン (置ける物の `role` が `Beacon`) は、ルールの `respawnAnchor` に `Beacon` があるときだけ復活の場所になる。

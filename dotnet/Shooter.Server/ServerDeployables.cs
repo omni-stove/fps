@@ -27,6 +27,7 @@ namespace Shooter.Server
         private readonly MatchRulesModule _rules;
         private readonly ServerCombat _combat;
         private readonly DeployCatalog _catalog;
+        private readonly ServerAbilityChoices _abilities;
         private readonly string _catalogPath;
         private readonly SortedDictionary<int, Placed> _placed = new SortedDictionary<int, Placed>();
         private readonly Dictionary<(int Owner, string TypeId), DeployRoster<Placed>> _rosters =
@@ -60,6 +61,10 @@ namespace Shooter.Server
 
             // 倒されて戻る人をルールの RespawnAnchor の順でビーコンへ出せるよう、ルールにビーコンを渡す
             rules.Beacons = this;
+
+            // 要求の能力の検査 (ルール) と置くときの検査 (ここ) が同じ選択を見るよう、置ける物の一覧を持つ選択をルールに渡す
+            _abilities = new ServerAbilityChoices(_catalog);
+            rules.Abilities = _abilities;
         }
 
         public string Name => "deployables";
@@ -81,6 +86,7 @@ namespace Shooter.Server
             _rules.RulesChanged += HandleRulesChanged;
             _rules.PlayerSpawned += HandlePlayerSpawned;
             _log.WriteLine(ServerDeployableLog.Catalog(_catalog.Count, _catalog.Count - _unusable.Count, _catalogPath));
+            UseAbilities();
         }
 
         public void Tick(long tick, float deltaSeconds)
@@ -152,10 +158,42 @@ namespace Shooter.Server
             _beacons.Clear();
         }
 
-        // 置ける物の種類は武器の並び (ルールのファイルのロードアウト) で決まり、ルールを替えても変わらないので選び直さない
+        // タレットの武器は武器の並び (ルールのファイルのロードアウト) で決まり、ルールを替えても変わらないので選び直さない。
+        // 能力の候補は替えた先のルールのファイルから引き直し、持たせた能力を捨てる
         private void HandleRulesChanged(ServerRulesData data)
         {
             _data = data;
+            UseAbilities();
+        }
+
+        // 選んだ能力は武器と同じく出現のときに持たせ、生きている間に選び直しても持ち替えない
+        // オフラインの AbilityHost が体力を戻すたびに枠を満たすのと同じく、出現し直した人は回数を満たして始める
+        private void HandlePlayerSpawned(int playerId)
+        {
+            RemoveSlots(playerId);
+            if (_abilities.Equip(playerId))
+            {
+                _log.WriteLine(ServerDeployableLog.Equipped(playerId, _abilities.EquippedFor(playerId)));
+            }
+        }
+
+        private void UseAbilities()
+        {
+            var listed = _data.File.LoadoutAbilities;
+            var skipped = new List<string>();
+            var dropped = new List<int>();
+            _abilities.Use(listed, id => !_unusable.Contains(id), skipped, dropped);
+            foreach (var id in skipped)
+            {
+                _log.WriteLine(ServerDeployableLog.AbilityNotInCatalog(id, _data.Name));
+            }
+
+            foreach (var playerId in dropped)
+            {
+                _log.WriteLine(ServerDeployableLog.AbilitiesReset(playerId));
+            }
+
+            _log.WriteLine(ServerDeployableLog.Abilities(_abilities.Candidates, _abilities.Default, listed != null));
         }
 
         // Place が全体の数を SnapshotMessage.MaxDeployables までに抑えるので、置いた物は全部載る
@@ -243,6 +281,11 @@ namespace Shooter.Server
             if (_unusable.Contains(type.Id))
             {
                 return Refuse(playerId, type.Id, ServerDeployRefusal.Unusable);
+            }
+
+            if (!_abilities.IsEquipped(playerId, type.Id))
+            {
+                return Refuse(playerId, type.Id, ServerDeployRefusal.NotEquipped);
             }
 
             // オフラインの能力の枠は置く前に回数と間隔で止めるので、置けるかを調べる前に断る。回数は置けたときにだけ減らす
@@ -645,12 +688,6 @@ namespace Shooter.Server
             RemoveSlots(owner);
         }
 
-        // オフラインの AbilityHost が体力を戻すたびに枠を満たすのと同じく、出現し直した人は回数を満たして始める
-        private void HandlePlayerSpawned(int playerId)
-        {
-            RemoveSlots(playerId);
-        }
-
         private void RemoveSlots(int owner)
         {
             var keys = new List<(int Owner, string TypeId)>();
@@ -672,6 +709,7 @@ namespace Shooter.Server
         private void HandleMapChanged(ServerMapData map)
         {
             RemoveAll(_ => true, DeployRemoval.Discarded);
+            _abilities.ForgetEquipped();
         }
 
         private void HandleMatchStarted()

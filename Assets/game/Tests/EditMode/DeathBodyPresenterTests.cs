@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using Shooter.Core;
 using Shooter.Runtime;
@@ -38,6 +40,26 @@ namespace Shooter.Tests.EditMode
             {
                 Object.DestroyImmediate(shell);
             }
+        }
+
+        [Test]
+        public void SerializedFieldsKeepTheirNamesAndTypes()
+        {
+            var fields = typeof(DeathBodyPresenter)
+                .GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly)
+                .Where(f => f.IsPublic || f.IsDefined(typeof(SerializeField), false))
+                .Select(f => $"{f.Name}:{f.FieldType.Name}")
+                .OrderBy(s => s, StringComparer.Ordinal)
+                .ToArray();
+
+            Assert.That(fields, Is.EqualTo(new[]
+            {
+                "_id:String",
+                "_lifetime:Single",
+                "_mode:DeathBody",
+                "_ragdollCatalog:RagdollCatalog",
+                "_useRagdoll:Boolean",
+            }));
         }
 
         [Test]

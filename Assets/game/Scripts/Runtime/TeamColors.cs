@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Shooter.Core;
 using UnityEngine;
 
@@ -8,7 +9,14 @@ namespace Shooter.Runtime
         // オフラインの Runner はプレイヤーを Alpha に入れ、敵を Bravo にするので、それに合わせる。
         public const Team OfflineViewer = Team.Alpha;
 
-        public static TeamPalette Current => TeamPalette.For(AppliedControlSettings.Current.Palette);
+        public static IReadOnlyList<TeamPalette> All => KitTuning.Palettes;
+
+        public static TeamPalette Current => For(AppliedControlSettings.Current.Palette);
+
+        public static TeamPalette For(ColorPalette kind)
+        {
+            return TeamPalette.For(kind, All);
+        }
 
         public static Color Of(Team? team, Team? viewer)
         {

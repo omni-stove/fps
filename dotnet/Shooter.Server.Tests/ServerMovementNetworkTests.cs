@@ -102,7 +102,7 @@ namespace Shooter.Server.Tests
             var movement = new ServerMovement(settings);
             var host = new ServerHost();
             host.Register(movement);
-            host.Register(new ServerSnapshots(settings.Rules, new ISnapshotContributor[] { movement }));
+            host.Register(new ServerSnapshots(settings.Rules, new ISnapshotContributor[] { movement }, TestAntiCheat.Off));
             _server = new MatchServer(launch, _transport, host, TestMaps.Data(), _log, new ServerEventWriter(false, _log, _log), () => _time);
             _server.Start();
         }

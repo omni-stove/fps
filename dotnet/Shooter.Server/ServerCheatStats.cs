@@ -379,7 +379,7 @@ namespace Shooter.Server
             }
         }
 
-        // 入力は pitch を送らないので、横の向きだけで体の幅に向いているかを見る
+        // pitch は撃った後の入力にしか載らず、撃っていない間の縦の向きは分からないので、横の向きだけで体の幅に向いているかを見る
         private static bool AimsAt(float yaw, Vector3 eye, ServerBody target)
         {
             var offset = target.Center - eye;

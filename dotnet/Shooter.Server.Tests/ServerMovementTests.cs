@@ -734,7 +734,7 @@ namespace Shooter.Server.Tests
                 _spawn);
             _signals = new ServerCheatSignals();
             _movement = new ServerMovement(settings, signals: _signals);
-            _snapshots = new ServerSnapshots(settings.Rules, new ISnapshotContributor[] { _movement });
+            _snapshots = new ServerSnapshots(settings.Rules, new ISnapshotContributor[] { _movement }, TestAntiCheat.Off);
             _host = new ServerHost();
             _host.Register(_movement);
             _host.Register(_snapshots);

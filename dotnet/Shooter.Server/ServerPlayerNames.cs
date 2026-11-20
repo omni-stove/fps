@@ -45,10 +45,7 @@ namespace Shooter.Server
         // つなぎ直しなどで同じ Id がもう一度入ったときは、並びを保ったまま名前だけを決め直す
         public PlayerNamesMessage Join(ServerPlayer player)
         {
-            if (player == null)
-            {
-                throw new ArgumentNullException(nameof(player));
-            }
+            ArgumentNullException.ThrowIfNull(player);
 
             var playerId = player.PlayerId;
             if (_names.Remove(playerId))

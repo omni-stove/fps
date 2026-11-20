@@ -32,6 +32,7 @@ namespace Shooter.Server
         private readonly ServerAreaEffects _areaEffects;
         private readonly ServerFlash _flash;
         private readonly ServerVehicles _vehicles;
+        private readonly ServerCheatSignals _signals;
         // 座席の武器の弾と連射の間隔は、座る人が代わっても武器に残るので、人ではなく乗り物と武器の番号で持つ
         private readonly Dictionary<(int Vehicle, int Weapon), ServerPlayerWeapons> _mounts =
             new Dictionary<(int Vehicle, int Weapon), ServerPlayerWeapons>();
@@ -48,9 +49,11 @@ namespace Shooter.Server
         private double _now;
         private float _nextRejectWarningTime = float.NegativeInfinity;
 
-        public ServerCombat(MatchRulesModule rules, ServerMovement movement, ServerVehicles vehicles = null)
+        public ServerCombat(
+            MatchRulesModule rules, ServerMovement movement, ServerVehicles vehicles = null, ServerCheatSignals signals = null)
         {
             _vehicles = vehicles;
+            _signals = signals;
             if (vehicles != null)
             {
                 vehicles.Combat = this;
@@ -72,6 +75,8 @@ namespace Shooter.Server
 
         // 近接・ストリーク・設置物のように戦闘の外で数える仕組みが、倒したことを知る口。撃った弾・爆発・落下・溺れも含めて、キルを数えるたびに出す
         public event Action<KillFeedEntry> PlayerKilled;
+
+        internal ServerCheatSignals CheatSignals => _signals;
 
         internal ServerHitboxes Hitboxes => _hitboxes;
 

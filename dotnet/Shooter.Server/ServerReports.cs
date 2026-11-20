@@ -22,7 +22,7 @@ namespace Shooter.Server
         private StreamWriter _writer;
         private double _now;
 
-        public ServerReports(string path, Func<DateTime> utcNow, double repeatSeconds = DefaultRepeatSeconds)
+        public ServerReports(string path, Func<DateTime> utcNow, double repeatSeconds = DefaultRepeatSeconds, IReportEvidence evidence = null)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
@@ -37,6 +37,7 @@ namespace Shooter.Server
             Path = System.IO.Path.GetFullPath(path);
             _utcNow = utcNow ?? throw new ArgumentNullException(nameof(utcNow));
             RepeatSeconds = repeatSeconds;
+            Evidence = evidence;
         }
 
         public string Name => "reports";
@@ -44,6 +45,8 @@ namespace Shooter.Server
         public string Path { get; }
 
         public double RepeatSeconds { get; }
+
+        public IReportEvidence Evidence { get; }
 
         public void Start(ServerContext context)
         {

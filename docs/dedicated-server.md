@@ -140,6 +140,8 @@ make server-dotnet ARGS="-rules FreeForAll"
   モードの例はどれも近接とキルカムを `On` にしてある (`GunGame` はストリークを `Off`)。この 3 つの規則はスナップショットでクライアントにも届く。
 - 近接・ストリークの調整値は `server-data/tuning/melee.json`・`streaks.json` から読む。クライアントの `Resources/Tuning/` と同じ中身にしておく。
   置ける物 (タレット・盾・囮・ビーコン) は `server-data/tuning/deployables.json` にある種類だけを置かせる。
+  サーバー側のアンチチートの調整値 (見えない相手を送らない `conceal`・違反の累積 `violations`・統計の検知 `stats`・通報の証拠 `evidence`) は
+  `server-data/tuning/anticheat.json` から読み、起動の `[Server] combat tuning ... anticheat=<ファイル>` に出す。どれも `enabled` が `false` で、まだ試合の挙動は変えない。
 - リスポーンビーコン (置ける物の `role` が `Beacon`) は、ルールの `respawnAnchor` に `Beacon` があるときだけ復活の場所になる。
   倒されて戻る人を `respawnAnchor` の順に試し、置いた本人か味方の、使える中でいちばん後に置いたビーコンの前 (`beacon.spawnDistance`) へ出す
   (`[Beacon] ... used by=<id> ... uses=<残り>/<回数>`・`[Match] spawn player=<id> ... from=Beacon`)。回数 (`beacon.uses`) を使い切るか壊されると消え、拠点に戻る。

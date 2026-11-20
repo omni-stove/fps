@@ -90,11 +90,13 @@ namespace Shooter.Server
             // 戦闘はルールが出現させた後の位置を当たり判定に残すので、ルールより後
             // 乗り物は乗っている人を座席へ置き直してから戦闘に当たり判定を残させるので、戦闘より先
             // 目的 (BR・Extraction) は箱と戦闘を使うが、どちらもルールのモジュールから作るので、部品は後から渡す。目的を作るのはルールの Start の中なので、それまでに揃う
+            // 違反の累積・統計・通報の証拠は戦闘と移動の出来事を読むので、両方へ同じ signals を渡す
             ServerObjectiveParts parts = null;
-            var movement = new ServerMovement(motorSettings);
+            var signals = new ServerCheatSignals();
+            var movement = new ServerMovement(motorSettings, signals: signals);
             var rules = new MatchRulesModule((objective, settings, host) => ServerObjectiveFactory.Create(objective, settings, host, parts));
             var vehicles = new ServerVehicles(rules, movement);
-            var combat = new ServerCombat(rules, movement, vehicles);
+            var combat = new ServerCombat(rules, movement, vehicles, signals);
             modules.Add(movement);
             modules.Add(rules);
             modules.Add(vehicles);
@@ -125,7 +127,9 @@ namespace Shooter.Server
 
             // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足すので、ルールの直後
             modules.Add(new ServerSnapshots(
-                motorSettings.Rules, new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables }));
+                motorSettings.Rules,
+                new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables },
+                tuning.AntiCheat));
 
             // 通報・統計・テレメトリは試合の状態を変えず、ルールが出したキルと試合の始まり・終わりを読むだけなので、スナップショットより後でよい
             if (!TryAddRecords(launch, runtime, libraryDirectory, rules, modules, out error))

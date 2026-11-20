@@ -104,6 +104,7 @@ namespace Shooter.Server
             _rules.NotifyFired(shooterId);
 
             var origin = blind == BlindFireAim.Blind ? blindOrigin : request.Origin;
+            _signals?.RaiseShotAccepted(shooterId, origin, request.Direction, time.ToTick());
             var round = weapons.CurrentRound;
             var plan = PlanShot(shooter, spec, round, request, motion, blind == BlindFireAim.Blind, origin, spreadMultiplier);
             var shot = new ServerShot(
@@ -189,6 +190,7 @@ namespace Shooter.Server
             var outcome = _rules.ApplyDamage(attacker, victimId, amount, new KillShot(attacker ?? victimId, victimId, shot.Weapon.Id, hit.Zone));
             if (outcome != DamageOutcome.Ignored)
             {
+                _signals?.RaiseHit(shooterId, victimId, hit.Zone, hit.RewindTicks);
                 var hurt = IsReflected(shooterId, victimId) ? shooterId : victimId;
                 if (_fighters.TryGetValue(hurt, out var hurtFighter))
                 {
@@ -514,6 +516,8 @@ namespace Shooter.Server
 
         private void WarnRejected(int shooterId, ShotRejection reason)
         {
+            // 警告の行は連打で間引くが、違反の累積は間引かずに数えるので、間引く前に出す
+            _signals?.RaiseShotRejected(shooterId, reason);
             if (CanWarn())
             {
                 _log.WriteLine(NetHitLog.Rejected(shooterId, reason));

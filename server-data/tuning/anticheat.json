@@ -1,0 +1,26 @@
+{
+  "conceal": {
+    "enabled": false,
+    "maxDistance": 150,
+    "marginDistance": 1.5,
+    "marginSeconds": 0.5
+  },
+  "violations": {
+    "enabled": false,
+    "windowSeconds": 30,
+    "shotRejectionLimit": 60,
+    "overBudgetLimit": 120
+  },
+  "stats": {
+    "enabled": false,
+    "windowSeconds": 120,
+    "headshotRatio": 0.6,
+    "minReactionMs": 120,
+    "snapDegreesPerTick": 45,
+    "wallTrackSeconds": 1.5
+  },
+  "evidence": {
+    "enabled": false,
+    "seconds": 30
+  }
+}

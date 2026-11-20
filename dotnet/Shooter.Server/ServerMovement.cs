@@ -19,6 +19,7 @@ namespace Shooter.Server
 
         private ServerMotorSettings _settings;
         private readonly float _tickSeconds;
+        private readonly ServerCheatSignals _signals;
         private readonly Dictionary<ConnectionId, Mover> _byConnection = new Dictionary<ConnectionId, Mover>();
         private readonly Dictionary<int, Mover> _byPlayer = new Dictionary<int, Mover>();
         private ServerContext _context;
@@ -26,9 +27,10 @@ namespace Shooter.Server
         private KnockbackSpec _knockback = KnockbackSpec.Default;
         private float _now;
 
-        public ServerMovement(ServerMotorSettings settings, int tickRate = TickClock.DefaultTickRate)
+        public ServerMovement(ServerMotorSettings settings, int tickRate = TickClock.DefaultTickRate, ServerCheatSignals signals = null)
         {
             _settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            _signals = signals;
             if (tickRate <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(tickRate), tickRate, "tickRate must be positive");
@@ -50,6 +52,8 @@ namespace Shooter.Server
         public float TickSeconds => _tickSeconds;
 
         public ServerMotorSettings Settings => _settings;
+
+        internal ServerCheatSignals CheatSignals => _signals;
 
         public void Start(ServerContext context)
         {
@@ -424,6 +428,8 @@ namespace Shooter.Server
 
                 if (mover.InputBudget < 1f)
                 {
+                    // 警告の行は間引くが、違反の累積は間引かずに数えるので、間引く前に出す
+                    _signals?.RaiseInputOverBudget(mover.Player.PlayerId);
                     Warn(
                         mover,
                         "[Net] dropped input from client=" + Text(mover.Player.Connection) + " tick=" + Text(frame.Tick)
@@ -433,6 +439,9 @@ namespace Shooter.Server
 
                 mover.InputBudget -= 1f;
                 Apply(mover, frame);
+
+                // Bot の入力 (ApplyBotInput) は出さない。サーバーが作る向きを検知に数えても意味が無いため
+                _signals?.RaiseLooked(mover.Player.PlayerId, frame.Tick, mover.Yaw, null);
             }
         }
 

@@ -15,10 +15,11 @@ namespace Shooter.Server
         private readonly Dictionary<ConnectionId, ClientHistory> _clients = new Dictionary<ConnectionId, ClientHistory>();
         private ServerContext _context;
 
-        public ServerSnapshots(GameRules rules, IEnumerable<ISnapshotContributor> contributors)
+        public ServerSnapshots(GameRules rules, IEnumerable<ISnapshotContributor> contributors, AntiCheatTuning antiCheat = null)
         {
             ArgumentNullException.ThrowIfNull(rules);
             ArgumentNullException.ThrowIfNull(contributors);
+            AntiCheat = antiCheat ?? AntiCheatTuning.Default;
             _rules = MatchRulesSync.From(rules);
             _objective = rules.Objective;
             _contributors = new List<ISnapshotContributor>(contributors);
@@ -29,6 +30,8 @@ namespace Shooter.Server
         }
 
         public string Name => "snapshots";
+
+        public AntiCheatTuning AntiCheat { get; }
 
         public int SentCount { get; private set; }
 

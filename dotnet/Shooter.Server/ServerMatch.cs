@@ -166,7 +166,7 @@ namespace Shooter.Server
                 throw new ArgumentException("'" + displayName + "' is not a sanitized display name", nameof(displayName));
             }
 
-            if (!string.IsNullOrEmpty(partyId) &&!ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
+            if (!string.IsNullOrEmpty(partyId) && !ConnectionExtras.IsValidField(partyId, ConnectionExtras.MaxPartyIdLength))
             {
                 throw new ArgumentException(
                     nameof(partyId) + " must be 1-" + ConnectionExtras.MaxPartyIdLength + " characters of [0-9A-Za-z_-]", nameof(partyId));

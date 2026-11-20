@@ -21,6 +21,50 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void ForWithPalettesPicksThePaletteOfThatKindFromThem()
+        {
+            var green = new PaletteColor(0f, 1f, 0f);
+            var replaced = new TeamPalette(
+                ColorPalette.Standard,
+                TeamPalette.Standard.Friendly,
+                green,
+                TeamPalette.Standard.Neutral,
+                TeamPalette.Standard.Highlight,
+                TeamPalette.Standard.Objective,
+                TeamPalette.Standard.Danger,
+                TeamPalette.Standard.Contested,
+                TeamPalette.Standard.Safe,
+                false);
+            var palettes = new[] { replaced, TeamPalette.RedGreen, TeamPalette.BlueYellow };
+
+            Assert.That(TeamPalette.For(ColorPalette.Standard, palettes), Is.SameAs(replaced));
+            Assert.That(TeamPalette.For(ColorPalette.Standard, palettes).Enemy, Is.EqualTo(green));
+            Assert.That(TeamPalette.For(ColorPalette.RedGreen, palettes), Is.SameAs(TeamPalette.RedGreen));
+            Assert.That(TeamPalette.For(ColorPalette.Standard, TeamPalette.All), Is.SameAs(TeamPalette.Standard));
+        }
+
+        [Test]
+        public void ForWithPalettesRejectsAMissingKindAnUnknownKindAndNoList()
+        {
+            var onlyStandard = new[] { TeamPalette.Standard };
+
+            var missing = Assert.Throws<ArgumentException>(() => TeamPalette.For(ColorPalette.BlueYellow, onlyStandard));
+            Assert.That(missing.ParamName, Is.EqualTo("palettes"));
+            Assert.That(missing.Message, Does.Contain("BlueYellow"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => TeamPalette.For((ColorPalette)3, TeamPalette.All));
+            Assert.Throws<ArgumentNullException>(() => TeamPalette.For(ColorPalette.Standard, null));
+        }
+
+        [Test]
+        public void TheConstructorRejectsAnUnknownKind()
+        {
+            var c = TeamPalette.Standard;
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => new TeamPalette(
+                (ColorPalette)3, c.Friendly, c.Enemy, c.Neutral, c.Highlight, c.Objective, c.Danger, c.Contested, c.Safe, false));
+        }
+
+        [Test]
         public void AllListsEveryKindOnceInOrder()
         {
             // Unity の .NET Standard 2.1 には Enum.GetValues<T>() が無いため、非ジェネリック版を使う

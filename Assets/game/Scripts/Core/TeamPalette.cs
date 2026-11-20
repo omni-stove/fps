@@ -60,7 +60,7 @@ namespace Shooter.Core
 
         private static readonly TeamPalette[] _all = { Standard, RedGreen, BlueYellow };
 
-        private TeamPalette(
+        public TeamPalette(
             ColorPalette kind,
             PaletteColor friendly,
             PaletteColor enemy,
@@ -72,6 +72,11 @@ namespace Shooter.Core
             PaletteColor safe,
             bool usesMarks)
         {
+            if (!Enum.IsDefined(typeof(ColorPalette), kind))
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown color palette");
+            }
+
             Kind = kind;
             Friendly = friendly;
             Enemy = enemy;
@@ -123,6 +128,30 @@ namespace Shooter.Core
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown color palette");
             }
+        }
+
+        // Core は Resources を読めないので、palettes.json で差し替えた組は呼ぶ側 (TeamColors) が読んで渡す。For(kind) は既定の組しか返さない。
+        public static TeamPalette For(ColorPalette kind, IReadOnlyList<TeamPalette> palettes)
+        {
+            if (palettes == null)
+            {
+                throw new ArgumentNullException(nameof(palettes));
+            }
+
+            foreach (var palette in palettes)
+            {
+                if (palette != null && palette.Kind == kind)
+                {
+                    return palette;
+                }
+            }
+
+            if (!Enum.IsDefined(typeof(ColorPalette), kind))
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown color palette");
+            }
+
+            throw new ArgumentException($"the palettes have no {kind} palette", nameof(palettes));
         }
 
         // viewer が null (観戦だけで自分のプレイヤーがいないなど) でも 2 チームを見分けられるよう、Alpha を味方・Bravo を敵とみなす。

@@ -380,7 +380,7 @@ namespace Shooter.Runtime
 
         public static ColorPalette NextPalette(ColorPalette palette)
         {
-            var all = TeamPalette.All;
+            var all = TeamColors.All;
             for (var i = 0; i < all.Count; i++)
             {
                 if (all[i].Kind == palette)
@@ -1071,7 +1071,7 @@ namespace Shooter.Runtime
 
         private void RefreshPalette()
         {
-            var palette = TeamPalette.For(_editing.Palette);
+            var palette = TeamColors.For(_editing.Palette);
             if (_paletteButton != null)
             {
                 _paletteButton.text = FormatPalette(palette.Kind);

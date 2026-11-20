@@ -159,7 +159,7 @@ namespace Shooter.Runtime
                 return;
             }
 
-            var contested = ContestedColorOf(TeamPalette.For(settings.Palette));
+            var contested = ContestedColorOf(TeamColors.For(settings.Palette));
             if (contested == _contestedColor)
             {
                 return;

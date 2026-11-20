@@ -270,7 +270,7 @@ namespace Shooter.Runtime
 
             if (_bomb == null)
             {
-                Debug.LogWarning($"{SearchAndDestroyText.Tag} BombObject が配線されていないため、爆弾は見えません。", this);
+                Debug.LogWarning($"{SearchAndDestroyLog.Tag} BombObject が配線されていないため、爆弾は見えません。", this);
             }
 
             return _game.Mode;
@@ -451,7 +451,7 @@ namespace Shooter.Runtime
 
         private void OnPreparationStarted(int round)
         {
-            Debug.Log(SearchAndDestroyText.RoundLog(round, _game.Attacker, _game.Defender), this);
+            Debug.Log(SearchAndDestroyLog.RoundLog(round, _game.Attacker, _game.Defender), this);
 
             _hasBombGround = false;
             foreach (var site in _sortedSites)
@@ -479,7 +479,7 @@ namespace Shooter.Runtime
 
         private void OnRoundStarted(int round)
         {
-            Debug.Log(SearchAndDestroyText.LiveLog(round), this);
+            Debug.Log(SearchAndDestroyLog.LiveLog(round), this);
             if (IsMatchOver)
             {
                 return;
@@ -497,25 +497,25 @@ namespace Shooter.Runtime
         private void OnRoundEnded(Side? winner, RoundEndReason reason)
         {
             Debug.Log(
-                SearchAndDestroyText.RoundEndLog(
+                SearchAndDestroyLog.RoundEndLog(
                     _game.RoundNumber, winner, reason, _game.GetRoundWins(Side.Alpha), _game.GetRoundWins(Side.Bravo)),
                 this);
         }
 
         private void OnSidesSwapped()
         {
-            Debug.Log(SearchAndDestroyText.SwapLog(_game.Attacker, _game.Defender), this);
+            Debug.Log(SearchAndDestroyLog.SwapLog(_game.Attacker, _game.Defender), this);
         }
 
         private void OnGameEnded(Side winner)
         {
-            Debug.Log(SearchAndDestroyText.EndedLog(winner), this);
+            Debug.Log(SearchAndDestroyLog.EndedLog(winner), this);
             EndMatch(winner);
         }
 
         private void OnBombPickedUp(int playerId)
         {
-            Debug.Log(SearchAndDestroyText.PickUpLog(playerId), this);
+            Debug.Log(SearchAndDestroyLog.PickUpLog(playerId), this);
             _hasBombGround = false;
             RestoreRoutes();
             RouteCarrierToSite();
@@ -524,7 +524,7 @@ namespace Shooter.Runtime
 
         private void OnBombDropped(int playerId)
         {
-            Debug.Log(SearchAndDestroyText.DropLog(playerId), this);
+            Debug.Log(SearchAndDestroyLog.DropLog(playerId), this);
             var carrier = MemberOf(playerId);
             if (carrier != null)
             {
@@ -538,7 +538,7 @@ namespace Shooter.Runtime
 
         private void OnBombPlanted(int playerId, int site)
         {
-            Debug.Log(SearchAndDestroyText.PlantedLog(playerId, site), this);
+            Debug.Log(SearchAndDestroyLog.PlantedLog(playerId, site), this);
             var planter = MemberOf(playerId);
             _bombGround = planter != null ? planter.GroundPosition : _sortedSites[site].transform.position;
             _hasBombGround = true;
@@ -550,13 +550,13 @@ namespace Shooter.Runtime
 
         private void OnBombDefused(int playerId)
         {
-            Debug.Log(SearchAndDestroyText.DefusedLog(playerId), this);
+            Debug.Log(SearchAndDestroyLog.DefusedLog(playerId), this);
             ShowBomb();
         }
 
         private void OnBombDetonated(int site)
         {
-            Debug.Log(SearchAndDestroyText.DetonatedLog(site), this);
+            Debug.Log(SearchAndDestroyLog.DetonatedLog(site), this);
             ShowBomb();
         }
 
@@ -695,7 +695,7 @@ namespace Shooter.Runtime
                 if (actions == null)
                 {
                     Debug.LogError(
-                        $"{SearchAndDestroyText.Tag} プロジェクト全体の Input Actions が設定されていないため、設置も解除もできません (Project Settings > Input System Package)。",
+                        $"{SearchAndDestroyLog.Tag} プロジェクト全体の Input Actions が設定されていないため、設置も解除もできません (Project Settings > Input System Package)。",
                         this);
                     return;
                 }
@@ -703,7 +703,7 @@ namespace Shooter.Runtime
                 _interactAction = actions.FindAction(InteractActionPath);
                 if (_interactAction == null)
                 {
-                    Debug.LogError($"{SearchAndDestroyText.Tag} Input Actions '{actions.name}' に '{InteractActionPath}' がないため、設置も解除もできません。", this);
+                    Debug.LogError($"{SearchAndDestroyLog.Tag} Input Actions '{actions.name}' に '{InteractActionPath}' がないため、設置も解除もできません。", this);
                     return;
                 }
             }

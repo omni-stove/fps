@@ -467,11 +467,15 @@ namespace Shooter.Core.Tests
         [Test]
         public void LogLinesNameTheRoundAndTheSite()
         {
-            Assert.That(SearchAndDestroyText.SiteName(1), Is.EqualTo("B"));
+            Assert.That(BombSiteName.Of(0), Is.EqualTo("A"));
+            Assert.That(BombSiteName.Of(1), Is.EqualTo("B"));
+            Assert.That(BombSiteName.Of(26), Is.EqualTo("P27"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => BombSiteName.Of(-1));
+            Assert.That(SearchAndDestroyLog.DetonatedLog(1), Is.EqualTo("[SearchAndDestroy] detonated site=B"));
             Assert.That(
-                SearchAndDestroyText.RoundEndLog(3, Side.Bravo, RoundEndReason.Defused, 1, 2),
+                SearchAndDestroyLog.RoundEndLog(3, Side.Bravo, RoundEndReason.Defused, 1, 2),
                 Is.EqualTo("[SearchAndDestroy] round_end round=3 winner=1 reason=Defused wins=0:1,1:2"));
-            Assert.That(SearchAndDestroyText.PlantedLog(0, 0), Is.EqualTo("[SearchAndDestroy] planted player=0 site=A"));
+            Assert.That(SearchAndDestroyLog.PlantedLog(0, 0), Is.EqualTo("[SearchAndDestroy] planted player=0 site=A"));
         }
 
         [Test]
@@ -517,9 +521,9 @@ namespace Shooter.Core.Tests
             var spec = new SearchAndDestroySpec(3, 90f, 2.5f, 6f, 40f, 5, 8f, 3);
 
             Assert.That(
-                SearchAndDestroyText.SettingsLog(spec),
+                SearchAndDestroyLog.SettingsLog(spec),
                 Is.EqualTo("[SearchAndDestroy] net sites=3 winsToWin=5 round=90s plant=2.5s defuse=6s fuse=40s preparation=8s swapEvery=3"));
-            Assert.Throws<ArgumentNullException>(() => SearchAndDestroyText.SettingsLog(null));
+            Assert.Throws<ArgumentNullException>(() => SearchAndDestroyLog.SettingsLog(null));
         }
 
         private static void Plant(SearchAndDestroy game, int site)

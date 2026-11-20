@@ -156,7 +156,7 @@ namespace Shooter.Server
             _game.BombPlanted += HandleBombPlanted;
             _game.BombDefused += HandleBombDefused;
             _game.BombDetonated += HandleBombDetonated;
-            _host.Log.WriteLine(SearchAndDestroyText.SettingsLog(_game.Spec));
+            _host.Log.WriteLine(SearchAndDestroyLog.SettingsLog(_game.Spec));
         }
 
         public void Stop()
@@ -521,7 +521,7 @@ namespace Shooter.Server
         // 体力と位置は Session が持つので、ここで全員を出直させる。倒れている人の蘇生の受け付けも捨てる
         private void HandlePreparationStarted(int round)
         {
-            _host.Log.WriteLine(SearchAndDestroyText.RoundLog(round, _game.Attacker, _game.Defender));
+            _host.Log.WriteLine(SearchAndDestroyLog.RoundLog(round, _game.Attacker, _game.Defender));
             _hasBombGround = false;
             _host.ClearDowned();
             _host.Session?.RespawnAll();
@@ -530,7 +530,7 @@ namespace Shooter.Server
 
         private void HandleRoundStarted(int round)
         {
-            _host.Log.WriteLine(SearchAndDestroyText.LiveLog(round));
+            _host.Log.WriteLine(SearchAndDestroyLog.LiveLog(round));
             RoundStarted?.Invoke(round);
         }
 
@@ -538,39 +538,39 @@ namespace Shooter.Server
         {
             var alpha = _game.GetRoundWins(Side.Alpha);
             var bravo = _game.GetRoundWins(Side.Bravo);
-            _host.Log.WriteLine(SearchAndDestroyText.RoundEndLog(_game.RoundNumber, winner, reason, alpha, bravo));
+            _host.Log.WriteLine(SearchAndDestroyLog.RoundEndLog(_game.RoundNumber, winner, reason, alpha, bravo));
             _host.SetMatchScores(alpha, bravo);
             RoundEnded?.Invoke(winner);
         }
 
         private void HandleSidesSwapped()
         {
-            _host.Log.WriteLine(SearchAndDestroyText.SwapLog(_game.Attacker, _game.Defender));
+            _host.Log.WriteLine(SearchAndDestroyLog.SwapLog(_game.Attacker, _game.Defender));
             SidesSwapped?.Invoke();
         }
 
         private void HandleEnded(Side winner)
         {
-            _host.Log.WriteLine(SearchAndDestroyText.EndedLog(winner));
+            _host.Log.WriteLine(SearchAndDestroyLog.EndedLog(winner));
             Ended?.Invoke(winner);
         }
 
         private void HandleBombPickedUp(int playerId)
         {
-            _host.Log.WriteLine(SearchAndDestroyText.PickUpLog(playerId));
+            _host.Log.WriteLine(SearchAndDestroyLog.PickUpLog(playerId));
             _hasBombGround = false;
         }
 
         // 落とした人の体がもう無ければ (抜けた後など)、落ちた場所が分からないので誰も拾えない
         private void HandleBombDropped(int playerId)
         {
-            _host.Log.WriteLine(SearchAndDestroyText.DropLog(playerId));
+            _host.Log.WriteLine(SearchAndDestroyLog.DropLog(playerId));
             _hasBombGround = TryBodyPosition(playerId, out _bombGround);
         }
 
         private void HandleBombPlanted(int playerId, int site)
         {
-            _host.Log.WriteLine(SearchAndDestroyText.PlantedLog(playerId, site));
+            _host.Log.WriteLine(SearchAndDestroyLog.PlantedLog(playerId, site));
             if (!TryBodyPosition(playerId, out _bombGround))
             {
                 _bombGround = _sites[site].Center;
@@ -581,12 +581,12 @@ namespace Shooter.Server
 
         private void HandleBombDefused(int playerId)
         {
-            _host.Log.WriteLine(SearchAndDestroyText.DefusedLog(playerId));
+            _host.Log.WriteLine(SearchAndDestroyLog.DefusedLog(playerId));
         }
 
         private void HandleBombDetonated(int site)
         {
-            _host.Log.WriteLine(SearchAndDestroyText.DetonatedLog(site));
+            _host.Log.WriteLine(SearchAndDestroyLog.DetonatedLog(site));
         }
     }
 }

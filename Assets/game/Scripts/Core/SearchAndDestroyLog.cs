@@ -2,11 +2,9 @@ using System.Globalization;
 
 namespace Shooter.Core
 {
-    public static class SearchAndDestroyText
+    public static class SearchAndDestroyLog
     {
         public const string Tag = "[SearchAndDestroy]";
-
-        public static string SiteName(int site) => DominationHudFormat.PointName(site);
 
         public static string RoundLog(int round, Side attacker, Side defender)
         {
@@ -35,11 +33,11 @@ namespace Shooter.Core
 
         public static string DropLog(int playerId) => Tag + " drop player=" + Number(playerId);
 
-        public static string PlantedLog(int playerId, int site) => Tag + " planted player=" + Number(playerId) + " site=" + SiteName(site);
+        public static string PlantedLog(int playerId, int site) => Tag + " planted player=" + Number(playerId) + " site=" + BombSiteName.Of(site);
 
         public static string DefusedLog(int playerId) => Tag + " defused player=" + Number(playerId);
 
-        public static string DetonatedLog(int site) => Tag + " detonated site=" + SiteName(site);
+        public static string DetonatedLog(int site) => Tag + " detonated site=" + BombSiteName.Of(site);
 
         public static string EndedLog(Side winner) => Tag + " ended winner=" + Number(winner.Id);
 

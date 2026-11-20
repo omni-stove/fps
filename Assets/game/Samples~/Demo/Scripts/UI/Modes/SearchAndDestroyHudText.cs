@@ -97,7 +97,7 @@ namespace Shooter.Runtime
                         : "mode.snd.carried"));
                     if (game.PlantingSite.HasValue)
                     {
-                        lines.Add(new LocalizedText("mode.snd.planting", SearchAndDestroyText.SiteName(game.PlantingSite.Value), Percent(game.PlantFraction)));
+                        lines.Add(new LocalizedText("mode.snd.planting", BombSiteName.Of(game.PlantingSite.Value), Percent(game.PlantFraction)));
                     }
 
                     break;
@@ -125,7 +125,7 @@ namespace Shooter.Runtime
 
         public static LocalizedText Fuse(int site, float fuseRemaining)
         {
-            return new LocalizedText("mode.snd.fuse", SearchAndDestroyText.SiteName(site), HudFormat.DisplayedSeconds(fuseRemaining));
+            return new LocalizedText("mode.snd.fuse", BombSiteName.Of(site), HudFormat.DisplayedSeconds(fuseRemaining));
         }
 
         public static LocalizedText RoundResult(Side? winner, RoundEndReason reason)

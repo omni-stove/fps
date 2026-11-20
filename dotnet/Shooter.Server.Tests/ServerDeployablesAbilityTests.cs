@@ -184,6 +184,8 @@ namespace Shooter.Server.Tests
             Step(_respawnWait);
 
             Deploy(1, _beaconId, _alphaFront, 90f);
+            // 断りのログは 1 秒に 1 回までなので、2 つ目の断りも出るよう間を空ける
+            Step(1.5f);
             Deploy(1, _shieldId, _alphaFront, 90f);
 
             Assert.That(Rows(1), Is.Empty);

@@ -152,6 +152,11 @@ make server-dotnet ARGS="-rules FreeForAll"
     切るときに `[AntiCheat] violations kicking id=<id>: reason=ShotRejected|InputOverBudget count=<数> limit=<上限> window=<秒>s` と出す。
     回避・乗り越えの最中に撃って断られた分 (`Dodging`・`Vaulting`) と Bot は数えず、抜けた人の数は忘れる。
     起動のときに `[AntiCheat] violations on window=...` か `[AntiCheat] violations off ...` と出す。
+  - `stats.enabled` を `true` にすると、人 (Bot は除く) ごとに `stats.windowSeconds` の時間窓で射撃と視線を数え、閾値を超えた指標を
+    `{"type":"cheat-stats","playerId":"1","productUserId":"...","metric":"headshotRatio","value":"0.9","threshold":"0.6","windowSeconds":"120","samples":"12"}` のような 1 行の JSON でログに出す (キックはしない)。
+    指標は `headshotRatio` (命中のうち頭の率が `headshotRatio` より高い)・`reactionMs` (相手が見え始めてから当てるまでの平均が `minReactionMs` より短い)・
+    `snapDegreesPerTick` (1 tick の横の向きの差が `snapDegreesPerTick` より大きい)・`wallTrackSeconds` (見えない相手へ `wallTrackSeconds` より長く向き続けた) の 4 つで、
+    率と平均は時間窓の中の数が `minSamples` に届くまで比べない。同じ人の同じ指標は時間窓ごとに 1 回だけ出し、起動のときに `[CheatStats] collecting ...` と閾値を出す。
 - 人ごとに置ける種類 (能力) は 2 枠で、選べる候補はルールの JSON の `loadout.abilities` に書いた `deployables.json` の Id にする
   (例: `"loadout": { ..., "abilities": ["deploy-beacon"] }`)。項目が無ければ `deployables.json` の全部 (置けない `Drone` を除く) が候補になり、
   空の並び (`[]`) なら何も置かせない。起動のときに `[Deploy] net abilities=<候補> default=<既定> from=rules|catalog` と出す。

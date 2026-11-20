@@ -161,6 +161,7 @@ make server-dotnet ARGS="-rules FreeForAll"
     指標は `headshotRatio` (命中のうち頭の率が `headshotRatio` より高い)・`reactionMs` (相手が見え始めてから当てるまでの平均が `minReactionMs` より短い)・
     `snapDegreesPerTick` (1 tick の横の向きの差が `snapDegreesPerTick` より大きい)・`wallTrackSeconds` (見えない相手へ `wallTrackSeconds` より長く向き続けた) の 4 つで、
     率と平均は時間窓の中の数が `minSamples` に届くまで比べない。同じ人の同じ指標は時間窓ごとに 1 回だけ出し、起動のときに `[CheatStats] collecting ...` と閾値を出す。
+  - `evidence.enabled` を `true` にすると、`--report-file` と一緒に起動したときだけ通報の証拠を残す ([通報・統計・テレメトリ](#通報統計テレメトリ))。
 - 人ごとに置ける種類 (能力) は 2 枠で、選べる候補はルールの JSON の `loadout.abilities` に書いた `deployables.json` の Id にする
   (例: `"loadout": { ..., "abilities": ["deploy-beacon"] }`)。項目が無ければ `deployables.json` の全部 (置けない `Drone` を除く) が候補になり、
   空の並び (`[]`) なら何も置かせない。起動のときに `[Deploy] net abilities=<候補> default=<既定> from=rules|catalog` と出す。
@@ -331,6 +332,12 @@ docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -regist
 | `--telemetry` | 運用する人の同意として、試合のまとめとクラッシュを残す。送り先は `server-data/tuning/telemetry.json` (クライアントの `Tuning/telemetry.json` と同じ形、無ければ手元のファイル) |
 | `--telemetry-dir <フォルダ>` | `--telemetry` の送り先が手元のファイル (`LocalFile`) のときの置き場所。`--telemetry` と一緒にだけ使え、送り先が `LocalFile` なのに無ければ終了コード 3 |
 
+- 通報の行には `id` が付く。`anticheat.json` の `evidence.enabled` を `true` にすると、サーバーは人ごとに直前の `evidence.seconds` 秒の
+  向きと体の位置 (`look`)・受け入れた射撃 (`shot`)・命中 (`hit`) を持ち、通報を残すたびに相手の分を通報のファイルと同じフォルダの
+  `<id>.evidence.jsonl` に 1 件 1 行で書く。`ago` は通報からさかのぼった秒。間引いた通報・断った通報では書かず、抜けた人の記録は捨てる。
+  証拠が書けなくても通報の行は残し、`[Evidence] could not write the evidence ...` をログに出す。
+  1 人が全員を通報し直してファイルを増やし続けないよう、証拠のファイルはサーバー全体で直近 1 分に `evidence.maxFilesPerMinute` (既定 10) 個までにする。
+  超えた分は通報の行だけを残し、`[Evidence] skipped the evidence for target=<相手>: already <数> files in the last minute ...` をログに出す。
 - 統計のボードは `server-data/tuning/leaderboards.json` (クライアントの `Tuning/leaderboards.json` と同じ形、無ければ既定のボード) から読む。クライアントと同じ中身にしておく。
 - 統計は EOS の ProductUserId で送るので、UDP でつないで ProductUserId を名乗らない人の数は送らない。
 - docker では置き場所をボリュームにする (`-v ./records:/records` と `--report-file /records/reports.jsonl --telemetry-dir /records`)。

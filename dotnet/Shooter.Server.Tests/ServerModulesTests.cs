@@ -114,6 +114,53 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void EnabledEvidenceIsHeldFromTheSharedSignalsAndHandedToTheReports()
+        {
+            var evidence = new AntiCheatTuning.EvidenceSettings(true, 12f);
+            var tuning = new ServerCombatTuning(antiCheat: new AntiCheatTuning(
+                AntiCheatTuning.ConcealSettings.Default, AntiCheatTuning.ViolationSettings.Default, AntiCheatTuning.StatsSettings.Default, evidence));
+
+            CreateWithReports(tuning);
+
+            var held = _modules.OfType<ServerReportEvidence>().Single();
+            var reports = _modules.OfType<ServerReports>().Single();
+            Assert.That(held.Settings, Is.SameAs(evidence));
+            Assert.That(reports.Evidence, Is.SameAs(held));
+            Assert.That(_modules.IndexOf(held), Is.LessThan(_modules.IndexOf(reports)));
+            Assert.That(_modules.IndexOf(held), Is.GreaterThan(_modules.IndexOf(_modules.OfType<ServerSnapshots>().Single())));
+
+            _modules.OfType<ServerMovement>().Single().CheatSignals.RaiseShotAccepted(1, Vector3.Zero, Vector3.UnitZ, 1f);
+            Assert.That(held.HeldPlayerCount, Is.Zero, "nothing is held before the module starts");
+        }
+
+        [Test]
+        public void DisabledEvidenceAddsNoModuleAndTheReportsHaveNone()
+        {
+            CreateWithReports(ServerCombatTuning.Default);
+
+            Assert.That(_modules.OfType<ServerReportEvidence>(), Is.Empty);
+            Assert.That(_modules.OfType<ServerReports>().Single().Evidence, Is.Null);
+        }
+
+        [Test]
+        public void WithoutAReportFileEnabledEvidenceIsNotHeld()
+        {
+            var tuning = new ServerCombatTuning(antiCheat: new AntiCheatTuning(
+                AntiCheatTuning.ConcealSettings.Default,
+                AntiCheatTuning.ViolationSettings.Default,
+                AntiCheatTuning.StatsSettings.Default,
+                new AntiCheatTuning.EvidenceSettings(true, 12f)));
+            Assert.That(ServerLaunch.TryParse(Array.Empty<string>(), _ => null, out var launch, out var parseError), Is.True, parseError);
+
+            Assert.That(
+                ServerModules.Create(launch, Runtime(), _modules, _library.Path, ServerMotorSettings.Default, tuning, null, out var error),
+                Is.True,
+                error);
+
+            Assert.That(_modules.OfType<ServerReportEvidence>(), Is.Empty);
+        }
+
+        [Test]
         public void WithAStashDirectoryTheModulesOpenItAndAnUnusableOneStopsTheStart()
         {
             var stashes = Path.Combine(_roots.Path, "stashes");
@@ -340,6 +387,17 @@ namespace Shooter.Server.Tests
         {
             Assert.That(ServerLaunch.TryParse(args, _ => null, out var launch, out var parseError), Is.True, parseError);
             return ServerModules.Create(launch, Runtime(), _modules, libraryDirectory, out var error) ? null : error;
+        }
+
+        private void CreateWithReports(ServerCombatTuning tuning)
+        {
+            var args = new[] { ServerLaunch.ReportFileFlag, Path.Combine(_roots.Path, "records", ServerReports.DefaultFileName) };
+            Assert.That(ServerLaunch.TryParse(args, _ => null, out var launch, out var parseError), Is.True, parseError);
+
+            Assert.That(
+                ServerModules.Create(launch, Runtime(), _modules, _library.Path, ServerMotorSettings.Default, tuning, null, out var error),
+                Is.True,
+                error);
         }
 
         private ServerRuntime Runtime()

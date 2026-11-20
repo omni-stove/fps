@@ -170,6 +170,7 @@ namespace Shooter.Editor
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             // NewScene(Single) は参照されていないアセットをアンロードし、先に読んだ定義が null になるので、シーンを作ってから読む。
+            var playerLoadout = WeaponAssetBuilder.LoadDefaultLoadout();
             var playerWeapons = WeaponAssetBuilder.LoadPlayerLoadout();
             var catalog = WeaponAssetBuilder.LoadCatalog();
             var botWeapon = WeaponAssetBuilder.FindInCatalog(catalog, BotsRootName, BotWeaponId);
@@ -184,7 +185,7 @@ namespace Shooter.Editor
 
             var context = new ModeSceneContext(scene, surface, catalog, rules);
             context.SpawnPoints = CreateSpawnPoints(scene, sides);
-            context.Bootstrap = CreateBootstrap(scene, playerWeapons, rules);
+            context.Bootstrap = CreateBootstrap(scene, playerWeapons, playerLoadout, rules);
             context.Bots = CreateBots(scene, sides, routes, botWeapon);
             context.Runner = CreateRunner(scene, context);
             AddModeObjects(context);
@@ -361,17 +362,42 @@ namespace Shooter.Editor
             return points;
         }
 
-        private static GameBootstrap CreateBootstrap(Scene scene, IReadOnlyList<WeaponDefinition> playerWeapons, GameRulesDefinition rules)
+        private static GameBootstrap CreateBootstrap(
+            Scene scene, IReadOnlyList<WeaponDefinition> playerWeapons, LoadoutDefinition playerLoadout, GameRulesDefinition rules)
         {
             SceneBuildHelpers.RequirePlayerWeapons(playerWeapons, nameof(playerWeapons));
+            if (playerLoadout == null)
+            {
+                throw new ArgumentNullException(nameof(playerLoadout));
+            }
 
             var host = new GameObject(BootstrapObjectName);
             SceneManager.MoveGameObjectToScene(host, scene);
             var bootstrap = host.AddComponent<GameBootstrap>();
+            ConfigureBootstrap(bootstrap, playerWeapons, playerLoadout, rules);
+            return bootstrap;
+        }
+
+        // 能力の並びは空のままにし、GameBootstrap に装備の能力の枠を読ませる。並びを写すと、装備の能力を差し替えるたびにシーンを組み直すことになるため。
+        public static void ConfigureBootstrap(
+            GameBootstrap bootstrap, IReadOnlyList<WeaponDefinition> playerWeapons, LoadoutDefinition playerLoadout, GameRulesDefinition rules)
+        {
+            if (bootstrap == null)
+            {
+                throw new ArgumentNullException(nameof(bootstrap));
+            }
+
+            SceneBuildHelpers.RequirePlayerWeapons(playerWeapons, nameof(playerWeapons));
+            if (playerLoadout == null)
+            {
+                throw new ArgumentNullException(nameof(playerLoadout));
+            }
+
             bootstrap.CreatesFloor = false;
             bootstrap.WeaponDefinitions = playerWeapons;
+            bootstrap.Loadout = playerLoadout;
+            bootstrap.AbilityDefinitions = null;
             bootstrap.RulesDefinition = rules;
-            return bootstrap;
         }
 
         private List<EnemyAgent> CreateBots(

@@ -24,7 +24,6 @@ namespace Shooter.Runtime
         private NameplateSpec _spec;
         private INameplateTargets _source;
         private OfflineNameplateTargets _offline;
-        private SignalNameplateTargets _online;
         private INameplateTargets _logged;
 
         public override string ElementName => UxmlName;
@@ -37,10 +36,10 @@ namespace Shooter.Runtime
             set => _spec = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-        // 決めた集め方を持ち続けないのは、同じ HUD のままネット対戦に入ったり地図を替えたりして、キットが出す集め方 (GameSignals.Nameplates) が入れ替わるため。
+        // 出ている引き先を覚えないのは、ネット対戦はマップを替えるたびに引き先を出し直し、抜けると空に戻すため。
         public INameplateTargets Targets
         {
-            get => _source ?? CurrentTargets();
+            get => _source ?? GameSignals.NameplateTargets.Value ?? (_offline ??= new OfflineNameplateTargets());
             set => _source = value ?? throw new ArgumentNullException(nameof(value));
         }
 
@@ -175,22 +174,6 @@ namespace Shooter.Runtime
             {
                 Refresh();
             }
-        }
-
-        private INameplateTargets CurrentTargets()
-        {
-            var contacts = GameSignals.Nameplates.Value;
-            if (contacts == null)
-            {
-                return _offline ?? (_offline = new OfflineNameplateTargets());
-            }
-
-            if (_online == null || !ReferenceEquals(_online.Contacts, contacts))
-            {
-                _online = new SignalNameplateTargets(contacts);
-            }
-
-            return _online;
         }
 
         private static bool TryName(IParticipants participants, int id, out string name)

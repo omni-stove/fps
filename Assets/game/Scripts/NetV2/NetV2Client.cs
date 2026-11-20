@@ -66,7 +66,7 @@ namespace Shooter.NetV2
         private bool _wasReloading;
         private bool _startedFromMenu;
         private NetV2Hud _hud;
-        private ClientNameplateContacts _nameplates;
+        private NetV2NameplateTargets _nameplates;
         private Transform _remoteRoot;
         private IMenuNavigator _menu;
         private AsyncOperation _mapLoad;
@@ -833,6 +833,13 @@ namespace Shooter.NetV2
             _weaponHooks?.Projectiles.Detach();
             _weaponHooks?.Beams.Detach();
             _weaponHooks?.Spray.Detach();
+
+            // 他の画面が後から出した引き先まで消さないよう、自分が出した値のときだけ消す。
+            if (_nameplates != null)
+            {
+                GameSignals.NameplateTargets.ClearIfCurrent(_nameplates);
+                _nameplates = null;
+            }
         }
 
         // ロビーを探せないときに既定のサーバーへつなぐのは、開発中に make server-dotnet へつなげるようにするため。

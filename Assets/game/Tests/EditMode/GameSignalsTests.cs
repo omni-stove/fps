@@ -72,7 +72,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Vision.Value, Is.Null);
             Assert.That(GameSignals.Drone.Value, Is.Null);
             Assert.That(GameSignals.NetStats.Value, Is.Null);
-            Assert.That(GameSignals.Nameplates.Value, Is.Null);
+            Assert.That(GameSignals.NameplateTargets.Value, Is.Null);
         }
 
         [Test]
@@ -204,7 +204,7 @@ namespace Shooter.Tests.EditMode
             GameSignals.Vision.Publish(new VisionStatus(VisionMode.Night, VisionSource.Goggles));
             GameSignals.Drone.Publish(new DroneStatus(1f, 1f, 0, true));
             GameSignals.NetStats.Publish(new NetStatsSignal(40, 2, 900));
-            GameSignals.Nameplates.Publish(new FakeNameplateContacts());
+            GameSignals.NameplateTargets.Publish(new FakeNameplateTargets());
             heard = 0;
 
             GameSignals.ResetAll();
@@ -612,9 +612,11 @@ namespace Shooter.Tests.EditMode
             }
         }
 
-        private sealed class FakeNameplateContacts : INameplateContacts
+        private sealed class FakeNameplateTargets : INameplateTargets
         {
-            public void CopyTo(System.Numerics.Vector3 eye, List<NameplateContact> into)
+            public IParticipants Participants => null;
+
+            public void CopyTo(Vector3 eye, List<NameplateTarget> targets)
             {
             }
         }

@@ -135,6 +135,17 @@ namespace Shooter.NetV2
             _hud.BindStatusEffects(_weaponHooks.StatusEffects);
             _hud.BindInventory(_inventory);
 
+            // 名前は NetV2Hud が GameSignals.Participants に出した名簿からプレイヤー Id で引く。
+            _nameplates = new NetV2NameplateTargets(
+                _client.PlayerId,
+                () => _client.LatestSnapshot,
+                _match.TrySampleRemote,
+                _world.Collision,
+                _client.Motor.Stance,
+                () => GameSignals.Participants.Value,
+                (eye, point) => EnemySenses.IsVisionBlocked(eye.ToUnity(), point.ToUnity()));
+            GameSignals.NameplateTargets.Publish(_nameplates);
+
             _loadout.Bind(GameUi.LoadoutSelect);
 
             if (_client.LatestSnapshot != null)

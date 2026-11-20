@@ -58,6 +58,26 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AnAbilityWithoutANameKeyIsNamedByItsId()
+        {
+            var ability = ScriptableObject.CreateInstance<NullAbilityDefinition>();
+            var beacon = ScriptableObject.CreateInstance<BeaconDeployDefinition>();
+            try
+            {
+                ability.Id = "null-ability";
+                beacon.Id = "beacon-id";
+
+                Assert.That(DisplayNames.Of((AbilityDefinition)ability), Is.EqualTo(LocalizedText.Literal("null-ability")));
+                Assert.That(DisplayNames.Of((AbilityDefinition)beacon), Is.EqualTo(new LocalizedText(BeaconSpec.DefaultNameKey)));
+            }
+            finally
+            {
+                Object.DestroyImmediate(ability);
+                Object.DestroyImmediate(beacon);
+            }
+        }
+
+        [Test]
         public void ABuyItemIsNamedByItsKeyOrItsId()
         {
             Assert.That(
@@ -105,7 +125,7 @@ namespace Shooter.Tests.EditMode
             Assert.Throws<ArgumentNullException>(() => DisplayNames.Of((WeaponDefinition)null));
             Assert.Throws<ArgumentNullException>(() => DisplayNames.Of((GrenadeSpec)null));
             Assert.Throws<ArgumentNullException>(() => DisplayNames.Of((AmmoTypeSpec)null));
-            Assert.Throws<ArgumentNullException>(() => DisplayNames.Of((DeployAbilityDefinition)null));
+            Assert.Throws<ArgumentNullException>(() => DisplayNames.Of((AbilityDefinition)null));
             Assert.Throws<ArgumentNullException>(() => DisplayNames.Description(null));
         }
     }

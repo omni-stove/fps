@@ -26,6 +26,11 @@ namespace Shooter.Runtime
         public const string LockBodyClass = "loadout-select__lock-body";
         public const string LockLevelClass = "loadout-select__lock-level";
         public const string NoOptionClass = "loadout-select__no-option";
+        public const string AbilitySlotClass = "loadout-select__ability";
+        public const string AbilityPickerClass = "loadout-select__ability-picker";
+        public const string AbilityStepClass = "loadout-select__ability-step";
+        public const string AbilityNameClass = "loadout-select__ability-name";
+        public const string NoAbilityClass = "loadout-select__ability-name--none";
         public const string ConfirmClass = "loadout-select__confirm";
         public const string FocusedConfirmClass = "loadout-select__confirm--focused";
         public const string StatusClass = "loadout-select__status";
@@ -45,6 +50,11 @@ namespace Shooter.Runtime
         private readonly ProgressionLedger _ledger;
         private readonly List<VisualElement> _rows = new List<VisualElement>();
         private readonly List<List<Button>> _options = new List<List<Button>>();
+        private readonly AbilityCatalogAsset _abilityCatalog;
+        private readonly List<VisualElement> _abilityRows = new List<VisualElement>();
+        private readonly List<Label> _abilityNames = new List<Label>();
+        private readonly List<Button> _abilityPrevious = new List<Button>();
+        private readonly List<Button> _abilityNext = new List<Button>();
         private readonly Button _confirm;
         private readonly Label _status;
         private readonly VisualElement _navigationRoot;
@@ -52,12 +62,18 @@ namespace Shooter.Runtime
         private bool _busy;
         private bool _disposed;
 
-        // 能力はまだ行に出さず、開いたときの選択をそのまま Confirmed に添える。
-        public LoadoutSelectPanel(VisualElement container, LoadoutSelection selection, ProgressionLedger ledger = null, AbilitySelection abilities = null)
+        // 能力の枠は abilities が null なら出さない。abilityCatalog は名前を引くのにだけ使い、引けない能力は Id を出す。
+        public LoadoutSelectPanel(
+            VisualElement container,
+            LoadoutSelection selection,
+            ProgressionLedger ledger = null,
+            AbilitySelection abilities = null,
+            AbilityCatalogAsset abilityCatalog = null)
         {
             _container = container ?? throw new ArgumentNullException(nameof(container));
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
             _abilities = abilities;
+            _abilityCatalog = abilityCatalog;
 
             // 使えるかは selection の述語が決める。ledger から使えるかを引き直すと述語と食い違いうるので、鍵に添えるレベルを引くのにだけ使う
             _ledger = ledger;
@@ -79,6 +95,11 @@ namespace Shooter.Runtime
             for (var slot = 0; slot < selection.SlotCount; slot++)
             {
                 container.Add(BuildRow(slot));
+            }
+
+            for (var slot = 0; slot < AbilitySlotCount; slot++)
+            {
+                container.Add(BuildAbilityRow(slot));
             }
 
             _confirm = new Button(() => Confirm()) { name = ConfirmButtonName, text = LoadoutFormat.Confirm };
@@ -113,7 +134,12 @@ namespace Shooter.Runtime
 
         public int FocusRow => _focusRow;
 
-        public int ConfirmRow => _selection.SlotCount;
+        public int AbilitySlotCount => _abilities?.SlotCount ?? 0;
+
+        public AbilityCatalogAsset AbilityCatalog => _abilityCatalog;
+
+        // 行は武器の枠、能力の枠、決定の順に並ぶ
+        public int ConfirmRow => _selection.SlotCount + AbilitySlotCount;
 
         public Button ConfirmButton => _confirm;
 
@@ -126,6 +152,30 @@ namespace Shooter.Runtime
         public Button OptionButton(int slot, int option)
         {
             return _options[slot][option];
+        }
+
+        public int AbilityRow(int slot)
+        {
+            RequireAbilitySlot(slot);
+            return _selection.SlotCount + slot;
+        }
+
+        public string AbilityName(int slot)
+        {
+            RequireAbilitySlot(slot);
+            return _abilityNames[slot].text;
+        }
+
+        public Button AbilityPreviousButton(int slot)
+        {
+            RequireAbilitySlot(slot);
+            return _abilityPrevious[slot];
+        }
+
+        public Button AbilityNextButton(int slot)
+        {
+            RequireAbilitySlot(slot);
+            return _abilityNext[slot];
         }
 
         public void MoveFocus(int step)
@@ -141,7 +191,23 @@ namespace Shooter.Runtime
 
         public bool Cycle(int step)
         {
-            if (_busy || _focusRow >= ConfirmRow || !_selection.Cycle(_focusRow, step))
+            if (_busy || _focusRow >= ConfirmRow)
+            {
+                return false;
+            }
+
+            if (_focusRow >= _selection.SlotCount)
+            {
+                if (!CycleAbilityAt(_focusRow - _selection.SlotCount, step))
+                {
+                    return false;
+                }
+
+                FocusCurrent();
+                return true;
+            }
+
+            if (!_selection.Cycle(_focusRow, step))
             {
                 return false;
             }
@@ -150,6 +216,18 @@ namespace Shooter.Runtime
             RefreshRow(_focusRow);
             FocusCurrent();
             return true;
+        }
+
+        // 前後のボタンを押したときの入口。押したボタンがフォーカスを持つので、ここではフォーカスを動かさない。
+        public bool CycleAbility(int slot, int step)
+        {
+            if (_busy || slot < 0 || slot >= AbilitySlotCount)
+            {
+                return false;
+            }
+
+            SetFocusRow(_selection.SlotCount + slot, false);
+            return CycleAbilityAt(slot, step);
         }
 
         public bool Select(int slot, int option)
@@ -207,6 +285,13 @@ namespace Shooter.Runtime
                 {
                     row[option].SetEnabled(!busy && _selection.IsAvailableAt(slot, option));
                 }
+            }
+
+            for (var slot = 0; slot < _abilityRows.Count; slot++)
+            {
+                var canCycle = !busy && HasAbilityChoices(slot);
+                _abilityPrevious[slot].SetEnabled(canCycle);
+                _abilityNext[slot].SetEnabled(canCycle);
             }
 
             _confirm.SetEnabled(!busy);
@@ -306,6 +391,99 @@ namespace Shooter.Runtime
             return row;
         }
 
+        // 能力は候補が多くなりうるので、武器のように全部を並べず、前後のボタンで今の 1 つを替える。
+        private VisualElement BuildAbilityRow(int slot)
+        {
+            var row = new VisualElement();
+            row.AddToClassList(SlotClass);
+            row.AddToClassList(AbilitySlotClass);
+
+            var title = new Label(LoadoutFormat.AbilitySlotTitle(slot));
+            title.AddToClassList(SlotTitleClass);
+            row.Add(title);
+
+            var picker = new VisualElement();
+            picker.AddToClassList(AbilityPickerClass);
+            picker.RegisterCallback<PointerEnterEvent>(_ => SetFocusRow(_selection.SlotCount + slot, false));
+            row.Add(picker);
+
+            var previous = new Button(() => CycleAbility(slot, -1)) { text = LoadoutFormat.PreviousAbility };
+            previous.AddToClassList(AbilityStepClass);
+            picker.Add(previous);
+
+            var abilityName = new Label(string.Empty) { pickingMode = PickingMode.Ignore };
+            abilityName.AddToClassList(AbilityNameClass);
+            picker.Add(abilityName);
+
+            var next = new Button(() => CycleAbility(slot, 1)) { text = LoadoutFormat.NextAbility };
+            next.AddToClassList(AbilityStepClass);
+            picker.Add(next);
+
+            var canCycle = HasAbilityChoices(slot);
+            previous.SetEnabled(canCycle);
+            next.SetEnabled(canCycle);
+
+            _abilityRows.Add(row);
+            _abilityNames.Add(abilityName);
+            _abilityPrevious.Add(previous);
+            _abilityNext.Add(next);
+            return row;
+        }
+
+        private bool HasAbilityChoices(int slot)
+        {
+            // 先頭の「なし」しか無い枠は回しても変わらない
+            return _abilities.OptionsAt(slot).Count > 1;
+        }
+
+        private bool CycleAbilityAt(int slot, int step)
+        {
+            if (!_abilities.Cycle(slot, step))
+            {
+                return false;
+            }
+
+            ClearStatus();
+            RefreshAbilityRow(slot);
+            return true;
+        }
+
+        private void RefreshAbilityRow(int slot)
+        {
+            var id = _abilities.SelectedAt(slot);
+            var none = string.IsNullOrEmpty(id);
+            _abilityNames[slot].text = none ? LoadoutFormat.NoAbility : AbilityText(id);
+            _abilityNames[slot].EnableInClassList(NoAbilityClass, none);
+        }
+
+        private string AbilityText(string abilityId)
+        {
+            if (_abilityCatalog == null)
+            {
+                return abilityId;
+            }
+
+            try
+            {
+                return _abilityCatalog.TryFind(abilityId, out var definition)
+                    ? GameText.Resolve(DisplayNames.Of(definition))
+                    : abilityId;
+            }
+            catch (AbilityDefinitionException)
+            {
+                // 開いた後にカタログが壊れても、選んでいる能力は分かるよう Id を出す
+                return abilityId;
+            }
+        }
+
+        private void RequireAbilitySlot(int slot)
+        {
+            if (slot < 0 || slot >= AbilitySlotCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(slot), slot, "slot must be in [0, " + AbilitySlotCount + ")");
+            }
+        }
+
         private VisualElement BuildLock(string weaponId)
         {
             var lockRow = new VisualElement { pickingMode = PickingMode.Ignore };
@@ -369,6 +547,11 @@ namespace Shooter.Runtime
                 RefreshRow(slot);
             }
 
+            for (var slot = 0; slot < _abilityRows.Count; slot++)
+            {
+                RefreshAbilityRow(slot);
+            }
+
             RefreshFocusClasses();
             FocusCurrent();
         }
@@ -388,6 +571,11 @@ namespace Shooter.Runtime
             for (var i = 0; i < _rows.Count; i++)
             {
                 _rows[i].EnableInClassList(FocusedSlotClass, i == _focusRow);
+            }
+
+            for (var i = 0; i < _abilityRows.Count; i++)
+            {
+                _abilityRows[i].EnableInClassList(FocusedSlotClass, _selection.SlotCount + i == _focusRow);
             }
 
             _confirm.EnableInClassList(FocusedConfirmClass, _focusRow == ConfirmRow);
@@ -430,6 +618,13 @@ namespace Shooter.Runtime
             if (_focusRow >= ConfirmRow)
             {
                 return _confirm;
+            }
+
+            if (_focusRow >= _selection.SlotCount)
+            {
+                // 左右の入力はパネルの根で受けて回すので、どちらのボタンにフォーカスを置いても同じに動く
+                var slot = _focusRow - _selection.SlotCount;
+                return HasAbilityChoices(slot) ? _abilityNext[slot] : null;
             }
 
             var selected = _selection.SelectedIndexAt(_focusRow);

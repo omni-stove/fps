@@ -793,7 +793,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
-        public void TheLoadoutOpensWithTheAbilityCatalogButStillSavesOnlyTheWeapons()
+        public void TheLoadoutShowsTheAbilitySlotsAndSavesTheChosenAbilities()
         {
             var catalog = ScriptableObject.CreateInstance<AbilityCatalogAsset>();
             var beacon = ScriptableObject.CreateInstance<NullAbilityDefinition>();
@@ -819,13 +819,26 @@ namespace Shooter.Tests.EditMode
                     Assert.That(abilities, Is.Not.Null);
                     Assert.That(abilities.AbilityIds, Is.EqualTo(new[] { "beacon", "grapple" }), "the saved abilities are restored");
                     Assert.That(abilities.RestoredPreference, Is.True);
+                    var panel = _screen.LoadoutPanel;
+                    Assert.That(panel.AbilityCatalog, Is.SameAs(catalog));
+                    Assert.That(panel.AbilitySlotCount, Is.EqualTo(2));
+                    Assert.That(panel.AbilityName(0), Is.EqualTo("beacon"));
+                    Assert.That(panel.AbilityName(1), Is.EqualTo("grapple"));
 
-                    _screen.LoadoutPanel.Select(0, 1);
-                    Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
+                    panel.Select(0, 1);
+                    Assert.That(panel.CycleAbility(0, 1), Is.True);
+                    Assert.That(panel.AbilityName(0), Is.EqualTo("なし"), "grapple is taken by slot 2, so after beacon comes none");
+                    LogAssert.Expect(LogType.Log, new Regex(@"^\[Loadout\] saved .+ abilities=-,grapple$"));
+                    Assert.That(panel.Confirm(), Is.True);
 
                     var saved = _store.Load();
                     Assert.That(saved.WeaponIds, Is.EqualTo(new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }));
-                    Assert.That(saved.AbilityIds, Is.Null, "the abilities are not chosen on this screen yet");
+                    Assert.That(saved.AbilityIds, Is.EqualTo(new[] { AbilitySelection.None, "grapple" }));
+
+                    _screen.OpenLoadout();
+                    Assert.That(_screen.LoadoutPanel.Abilities.AbilityIds, Is.EqualTo(new[] { AbilitySelection.None, "grapple" }), "reopening shows the saved abilities");
+                    Assert.That(_screen.LoadoutPanel.AbilityName(0), Is.EqualTo("なし"));
+                    Assert.That(_screen.LoadoutPanel.AbilityName(1), Is.EqualTo("grapple"));
                 }
             }
             finally
@@ -849,14 +862,18 @@ namespace Shooter.Tests.EditMode
                     _screen.Catalog = assets.Catalog;
                     _screen.AbilityCatalog = catalog;
                     _screen.Bind(_root);
+                    _store.Save(new LoadoutChoice(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }, new[] { "beacon", AbilitySelection.None }));
                     LogAssert.Expect(LogType.Warning, new Regex(@"^\[Loadout\] the loadout screen does not offer abilities: ability catalog 'BrokenAbilities' has no abilities$"));
 
                     _screen.OpenLoadout();
 
                     Assert.That(_screen.IsLoadoutOpen, Is.True);
                     Assert.That(_screen.LoadoutPanel.Abilities, Is.Null);
+                    Assert.That(_screen.LoadoutPanel.AbilitySlotCount, Is.Zero);
+                    _screen.LoadoutPanel.Select(0, 1);
                     Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
-                    Assert.That(_store.Load().WeaponIds, Is.EqualTo(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+                    Assert.That(_store.Load().WeaponIds, Is.EqualTo(new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }));
+                    Assert.That(_store.Load().AbilityIds, Is.EqualTo(new[] { "beacon", AbilitySelection.None }), "the abilities chosen before are kept");
                 }
             }
             finally

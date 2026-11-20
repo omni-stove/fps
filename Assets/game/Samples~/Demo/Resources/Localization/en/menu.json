@@ -49,6 +49,10 @@
   "loadout.saved": "Loadout saved. It will be sent when you go online",
   "loadout.noOption": "No weapons to choose from",
   "loadout.slot": "Slot {0}",
+  "loadout.abilitySlot": "Ability {0}",
+  "loadout.abilityNone": "None",
+  "loadout.abilityPrevious": "<",
+  "loadout.abilityNext": ">",
   "loadout.rejected": "Not allowed",
   "loadout.rejectedWithReason": "Not allowed: {0}"
 }

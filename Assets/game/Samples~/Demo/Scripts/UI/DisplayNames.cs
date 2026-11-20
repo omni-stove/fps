@@ -58,14 +58,14 @@ namespace Shooter.Runtime
             return Of(tier.NameKey, tier.WeaponId);
         }
 
-        public static LocalizedText Of(DeployAbilityDefinition deploy)
+        public static LocalizedText Of(AbilityDefinition ability)
         {
-            if (deploy == null)
+            if (ability == null)
             {
-                throw new ArgumentNullException(nameof(deploy));
+                throw new ArgumentNullException(nameof(ability));
             }
 
-            return Of(deploy.DisplayNameKey, deploy.Id);
+            return Of(ability.DisplayNameKey, ability.Id);
         }
 
         public static LocalizedText Of(StreakSlot slot)

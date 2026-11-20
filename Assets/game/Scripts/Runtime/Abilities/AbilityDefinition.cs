@@ -51,6 +51,9 @@ namespace Shooter.Runtime
             set => _windupSeconds = value;
         }
 
+        // 名前の欄は種類ごとのアセットが既に持っている (_nameKey) ので、基底では欄を持たずに引き口だけを揃える。
+        public virtual string DisplayNameKey => string.Empty;
+
         public AbilitySpec ToSpec()
         {
             try

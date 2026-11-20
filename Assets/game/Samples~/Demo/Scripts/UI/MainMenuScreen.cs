@@ -599,7 +599,8 @@ namespace Shooter.Runtime
             }
 
             // 能力の一覧が壊れていても武器は選べるよう、能力を選ばせずに開く
-            if (!LoadoutSelectionAssets.TryCreateAbilities(loadout, EffectiveAbilityCatalog, saved?.AbilityIds, out var abilities, out error))
+            var abilityCatalog = EffectiveAbilityCatalog;
+            if (!LoadoutSelectionAssets.TryCreateAbilities(loadout, abilityCatalog, saved?.AbilityIds, out var abilities, out error))
             {
                 Debug.LogWarning(LoadoutPreferenceStore.LogTag + " the loadout screen does not offer abilities: " + error, this);
             }
@@ -607,7 +608,7 @@ namespace Shooter.Runtime
             ShowNotice(null);
             SetDisplayed(_loadoutSlot, true);
             SetButtonsEnabled(false);
-            _loadoutPanel = new LoadoutSelectPanel(_loadoutSlot, selection, progression?.Ledger, abilities);
+            _loadoutPanel = new LoadoutSelectPanel(_loadoutSlot, selection, progression?.Ledger, abilities, abilityCatalog);
             _loadoutPanel.Confirmed += SaveLoadout;
             _loadoutPanel.Cancelled += CloseLoadout;
         }
@@ -888,10 +889,12 @@ namespace Shooter.Runtime
         private void SaveLoadout(LoadoutChoice choice)
         {
             var weaponIds = choice.WeaponIds;
+
+            // 能力のカタログが壊れて能力の枠を出せなかったときに、前に選んだ能力まで既定に戻さないよう、保存してあるものを残す
+            var abilityIds = choice.AbilityIds ?? _loadoutStore.Load()?.AbilityIds;
             try
             {
-                // 能力はまだ装備画面で選ばせないので、武器だけを保存する
-                _loadoutStore.Save(new LoadoutChoice(weaponIds));
+                _loadoutStore.Save(new LoadoutChoice(weaponIds, abilityIds));
             }
             catch (ArgumentException e)
             {
@@ -901,9 +904,24 @@ namespace Shooter.Runtime
                 return;
             }
 
-            Debug.Log(LoadoutPreferenceStore.LogTag + " saved " + string.Join(",", weaponIds), this);
+            Debug.Log(
+                LoadoutPreferenceStore.LogTag + " saved " + string.Join(",", weaponIds)
+                + (abilityIds != null ? " abilities=" + SavedAbilitiesText(abilityIds) : string.Empty),
+                this);
             CloseLoadout();
             ShowNotice(LoadoutFormat.Saved);
+        }
+
+        // 「なし」は空の Id なので、そのまま並べると枠の数が読めなくなる
+        private static string SavedAbilitiesText(IReadOnlyList<string> abilityIds)
+        {
+            var texts = new string[abilityIds.Count];
+            for (var i = 0; i < texts.Length; i++)
+            {
+                texts[i] = string.IsNullOrEmpty(abilityIds[i]) ? "-" : abilityIds[i];
+            }
+
+            return string.Join(",", texts);
         }
 
         public void OpenCampaign()

@@ -11,6 +11,9 @@ namespace Shooter.Runtime
     {
         public const string UxmlName = "loadout-select";
 
+        [SerializeField, Tooltip("Where the names of the offered abilities are looked up. Empty uses the GameContent one; abilities missing from it show their id")]
+        private AbilityCatalogAsset _abilityCatalog;
+
         private LoadoutSelection _selection;
         private AbilitySelection _abilities;
         private LoadoutSelectPanel _panel;
@@ -42,6 +45,15 @@ namespace Shooter.Runtime
         public LoadoutSelection Selection => _selection;
 
         public AbilitySelection Abilities => _abilities;
+
+        // 候補を作る NetV2LoadoutChooser も GameContent のカタログを引くので、既定では同じものから名前を引く。
+        public AbilityCatalogAsset AbilityCatalog
+        {
+            get => _abilityCatalog;
+            set => _abilityCatalog = value;
+        }
+
+        public AbilityCatalogAsset EffectiveAbilityCatalog => GameContent.Pick(_abilityCatalog, c => c.AbilityCatalog);
 
         public LoadoutSelectPanel Panel => _panel;
 
@@ -145,7 +157,7 @@ namespace Shooter.Runtime
             }
 
             element.style.display = DisplayStyle.Flex;
-            _panel = new LoadoutSelectPanel(element, _selection, null, _abilities);
+            _panel = new LoadoutSelectPanel(element, _selection, null, _abilities, _abilities != null ? EffectiveAbilityCatalog : null);
             _panel.Confirmed += HandleConfirmed;
             _panel.Cancelled += HandleCancelled;
             _panel.ShowStatus(_status, _statusIsError);

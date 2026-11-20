@@ -21,6 +21,9 @@ namespace Shooter.Server.Tests
 
         private readonly List<TestClient> _clients = new List<TestClient>();
         private List<string> _calls;
+        // An attribute argument must be a constant, and a raw U+202E in the source is invisible.
+        private static readonly string[] BidiOverrideName = { "A" + (char)0x202E + "ce" };
+
         private StringWriter _log;
         private StringWriter _json;
         private UdpMatchTransport _transport;
@@ -129,7 +132,7 @@ namespace Shooter.Server.Tests
         }
 
         [TestCase("A\nce")]
-        [TestCase("A" + (char)0x202E + "ce")]
+        [TestCaseSource(nameof(BidiOverrideName))]
         [TestCase("seventeen_chars__")]
         public void ARefusedDisplayNameStillJoinsWithoutAName(string name)
         {

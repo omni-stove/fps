@@ -146,8 +146,18 @@ make server-dotnet ARGS="-rules FreeForAll"
   種類ごとの `maxCharges`・`rechargeSeconds`・`cooldownSeconds` (Unity の能力のアセットの回数・戻り・間隔と同じ値にする) で人ごとに置ける回数と間隔を数え、
   使い切ると `[Deploy] ... refused reason=NoCharges charges=0/<回数> wait=<秒>`、間隔の内なら `reason=CoolingDown` で断る。回数は出現し直すと満ちる。
   サーバー側のアンチチートの調整値 (見えない相手を送らない `conceal`・違反の累積 `violations`・統計の検知 `stats`・通報の証拠 `evidence`) は
-  `server-data/tuning/anticheat.json` から読み、起動の `[Server] combat tuning ... anticheat=<ファイル>` に出す。どれも既定の `enabled` は `false`。
-  `evidence` を有効にすると、`--report-file` と一緒に起動したときだけ通報の証拠を残す ([通報・統計・テレメトリ](#通報統計テレメトリ))。
+  `server-data/tuning/anticheat.json` から読み、起動の `[Server] combat tuning ... anticheat=<ファイル>` に出す。どれも既定は `enabled` が `false` で、試合の挙動を変えない。
+  - `violations.enabled` を `true` にすると、拒否された射撃と予算を超えた入力を人ごとに直近 `windowSeconds` 秒で数え、
+    `shotRejectionLimit`・`overBudgetLimit` を超えた人を EAC と同じ理由 (`shooter:rejected:anti-cheat`) で切る。
+    切るときに `[AntiCheat] violations kicking id=<id>: reason=ShotRejected|InputOverBudget count=<数> limit=<上限> window=<秒>s` と出す。
+    回避・乗り越えの最中に撃って断られた分 (`Dodging`・`Vaulting`) と Bot は数えず、抜けた人の数は忘れる。
+    起動のときに `[AntiCheat] violations on window=...` か `[AntiCheat] violations off ...` と出す。
+  - `stats.enabled` を `true` にすると、人 (Bot は除く) ごとに `stats.windowSeconds` の時間窓で射撃と視線を数え、閾値を超えた指標を
+    `{"type":"cheat-stats","playerId":"1","productUserId":"...","metric":"headshotRatio","value":"0.9","threshold":"0.6","windowSeconds":"120","samples":"12"}` のような 1 行の JSON でログに出す (キックはしない)。
+    指標は `headshotRatio` (命中のうち頭の率が `headshotRatio` より高い)・`reactionMs` (相手が見え始めてから当てるまでの平均が `minReactionMs` より短い)・
+    `snapDegreesPerTick` (1 tick の横の向きの差が `snapDegreesPerTick` より大きい)・`wallTrackSeconds` (見えない相手へ `wallTrackSeconds` より長く向き続けた) の 4 つで、
+    率と平均は時間窓の中の数が `minSamples` に届くまで比べない。同じ人の同じ指標は時間窓ごとに 1 回だけ出し、起動のときに `[CheatStats] collecting ...` と閾値を出す。
+  - `evidence.enabled` を `true` にすると、`--report-file` と一緒に起動したときだけ通報の証拠を残す ([通報・統計・テレメトリ](#通報統計テレメトリ))。
 - 人ごとに置ける種類 (能力) は 2 枠で、選べる候補はルールの JSON の `loadout.abilities` に書いた `deployables.json` の Id にする
   (例: `"loadout": { ..., "abilities": ["deploy-beacon"] }`)。項目が無ければ `deployables.json` の全部 (置けない `Drone` を除く) が候補になり、
   空の並び (`[]`) なら何も置かせない。起動のときに `[Deploy] net abilities=<候補> default=<既定> from=rules|catalog` と出す。
@@ -322,6 +332,8 @@ docker run --rm --env-file eos.env -p 7777:7777/udp shooter-server:local -regist
   向きと体の位置 (`look`)・受け入れた射撃 (`shot`)・命中 (`hit`) を持ち、通報を残すたびに相手の分を通報のファイルと同じフォルダの
   `<id>.evidence.jsonl` に 1 件 1 行で書く。`ago` は通報からさかのぼった秒。間引いた通報・断った通報では書かず、抜けた人の記録は捨てる。
   証拠が書けなくても通報の行は残し、`[Evidence] could not write the evidence ...` をログに出す。
+  1 人が全員を通報し直してファイルを増やし続けないよう、証拠のファイルはサーバー全体で直近 1 分に `evidence.maxFilesPerMinute` (既定 10) 個までにする。
+  超えた分は通報の行だけを残し、`[Evidence] skipped the evidence for target=<相手>: already <数> files in the last minute ...` をログに出す。
 - 統計のボードは `server-data/tuning/leaderboards.json` (クライアントの `Tuning/leaderboards.json` と同じ形、無ければ既定のボード) から読む。クライアントと同じ中身にしておく。
 - 統計は EOS の ProductUserId で送るので、UDP でつないで ProductUserId を名乗らない人の数は送らない。
 - docker では置き場所をボリュームにする (`-v ./records:/records` と `--report-file /records/reports.jsonl --telemetry-dir /records`)。

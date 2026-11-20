@@ -1,7 +1,9 @@
 {
     "name": "Shooter.Core",
     "rootNamespace": "Shooter.Core",
-    "references": [],
+    "references": [
+        "Shooter.Core.World"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,

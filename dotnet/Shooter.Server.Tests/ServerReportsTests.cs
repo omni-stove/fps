@@ -13,6 +13,13 @@ namespace Shooter.Server.Tests
     {
         private const string _alice = "0123456789abcdef0123456789abcdef";
         private const string _bob = "fedcba9876543210fedcba9876543210";
+        private static readonly string[] _firstEvidenceFile = { "report-1.evidence.jsonl" };
+        private static readonly string[] _limitedEvidenceFiles = { "report-1.evidence.jsonl", "report-2.evidence.jsonl" };
+        private static readonly string[] _afterAMinuteEvidenceFiles =
+        {
+            "report-1.evidence.jsonl", "report-2.evidence.jsonl", "report-4.evidence.jsonl",
+        };
+
         private static readonly DateTime _time = new DateTime(2026, 11, 15, 9, 0, 0, DateTimeKind.Utc);
 
         private TempDirectory _folder;
@@ -314,8 +321,34 @@ namespace Shooter.Server.Tests
             Report(1, 2, ReportReason.Cheating);
 
             Assert.That(Lines(), Has.Length.EqualTo(1));
-            Assert.That(EvidenceFiles(), Is.EqualTo(new[] { "report-1.evidence.jsonl" }));
+            Assert.That(EvidenceFiles(), Is.EqualTo(_firstEvidenceFile));
             Assert.That(_ids, Is.EqualTo(1), "a held-back report takes no id");
+        }
+
+        [Test]
+        public void EvidenceStopsAtTheFilesPerMinuteAndTheReportsAreStillKept()
+        {
+            var signals = new ServerCheatSignals();
+            Start(0d, StartEvidence(signals, true, 2));
+            for (var id = 1; id <= 4; id++)
+            {
+                Join(id);
+            }
+
+            Report(1, 2, ReportReason.Cheating);
+            Report(1, 3, ReportReason.Cheating);
+            Report(1, 4, ReportReason.Cheating);
+
+            Assert.That(Lines(), Has.Length.EqualTo(3));
+            Assert.That(EvidenceFiles(), Is.EqualTo(_limitedEvidenceFiles));
+            Assert.That(_log.ToString(), Does.Contain(
+                "[Evidence] skipped the evidence for target=4: already 2 files in the last minute (evidence.maxFilesPerMinute); the report is kept without it"));
+
+            Advance(60f);
+            Report(1, 4, ReportReason.Cheating);
+
+            Assert.That(Lines(), Has.Length.EqualTo(4));
+            Assert.That(EvidenceFiles(), Is.EqualTo(_afterAMinuteEvidenceFiles));
         }
 
         [Test]
@@ -440,9 +473,10 @@ namespace Shooter.Server.Tests
             Assert.That(_log.ToString(), Does.Contain("[Report] writing reports to " + FilePath));
         }
 
-        private ServerReportEvidence StartEvidence(ServerCheatSignals signals, bool enabled)
+        private ServerReportEvidence StartEvidence(
+            ServerCheatSignals signals, bool enabled, int maxFilesPerMinute = AntiCheatTuning.EvidenceSettings.DefaultMaxFilesPerMinute)
         {
-            _evidence = new ServerReportEvidence(signals, new AntiCheatTuning.EvidenceSettings(enabled, 30f));
+            _evidence = new ServerReportEvidence(signals, new AntiCheatTuning.EvidenceSettings(enabled, 30f, maxFilesPerMinute));
             _evidence.Start(_context);
             return _evidence;
         }

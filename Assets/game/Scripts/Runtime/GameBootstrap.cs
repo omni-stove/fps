@@ -105,6 +105,7 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("このシーンのプレイヤーの泳ぎと壁走りの調整値 (traversal の JSON)。空なら入口 (GameContent) か Resources の traversal.json。JSON に書いていない項目はキットの既定の値")]
         private TextAsset _traversalTuning;
 
+        private LoadoutPreferenceStore _loadoutPreferences = new LoadoutPreferenceStore();
         private BootstrapWorld _world;
         private LocalPlayerSignal _publishedPlayer;
         private HudModel _publishedHudModel;
@@ -234,6 +235,16 @@ namespace Shooter.Runtime
             }
         }
 
+        // 装備画面で保存した選択の読み先。null なら保存した選択を読まず、シーンとロードアウトの並びのまま組み立てる
+        public LoadoutPreferenceStore LoadoutPreferences
+        {
+            get => _loadoutPreferences;
+            set => _loadoutPreferences = value;
+        }
+
+        // 組み立てたときにプレイヤーへ渡した武器と能力。組み立てる前は null
+        public AppliedLoadout PlayerLoadout { get; private set; }
+
         public GameRulesDefinition RulesDefinition
         {
             get => _rules;
@@ -336,6 +347,7 @@ namespace Shooter.Runtime
 
             var rules = ResolveRules(out var configured);
             var tuning = ResolvePlayerTuning(configured ? rules : null);
+            var playerLoadout = ResolvePlayerLoadout();
 
             GameObject floor = null;
             GameObject player = null;
@@ -345,7 +357,7 @@ namespace Shooter.Runtime
             {
                 floor = _createFloor ? CreateFloor(_floorPrefab) : null;
                 player = CreatePlayer(
-                    EffectiveWeaponDefinitions, EffectiveAbilityDefinitions, rules, EffectiveSwitchSeconds, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
+                    playerLoadout.Weapons, playerLoadout.Abilities, rules, EffectiveSwitchSeconds, tuning, out var controller, out var rig, out var camera, out var look, out var mover,
                     out var weapon, out var ads, out var playerDamageable, out var regen, out var actionReader, out var grenades, out var deathCamera,
                     out var abilities);
                 ApplyPlayerVisuals(player, grenades, MockBodyPrefabs, _grenadePrefab);
@@ -370,10 +382,45 @@ namespace Shooter.Runtime
                 throw;
             }
 
+            PlayerLoadout = playerLoadout;
             PublishSignals(_world);
             Debug.Log(ReadyLog, this);
             NotifyBuilt(_world);
             return _world;
+        }
+
+        // 能力をシーンに直接つないだシーン (射撃場など) は、そのシーンで試させる並びなので、保存した選択で置き換えない
+        private AppliedLoadout ResolvePlayerLoadout()
+        {
+            var weapons = EffectiveWeaponDefinitions;
+            var abilities = EffectiveAbilityDefinitions;
+            if (AbilityDefinitions.Count > 0 || _loadoutPreferences == null)
+            {
+                return new AppliedLoadout(weapons, abilities, false, false);
+            }
+
+            return LoadoutPreferenceApplier.Apply(
+                LoadSavedLoadout(),
+                EffectiveLoadout,
+                GameContent.Pick(c => c.WeaponCatalog),
+                GameContent.Pick(c => c.AbilityCatalog),
+                weapons,
+                abilities,
+                this);
+        }
+
+        // 読めない保存で試合を始められなくしないよう、保存が無いときと同じく既定の並びにする
+        private LoadoutChoice LoadSavedLoadout()
+        {
+            try
+            {
+                return _loadoutPreferences.Load();
+            }
+            catch (Exception e) when (e is ArgumentException || e is InvalidOperationException)
+            {
+                Debug.LogWarning(LoadoutPreferenceLog.NotApplied(e.Message), this);
+                return null;
+            }
         }
 
         private void OnDestroy()

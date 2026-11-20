@@ -17,10 +17,12 @@ namespace Shooter.Server
         public const int MaxRecordsPerSecond = TickClock.DefaultTickRate * 4;
 
         private const int _initialCapacity = 64;
+        private const double _filesWindowSeconds = 60d;
 
         private readonly ServerCheatSignals _signals;
         private readonly Dictionary<int, Ring> _byPlayer = new Dictionary<int, Ring>();
         private readonly int _maxRecords;
+        private readonly Queue<double> _describedAt = new Queue<double>();
         private ServerContext _context;
         private bool _listening;
         private double _now;
@@ -100,6 +102,7 @@ namespace Shooter.Server
             }
 
             _byPlayer.Clear();
+            _describedAt.Clear();
         }
 
         public string Describe(int targetId)
@@ -108,6 +111,19 @@ namespace Shooter.Server
             {
                 return null;
             }
+
+            while (_describedAt.Count > 0 && _now - _describedAt.Peek() >= _filesWindowSeconds)
+            {
+                _describedAt.Dequeue();
+            }
+
+            if (_describedAt.Count >= Settings.MaxFilesPerMinute)
+            {
+                _context.Log.WriteLine(ServerReportEvidenceLog.Limited(targetId, Settings.MaxFilesPerMinute));
+                return null;
+            }
+
+            _describedAt.Enqueue(_now);
 
             if (!_byPlayer.TryGetValue(targetId, out var ring))
             {

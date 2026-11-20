@@ -44,7 +44,7 @@ namespace Shooter.Server.Tests
         public void WithoutRegisterLobbyAddsTheMatchAndCombatModulesAndSnapshotsLast()
         {
             Assert.That(Create(_library.Path), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(13));
+            Assert.That(_modules, Has.Count.EqualTo(14));
             Assert.That(_modules[0], Is.InstanceOf<ServerAntiCheat>());
             Assert.That(((ServerAntiCheat)_modules[0]).Enabled, Is.False);
             Assert.That(_modules[1], Is.InstanceOf<ServerMovement>());
@@ -58,15 +58,18 @@ namespace Shooter.Server.Tests
             Assert.That(_modules[9], Is.InstanceOf<ServerStreaks>());
             Assert.That(_modules[10], Is.InstanceOf<ServerDeployables>());
             Assert.That(_modules[11], Is.InstanceOf<ServerKillCam>());
-            Assert.That(_modules[12], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[12], Is.InstanceOf<ServerViolations>());
+            Assert.That(((ServerViolations)_modules[12]).Enabled, Is.False);
+            Assert.That(_modules[13], Is.InstanceOf<ServerSnapshots>());
         }
 
         [Test]
-        public void TheCombatAndMovementShareOneCheatSignalsAndTheSnapshotsTakeTheAntiCheatTuning()
+        public void TheCombatAndMovementShareOneCheatSignalsAndTheSnapshotsAndViolationsTakeTheAntiCheatTuning()
         {
+            var violations = new AntiCheatTuning.ViolationSettings(true, 10f, 5, 7);
             var antiCheat = new AntiCheatTuning(
                 new AntiCheatTuning.ConcealSettings(false, 90f, 1f, 0.25f),
-                AntiCheatTuning.ViolationSettings.Default,
+                violations,
                 AntiCheatTuning.StatsSettings.Default,
                 AntiCheatTuning.EvidenceSettings.Default);
             var tuning = new ServerCombatTuning(antiCheat: antiCheat);
@@ -82,6 +85,32 @@ namespace Shooter.Server.Tests
             Assert.That(movement.CheatSignals, Is.Not.Null);
             Assert.That(combat.CheatSignals, Is.SameAs(movement.CheatSignals));
             Assert.That(_modules.OfType<ServerSnapshots>().Single().AntiCheat, Is.SameAs(antiCheat));
+            Assert.That(_modules.OfType<ServerViolations>().Single().Settings, Is.SameAs(violations));
+            Assert.That(_modules.OfType<ServerViolations>().Single().CheatSignals, Is.SameAs(movement.CheatSignals));
+            Assert.That(_modules.OfType<ServerCheatStats>(), Is.Empty, "the stats are off in this tuning");
+        }
+
+        [Test]
+        public void WithTheStatsOnTheCheatStatsComeRightAfterTheSnapshots()
+        {
+            var stats = new AntiCheatTuning.StatsSettings(true, 60f, 0.5f, 100f, 40f, 2f, 5);
+            var antiCheat = new AntiCheatTuning(
+                AntiCheatTuning.ConcealSettings.Default,
+                AntiCheatTuning.ViolationSettings.Default,
+                stats,
+                AntiCheatTuning.EvidenceSettings.Default);
+            var tuning = new ServerCombatTuning(antiCheat: antiCheat);
+            Assert.That(ServerLaunch.TryParse(Array.Empty<string>(), _ => null, out var launch, out var parseError), Is.True, parseError);
+
+            Assert.That(
+                ServerModules.Create(launch, Runtime(), _modules, _library.Path, ServerMotorSettings.Default, tuning, null, out var error),
+                Is.True,
+                error);
+
+            Assert.That(_modules, Has.Count.EqualTo(15));
+            Assert.That(_modules[13], Is.InstanceOf<ServerSnapshots>());
+            Assert.That(_modules[14], Is.InstanceOf<ServerCheatStats>());
+            Assert.That(((ServerCheatStats)_modules[14]).Stats, Is.SameAs(stats));
         }
 
         [Test]
@@ -284,9 +313,9 @@ namespace Shooter.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777"), Is.Null);
-            Assert.That(_modules, Has.Count.EqualTo(14));
-            Assert.That(_modules[13], Is.InstanceOf<ServerLobbyModule>());
-            Assert.That(((ServerLobbyModule)_modules[13]).Region, Is.Null);
+            Assert.That(_modules, Has.Count.EqualTo(15));
+            Assert.That(_modules[14], Is.InstanceOf<ServerLobbyModule>());
+            Assert.That(((ServerLobbyModule)_modules[14]).Region, Is.Null);
         }
 
         [Test]
@@ -300,7 +329,7 @@ namespace Shooter.Server.Tests
             WriteLocalFile();
 
             Assert.That(Create(AppContext.BaseDirectory, "-register-lobby", "203.0.113.10:7777", "--region", "europe"), Is.Null);
-            Assert.That(((ServerLobbyModule)_modules[13]).Region, Is.EqualTo("europe"));
+            Assert.That(((ServerLobbyModule)_modules[14]).Region, Is.EqualTo("europe"));
         }
 
         [Test]

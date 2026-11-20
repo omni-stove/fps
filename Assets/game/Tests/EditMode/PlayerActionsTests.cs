@@ -90,8 +90,12 @@ namespace Shooter.Tests.EditMode
             PlayerActions.Register(new LateInstaller());
             PlayerActions.Register(new EarlyInstaller());
 
-            var installers = PlayerActions.Installers;
-            Assert.That(installers.First(), Is.InstanceOf<EarlyInstaller>());
+            // 組み込みより前に付く別のアセンブリの installer (Vision など) も並ぶので、先頭でなく最初の組み込みの直前にあることを見る。
+            var installers = PlayerActions.Installers.ToList();
+            var early = installers.FindIndex(i => i is EarlyInstaller);
+            var cover = installers.FindIndex(i => i is CoverActionInstaller);
+            Assert.That(early, Is.GreaterThanOrEqualTo(0));
+            Assert.That(early, Is.EqualTo(cover - 1));
             Assert.That(installers.Last(), Is.InstanceOf<LateInstaller>());
 
             LogAssert.Expect(LogType.Log, "[Actions] cover=Off blindFire=Off activeReload=Off downed=Off dodge=Off vault=Off" + NewActionsOff);

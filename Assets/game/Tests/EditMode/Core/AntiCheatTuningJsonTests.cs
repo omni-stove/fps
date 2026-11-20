@@ -12,10 +12,10 @@ namespace Shooter.Core.Tests
 
         private static readonly string[] _expectedStatsItemNames =
         {
-            "enabled", "windowSeconds", "headshotRatio", "minReactionMs", "snapDegreesPerTick", "wallTrackSeconds",
+            "enabled", "windowSeconds", "headshotRatio", "minReactionMs", "snapDegreesPerTick", "wallTrackSeconds", "minSamples",
         };
 
-        private static readonly string[] _expectedEvidenceItemNames = { "enabled", "seconds" };
+        private static readonly string[] _expectedEvidenceItemNames = { "enabled", "seconds", "maxFilesPerMinute" };
 
         [Test]
         public void TheItemNamesFollowTheSettingsArguments()
@@ -54,7 +54,9 @@ namespace Shooter.Core.Tests
             Assert.That(tuning.Stats.MinReactionMs, Is.EqualTo(120f));
             Assert.That(tuning.Stats.SnapDegreesPerTick, Is.EqualTo(45f));
             Assert.That(tuning.Stats.WallTrackSeconds, Is.EqualTo(1.5f));
+            Assert.That(tuning.Stats.MinSamples, Is.EqualTo(10));
             Assert.That(tuning.Evidence.Seconds, Is.EqualTo(30f));
+            Assert.That(tuning.Evidence.MaxFilesPerMinute, Is.EqualTo(10));
         }
 
         [Test]
@@ -64,8 +66,8 @@ namespace Shooter.Core.Tests
                 "{\"conceal\": {\"enabled\": true, \"maxDistance\": 80, \"marginDistance\": 2, \"marginSeconds\": 0.25},"
                 + " \"violations\": {\"enabled\": true, \"windowSeconds\": 10, \"shotRejectionLimit\": 5, \"overBudgetLimit\": 7},"
                 + " \"stats\": {\"enabled\": true, \"windowSeconds\": 60, \"headshotRatio\": 0.8, \"minReactionMs\": 90,"
-                + " \"snapDegreesPerTick\": 30, \"wallTrackSeconds\": 2},"
-                + " \"evidence\": {\"enabled\": true, \"seconds\": 45}}",
+                + " \"snapDegreesPerTick\": 30, \"wallTrackSeconds\": 2, \"minSamples\": 4},"
+                + " \"evidence\": {\"enabled\": true, \"seconds\": 45, \"maxFilesPerMinute\": 3}}",
                 "anticheat.json");
 
             Assert.That(tuning.Conceal.Enabled, Is.True);
@@ -82,8 +84,10 @@ namespace Shooter.Core.Tests
             Assert.That(tuning.Stats.MinReactionMs, Is.EqualTo(90f));
             Assert.That(tuning.Stats.SnapDegreesPerTick, Is.EqualTo(30f));
             Assert.That(tuning.Stats.WallTrackSeconds, Is.EqualTo(2f));
+            Assert.That(tuning.Stats.MinSamples, Is.EqualTo(4));
             Assert.That(tuning.Evidence.Enabled, Is.True);
             Assert.That(tuning.Evidence.Seconds, Is.EqualTo(45f));
+            Assert.That(tuning.Evidence.MaxFilesPerMinute, Is.EqualTo(3));
         }
 
         [Test]
@@ -115,8 +119,10 @@ namespace Shooter.Core.Tests
             Assert.That(tuning.Stats.Enabled, Is.False);
             Assert.That(tuning.Stats.HeadshotRatio, Is.EqualTo(AntiCheatTuning.StatsSettings.DefaultHeadshotRatio));
             Assert.That(tuning.Stats.MinReactionMs, Is.EqualTo(AntiCheatTuning.StatsSettings.DefaultMinReactionMs));
+            Assert.That(tuning.Stats.MinSamples, Is.EqualTo(AntiCheatTuning.StatsSettings.DefaultMinSamples));
             Assert.That(tuning.Evidence.Enabled, Is.False);
             Assert.That(tuning.Evidence.Seconds, Is.EqualTo(10f));
+            Assert.That(tuning.Evidence.MaxFilesPerMinute, Is.EqualTo(10));
         }
 
         [Test]
@@ -135,7 +141,9 @@ namespace Shooter.Core.Tests
             Assert.That(ItemOf("{\"stats\": {\"headshotRatio\": 1.5}}"), Is.EqualTo("stats.headshotRatio"));
             Assert.That(ItemOf("{\"stats\": {\"snapDegreesPerTick\": 181}}"), Is.EqualTo("stats.snapDegreesPerTick"));
             Assert.That(ItemOf("{\"stats\": {\"wallTrackSeconds\": 0}}"), Is.EqualTo("stats.wallTrackSeconds"));
+            Assert.That(ItemOf("{\"stats\": {\"minSamples\": 0}}"), Is.EqualTo("stats.minSamples"));
             Assert.That(ItemOf("{\"evidence\": {\"seconds\": -3}}"), Is.EqualTo("evidence.seconds"));
+            Assert.That(ItemOf("{\"evidence\": {\"maxFilesPerMinute\": 0}}"), Is.EqualTo("evidence.maxFilesPerMinute"));
             Assert.That(ItemOf("{\"evidence\": {\"enabled\": 1}}"), Is.EqualTo("evidence.enabled"));
             Assert.That(ItemOf("{\"stats\": {\"windowSeconds\": \"long\"}}"), Is.EqualTo("stats.windowSeconds"));
             Assert.That(ItemOf("{\"conceal\": {\"enabled\": null}}"), Is.EqualTo("conceal.enabled"));

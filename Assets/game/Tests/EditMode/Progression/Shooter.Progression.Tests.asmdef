@@ -6,6 +6,7 @@
         "Shooter.Core",
         "Shooter.Progression.Core",
         "Shooter.Runtime",
+        "Shooter.Services",
         "Shooter.Progression",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"

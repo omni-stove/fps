@@ -3,6 +3,7 @@
     "rootNamespace": "Shooter.Runtime",
     "references": [
         "Shooter.Core",
+        "Shooter.Core.World",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],

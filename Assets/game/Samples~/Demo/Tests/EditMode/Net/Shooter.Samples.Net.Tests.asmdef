@@ -3,6 +3,8 @@
     "rootNamespace": "Shooter.Net.Tests",
     "references": [
         "Shooter.Core",
+        "Shooter.Core.World",
+        "Shooter.Core.Navigation",
         "Shooter.Aircraft.Core",
         "Shooter.Aircraft",
         "Shooter.Campaign.Core",
@@ -15,6 +17,7 @@
         "Shooter.Samples.Editor",
         "Shooter.Samples.Net.Editor",
         "Shooter.Runtime",
+        "Shooter.Vision",
         "Shooter.Runtime.UI",
         "Shooter.Protocol",
         "Shooter.NetV2",

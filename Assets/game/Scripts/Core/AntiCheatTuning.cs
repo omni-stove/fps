@@ -94,6 +94,7 @@ namespace Shooter.Core
             public const float DefaultMinReactionMs = 120f;
             public const float DefaultSnapDegreesPerTick = 45f;
             public const float DefaultWallTrackSeconds = 1.5f;
+            public const int DefaultMinSamples = 10;
 
             // 1 tick の向きの差は短い回り方で測るので 180 度を超えず、それより大きい閾値は決して当たらない。
             public const float MaxSnapDegreesPerTick = 180f;
@@ -104,7 +105,8 @@ namespace Shooter.Core
                 DefaultHeadshotRatio,
                 DefaultMinReactionMs,
                 DefaultSnapDegreesPerTick,
-                DefaultWallTrackSeconds);
+                DefaultWallTrackSeconds,
+                DefaultMinSamples);
 
             public StatsSettings(
                 bool enabled,
@@ -112,7 +114,8 @@ namespace Shooter.Core
                 float headshotRatio,
                 float minReactionMs,
                 float snapDegreesPerTick,
-                float wallTrackSeconds)
+                float wallTrackSeconds,
+                int minSamples)
             {
                 RequirePositive(windowSeconds, nameof(windowSeconds));
                 if (!(headshotRatio > 0f && headshotRatio <= 1f))
@@ -128,12 +131,14 @@ namespace Shooter.Core
                 }
 
                 RequirePositive(wallTrackSeconds, nameof(wallTrackSeconds));
+                RequireAtLeastOne(minSamples, nameof(minSamples));
                 Enabled = enabled;
                 WindowSeconds = windowSeconds;
                 HeadshotRatio = headshotRatio;
                 MinReactionMs = minReactionMs;
                 SnapDegreesPerTick = snapDegreesPerTick;
                 WallTrackSeconds = wallTrackSeconds;
+                MinSamples = minSamples;
             }
 
             public bool Enabled { get; }
@@ -148,25 +153,36 @@ namespace Shooter.Core
             public float SnapDegreesPerTick { get; }
 
             public float WallTrackSeconds { get; }
+
+            // ヘッドショット率と反応時間の平均は、時間窓の中の命中がこの数に届くまで比べない。
+            // 最初の 1 発が頭に当たっただけで率が 1 になり、閾値を超えてしまうため。
+            public int MinSamples { get; }
         }
 
         public sealed class EvidenceSettings
         {
             public const bool DefaultEnabled = false;
             public const float DefaultSeconds = 30f;
+            public const int DefaultMaxFilesPerMinute = 10;
 
-            public static readonly EvidenceSettings Default = new EvidenceSettings(DefaultEnabled, DefaultSeconds);
+            public static readonly EvidenceSettings Default = new EvidenceSettings(DefaultEnabled, DefaultSeconds, DefaultMaxFilesPerMinute);
 
-            public EvidenceSettings(bool enabled, float seconds)
+            public EvidenceSettings(bool enabled, float seconds, int maxFilesPerMinute = DefaultMaxFilesPerMinute)
             {
                 RequirePositive(seconds, nameof(seconds));
+                RequireAtLeastOne(maxFilesPerMinute, nameof(maxFilesPerMinute));
                 Enabled = enabled;
                 Seconds = seconds;
+                MaxFilesPerMinute = maxFilesPerMinute;
             }
 
             public bool Enabled { get; }
 
             public float Seconds { get; }
+
+            // 通報の間引きは (通報した人, 相手) の組ごとで、抜けて入り直すと消える。
+            // 1 人が全員を通報し直すだけで証拠のファイルと整形が際限なく増えないよう、サーバー全体の 1 分あたりの数を絞る
+            public int MaxFilesPerMinute { get; }
         }
 
         private static void RequirePositive(float value, string name)

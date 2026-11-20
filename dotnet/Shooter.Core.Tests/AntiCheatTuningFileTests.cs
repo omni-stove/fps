@@ -27,8 +27,10 @@ namespace Shooter.Core.Tests
             Assert.That(tuning.Stats.MinReactionMs, Is.EqualTo(defaults.Stats.MinReactionMs));
             Assert.That(tuning.Stats.SnapDegreesPerTick, Is.EqualTo(defaults.Stats.SnapDegreesPerTick));
             Assert.That(tuning.Stats.WallTrackSeconds, Is.EqualTo(defaults.Stats.WallTrackSeconds));
+            Assert.That(tuning.Stats.MinSamples, Is.EqualTo(defaults.Stats.MinSamples));
             Assert.That(tuning.Evidence.Enabled, Is.False);
             Assert.That(tuning.Evidence.Seconds, Is.EqualTo(defaults.Evidence.Seconds));
+            Assert.That(tuning.Evidence.MaxFilesPerMinute, Is.EqualTo(defaults.Evidence.MaxFilesPerMinute));
         }
 
         private static string RepositoryRoot()

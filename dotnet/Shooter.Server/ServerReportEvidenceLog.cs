@@ -67,6 +67,16 @@ namespace Shooter.Server
             return string.Format(CultureInfo.InvariantCulture, "{0} saved report={1} target={2} to {3}", Tag, reportId, targetId, path);
         }
 
+        public static string Limited(int targetId, int maxFilesPerMinute)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} skipped the evidence for target={1}: already {2} files in the last minute (evidence.maxFilesPerMinute); the report is kept without it",
+                Tag,
+                targetId,
+                maxFilesPerMinute);
+        }
+
         public static string WriteFailed(string path, string error)
         {
             return Tag + " could not write the evidence to " + path + " (" + error + "); the report is kept without it";

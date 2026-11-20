@@ -66,9 +66,11 @@ namespace Shooter.Server
         }
 
         // 足元ちょうどに出すとビーコンの箱に体が重なるので、前 (+Z) へ SpawnDistance だけ離す (オフラインの SpawnBeacon.SpawnPose と同じ)
-        private static Vector3 BeaconSpawnPosition(Placed placed)
+        // 置いた点は床の上で、サーバーの体の位置は体の中心なので、足元を体の原点へ直して返す
+        private Vector3 BeaconSpawnPosition(Placed placed)
         {
-            return placed.Position + (Forward(placed.Yaw) * placed.Type.Beacon.SpawnDistance);
+            var feet = placed.Position + (Forward(placed.Yaw) * placed.Type.Beacon.SpawnDistance);
+            return MapVehicle.RiderOrigin(feet, _bodies.Geometry, false);
         }
     }
 }

@@ -233,6 +233,8 @@ namespace Shooter.Core.Tests
             Assert.That(_events, Is.EqualTo(Events("kill 1>2", "score 2-0", "spawn 1", "spawn 2")), "the round head puts everyone back without the anchors");
             _events.Clear();
 
+            session.Finish(null);
+            _events.Clear();
             session.Restart();
 
             Assert.That(_events, Does.Not.Contain("respawning 1").And.Not.Contain("respawning 2"), "a restart is not a respawn");

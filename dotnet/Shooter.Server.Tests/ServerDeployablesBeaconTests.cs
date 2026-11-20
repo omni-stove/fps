@@ -11,8 +11,8 @@ namespace Shooter.Server.Tests
     {
         private static readonly RespawnAnchor[] _beaconFirst = { RespawnAnchor.Beacon, RespawnAnchor.Base };
 
-        // _alphaFront (-3, 0.5, 0) に 90 度で置くと前は +X なので、既定の 1 m 前の (-2, 0.5, 0) に出る
-        private static readonly Vector3 _beaconSpawn = new Vector3(-2f, 0.5f, 0f);
+        // _alphaFront (-3, 0.5, 0) に 90 度で置くと前は +X なので、既定の 1 m 前の足元 (-2, 0.5, 0) に出る。体の原点は足元の 1 m 上 (BottomY = -1)
+        private static readonly Vector3 _beaconSpawn = new Vector3(-2f, 1.5f, 0f);
 
         private static readonly float _respawnWait = NetMatchSettings.DefaultRespawnSeconds + 0.2f;
 
@@ -58,8 +58,8 @@ namespace Shooter.Server.Tests
             Assert.That(body.Position.X, Is.EqualTo(_beaconSpawn.X).Within(1e-3f), _log.ToString());
             Assert.That(body.Position.Z, Is.EqualTo(_beaconSpawn.Z).Within(1e-3f));
             Assert.That(body.Yaw, Is.EqualTo(90f).Within(1e-3f), "faces the way the beacon faces");
-            Assert.That(_log.ToString(), Does.Contain("[Beacon] owner=1 kind=deploy-beacon serial=1 used by=1 at=(-2.00, 0.50, 0.00) uses=2/3"));
-            Assert.That(_log.ToString(), Does.Contain("[Match] spawn player=1 at=(-2.00, 0.50, 0.00) from=Beacon"));
+            Assert.That(_log.ToString(), Does.Contain("[Beacon] owner=1 kind=deploy-beacon serial=1 used by=1 at=(-2.00, 1.50, 0.00) uses=2/3"));
+            Assert.That(_log.ToString(), Does.Contain("[Match] spawn player=1 at=(-2.00, 1.50, 0.00) from=Beacon"));
             Assert.That(_deployables.BeaconUsesLeft(1), Is.EqualTo(2));
             Assert.That(Rows(1), Has.Count.EqualTo(1), "a beacon with uses left stays");
         }
@@ -79,8 +79,8 @@ namespace Shooter.Server.Tests
             _combat.DealDamage(1, 2, NetMatchSettings.DefaultMaxHealth, TestRules.RifleId, HitZone.Body, null);
             Step(_respawnWait);
 
-            Assert.That(_log.ToString(), Does.Contain("[Beacon] owner=1 kind=deploy-beacon serial=1 used by=3 at=(-2.00, 0.50, 0.00) uses=2/3"));
-            Assert.That(_log.ToString(), Does.Contain("[Match] spawn player=3 at=(-2.00, 0.50, 0.00) from=Beacon"));
+            Assert.That(_log.ToString(), Does.Contain("[Beacon] owner=1 kind=deploy-beacon serial=1 used by=3 at=(-2.00, 1.50, 0.00) uses=2/3"));
+            Assert.That(_log.ToString(), Does.Contain("[Match] spawn player=3 at=(-2.00, 1.50, 0.00) from=Beacon"));
             Assert.That(_log.ToString(), Does.Contain("[Match] spawn player=2 at=(5.00, 1.60, 0.00) from=Base"), "the enemy's beacon is not theirs to use");
             Assert.That(_log.ToString(), Does.Not.Contain("used by=2"));
             Assert.That(_deployables.BeaconUsesLeft(1), Is.EqualTo(2));
@@ -98,7 +98,7 @@ namespace Shooter.Server.Tests
             _combat.DealDamage(2, 1, NetMatchSettings.DefaultMaxHealth, TestRules.RifleId, HitZone.Body, null);
             Step(_respawnWait);
 
-            Assert.That(_log.ToString(), Does.Contain("[Beacon] owner=1 kind=deploy-beacon serial=1 used by=1 at=(-2.00, 0.50, 0.00) uses=0/1"));
+            Assert.That(_log.ToString(), Does.Contain("[Beacon] owner=1 kind=deploy-beacon serial=1 used by=1 at=(-2.00, 1.50, 0.00) uses=0/1"));
             Assert.That(_log.ToString(), Does.Contain("[Deploy] owner=1 kind=deploy-beacon serial=1 removed reason=Expended"));
             Assert.That(Rows(1), Is.Empty);
 

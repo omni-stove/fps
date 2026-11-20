@@ -46,7 +46,8 @@ namespace Shooter.Server.Tests
                 TestMaps.Data(),
                 _match,
                 new ServerMessenger(_transport),
-                new StubControl());
+                new StubControl(),
+                addresses: new PerConnectionAddresses());
             _tick = 0;
             _ids = 0;
         }
@@ -485,6 +486,16 @@ namespace Shooter.Server.Tests
         {
             var folder = Path.GetDirectoryName(FilePath);
             return Directory.GetFiles(folder, "*" + ServerReportEvidenceLog.FileSuffix).Select(Path.GetFileName).OrderBy(name => name, StringComparer.Ordinal).ToArray();
+        }
+
+        // ProductUserId の無い通報者でも、接続ごとに違うアドレスの鍵で人ごとの枠が作れるようにする
+        private sealed class PerConnectionAddresses : IConnectionAddresses
+        {
+            public bool TryGetRemoteAddress(ConnectionId connection, out string address)
+            {
+                address = "10.0.0." + connection.Value;
+                return true;
+            }
         }
 
         private void Join(int id)

@@ -163,7 +163,7 @@ namespace Shooter.Server
             }
 
             _tagPositions[tag.Id] = body.Position;
-            _host.Log.WriteLine(KillConfirmedText.DropLog(tag));
+            _host.Log.WriteLine(KillConfirmedLog.DropLog(tag));
         }
 
         public void MatchRestarted()
@@ -313,7 +313,7 @@ namespace Shooter.Server
 
                 var collectorSide = _killConfirmed.Session.GetSide(collectorId.Value);
                 var result = _killConfirmed.Collect(tag.Id, collectorId.Value);
-                _host.Log.WriteLine(KillConfirmedText.CollectLog(tag, collectorId.Value, collectorSide, result));
+                _host.Log.WriteLine(KillConfirmedLog.CollectLog(tag, collectorId.Value, collectorSide, result));
                 if (result == KillConfirmedResult.Confirmed)
                 {
                     var mode = _killConfirmed.Session;
@@ -383,7 +383,7 @@ namespace Shooter.Server
         private void HandleTagExpired(KillConfirmedTag tag)
         {
             _tagPositions.Remove(tag.Id);
-            _host.Log.WriteLine(KillConfirmedText.ExpireLog(tag));
+            _host.Log.WriteLine(KillConfirmedLog.ExpireLog(tag));
         }
     }
 }

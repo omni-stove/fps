@@ -4,13 +4,13 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    // タグの出来事 (落ちた・拾われた・消えた) はオフラインと同じ KillConfirmedText の行で残し、ここは専用サーバーだけの行を組み立てる
+    // タグの出来事 (落ちた・拾われた・消えた) はオフラインと同じ KillConfirmedLog の行で残し、ここは専用サーバーだけの行を組み立てる
     internal static class ServerKillConfirmedLog
     {
         public static string Settings(KillConfirmedSpec spec)
         {
             ArgumentNullException.ThrowIfNull(spec);
-            return KillConfirmedText.LogPrefix + " net scoreLimit=" + Number(spec.ScoreLimit)
+            return KillConfirmedLog.LogPrefix + " net scoreLimit=" + Number(spec.ScoreLimit)
                 + " timeLimit=" + Number(spec.TimeLimitSeconds)
                 + "s respawn=" + Number(spec.RespawnSeconds)
                 + "s tagLifetime=" + Number(spec.TagLifetimeSeconds)
@@ -20,12 +20,12 @@ namespace Shooter.Server
 
         public static string Restart()
         {
-            return KillConfirmedText.LogPrefix + " restart";
+            return KillConfirmedLog.LogPrefix + " restart";
         }
 
         public static string NoBody(int playerId)
         {
-            return KillConfirmedText.LogPrefix + " no tag player=" + Number(playerId) + " reason=no body";
+            return KillConfirmedLog.LogPrefix + " no tag player=" + Number(playerId) + " reason=no body";
         }
 
         public static string State(KillConfirmed killConfirmed)
@@ -34,7 +34,7 @@ namespace Shooter.Server
             var session = killConfirmed.Session;
             var winner = Side.ToTeam(session.Winner);
             var winnerText = session.State != GameModeState.Ended ? "-" : winner.HasValue ? winner.Value.ToString() : MatchLog.Draw;
-            return KillConfirmedText.LogPrefix + " state=" + session.State
+            return KillConfirmedLog.LogPrefix + " state=" + session.State
                 + " winner=" + winnerText
                 + " score=" + Number(KillConfirmedRules.ScoreOf(session.GetScore(Side.Alpha)))
                 + "-" + Number(KillConfirmedRules.ScoreOf(session.GetScore(Side.Bravo)))

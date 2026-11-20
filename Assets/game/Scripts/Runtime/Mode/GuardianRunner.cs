@@ -149,7 +149,7 @@ namespace Shooter.Runtime
         private void OnLeaderChosen(Side side, int playerId)
         {
             var member = MemberOf(playerId);
-            Debug.Log(GuardianText.LeaderChosenLog(side, playerId), member != null ? member : (UnityEngine.Object)this);
+            Debug.Log(GuardianLog.LeaderChosenLog(side, playerId), member != null ? member : (UnityEngine.Object)this);
 
             if (!_showLeaderMarkers || member == null || member == LocalPlayer)
             {
@@ -171,7 +171,7 @@ namespace Shooter.Runtime
         private void OnLeaderFell(Side side, int playerId)
         {
             var member = MemberOf(playerId);
-            Debug.Log(GuardianText.LeaderFellLog(side, playerId), member != null ? member : (UnityEngine.Object)this);
+            Debug.Log(GuardianLog.LeaderFellLog(side, playerId), member != null ? member : (UnityEngine.Object)this);
 
             var marker = MarkerOf(playerId);
             if (marker != null)

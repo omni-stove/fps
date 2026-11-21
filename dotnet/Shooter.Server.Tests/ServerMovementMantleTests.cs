@@ -84,7 +84,7 @@ namespace Shooter.Server.Tests
             Send(InputButtons.Jump);
             var normal = MantleToTheEnd();
 
-            Start(_mantleOn, Ledge(1.5f), new MotorSpec(mantleSpeed: MotorSpec.DefaultMantleSpeed / 2f));
+            Start(_mantleOn, Ledge(1.5f), new MotorSpec(4f, 8f, 1.5f, 9.81f, 0.5f, 2f, mantleSpeed: MotorSpec.DefaultMantleSpeed / 2f));
             Send(InputButtons.Jump);
             var slow = MantleToTheEnd();
 

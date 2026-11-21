@@ -97,7 +97,7 @@ namespace Shooter.Core.Tests
             var simulation = NewSimulation();
             var state = Settle(simulation);
 
-            var result = simulation.VaultSensor.ProbeMantle(state.Position, 0f, new MotorSpec(mantleMaxHeight: 1.3f));
+            var result = simulation.VaultSensor.ProbeMantle(state.Position, 0f, new MotorSpec(4f, 8f, 1.5f, 9.81f, 0.5f, 2f, mantleMaxHeight: 1.3f));
 
             Assert.That(result.Verdict, Is.EqualTo(VaultVerdict.TooHigh));
         }

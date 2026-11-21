@@ -92,6 +92,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("感染 (Infected) の調整値。空なら InfectedRunner と同じく調整値の JSON (GameContent の InfectedTuning か Resources/Tuning/infected) を読む")]
         private InfectedDefinition _infected;
 
+        [SerializeField, Tooltip("エクスキューション (Execution) のとどめの秒数と距離。勝ち数・待ち・制限時間はラウンドの欄を使う。空なら入口 (GameContent) のもの、それも無ければ既定値")]
+        private ExecutionDefinition _execution;
+
         [Header("天候と時刻")]
         [SerializeField, Tooltip("試合の天候の Id。英数字と - _ で 64 文字まで。空ならマップの既定")]
         private string _weatherId = string.Empty;
@@ -306,6 +309,12 @@ namespace Shooter.Runtime
             set => _infected = value;
         }
 
+        public ExecutionDefinition Execution
+        {
+            get => _execution;
+            set => _execution = value;
+        }
+
         public string WeatherId
         {
             get => _weatherId;
@@ -448,7 +457,14 @@ namespace Shooter.Runtime
                     _economyLossStreakBonus,
                     _economyMaxLossReward),
                 _maxDisplayNameLength,
-                ToInfected());
+                ToInfected(),
+                ToExecution());
+        }
+
+        private ExecutionSpec ToExecution()
+        {
+            var definition = GameContent.Pick(_execution, c => c.Execution);
+            return definition != null ? definition.ToSpec() : ExecutionSpec.Default;
         }
 
         // 感染者の武器はアセットで付けても Id で運ぶ (サーバーは WeaponDefinition を読めない)

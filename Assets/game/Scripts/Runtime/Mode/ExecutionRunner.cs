@@ -14,8 +14,7 @@ namespace Shooter.Runtime
         public const float DefaultRoundTimeLimitSeconds = ExecutionSession.DefaultRoundTimeLimitSeconds;
         public const float DefaultExecuteSeconds = ExecutionSession.DefaultExecuteSeconds;
 
-        // ダウン中の体は倒れて横に伸びるので、立った人どうしで測るネット対戦の蘇生 (ReviveReach.DefaultRange) より少し長くする。
-        public const float DefaultExecuteRange = 2f;
+        public const float DefaultExecuteRange = ExecutionSpec.DefaultExecuteRange;
 
         public const string InteractActionPath = InputActionPaths.Interact;
 

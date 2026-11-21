@@ -264,6 +264,25 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheMusicCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.Music, Is.Null);
+            Assert.That(MusicCatalog.Load(), Is.SameAs(Resources.Load<MusicCatalog>(MusicCatalog.ResourcePath)));
+
+            content.Music = Track(ScriptableObject.CreateInstance<MusicCatalog>());
+            Assert.That(MusicCatalog.Load(), Is.SameAs(content.Music));
+
+            content.Music = null;
+            Assert.That(MusicCatalog.Load(), Is.SameAs(Resources.Load<MusicCatalog>(MusicCatalog.ResourcePath)));
+
+            var left = GameContentAssets.FillEmpty(
+                Track(ScriptableObject.CreateInstance<GameContent>()), _ => new Object[0], _ => new TextAsset[0]);
+            Assert.That(left, Does.Contain("Music"), "the entry lists the music as a slot to fill");
+        }
+
+        [Test]
         public void WithoutAVisionCatalogTheDefaultColorsAreUsed()
         {
             Assert.That(VisionVisualCatalog.ColorFor(null, VisionMode.Night), Is.EqualTo(VisionVisualCatalog.DefaultNightColor));
@@ -285,6 +304,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [TestCase("_visionVisuals", "Resources/Presentation/VisionVisualsCatalog")]
+        [TestCase("_music", "Resources/Presentation/MusicCatalog")]
         [TestCase("_emoteAnimations", "Resources/Presentation/EmoteCatalog")]
         [TestCase("_cosmeticVisuals", "Resources/Presentation/CosmeticVisualCatalog")]
         [TestCase("_streakIcons", "Resources/Presentation/StreakIconCatalog")]

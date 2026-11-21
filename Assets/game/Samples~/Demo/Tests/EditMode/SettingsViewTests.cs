@@ -800,6 +800,60 @@ namespace Shooter.Tests.EditMode
             }
         }
 
+        [Test]
+        public void TheMusicVolumeRowFollowsTheEffectsVolumeInBothLanguages()
+        {
+            _view.Open(_container);
+
+            var order = _view.Root.Query<VisualElement>().ToList();
+            var slider = _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.MusicVolume));
+            var effects = _container.Q<SliderInt>(SettingsView.SliderName(ControlValue.EffectsVolume));
+            var sections = _view.Root.Query<Label>(className: "settings__section").ToList();
+            var viewAndSound = sections.Single(label => label.text == Localizer.Get("settings.section.viewAndSound"));
+            var next = sections[sections.IndexOf(viewAndSound) + 1];
+            Assert.That(order.IndexOf(slider), Is.GreaterThan(order.IndexOf(effects)));
+            Assert.That(order.IndexOf(slider), Is.LessThan(order.IndexOf(next)));
+            Assert.That(CaptionOf(slider), Is.EqualTo("BGM の音量"));
+            Assert.That(slider.lowValue, Is.EqualTo(0));
+            Assert.That(slider.highValue, Is.EqualTo(100));
+            Assert.That(slider.value, Is.EqualTo(100));
+            Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.MusicVolume)).text, Is.EqualTo("100%"));
+
+            LogAssert.Expect(LogType.Log, Localizer.LogTag + " language is now en");
+            _view.SetLanguage(GameLanguage.English);
+
+            Assert.That(CaptionOf(_view.Root.Q<SliderInt>(SettingsView.SliderName(ControlValue.MusicVolume))), Is.EqualTo("Music volume"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [Test]
+        public void ChangingTheMusicVolumeTakesEffectAtOnceAndIsSavedOnClose()
+        {
+            var received = new List<ControlSettings>();
+            AppliedControlSettings.Changed += received.Add;
+            try
+            {
+                _view.Open(_container);
+
+                _view.SetValue(ControlValue.MusicVolume, 30);
+
+                Assert.That(AppliedControlSettings.Current.MusicVolume, Is.EqualTo(0.3f).Within(1e-6f));
+                Assert.That(AppliedControlSettings.Current.EffectsVolume, Is.EqualTo(1f), "the effects volume is a separate slider");
+                Assert.That(received, Has.Count.EqualTo(1));
+                Assert.That(received[0].Get(ControlValue.MusicVolume), Is.EqualTo(30));
+                Assert.That(_container.Q<Label>(SettingsView.ValueLabelName(ControlValue.MusicVolume)).text, Is.EqualTo("30%"));
+                Assert.That(PlayerPrefs.HasKey(_store.Key), Is.False);
+
+                Assert.That(_view.Close(), Is.True);
+
+                Assert.That(new ControlSettingsStore(_store.Key).Load().Get(ControlValue.MusicVolume), Is.EqualTo(30));
+            }
+            finally
+            {
+                AppliedControlSettings.Changed -= received.Add;
+            }
+        }
+
         private static string CaptionOf(VisualElement control)
         {
             Assert.That(control, Is.Not.Null);
@@ -873,6 +927,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(SettingsView.FormatValue(ControlValue.StickDeadzone, 500), Is.EqualTo("50%"));
             Assert.That(SettingsView.FormatValue(ControlValue.RumbleStrength, 70), Is.EqualTo("70%"));
             Assert.That(SettingsView.FormatValue(ControlValue.UiScale, 150), Is.EqualTo("150%"));
+            Assert.That(SettingsView.FormatValue(ControlValue.MusicVolume, 0), Is.EqualTo("0%"));
             Assert.That(SettingsView.FormatMode(HoldMode.Hold), Is.EqualTo(SettingsView.HoldText));
             Assert.That(SettingsView.FormatMode(HoldMode.Toggle), Is.EqualTo(SettingsView.ToggleText));
         }
@@ -1142,8 +1197,10 @@ namespace Shooter.Tests.EditMode
                 Assert.That(settings.Slot.Q<SliderInt>(SettingsView.SliderName(ControlValue.StickDeadzone)), Is.Not.Null);
                 Assert.That(settings.Slot.Q<Button>(SettingsView.RumbleButtonName), Is.Not.Null);
                 Assert.That(settings.Slot.Q<SliderInt>(SettingsView.SliderName(ControlValue.RumbleStrength)), Is.Not.Null);
+                Assert.That(settings.Slot.Q<SliderInt>(SettingsView.SliderName(ControlValue.MusicVolume)), Is.Not.Null);
 
                 _view.SetValue(ControlValue.MouseSensitivity, 40);
+                _view.SetValue(ControlValue.MusicVolume, 55);
                 settings.CloseSettings();
 
                 Assert.That(settings.IsSettingsOpen, Is.False);
@@ -1151,6 +1208,7 @@ namespace Shooter.Tests.EditMode
                 Assert.That(settings.Panel.style.display.value, Is.EqualTo(DisplayStyle.Flex));
                 Assert.That(pause.IsOpen, Is.True, "going back keeps the game paused");
                 Assert.That(_store.Load().Get(ControlValue.MouseSensitivity), Is.EqualTo(40));
+                Assert.That(_store.Load().Get(ControlValue.MusicVolume), Is.EqualTo(55), "the pause menu saves the music volume too");
             }
             finally
             {

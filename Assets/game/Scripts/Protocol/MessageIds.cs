@@ -39,6 +39,8 @@ namespace Shooter.Protocol
         public const ushort PickupRequest = 37;
         public const ushort DroneControl = 38;
 
+        public const ushort DetonateRequest = 39;
+
         public const ushort Snapshot = 48;
         public const ushort StructureState = 49;
         public const ushort MapVoteState = 50;

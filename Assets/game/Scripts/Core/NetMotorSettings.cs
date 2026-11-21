@@ -37,7 +37,7 @@ namespace Shooter.Core
             SwimTuning swim,
             WallRunTuning wallRun,
             ParachuteTuning parachute)
-            : this(motor, stance, mover, prone, swim, wallRun, parachute, ZiplineTuning.Default)
+            : this(motor, stance, mover, prone, swim, wallRun, parachute, SlideTuning.Default)
         {
         }
 
@@ -49,8 +49,23 @@ namespace Shooter.Core
             SwimTuning swim,
             WallRunTuning wallRun,
             ParachuteTuning parachute,
+            SlideTuning slide)
+            : this(motor, stance, mover, prone, swim, wallRun, parachute, slide, ZiplineTuning.Default)
+        {
+        }
+
+        public NetMotorSettings(
+            MotorSpec motor,
+            StanceGeometry stance,
+            CapsuleMoverSpec mover,
+            ProneSpec prone,
+            SwimTuning swim,
+            WallRunTuning wallRun,
+            ParachuteTuning parachute,
+            SlideTuning slide,
             ZiplineTuning zipline)
         {
+            Slide = slide ?? throw new ArgumentNullException(nameof(slide));
             Zipline = zipline ?? throw new ArgumentNullException(nameof(zipline));
             Motor = motor ?? throw new ArgumentNullException(nameof(motor));
             Stance = stance ?? throw new ArgumentNullException(nameof(stance));
@@ -86,6 +101,8 @@ namespace Shooter.Core
         public WallRunTuning WallRun { get; }
 
         public ParachuteTuning Parachute { get; }
+
+        public SlideTuning Slide { get; }
 
         // 掴む距離・ぶら下がる高さ・掴み直しの待ちは線ごとでなく人ごとの値なので、マップの線 (NetMapZiplines) でなくここで受け取る
         public ZiplineTuning Zipline { get; }

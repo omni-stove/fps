@@ -23,8 +23,10 @@ namespace Shooter.Server
             NetMapLadders ladders = null,
             NetMapVehicles vehicles = null,
             NetMapWater water = null,
+            NetMapPickups pickups = null,
             NetMapZiplines ziplines = null)
         {
+            Pickups = pickups ?? NetMapPickups.None;
             Ziplines = ziplines ?? NetMapZiplines.None;
             Vehicles = vehicles ?? NetMapVehicles.None;
             Water = water ?? NetMapWater.None;
@@ -70,6 +72,9 @@ namespace Shooter.Server
 
         // はしごと同じく、書き出す前のマップでも泳げないだけで動けるよう、ファイルが無ければ空にする。
         public NetMapWater Water { get; }
+
+        // はしごと同じく、書き出す前のマップでも拾い物が無いだけで動けるよう、ファイルが無ければ空にする。
+        public NetMapPickups Pickups { get; }
 
         // はしごと同じく、書き出す前のマップでも掴めないだけで動けるよう、ファイルが無ければ空にする。
         public NetMapZiplines Ziplines { get; }
@@ -290,6 +295,21 @@ namespace Shooter.Server
                 }
             }
 
+            NetMapPickups pickups = null;
+            var pickupsPath = Path.Combine(directory, map + NetMapPickups.Extension);
+            if (File.Exists(pickupsPath))
+            {
+                try
+                {
+                    pickups = NetMapPickups.Parse(File.ReadAllText(pickupsPath), pickupsPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + pickupsPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             NetMapZiplines ziplines = null;
             var ziplinesPath = Path.Combine(directory, map + NetMapZiplines.Extension);
             if (File.Exists(ziplinesPath))
@@ -307,7 +327,7 @@ namespace Shooter.Server
 
             try
             {
-                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles, water, ziplines);
+                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles, water, pickups, ziplines);
             }
             catch (ArgumentException e)
             {

@@ -238,7 +238,8 @@ namespace Shooter.Server
             _session = null;
         }
 
-        public DamageOutcome ApplyDamage(int? attackerId, int victimId, int amount, KillShot? shot = null)
+        // finishesDowned は目的のとどめの技 (IMatchObjectiveRules.DownedFinisher) が与えるダメージ。目的がとどめを技に限るなら、ほかのダメージはダウン中の人に通さない
+        public DamageOutcome ApplyDamage(int? attackerId, int victimId, int amount, KillShot? shot = null, bool finishesDowned = false)
         {
             if (amount < 0)
             {
@@ -247,7 +248,8 @@ namespace Shooter.Server
 
             // Session は攻撃者と被害者が同じ Id のダメージを自滅として扱うので、攻撃者のいないダメージはそれに寄せる
             var source = attackerId ?? victimId;
-            if (_session == null || !_session.HasPlayer(source) || !_session.HasPlayer(victimId) || IsBetweenRounds || AreNeutral(source, victimId))
+            if (_session == null || !_session.HasPlayer(source) || !_session.HasPlayer(victimId) || IsBetweenRounds || AreNeutral(source, victimId)
+                || (!finishesDowned && ShieldsDowned(victimId)))
             {
                 return DamageOutcome.Ignored;
             }

@@ -14,6 +14,8 @@ namespace Shooter.Tests.EditMode
 
         private const string DefaultUiScale = ",\"uiScale\":100";
 
+        private const string DefaultMusicVolume = ",\"musicVolume\":100";
+
         private ControlSettingsStore _store;
 
         [SetUp]
@@ -67,7 +69,7 @@ namespace Shooter.Tests.EditMode
             _store.Save(loaded);
 
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":13").And.Not.Contain("language"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":14").And.Not.Contain("language"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -179,7 +181,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.ShowNetStats, Is.True);
             Assert.That(loaded.Palette, Is.EqualTo(ColorPalette.RedGreen));
             Assert.That(loaded.ShowSubtitles, Is.True);
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":13"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":14"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -211,7 +213,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(loaded.AimAssist, Is.EqualTo(ControlSettings.Default.AimAssist));
             Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
-            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":13").And.Contain("\"aimAssist\":true"));
+            Assert.That(PlayerPrefs.GetString(_store.Key), Does.Contain("\"version\":14").And.Contain("\"aimAssist\":true"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -263,7 +265,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.RumbleStrength, Is.EqualTo(ControlSettings.Default.RumbleStrength));
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":13").And.Contain("\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100"));
+                Does.Contain("\"version\":14").And.Contain("\"invertLookY\":false,\"stickDeadzone\":125,\"rumble\":true,\"rumbleStrength\":100"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -281,7 +283,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.TelemetryConsent, Is.True);
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":13").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + DefaultUiScale + "}"));
+                Does.Contain("\"version\":14").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + DefaultUiScale + DefaultMusicVolume + "}"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -307,7 +309,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.TelemetryConsent, Is.False);
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":13").And.EndWith(",\"quickMatchRegion\":\"auto\",\"telemetryConsent\":false" + DefaultGyro + DefaultUiScale + "}"));
+                Does.Contain("\"version\":14").And.EndWith(",\"quickMatchRegion\":\"auto\",\"telemetryConsent\":false" + DefaultGyro + DefaultUiScale + DefaultMusicVolume + "}"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -331,8 +333,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.InvertGyroY, Is.True);
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":13")
-                    .And.EndWith(",\"gyro\":true,\"gyroSensitivity\":180,\"gyroAimOnly\":true,\"invertGyroY\":true" + DefaultUiScale + "}"));
+                Does.Contain("\"version\":14")
+                    .And.EndWith(",\"gyro\":true,\"gyroSensitivity\":180,\"gyroAimOnly\":true,\"invertGyroY\":true" + DefaultUiScale + DefaultMusicVolume + "}"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -358,7 +360,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.InvertGyroY, Is.False, "the stick invert does not carry over to the gyro");
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":13").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + DefaultUiScale + "}"));
+                Does.Contain("\"version\":14").And.EndWith(",\"quickMatchRegion\":\"europe\",\"telemetryConsent\":true" + DefaultGyro + DefaultUiScale + DefaultMusicVolume + "}"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -376,7 +378,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.UiScale, Is.EqualTo(1.5f));
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":13").And.EndWith(",\"invertGyroY\":true,\"uiScale\":150}"));
+                Does.Contain("\"version\":14").And.EndWith(",\"invertGyroY\":true,\"uiScale\":150" + DefaultMusicVolume + "}"));
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -400,7 +402,65 @@ namespace Shooter.Tests.EditMode
             Assert.That(loaded.Get(ControlValue.UiScale), Is.EqualTo(100));
             Assert.That(
                 PlayerPrefs.GetString(_store.Key),
-                Does.Contain("\"version\":13").And.EndWith(",\"gyro\":true,\"gyroSensitivity\":220,\"gyroAimOnly\":false,\"invertGyroY\":false" + DefaultUiScale + "}"));
+                Does.Contain("\"version\":14").And.EndWith(",\"gyro\":true,\"gyroSensitivity\":220,\"gyroAimOnly\":false,\"invertGyroY\":false" + DefaultUiScale + DefaultMusicVolume + "}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // BGM の音量を変えて閉じ、起動し直しても残っている
+        [Test]
+        public void SavesTheMusicVolumeAndLoadsItBackAfterARestart()
+        {
+            var settings = ControlSettings.Default.WithMusicVolume(35).WithUiScale(120).With(ControlValue.EffectsVolume, 80);
+
+            _store.Save(settings);
+
+            var loaded = new ControlSettingsStore(_store.Key).Load();
+            Assert.That(loaded, Is.EqualTo(settings));
+            Assert.That(loaded.Get(ControlValue.MusicVolume), Is.EqualTo(35));
+            Assert.That(loaded.MusicVolume, Is.EqualTo(0.35f).Within(1e-6f));
+            Assert.That(loaded.Get(ControlValue.EffectsVolume), Is.EqualTo(80), "the effects volume is kept apart");
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"version\":14").And.EndWith(",\"uiScale\":120,\"musicVolume\":35}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        // 版 13 の保存がある状態で起動すると、BGM の音量は 100% になり、ほかの設定は消えずに版 14 で書き直される
+        [Test]
+        public void VersionThirteenDataSilentlyGetsTheMusicVolumeAtOneHundredAndIsRewrittenInTheCurrentVersion()
+        {
+            var saved = ControlSettings.Default
+                .WithUiScale(130)
+                .With(ControlValue.MasterVolume, 60)
+                .With(ControlValue.EffectsVolume, 40);
+            var versionThirteen = OldVersion(saved.ToJson(), 13, null);
+            Assert.That(versionThirteen, Does.Contain("\"version\":13").And.Not.Contain("musicVolume"));
+            PlayerPrefs.SetString(_store.Key, versionThirteen);
+
+            var loaded = _store.Load();
+            _store.Save(loaded);
+
+            Assert.That(loaded, Is.EqualTo(saved), "every other value is kept");
+            Assert.That(loaded.Get(ControlValue.MusicVolume), Is.EqualTo(100));
+            Assert.That(
+                PlayerPrefs.GetString(_store.Key),
+                Does.Contain("\"version\":14").And.EndWith(",\"uiScale\":130" + DefaultMusicVolume + "}"));
+            LogAssert.NoUnexpectedReceived();
+        }
+
+        [TestCase(250, 100)]
+        [TestCase(-20, 0)]
+        public void AMusicVolumeOutsideTheRangeIsClampedWithAWarning(int saved, int expected)
+        {
+            PlayerPrefs.SetString(
+                _store.Key,
+                ControlSettings.Default.WithShowBlood(false).ToJson().Replace("\"musicVolume\":100", "\"musicVolume\":" + saved));
+            LogAssert.Expect(LogType.Warning, new Regex(@"^\[Input\] .*'musicVolume' " + saved + " is outside 0 to 100; using " + expected));
+
+            var loaded = _store.Load();
+
+            Assert.That(loaded.Get(ControlValue.MusicVolume), Is.EqualTo(expected));
+            Assert.That(loaded.ShowBlood, Is.False, "the saved value");
             LogAssert.NoUnexpectedReceived();
         }
 
@@ -623,9 +683,15 @@ namespace Shooter.Tests.EditMode
         // 版 10 までは版 11 で足した地域とテレメトリの同意を持たない (初期値のときだけ除ける)。
         // 版 11 までは版 12 で足したジャイロの欄を持たない (初期値のときだけ除ける)。
         // 版 12 までは版 13 で足した UI の拡大を持たない (初期値のときだけ除ける)。
+        // 版 13 までは版 14 で足した BGM の音量を持たない (初期値のときだけ除ける)。
         private static string OldVersion(string json, int version, string language)
         {
             var old = json.Replace("\"version\":" + ControlSettings.CurrentVersion, "\"version\":" + version);
+            if (version < 14)
+            {
+                old = old.Replace(DefaultMusicVolume, string.Empty);
+            }
+
             if (version < 13)
             {
                 old = old.Replace(DefaultUiScale, string.Empty);

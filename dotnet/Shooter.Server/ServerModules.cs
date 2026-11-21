@@ -46,6 +46,7 @@ namespace Shooter.Server
                 motor.Swim,
                 motor.WallRun,
                 motor.Parachute,
+                motor.Slide,
                 motor.Zipline,
                 rules.Rules,
                 defaults.KillPlaneY,
@@ -121,7 +122,10 @@ namespace Shooter.Server
             // 近接・ストリーク・設置物は戦闘の DealDamage・Explode でダメージを与え、キルカムは戦闘が出すキルでクリップを送るので、戦闘より後。
             // キルカムは Bot が動いた後の姿勢を残すので、Bot より後
             var streaks = new ServerStreaks(rules, combat, tuning.Streaks);
-            modules.Add(new ServerMelee(combat, movement, tuning.Melee, meleeWeaponId));
+            modules.Add(new ServerMelee(combat, movement, tuning.Melee, meleeWeaponId)
+            {
+                WeaponsDropped = playerId => inventories.HoldWeapons(playerId),
+            });
             modules.Add(streaks);
             modules.Add(deployables);
             modules.Add(new ServerKillCam(rules, combat));

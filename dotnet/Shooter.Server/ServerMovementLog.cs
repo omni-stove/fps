@@ -129,6 +129,20 @@ namespace Shooter.Server
             return Head("parachute", playerId, tick) + " closed reason=" + reason;
         }
 
+        // オフラインの SlideMotion.FormatStartLog・FormatEndLog と同じ項目と桁にし、同じ見方で追えるようにする
+        public static string SlideStart(int playerId, int tick, float speed, Vector2 direction)
+        {
+            return Head("slide", playerId, tick)
+                + string.Format(CultureInfo.InvariantCulture, " start speed={0:0.00} direction=({1:0.00}, {2:0.00})", speed, direction.X, direction.Y);
+        }
+
+        public static string SlideEnd(int playerId, int tick, Shooter.Core.SlideEnd reason, float speed, float seconds, float distance)
+        {
+            return Head("slide", playerId, tick)
+                + string.Format(
+                    CultureInfo.InvariantCulture, " end reason={0} speed={1:0.00} seconds={2:0.00} distance={3:0.00}", reason, speed, seconds, distance);
+        }
+
         private static string Vector(Vector3 value)
         {
             return string.Format(CultureInfo.InvariantCulture, "({0:0.0}, {1:0.0}, {2:0.0})", value.X, value.Y, value.Z);

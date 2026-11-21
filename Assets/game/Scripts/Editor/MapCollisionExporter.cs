@@ -26,6 +26,7 @@ namespace Shooter.Editor
         private static readonly string[] _builtInExtensions =
         {
             FileExtension, NavMeshFile.Extension, NetMapStructures.Extension, NetMapLadders.Extension, NetMapWater.Extension, NetMapVehicles.Extension,
+            NetMapPickups.Extension,
         };
 
         private static readonly Dictionary<string, Func<IReadOnlyList<GameObject>, string>> _sceneData =
@@ -214,6 +215,13 @@ namespace Shooter.Editor
                     WriteText(vehiclesPath, NetMapVehicles.Write(vehicles));
                     written.Add(vehiclesPath);
                     Debug.Log(LogTag + " wrote " + vehiclesPath + " from " + scenePath + " (" + vehicles.Vehicles.Count + " vehicles)");
+
+                    var pickups = MapPickupExporter.Collect(scene.GetRootGameObjects());
+                    var pickupsPath = Path.Combine(outputDirectory, MapName(scenePath) + NetMapPickups.Extension);
+                    WriteText(pickupsPath, NetMapPickups.Write(pickups));
+                    written.Add(pickupsPath);
+                    Debug.Log(LogTag + " wrote " + pickupsPath + " from " + scenePath + " (" + pickups.Pickups.Count + " pickups, "
+                        + pickups.AmmoCrates.Count + " ammo crates)");
 
                     foreach (var data in _sceneData)
                     {

@@ -67,6 +67,38 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void LoadsThePickupsBesideTheCollisionAndHasNoneWithoutTheFile()
+        {
+            var directory = TestMaps.Write(_second.Path, "NetArena01");
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out var bare, out var error), Is.True, error);
+            Assert.That(bare.Pickups.Pickups, Is.Empty, "a map exported before pickups has none");
+            Assert.That(bare.Pickups.AmmoCrates, Is.Empty);
+
+            var pickups = new NetMapPickups(
+                new[] { new NetMapPickup("medkit", PickupSpec.Health(25), new Vector3(1f, 0.5f, 2f), 1f, 20f, true) },
+                new[] { new NetMapAmmoCrate("crate", new Vector3(-3f, 0.5f, 0f), 1.6f, 1f) });
+            File.WriteAllText(Path.Combine(directory, "NetArena01" + NetMapPickups.Extension), NetMapPickups.Write(pickups));
+
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out var data, out error), Is.True, error);
+            Assert.That(data.Pickups.Pickups, Has.Count.EqualTo(1));
+            Assert.That(data.Pickups.Pickups[0].Spec.Kind, Is.EqualTo(PickupKind.Health));
+            Assert.That(data.Pickups.AmmoCrates[0].Id, Is.EqualTo("crate"));
+        }
+
+        [Test]
+        public void BrokenPickupsAreAnError()
+        {
+            var directory = TestMaps.Write(_second.Path, "NetArena01");
+            File.WriteAllText(
+                Path.Combine(directory, "NetArena01" + NetMapPickups.Extension),
+                "{ \"pickups\": [ { \"id\": \"a\", \"kind\": \"Health\", \"amount\": 0, \"position\": [0, 0, 0], \"radius\": 1, \"respawnSeconds\": 0 } ] }");
+
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.Contain("NetArena01.pickups.json"));
+            Assert.That(error, Does.Contain("pickups[0].amount"));
+        }
+
+        [Test]
         public void LoadsTheLaddersBesideTheCollision()
         {
             TestMaps.Write(_second.Path, "NetArena01", ladders: TestMaps.OneLadder());

@@ -66,6 +66,8 @@ namespace Shooter.Server
                 _log.WriteLine(ServerMovementLog.ParachuteClosed(playerId, tick, simulation.LastParachuteClose.Value));
             }
 
+            ReportSlide(playerId, tick, simulation);
+
             // 傾きは毎 tick 少しずつ変わるので、向きが替わったときだけ出す
             var leanBefore = Math.Sign(previous.Lean.Amount);
             var leanAfter = Math.Sign(current.Lean.Amount);

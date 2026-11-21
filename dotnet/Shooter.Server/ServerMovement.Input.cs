@@ -49,7 +49,6 @@ namespace Shooter.Server
 
         private void Apply(Mover mover, InputFrame frame)
         {
-
             var input = new CharacterMotorInput(
                     frame.Move,
                     frame.Yaw,
@@ -69,6 +68,7 @@ namespace Shooter.Server
                     openParachute: frame.Has(InputButtons.OpenParachute),
                     closeParachute: frame.Has(InputButtons.CloseParachute))
                 .WithRules(_settings.Rules.Actions);
+            input = WithSlideInput(input, frame);
 
             if (mover.Riding)
             {

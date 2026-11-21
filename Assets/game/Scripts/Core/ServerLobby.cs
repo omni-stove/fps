@@ -23,6 +23,8 @@ namespace Shooter.Core
 
         public const string RegionKey = "region";
 
+        public const string MapKey = "map";
+
         public const string TeamDeathmatchMode = "tdm";
 
         // 同じ EOS のサンドボックスを使う別のゲームのロビーと混ざらないよう、接頭辞を付ける。
@@ -60,9 +62,20 @@ namespace Shooter.Core
         public static IReadOnlyList<LobbyAttribute> Attributes(
             string endpoint, string version, int players, NetMatchSettings match, int? skillAverage, string region)
         {
+            return Attributes(endpoint, version, players, match, skillAverage, region, null);
+        }
+
+        public static IReadOnlyList<LobbyAttribute> Attributes(
+            string endpoint, string version, int players, NetMatchSettings match, int? skillAverage, string region, string map)
+        {
             if (region != null && !IsRegionName(region))
             {
                 throw new ArgumentException("'" + region + "' is not a server region (" + RegionRule + ")", nameof(region));
+            }
+
+            if (map != null && !NetLaunchOptions.IsMapName(map))
+            {
+                throw new ArgumentException("'" + map + "' is not a map name", nameof(map));
             }
 
             if (string.IsNullOrWhiteSpace(endpoint))
@@ -105,7 +118,23 @@ namespace Shooter.Core
                 attributes.Add(LobbyAttribute.OfText(RegionKey, region));
             }
 
+            if (map != null)
+            {
+                attributes.Add(MapAttribute(map));
+            }
+
             return attributes;
+        }
+
+        // 地図は投票や回しで試合ごとに替わるので、地域と違って作った後も書き直す (ServerLobbyRegistrar.SetMap)。
+        public static LobbyAttribute MapAttribute(string map)
+        {
+            if (!NetLaunchOptions.IsMapName(map))
+            {
+                throw new ArgumentException("'" + map + "' is not a map name", nameof(map));
+            }
+
+            return LobbyAttribute.OfText(MapKey, map);
         }
 
         public static string RegionRule =>

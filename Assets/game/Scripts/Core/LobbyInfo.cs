@@ -113,6 +113,10 @@ namespace Shooter.Core
 
         public string Region => TryGetText(ServerLobby.RegionKey, out var value) ? value : null;
 
+        public string Mode => TryGetText(ServerLobby.ModeKey, out var value) ? value : null;
+
+        public string Map => TryGetText(ServerLobby.MapKey, out var value) ? value : null;
+
         public bool VoiceEnabled => TryGetNumber(ServerLobby.VoiceEnabledKey, out var value) && value != 0;
 
         public bool IsOwnedBy(string userId)

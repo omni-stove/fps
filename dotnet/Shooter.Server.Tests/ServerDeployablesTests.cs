@@ -430,6 +430,40 @@ namespace Shooter.Server.Tests
             Assert.That(_deployables.Count, Is.EqualTo(1));
         }
 
+        // 地雷と遠隔爆弾は列挙にだけ先に足したので、ドローンと同じく置く前に断り、送る種類を決めずに済ませる
+        [TestCase(DeployRole.Mine, "deploy-mine")]
+        [TestCase(DeployRole.RemoteCharge, "deploy-charge")]
+        public void AnExplosiveMadeInCodeIsRefusedWithTheReason(DeployRole role, string id)
+        {
+            var explosive = new DeployType(id, role, DeploySpec.Default);
+            var shield = new DeployType(_shieldId, DeployRole.Shield, DeployType.DefaultDeploy(DeployRole.Shield));
+            Start(new DeployCatalog(new[] { explosive, shield }));
+            Join(1);
+            Join(2);
+            Step(0.2f);
+
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] net kind=" + id + " unusable: " + ServerDeployables.ExplosiveUnsupported));
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] net types=2 usable=1 from=memory"));
+            Assert.That(_deployables.Place(1, id, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.Unusable));
+            Assert.That(_deployables.Count, Is.Zero);
+            Assert.That(Rows(1), Is.Empty);
+        }
+
+        [TestCase("Mine")]
+        [TestCase("RemoteCharge")]
+        public void AnExplosiveInTheCatalogFileStopsTheLoad(string role)
+        {
+            using var directory = new TempDirectory();
+            var tuning = Path.Combine(directory.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(
+                Path.Combine(tuning, ServerDeployables.CatalogFileName),
+                "{\"types\": [{\"id\": \"deploy-x\", \"role\": \"" + role + "\"}]}");
+
+            Assert.That(ServerDeployables.TryLoadCatalog(new[] { directory.Path }, out _, out _, out var error), Is.False);
+            Assert.That(error, Does.Contain("role " + role + " is not supported yet"));
+        }
+
         [Test]
         public void ADroneReadFromTheCatalogFileIsRefused()
         {

@@ -246,12 +246,24 @@ namespace Shooter.Core.Tests
             var item = Assert.Throws<TuningJsonException>(
                 () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"s\", \"role\": \"Shield\", \"armor\": 3}]}", _source));
             var role = Assert.Throws<TuningJsonException>(
-                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"m\", \"role\": \"Mine\"}]}", _source));
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"c\", \"role\": \"Catapult\"}]}", _source));
             var broken = Assert.Throws<TuningJsonException>(() => DeployCatalogJson.Parse("{\"types\": [", _source));
 
             Assert.That(item.Item, Is.EqualTo("types[0].armor"));
             Assert.That(role.Item, Is.EqualTo("types[0].role"));
             Assert.That(broken.SourceName, Is.EqualTo(_source));
+        }
+
+        [TestCase("Mine")]
+        [TestCase("RemoteCharge")]
+        public void TheRolesWithoutRulesYetAreRejectedAtTheRole(string role)
+        {
+            var e = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"x\", \"role\": \"" + role + "\"}]}", _source));
+
+            Assert.That(e.SourceName, Is.EqualTo(_source));
+            Assert.That(e.Item, Is.EqualTo("types[0].role"));
+            Assert.That(e.Message, Does.Contain("role " + role + " is not supported yet"));
         }
 
         [Test]

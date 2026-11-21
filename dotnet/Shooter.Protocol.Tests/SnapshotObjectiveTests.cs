@@ -511,6 +511,28 @@ namespace Shooter.Protocol.Tests
             Assert.That(Send(extraction, null).Match.Objective, Is.EqualTo(MatchObjective.Extraction));
         }
 
+        // 列挙の値はバイト 1 つで送るので、足した値も前からある値もそのまま往復することを確かめる
+        [Test]
+        public void EveryObjectiveRoundTrips()
+        {
+            foreach (var objective in Enum.GetValues<MatchObjective>())
+            {
+                var sent = Build(100);
+                sent.Match.Objective = objective;
+
+                Assert.That(Send(sent, null).Match.Objective, Is.EqualTo(objective));
+            }
+        }
+
+        [Test]
+        public void AnObjectivePastTheLastValueIsRejected()
+        {
+            var sent = Build(100);
+            sent.Match.Objective = (MatchObjective)Enum.GetValues<MatchObjective>().Length;
+
+            Assert.Throws<MessageReadException>(() => Send(sent, null));
+        }
+
         [Test]
         public void ADefaultBattleRoyaleRoundTripsAsZero()
         {
@@ -1259,6 +1281,34 @@ namespace Shooter.Protocol.Tests
             Assert.That(got.Deployables[0].Yaw, Is.EqualTo(180f));
             Assert.That(got.Deployables[0].Health, Is.EqualTo(150));
             Assert.That(got.Deployables[0].ChangedBits(sent.Deployables[0]), Is.Zero);
+        }
+
+        [TestCase(DeployableKind.Mine)]
+        [TestCase(DeployableKind.RemoteCharge)]
+        [TestCase(DeployableKind.Drone)]
+        public void TheAddedKindsRoundTrip(DeployableKind kind)
+        {
+            var sent = Build(100);
+            AddDeployable(sent, 8, kind, "deploy-added", Team.Bravo, 4, new Vector3(1f, 0f, -2f), 45f, 60);
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Deployables.Count, Is.EqualTo(1));
+            Assert.That(got.Deployables[0].Kind, Is.EqualTo(kind));
+            Assert.That(got.Deployables[0].ChangedBits(sent.Deployables[0]), Is.Zero);
+        }
+
+        [Test]
+        public void TheDeployableKindsKeepTheirValues()
+        {
+            Assert.That((int)DeployableKind.Turret, Is.EqualTo(0));
+            Assert.That((int)DeployableKind.Shield, Is.EqualTo(1));
+            Assert.That((int)DeployableKind.Decoy, Is.EqualTo(2));
+            Assert.That((int)DeployableKind.Beacon, Is.EqualTo(3));
+            Assert.That((int)DeployableKind.Mine, Is.EqualTo(4));
+            Assert.That((int)DeployableKind.RemoteCharge, Is.EqualTo(5));
+            Assert.That((int)DeployableKind.Drone, Is.EqualTo(6));
+            Assert.That(Enum.GetValues<DeployableKind>().Length, Is.EqualTo(7));
         }
 
         [Test]

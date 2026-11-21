@@ -69,6 +69,7 @@ namespace Shooter.Server
                     closeParachute: frame.Has(InputButtons.CloseParachute))
                 .WithRules(_settings.Rules.Actions);
             input = WithSlideInput(input, frame);
+            input = Restrain(mover, input);
 
             if (mover.Riding)
             {
@@ -78,6 +79,9 @@ namespace Shooter.Server
                 mover.Aiming = input.Restrained().Aim;
                 mover.Sprinting = false;
                 mover.LastProcessedTick = frame.Tick;
+
+                // 座っている間は歩かないので、走っていない入力として時間だけ進め、スタミナを戻す
+                Stepped(mover, default, mover.State, mover.State);
                 Publish(mover);
                 return;
             }
@@ -101,6 +105,7 @@ namespace Shooter.Server
             mover.Aiming = input.Restrained().Aim;
             mover.Sprinting = input.Restrained().Sprint;
             mover.LastProcessedTick = frame.Tick;
+            Stepped(mover, input, previous, current);
             Publish(mover);
             Report(mover, frame.Tick, previous, current, mantled);
         }

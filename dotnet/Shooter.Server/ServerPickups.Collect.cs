@@ -264,7 +264,7 @@ namespace Shooter.Server
         {
             var session = _rules.Session;
             var team = session.GetTeam(playerId);
-            var maxHealth = session.MaxHealth;
+            var maxHealth = session.GetMaxHealth(playerId);
             var health = Math.Clamp(session.GetHealth(playerId), 0, maxHealth);
             var collector = new PickupCollector(Side.FromTeam(team), health, maxHealth);
 

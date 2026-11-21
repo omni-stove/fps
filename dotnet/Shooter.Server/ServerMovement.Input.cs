@@ -114,8 +114,8 @@ namespace Shooter.Server
             Report(mover, frame.Tick, previous, current, mantled, ziplined);
         }
 
-        // 構えた盾の重さもここに掛けるのは、持ち主の予測がこの値をスナップショット (OwnerSnapshot.CarrySpeedMultiplier) で受け取るため
-        // (オフラインの WeaponController も持ち運びの倍率に盾の倍率を掛ける)
+        // 構えた盾の重さと目的が掛ける倍率 (感染者の速さ) もここに掛けるのは、持ち主の予測がこの値をスナップショット
+        // (OwnerSnapshot.CarrySpeedMultiplier) で受け取るため (オフラインの WeaponController も持ち運びの倍率に盾の倍率を掛ける)
         private float CarrySpeedMultiplier(Mover mover)
         {
             if (!_context.Bodies.TryGet(mover.Player.PlayerId, out var body))
@@ -124,7 +124,8 @@ namespace Shooter.Server
             }
 
             var shield = body.RaisedShield?.MoveSpeedMultiplier ?? 1f;
-            return _settings.Motor.CarryLoad.SpeedMultiplier(body.HeldWeapon, body.CarriedWeapons, body.CarriedItemWeight) * shield;
+            return _settings.Motor.CarryLoad.SpeedMultiplier(body.HeldWeapon, body.CarriedWeapons, body.CarriedItemWeight) * shield
+                * body.MoveSpeedMultiplier;
         }
 
         private void Warn(Mover mover, string text)

@@ -242,6 +242,17 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheFortifyRequestLogNamesTheOfferAndWhetherItWasSent()
+        {
+            Assert.That(
+                ClientHordeLog.FortifyRequested(HordeFortificationAction.Build, "Gate", 40, true),
+                Is.EqualTo("[Net] horde fortify request action=Build structure=Gate cost=40 sent=True"));
+            Assert.That(
+                ClientHordeLog.FortifyRequested(HordeFortificationAction.Repair, null, 8, false),
+                Is.EqualTo("[Net] horde fortify request action=Repair structure=- cost=8 sent=False"));
+        }
+
+        [Test]
         public void BadArgumentsAreRejected()
         {
             Assert.Throws<ArgumentNullException>(() => _status.Apply(null));

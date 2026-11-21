@@ -100,6 +100,7 @@ namespace Shooter.NetV2
                 NetV2EmotePart.Create,
                 NetV2DronePart.Create,
                 NetV2VisionPart.Create,
+                NetV2HordePart.Create,
             };
 
         public static List<INetV2ClientPart> Create(NetV2ClientPartsContext context)

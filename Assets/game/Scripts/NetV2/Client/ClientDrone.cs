@@ -24,6 +24,7 @@ namespace Shooter.NetV2
         private int _sequence;
         private float _sinceSent;
         private bool _sentMoving;
+        private bool _unconfirmed;
         private Vector2 _sentMove;
         private float _sentClimb;
         private float _sentYaw;
@@ -124,6 +125,7 @@ namespace Shooter.NetV2
             IsPiloting = true;
             _sinceSent = ResendSeconds;
             _sentMoving = false;
+            _unconfirmed = false;
             _sentYaw = Yaw;
             _log?.Invoke(DroneLog.PilotStarted(_ownerText, TypeId, DroneId.Value));
             return true;
@@ -180,6 +182,14 @@ namespace Shooter.NetV2
             _sinceSent += deltaSeconds;
             var moving = move != Vector2.Zero || climb != 0f;
             var changed = move != _sentMove || climb != _sentClimb || !yaw.Equals(_sentYaw);
+            // 止まって向きだけ変えた最後の入力は届きにくい経路で 1 回しか送っていないので、落ちても向きがずれ続けないよう、
+            // 変わらなくなって ResendSeconds 後に確実に届く経路で 1 回だけ送り直す (毎フレーム変わるマウスの向きを Reliable で送らないため)
+            if (!changed && !moving && _unconfirmed && _sinceSent >= ResendSeconds)
+            {
+                Send(move, climb, yaw, false, TransportChannel.Reliable);
+                return true;
+            }
+
             if (!changed && (!moving || _sinceSent < ResendSeconds))
             {
                 return false;
@@ -237,6 +247,7 @@ namespace Shooter.NetV2
                 _sentMove = Vector2.Zero;
                 _sentClimb = 0f;
                 _sentMoving = false;
+                _unconfirmed = false;
                 _sentYaw = row.Yaw;
                 Appeared?.Invoke(id);
                 return;
@@ -272,6 +283,7 @@ namespace Shooter.NetV2
             _sentClimb = climb;
             _sentYaw = yaw;
             _sentMoving = move != Vector2.Zero || climb != 0f;
+            _unconfirmed = channel == TransportChannel.Unreliable;
         }
 
         private static bool IsFinite(Vector2 value)

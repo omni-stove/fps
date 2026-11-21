@@ -102,10 +102,15 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(_drone.Steer(Vector2.Zero, 0f, 90f, 0.016f), Is.False, "still and facing the same way");
             Assert.That(_drone.Steer(Vector2.Zero, 0f, 100f, 0.016f), Is.True, "turning is sent");
-            Assert.That(_drone.Steer(Vector2.Zero, 0f, 100f, 1f), Is.False, "a still drone is not resent");
+            Assert.That(_drone.Steer(Vector2.Zero, 0f, 100f, 0.001f), Is.False, "too soon to confirm the turn");
+            Assert.That(_drone.Steer(Vector2.Zero, 0f, 100f, ClientDrone.ResendSeconds), Is.True, "the last turn is confirmed once");
+            Assert.That(_drone.Steer(Vector2.Zero, 0f, 100f, 1f), Is.False, "a still drone is not resent after that");
             Assert.That(_drone.Steer(new Vector2(1f, 0f), 0f, 100f, 0.001f), Is.True);
 
-            Assert.That(_sent, Has.Count.EqualTo(2));
+            Assert.That(_sent, Has.Count.EqualTo(3));
+            Assert.That(_sent[0].Channel, Is.EqualTo(TransportChannel.Unreliable));
+            Assert.That(_sent[1].Channel, Is.EqualTo(TransportChannel.Reliable));
+            Assert.That(_sent[1].Yaw, Is.EqualTo(100f));
         }
 
         [Test]

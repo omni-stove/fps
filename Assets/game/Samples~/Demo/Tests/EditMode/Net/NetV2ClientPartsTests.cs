@@ -14,7 +14,7 @@ namespace Shooter.Net.Tests
         // 本物の一覧 (BlockListStore.DefaultKey) を壊さないよう、テストだけのキーに保存する。
         private const string BlocksKey = "Shooter.Tests.NetV2ClientParts.Blocks";
 
-        private const int VoiceIndex = 24;
+        private const int VoiceIndex = 25;
 
         private readonly List<string> _logs = new List<string>();
         private readonly List<string> _decided = new List<string>();
@@ -60,6 +60,7 @@ namespace Shooter.Net.Tests
             GameSignals.BuySender.Clear();
             GameSignals.NetStats.Clear();
             GameSignals.Emotes.Clear();
+            GameSignals.ModeStatus.Clear();
         }
 
         [Test]
@@ -93,6 +94,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2EmotePart),
                 typeof(NetV2DronePart),
                 typeof(NetV2VisionPart),
+                typeof(NetV2HordePart),
             }));
         }
 
@@ -108,6 +110,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2EmotePart),
                 typeof(NetV2DronePart),
                 typeof(NetV2VisionPart),
+                typeof(NetV2HordePart),
             }));
         }
 
@@ -166,6 +169,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2EmotePart),
                 typeof(NetV2DronePart),
                 typeof(NetV2VisionPart),
+                typeof(NetV2HordePart),
                 typeof(NetV2VoicePart),
             }));
             Assert.That(((NetV2VoicePart)_parts[VoiceIndex]).Voice, Is.Not.Null);
@@ -200,6 +204,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2GuardianLeaderPart),
                 typeof(NetV2PickupPart),
                 typeof(NetV2EmotePart),
+                typeof(NetV2HordePart),
             }));
             Assert.That(_parts.OfType<NetV2DronePart>(), Is.Empty, "a replay has no drone to pilot");
             Assert.That(_parts.OfType<NetV2VisionPart>(), Is.Empty, "a replay has no own body to put goggles on");

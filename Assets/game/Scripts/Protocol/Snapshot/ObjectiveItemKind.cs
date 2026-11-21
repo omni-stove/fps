@@ -18,5 +18,20 @@ namespace Shooter.Protocol
         DeathBox,
 
         ExtractionPoint,
+
+        // 地面の拾い物は中身の種類 (PickupKind) ごとに分け、クライアントが中身を知らずに見た目を選べるようにする。
+        // Opened は拾われて次に出るのを待っている間、Radius は拾える範囲、持ち主は落とした人
+        WeaponPickup,
+
+        AmmoPickup,
+
+        HealthPickup,
+
+        ArmorPickup,
+
+        ItemPickup,
+
+        // 弾薬箱。Opened は使ってから次に使えるまでの間、Radius は使える範囲
+        AmmoCrate,
     }
 }

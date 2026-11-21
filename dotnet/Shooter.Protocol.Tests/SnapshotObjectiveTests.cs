@@ -666,6 +666,12 @@ namespace Shooter.Protocol.Tests
         [TestCase(ObjectiveItemKind.SupplyCrate, 5, true, 2f)]
         [TestCase(ObjectiveItemKind.DeathBox, 6, true, 1.25f)]
         [TestCase(ObjectiveItemKind.ExtractionPoint, 7, true, 8f)]
+        [TestCase(ObjectiveItemKind.WeaponPickup, 8, false, 1f)]
+        [TestCase(ObjectiveItemKind.AmmoPickup, 9, true, 1f)]
+        [TestCase(ObjectiveItemKind.HealthPickup, 10, false, 1.5f)]
+        [TestCase(ObjectiveItemKind.ArmorPickup, 11, true, 1f)]
+        [TestCase(ObjectiveItemKind.ItemPickup, 12, false, 0.5f)]
+        [TestCase(ObjectiveItemKind.AmmoCrate, 13, true, 1.6f)]
         public void ABoxOrAnExtractionPointRoundTrips(ObjectiveItemKind kind, int value, bool opened, float radius)
         {
             var sent = Build(100);
@@ -776,13 +782,13 @@ namespace Shooter.Protocol.Tests
         public void AnUnknownItemKindIsUnreadable()
         {
             var sent = Build(100);
-            AddItem(sent, 1, ObjectiveItemKind.ExtractionPoint, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
+            AddItem(sent, 1, ObjectiveItemKind.AmmoCrate, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
             var bytes = Bytes(sent, null);
 
             // 物の種類は、末尾の 種類 (1)・陣営 (1)・持ち主 (4)・位置 (12)・状態 (1)・運んでいる人 (4)・設置物の並びの数 (1) の頭にある
             var kindAt = bytes.Length - (1 + 1 + 4 + 12 + 1 + 4 + 1);
-            Assert.That(bytes[kindAt], Is.EqualTo((byte)ObjectiveItemKind.ExtractionPoint));
-            bytes[kindAt] = (byte)(ObjectiveItemKind.ExtractionPoint + 1);
+            Assert.That(bytes[kindAt], Is.EqualTo((byte)ObjectiveItemKind.AmmoCrate));
+            bytes[kindAt] = (byte)(ObjectiveItemKind.AmmoCrate + 1);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
         }

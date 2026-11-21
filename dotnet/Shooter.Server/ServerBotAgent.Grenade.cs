@@ -16,7 +16,7 @@ namespace Shooter.Server
 
         private float _nextGrenadeAt;
 
-        public bool CanThrowGrenade => Clock >= _nextGrenadeAt;
+        public bool CanThrowGrenade => UsesTactics && Clock >= _nextGrenadeAt;
 
         public void NoteGrenadeThrown()
         {

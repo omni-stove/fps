@@ -10,7 +10,7 @@ namespace Shooter.Server
 {
     // Bot を接続の無いプレイヤーとして ServerMatch に入れ、人と同じ入力 (InputFrame) を移動のモジュールに、
     // 射撃を戦闘のモジュールの人と同じ検査に渡すのは、ルール・戦闘・スナップショット・クライアントの予測が Bot を人と分けずに扱えるようにするため。
-    internal sealed class ServerBots : IServerModule
+    internal sealed partial class ServerBots : IServerModule, ISnapshotContributor
     {
         public const string LogTag = "[Bot]";
 
@@ -87,6 +87,7 @@ namespace Shooter.Server
             _match.PlayerJoined += HandlePlayerJoined;
             _match.PlayerLeft += HandlePlayerLeft;
             _match.MapChanged += HandleMapChanged;
+            StartArchetypes();
         }
 
         private void UseMap(ServerMapData map)
@@ -160,6 +161,7 @@ namespace Shooter.Server
                 Reconcile();
             }
 
+            DetonateFallen();
             if (_agents.Count == 0)
             {
                 return;
@@ -219,6 +221,7 @@ namespace Shooter.Server
             _match.PlayerJoined -= HandlePlayerJoined;
             _match.PlayerLeft -= HandlePlayerLeft;
             _match.MapChanged -= HandleMapChanged;
+            StopArchetypes();
             _trimRequests.Clear();
         }
 
@@ -381,7 +384,7 @@ namespace Shooter.Server
                     {
                         if (!pair.Value.Goal.HasValue)
                         {
-                            pair.Value.Brain.SetPatrolRoute(ShuffledPatrolRoute(pair.Key));
+                            pair.Value.SetRoute(ShuffledPatrolRoute(pair.Key));
                         }
                     }
                 }
@@ -405,7 +408,7 @@ namespace Shooter.Server
                     continue;
                 }
 
-                agent.Brain.SetPatrolRoute(RouteAround(center, radius, slot, _spec));
+                agent.SetRoute(RouteAround(center, radius, slot, _spec));
                 slot++;
             }
 
@@ -431,12 +434,12 @@ namespace Shooter.Server
                 agent.Goal = goal;
                 if (goal.HasValue)
                 {
-                    agent.Brain.SetPatrolRoute(new[] { goal.Value });
+                    agent.SetRoute(new[] { goal.Value });
                     _log.WriteLine(ServerBotLog.Goal(pair.Key, goal.Value));
                 }
                 else
                 {
-                    agent.Brain.SetPatrolRoute(DefaultRoute(pair.Key));
+                    agent.SetRoute(DefaultRoute(pair.Key));
                     _log.WriteLine(ServerBotLog.GoalCleared(pair.Key));
                 }
             }
@@ -541,6 +544,13 @@ namespace Shooter.Server
                 decision = agent.Brain.Tick(dt, perception);
             }
 
+            // 突進している間と爆ぜた tick は、歩く入力を出さずに種類の動きだけをする
+            if (StepArchetype(agent, body, session, motion, thinking, dt))
+            {
+                LogPosition(agent, session);
+                return;
+            }
+
             var step = BotRouteStep.None;
             var climb = 0f;
             var route = agent.Route;
@@ -587,14 +597,25 @@ namespace Shooter.Server
 
             agent.Pitch = plan.Pitch;
             var traversing = step == BotRouteStep.Climb || step == BotRouteStep.ApproachLadder;
+            var sprint = plan.Sprint;
+            var crouch = plan.Crouch || decision.Crouch;
+            var gait = agent.GaitMultiplier;
+            if (gait.HasValue && !traversing)
+            {
+                // 盾持ちの遅い歩みと自爆兵の駆け足は種類の速さで決め、計画の走り・しゃがみは使わない
+                var motor = _movement.Settings.Motor;
+                move = ServerBotAgent.GaitMove(move, gait.Value, motor.WalkSpeed, motor.SprintSpeed, out sprint);
+                crouch = false;
+            }
+
             var buttons = InputButtons.None;
-            if (plan.Sprint && !traversing)
+            if (sprint && agent.SprintAllowed && !traversing)
             {
                 buttons |= InputButtons.Sprint;
             }
 
             // 判断が物陰でしゃがませる (隠れている) 時も、入力の計画 (構えた時にしゃがむか) と同じくしゃがむ
-            if ((plan.Crouch || decision.Crouch) && !traversing)
+            if (crouch && !traversing)
             {
                 buttons |= InputButtons.Crouch;
             }
@@ -625,13 +646,22 @@ namespace Shooter.Server
                 Shoot(agent, plan, decision.LookAt, (int)Math.Min(tick, int.MaxValue), dt);
             }
 
-            if (agent.Clock >= agent.NextPositionLog)
+            Bash(agent, body, decision.LookAt, thinking && !traversing && !after.Ladder.IsClimbing, dt);
+            LogPosition(agent, session);
+        }
+
+        private void LogPosition(ServerBotAgent agent, TeamDeathmatchSession session)
+        {
+            if (agent.Clock < agent.NextPositionLog || !_bodies.TryGet(agent.PlayerId, out var body))
             {
-                agent.NextPositionLog = agent.Clock + PositionLogIntervalSeconds;
-                var at = body.Position;
-                _log.WriteLine(LogTag + " pos player=" + Text(playerId) + " x=" + F2(at.X) + " y=" + F2(at.Y) + " z=" + F2(at.Z)
-                    + " state=" + agent.Brain.State + " health=" + Text(session.GetHealth(playerId)));
+                return;
             }
+
+            var playerId = agent.PlayerId;
+            agent.NextPositionLog = agent.Clock + PositionLogIntervalSeconds;
+            var at = body.Position;
+            _log.WriteLine(LogTag + " pos player=" + Text(playerId) + " x=" + F2(at.X) + " y=" + F2(at.Y) + " z=" + F2(at.Z)
+                + " state=" + agent.Brain.State + " health=" + Text(session.GetHealth(playerId)));
         }
 
         private void ReportLadder(ServerBotAgent agent, CharacterLadderState ladder, ServerBotRoute route)
@@ -677,6 +707,12 @@ namespace Shooter.Server
             if (_combat.BotFire(playerId, plan.FireOrigin, agent.Scatter(plan.FireOrigin, plan.FireDirection, lookAt), tick))
             {
                 agent.Brain.RecordShot();
+
+                // 狙撃兵は撃てたら次の足場へ移る。撃った瞬間の足元から次を選ぶ (オフラインの EnemySniper と同じ)
+                if (_bodies.TryGet(playerId, out var body) && agent.ConfirmShot(body.Position + new Vector3(0f, body.Shape.BottomY, 0f)))
+                {
+                    _log.WriteLine(ServerBotLog.SniperFired(playerId, agent.ShotDamageMultiplier));
+                }
             }
         }
 

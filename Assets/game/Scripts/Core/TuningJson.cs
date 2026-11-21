@@ -217,6 +217,10 @@ namespace Shooter.Core
             CoverSearchSecondsItem,
             CoverMaxAngleDegreesItem,
             CoverMinThreatDistanceItem,
+            BotArchetypeJson.ShieldItem,
+            BotArchetypeJson.SniperItem,
+            BotArchetypeJson.ChargerItem,
+            BotArchetypeJson.BomberItem,
         };
 
         // GrenadeTypesItem も CarriedItem も無いオブジェクトは、種類が 1 つだった頃の形として、その 1 種類だけを持つ並びに読む。
@@ -350,6 +354,12 @@ namespace Shooter.Core
             var arrivalDistance = fields.ReadFloat(ArrivalDistanceItem, input.ArrivalDistance);
             var archetype = fields.ReadEnum(ArchetypeItem, brain.Archetype);
             float? staggerResistance = fields.Has(StaggerResistanceItem) ? fields.ReadFloat(StaggerResistanceItem, brain.StaggerResistance) : (float?)null;
+
+            // 種類の値は今の archetype に関わらず読む。書いておけば archetype を替えるだけで切り替えられるように
+            var shield = BotArchetypeJson.ReadShield(fields, brain.Shield);
+            var sniper = BotArchetypeJson.ReadSniper(fields, brain.Sniper);
+            var charger = BotArchetypeJson.ReadCharger(fields, brain.Charger);
+            var bomber = BotArchetypeJson.ReadBomber(fields, brain.Bomber);
             EnemySpec readBrain;
             try
             {
@@ -366,6 +376,10 @@ namespace Shooter.Core
                     fields.ReadFloat(CoverPeekSecondsItem, brain.CoverPeekSeconds),
                     fields.ReadFloat(CoverHealthFractionItem, brain.CoverHealthFraction),
                     archetype,
+                    shield,
+                    sniper,
+                    charger,
+                    bomber,
                     staggerResistance: staggerResistance,
                     // 省いたときは 0 を渡し、EnemySpec に読んだ攻撃距離へそろえさせる (既定の FireRange を使うと攻撃距離だけ変えたデータで食い違う)
                     fireRange: fields.ReadFloat(FireRangeItem, 0f),

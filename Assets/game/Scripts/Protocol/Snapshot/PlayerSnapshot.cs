@@ -25,6 +25,12 @@ namespace Shooter.Protocol
         // 見えるかが変わるたびに切り替わるが、部分のビットに空きが無いので、Bot の旗と同じバイトに載せて Identity で送る
         public bool Concealed { get; set; }
 
+        // Bot の見た目の種類と、その予兆。部分のビットに空きが無いので Identity に載せる。
+        // 予兆は 1 回の攻撃で数回しか変わらず、Concealed と同じく変わった時だけ Identity を送れば足りる
+        public EnemyArchetype Archetype { get; set; }
+
+        public BotArchetypeCue ArchetypeCue { get; set; }
+
         public Vector3 Position { get; set; }
         public Vector3 Velocity { get; set; }
 
@@ -95,6 +101,8 @@ namespace Shooter.Protocol
                 || IsBot != baseline.IsBot
                 || Concealed != baseline.Concealed
                 || SquadId != baseline.SquadId
+                || Archetype != baseline.Archetype
+                || ArchetypeCue != baseline.ArchetypeCue
                 || !string.Equals(CosmeticId ?? "", baseline.CosmeticId ?? "", System.StringComparison.Ordinal))
             {
                 bits |= PlayerFields.Identity;
@@ -214,6 +222,8 @@ namespace Shooter.Protocol
                 writer.WriteByte((byte)((IsBot ? 1 : 0) | (Concealed ? 2 : 0)));
                 writer.WriteString(CosmeticId, MatchProtocol.MaxContentIdBytes);
                 writer.WriteByte(SquadId);
+                writer.WriteByte((byte)Archetype);
+                writer.WriteByte((byte)ArchetypeCue);
             }
 
             if ((fields & PlayerFields.Motion) != 0)
@@ -350,6 +360,8 @@ namespace Shooter.Protocol
                 Concealed = (flags & 2) != 0;
                 CosmeticId = reader.ReadString(MatchProtocol.MaxContentIdBytes, CosmeticId);
                 SquadId = reader.ReadByte();
+                Archetype = (EnemyArchetype)reader.ReadByteBelow(EnumRange<EnemyArchetype>.Count, "bot archetype");
+                ArchetypeCue = (BotArchetypeCue)reader.ReadByteBelow(EnumRange<BotArchetypeCue>.Count, "bot archetype cue");
             }
 
             if ((fields & PlayerFields.Motion) != 0)
@@ -474,6 +486,8 @@ namespace Shooter.Protocol
                 Concealed = baseline.Concealed;
                 CosmeticId = baseline.CosmeticId;
                 SquadId = baseline.SquadId;
+                Archetype = baseline.Archetype;
+                ArchetypeCue = baseline.ArchetypeCue;
             }
 
             if ((missing & PlayerFields.Motion) != 0)

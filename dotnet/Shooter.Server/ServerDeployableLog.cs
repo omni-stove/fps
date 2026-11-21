@@ -72,6 +72,22 @@ namespace Shooter.Server
             return "collider:" + Text(colliderId);
         }
 
+        public static string Body(int playerId)
+        {
+            return "player:" + Text(playerId);
+        }
+
+        // 乗り物はマップの乗り物の名前 (VehicleLog.NetName) で書き、乗り物のログの行と突き合わせられるようにする
+        public static string Vehicle(string netName)
+        {
+            return "vehicle:" + netName;
+        }
+
+        public static string Released(int ownerId, string typeId, int serial, string surface, ServerAnchorLoss loss)
+        {
+            return RemoteChargeLog.Prefix(Owner(ownerId), typeId) + " serial=" + Text(serial) + " net released from=" + surface + " reason=" + loss;
+        }
+
         public static string Owner(int playerId)
         {
             return Text(playerId);

@@ -72,6 +72,8 @@ namespace Shooter.Server
 
             if (mover.Riding)
             {
+                mover.GrappleHeld = frame.Has(InputButtons.Grapple);
+                mover.JumpHeld = frame.Has(InputButtons.Jump);
                 mover.Yaw = input.Yaw;
                 mover.Aiming = input.Restrained().Aim;
                 mover.Sprinting = false;
@@ -81,8 +83,19 @@ namespace Shooter.Server
             }
 
             var previous = mover.State;
-            var mantled = TryMantle(mover, frame.Tick, input);
-            var current = mantled ? mover.State : mover.Simulation.Step(mover.State, input);
+            // 縄に掛かっている間は縄が体を動かすので、崖のぼりの道は捨てる
+            var grappled = TryStepGrapple(mover, frame, previous, out var current);
+            var mantled = false;
+            if (grappled)
+            {
+                CancelMantle(mover);
+            }
+            else
+            {
+                mantled = TryMantle(mover, frame.Tick, input);
+                current = mantled ? mover.State : mover.Simulation.Step(mover.State, input);
+            }
+
             mover.State = current;
             mover.Yaw = input.Yaw;
             mover.Aiming = input.Restrained().Aim;

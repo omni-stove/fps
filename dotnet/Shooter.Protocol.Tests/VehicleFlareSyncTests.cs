@@ -145,7 +145,7 @@ namespace Shooter.Protocol.Tests
             Assert.That(first.SameAs(VehicleFlareSync.From(Flares((1, Vector3.One), (2, Vector3.UnitX)))), Is.True);
             Assert.That(first.SameAs(VehicleFlareSync.From(Flares((1, Vector3.One), (2, Vector3.UnitY)))), Is.False);
             Assert.That(first.SameAs(VehicleFlareSync.From(Flares((1, Vector3.One), (3, Vector3.UnitX)))), Is.False);
-            Assert.That(first.SameAs(VehicleFlareSync.From(Flares((1, Vector3.One))))), Is.False);
+            Assert.That(first.SameAs(VehicleFlareSync.From(Flares((1, Vector3.One)))), Is.False);
             Assert.That(first.SameAs(null), Is.False);
         }
 

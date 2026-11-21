@@ -38,7 +38,6 @@ namespace Shooter.Protocol.Tests
         }
 
         // 予約した Id は前の版と同じく読まずに断るが、知らない Id とは理由を分ける
-        [TestCase(MessageIds.EmoteRequest)]
         [TestCase(MessageIds.PickupRequest)]
         [TestCase(MessageIds.DroneControl)]
         public void AReservedIdIsRejectedByBothSidesUntilItsMessageIsAdded(ushort id)
@@ -52,6 +51,22 @@ namespace Shooter.Protocol.Tests
 
             Assert.That(server.Message, Does.Contain("message id " + id + " is reserved"));
             Assert.That(client.Message, Does.Contain("message id " + id + " is reserved"));
+        }
+
+        // 型を足した後も Id は予約のまま残すので、読まない側 (クライアント) は前と同じ理由で断る
+        [Test]
+        public void TheEmoteRequestIsReadByTheServerAndStillRejectedAsReservedByTheClient()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new EmoteRequestMessage { Action = EmoteAction.Play, EmoteId = "wave" });
+
+            var read = MatchMessages.CreateServerTable().Read(writer.AsSegment());
+            var client = Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(writer.AsSegment()));
+
+            Assert.That(read, Is.InstanceOf<EmoteRequestMessage>());
+            Assert.That(((EmoteRequestMessage)read).EmoteId, Is.EqualTo("wave"));
+            Assert.That(MessageTable.IsReserved(MessageIds.EmoteRequest), Is.True);
+            Assert.That(client.Message, Does.Contain("message id " + MessageIds.EmoteRequest + " is reserved"));
         }
 
         [Test]
@@ -328,6 +343,7 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.StashState)]
         [TestCase(MessageIds.BuyAnswer)]
         [TestCase(MessageIds.PlayerNames)]
+        [TestCase(MessageIds.EmoteState)]
         public void TheNewServerMessagesAreOnlyReadByTheClient(ushort id)
         {
             Assert.That(MatchMessages.CreateClientTable().TryGet(id, out _), Is.True);

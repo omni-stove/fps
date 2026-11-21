@@ -23,6 +23,7 @@ make export-server-rules    # ルールと調整値 → server-data/rules/、ser
 | `chat-words.json` | `server-data` | 手で書く。チャットはオンラインだけなので、伏せる語はサーバーの分を置く |
 | `anticheat`・`deployables`・`battle-royale` (`.json`) | `server-data` | 手で書く。クライアントに同じ名前のファイルは無い |
 | `mutators.json` | `Assets/game/Resources/Tuning/` | 使うときだけ写す。無ければオンラインの変則ルールは無し |
+| `emotes.json` | 入口 `GameContent` の `EmotesTuning` (キットの `Resources/Tuning/` には無い) | `make export-server-rules` で写す。無ければ `{}` (エモート無し) を置き、サーバーはどの Id の要求も断る |
 
 `server-data/tuning/` と `Resources/Tuning/` の両方にある同じ名前のファイルは、`economy.json`・`chat-words.json` を除き、中身が同じでないと `scripts/lint.sh` (CI の lint) が落ちる (`scripts/server-tuning.sh`)。サーバー用に別の中身を持たせるファイルを増やすときは、そのスクリプトの `server_owned` とこの表に足す。
 

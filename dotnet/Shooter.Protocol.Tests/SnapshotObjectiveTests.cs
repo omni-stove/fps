@@ -16,10 +16,11 @@ namespace Shooter.Protocol.Tests
         // エリアの中心 (8)・半径 (4)・次の中心 (8)・次の半径 (4)・段階 (4)・段階の残り秒 (4)・残っている分隊 (4)
         private const int _battleRoyaleBytes = 8 + 4 + 8 + 4 + 4 + 4 + 4;
 
+        // 25 で同期するルールにエモート (MatchRulesSync.Emote) が増えた
         [Test]
-        public void TheVersionIs24()
+        public void TheVersionIs25()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(24));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(25));
         }
 
         [Test]

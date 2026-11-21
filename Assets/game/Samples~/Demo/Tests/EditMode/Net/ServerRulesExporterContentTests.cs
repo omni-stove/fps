@@ -96,6 +96,7 @@ namespace Shooter.Net.Tests
                 Path.Combine(_directory, "streaks.json"),
                 Path.Combine(_directory, "extraction.json"),
                 Path.Combine(_directory, "stash.json"),
+                Path.Combine(_directory, "emotes.json"),
             }));
             Assert.That(File.ReadAllText(Path.Combine(_directory, "knockback.json")), Is.EqualTo(knockback));
             Assert.That(File.ReadAllText(Path.Combine(_directory, "bots.json")), Is.EqualTo(bots));
@@ -150,6 +151,26 @@ namespace Shooter.Net.Tests
             var resources = Resources.Load<TextAsset>(resourcePath);
             Assert.That(resources, Is.Not.Null, resourcePath);
             Assert.That(File.ReadAllText(Path.Combine(_directory, fileName)), Is.EqualTo(resources.text));
+        }
+
+        // エモートはゲームが用意するのでキットの Resources に無く、入口の欄が無ければ空の一覧 (既定) のまま渡す
+        [Test]
+        public void TheEmotesOfGameContentAreWrittenForTheServer()
+        {
+            ServerRulesExporter.ExportTuning(_directory);
+            var output = Path.Combine(_directory, "emotes.json");
+            var expected = Resources.Load<TextAsset>(EmoteJson.ResourcePath);
+            Assert.That(File.ReadAllText(output), Is.EqualTo(expected != null ? expected.text : ServerRulesExporter.AllDefaultsJson));
+
+            const string emotes = "{ \"emotes\": [ { \"id\": \"wave\", \"durationSeconds\": 2 } ] }";
+            var content = Create<GameContent>("Game");
+            content.EmotesTuning = Text("GameEmotes", emotes);
+            GameContent.Use(content);
+
+            ServerRulesExporter.ExportTuning(_directory);
+
+            Assert.That(File.ReadAllText(output), Is.EqualTo(emotes));
+            Assert.That(EmoteJson.Parse(emotes, "emotes.json")[0].DurationSeconds, Is.EqualTo(2f));
         }
 
         [Test]

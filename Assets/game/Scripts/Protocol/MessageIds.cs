@@ -34,7 +34,7 @@ namespace Shooter.Protocol
         public const ushort BuyRequest = 34;
         public const ushort InteractRequest = 35;
 
-        // 36-38 は Id だけを先に決めてある (MessageTable.IsReserved)。読む型を足すまでは、届いても断る
+        // 37-38 は Id だけを先に決めてある (MessageTable.IsReserved)。読む型を足すまでは、届いても断る
         public const ushort EmoteRequest = 36;
         public const ushort PickupRequest = 37;
         public const ushort DroneControl = 38;
@@ -71,5 +71,6 @@ namespace Shooter.Protocol
         public const ushort StashState = 87;
         public const ushort BuyAnswer = 88;
         public const ushort PlayerNames = 89;
+        public const ushort EmoteState = 90;
     }
 }

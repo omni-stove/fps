@@ -239,7 +239,13 @@ namespace Shooter.NetV2
                 return _local != null ? _local.gameObject : null;
             }
 
-            return _remotes.TryGetValue(shooterId, out var remote) && remote != null ? remote.gameObject : null;
+            return RemoteObject(shooterId);
+        }
+
+        // 部品 (NetV2EmotePart など) が相手の体に演出を付けるための口。見えていない (まだ現れていない・抜けた) 相手と自分は null
+        public GameObject RemoteObject(int playerId)
+        {
+            return _remotes.TryGetValue(playerId, out var remote) && remote != null ? remote.gameObject : null;
         }
 
         private void ShowShot(ShotMessage shot)

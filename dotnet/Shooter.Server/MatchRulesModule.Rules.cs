@@ -110,6 +110,18 @@ namespace Shooter.Server
             return _match.Maps.Count > 0 ? _match.Maps : new[] { _context.Map };
         }
 
+        // 起動は止めないのは、未対応の項目はクライアントだけで動くか何も起きないかで、試合そのものは進められるため
+        private void WarnUnsupportedActions()
+        {
+            var line = ServerUnsupportedActionsLog.Warning(
+                _data.File.Name.Length > 0 ? _data.File.Name : _data.Name,
+                ServerUnsupportedActions.EnabledIn(_data.Rules));
+            if (line != null)
+            {
+                _log.WriteLine(line);
+            }
+        }
+
         private void HandleRulesChanged(GameRules rules)
         {
             _nextData = ReferenceEquals(rules, _data.Rules) ? null : _data.WithRules(rules);
@@ -142,6 +154,7 @@ namespace Shooter.Server
             _log.WriteLine(MatchLog.RulesChanged(from, rules.Objective));
             _log.WriteLine(MatchLog.Rules(_data.File.Name.Length > 0 ? _data.File.Name : _data.Name, rules));
             _log.WriteLine(NetDownedLog.Settings(rules.Actions, rules.Actions.ReviveRange));
+            WarnUnsupportedActions();
             PreparePings(rules);
             _idleTracker = null;
             PrepareIdle(rules);

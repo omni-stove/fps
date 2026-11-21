@@ -689,7 +689,7 @@ namespace Shooter.NetV2
             lockOn.AimingSource = () => local != null && local.IsAiming;
             lockOn.AimSource = () => new Ray(local.EyePosition, local.AimDirection);
             lockOn.Targets = new ClientLockOnTargets(
-                _client.PlayerId, () => _client.LatestSnapshot, _match.TrySampleRemote, _world.Collision, _client.Motor.Stance);
+                _client.PlayerId, () => _client.LatestSnapshot, _match.TrySampleRemote, _world.Collision, _client.Motor.Stance, _vehicles);
             return lockOn;
         }
 

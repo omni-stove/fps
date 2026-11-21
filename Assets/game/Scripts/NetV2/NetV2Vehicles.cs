@@ -12,7 +12,8 @@ namespace Shooter.NetV2
     // 乗り降り・耐久・爆発・部位への命中はサーバーが決めるので、シーンの乗り物の部品 (Vehicle・VehicleImpactDamage・部位の部品 INetVehicleParts の命中の受け口) は止め、
     // 煙・火・残骸の見た目 (VehicleDamageEffects) にサーバーの段階を、部位の部品 (INetVehicleParts) にサーバーの受けた量を渡す。
     // 乗り物の番号は書き出し (MapVehicleExporter) と同じく、有効な乗り物をシーンの並び順で数える。
-    internal sealed class NetV2Vehicles
+    // ロックオン (ClientLockOnTargets) には、見せている車体の中ほどとシーンのフレアの効き目を渡す。
+    internal sealed class NetV2Vehicles : IClientLockOnVehicles
     {
         private readonly List<SceneVehicle> _scene = new List<SceneVehicle>();
         private readonly VehicleRequestMessage _request = new VehicleRequestMessage();
@@ -198,9 +199,17 @@ namespace Shooter.NetV2
 
             var next = local.TakeNextSeat();
             var previous = local.TakePreviousSeat();
-            if (!seat.IsRiding || seat.Vehicle >= _scene.Count)
+            var countermeasure = local.TakeCountermeasure();
+            if (!seat.IsRiding || seat.Vehicle >= _scene.Count || _scene[seat.Vehicle].Vehicle == null)
             {
                 return;
+            }
+
+            // フレアを積んでいない乗り物 (VehicleCountermeasures の無い・切ってある乗り物) はサーバーも撒かないので送らない
+            var scene = _scene[seat.Vehicle];
+            if (countermeasure && scene.DecoyConeDegrees.HasValue && _vehicles.FillCountermeasure(_request, scene.Vehicle.Spec.DriverSeatIndex))
+            {
+                Send(client);
             }
 
             if (next)
@@ -263,8 +272,35 @@ namespace Shooter.NetV2
             var motor = vehicle.GetComponent<IVehicleMotor>();
             var effects = vehicle.GetComponentInChildren<VehicleDamageEffects>(true);
             var mounts = vehicle.WeaponMounts;
+            var center = LocalCenter(vehicle);
+            var flares = vehicle.GetComponent<VehicleCountermeasures>();
+            var cone = flares != null && flares.enabled ? flares.Pod.Spec.DecoyConeDegrees : (float?)null;
             vehicle.enabled = false;
-            return new SceneVehicle(vehicle, body, motor, effects, parts, mounts);
+            return new SceneVehicle(vehicle, body, motor, effects, parts, mounts, center, cone);
+        }
+
+        // サーバーの車体の中ほど (MapVehicle.Center) と同じ点を指すよう、書き出し (MapVehicleExporter.Hull) が箱にする当たり判定と同じものの中心を、
+        // 乗り物から見た縮尺を掛けない位置で平均する。当たり判定の無い乗り物は原点
+        internal static Vector3 LocalCenter(Vehicle vehicle)
+        {
+            var root = vehicle.transform;
+            var inverse = Quaternion.Inverse(root.rotation);
+            var sum = Vector3.zero;
+            var count = 0;
+            foreach (var collider in vehicle.GetComponentsInChildren<Collider>(true))
+            {
+                if (!collider.enabled || !collider.gameObject.activeInHierarchy || collider.isTrigger || collider is WheelCollider
+                    || collider.GetComponentInParent<Vehicle>(true) != vehicle)
+                {
+                    continue;
+                }
+
+                var world = collider is BoxCollider box ? box.transform.TransformPoint(box.center) : collider.bounds.center;
+                sum += inverse * (world - root.position);
+                count++;
+            }
+
+            return count > 0 ? sum / count : Vector3.zero;
         }
 
         private InteractHintSlot BoardHint => _boardHint ?? (_boardHint = new InteractHintSlot(this));
@@ -303,14 +339,38 @@ namespace Shooter.NetV2
             return nearest >= 0;
         }
 
+        public bool TryGetShownCenter(int vehicle, out System.Numerics.Vector3 center)
+        {
+            center = default;
+            if (_vehicles == null || vehicle < 0 || vehicle >= _scene.Count || _scene[vehicle].Vehicle == null)
+            {
+                return false;
+            }
+
+            var scene = _scene[vehicle];
+            var transform = scene.Vehicle.transform;
+            center = NetV2Math.ToNumerics(transform.position + (transform.rotation * scene.LocalCenter));
+            return true;
+        }
+
+        public float? DecoyConeDegrees(int vehicle)
+        {
+            return _vehicles != null && vehicle >= 0 && vehicle < _scene.Count ? _scene[vehicle].DecoyConeDegrees : null;
+        }
+
         private void Request(MatchClient client, VehicleAction action, int vehicle, int seat)
         {
             _request.Action = action;
             _request.Vehicle = vehicle;
             _request.Seat = seat;
+            Send(client);
+        }
+
+        private void Send(MatchClient client)
+        {
             client.Send(_request, TransportChannel.Reliable);
-            Debug.Log(VehicleLog.Tag + " net request action=" + action + " vehicle=" + vehicle.ToString(CultureInfo.InvariantCulture)
-                + " seat=" + seat.ToString(CultureInfo.InvariantCulture), _context);
+            Debug.Log(VehicleLog.Tag + " net request action=" + _request.Action + " vehicle=" + _request.Vehicle.ToString(CultureInfo.InvariantCulture)
+                + " seat=" + _request.Seat.ToString(CultureInfo.InvariantCulture), _context);
         }
 
         private WeaponDefinition FindWeapon(string weaponId)
@@ -426,7 +486,7 @@ namespace Shooter.NetV2
         {
             public SceneVehicle(
                 Vehicle vehicle, Rigidbody body, IVehicleMotor motor, VehicleDamageEffects effects, INetVehicleParts parts,
-                IReadOnlyList<VehicleWeaponMount> mounts)
+                IReadOnlyList<VehicleWeaponMount> mounts, Vector3 localCenter, float? decoyConeDegrees)
             {
                 Vehicle = vehicle;
                 Body = body;
@@ -434,7 +494,15 @@ namespace Shooter.NetV2
                 Effects = effects;
                 Parts = parts;
                 Mounts = mounts ?? Array.Empty<VehicleWeaponMount>();
+                LocalCenter = localCenter;
+                DecoyConeDegrees = decoyConeDegrees;
             }
+
+            // 乗り物から見た車体の中ほど。縮尺は掛けない (サーバーの MapVehicle と同じ)
+            public Vector3 LocalCenter { get; }
+
+            // フレアを積んでいない乗り物は null
+            public float? DecoyConeDegrees { get; }
 
             public Vehicle Vehicle { get; }
 

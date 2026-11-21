@@ -13,6 +13,7 @@ namespace Shooter.Server.Tests
     {
         private const float _tickSeconds = 1f / 60f;
         private static readonly int[] _firstInfected = { 1 };
+        private static readonly int[] _joinedInfected = { 3 };
         private static readonly DateTime _time = new DateTime(2026, 11, 21, 9, 0, 0, DateTimeKind.Utc);
 
         private StringWriter _log;
@@ -307,7 +308,7 @@ namespace Shooter.Server.Tests
 
             Step();
 
-            Assert.That(rearmed, Is.EqualTo(new[] { 3 }));
+            Assert.That(rearmed, Is.EqualTo(_joinedInfected));
             Assert.That(_log.ToString(), Does.Contain("[Infected] rearm player=3 weapon=" + TestRules.HandgunId));
         }
 

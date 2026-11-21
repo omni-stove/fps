@@ -15,7 +15,8 @@ namespace Shooter.Core
             IReadOnlyList<MapVehicleHullBox> hull = null,
             IReadOnlyList<Vector3> exitPoints = null,
             IReadOnlyList<WeaponSpec> weapons = null,
-            VehicleDriveSpec drive = null)
+            VehicleDriveSpec drive = null,
+            MapVehicleCountermeasures countermeasures = null)
         {
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
             Position = MapVehicleSeat.RequireFinite(position, nameof(position));
@@ -36,6 +37,7 @@ namespace Shooter.Core
             ExitPoints = MapVehicleSeat.Copy(exitPoints, nameof(exitPoints));
             Weapons = CopyWeapons(spec, weapons);
             Drive = drive ?? VehicleDriveSpec.Default;
+            Countermeasures = countermeasures;
         }
 
         public VehicleSpec Spec { get; }
@@ -53,6 +55,9 @@ namespace Shooter.Core
         public IReadOnlyList<WeaponSpec> Weapons { get; }
 
         public VehicleDriveSpec Drive { get; }
+
+        // フレアを積んでいない乗り物は null。
+        public MapVehicleCountermeasures Countermeasures { get; }
 
         public static Vector3 ToWorld(Vector3 local, Vector3 position, Quaternion rotation)
         {

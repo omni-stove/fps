@@ -47,6 +47,11 @@
                 <ui:SliderInt name="settings-effects-volume" class="settings__slider" />
                 <ui:Label name="settings-effects-volume-value" text="" class="settings__value" />
             </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.musicVolume" class="settings__caption" />
+                <ui:SliderInt name="settings-music-volume" class="settings__slider" />
+                <ui:Label name="settings-music-volume-value" text="" class="settings__value" />
+            </ui:VisualElement>
 
             <ui:Label text="#settings.section.graphics" class="settings__section" />
             <!-- 押すたびに次の値へ巡る。解像度は画面が持つ大きさ、画質はプロジェクト設定 (Quality) の段階、fps の上限は Resources/Tuning/graphics の一覧から SettingsView が選ぶ。 -->

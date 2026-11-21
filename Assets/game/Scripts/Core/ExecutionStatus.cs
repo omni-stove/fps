@@ -6,16 +6,36 @@ namespace Shooter.Core
     public sealed class ExecutionStatus
     {
         public ExecutionStatus(ExecutionSession session, int? localPlayerId, int? interactTargetId)
+            : this(session ?? throw new ArgumentNullException(nameof(session)), session, localPlayerId, interactTargetId)
         {
-            Session = session ?? throw new ArgumentNullException(nameof(session));
+        }
+
+        private ExecutionStatus(IExecutionView view, ExecutionSession session, int? localPlayerId, int? interactTargetId)
+        {
+            View = view;
+            Session = session;
             LocalPlayerId = localPlayerId;
             InteractTargetId = interactTargetId;
         }
 
+        // オフラインの試合 (ExecutionRunner) でなければ null。HUD は View を読む
         public ExecutionSession Session { get; }
+
+        public IExecutionView View { get; }
 
         public int? LocalPlayerId { get; }
 
         public int? InteractTargetId { get; }
+
+        // コンストラクターを分けないのは、null を渡したときにどちらの形か決まらなくなるため
+        public static ExecutionStatus FromView(IExecutionView view, int? localPlayerId, int? interactTargetId)
+        {
+            if (view == null)
+            {
+                throw new ArgumentNullException(nameof(view));
+            }
+
+            return new ExecutionStatus(view, view as ExecutionSession, localPlayerId, interactTargetId);
+        }
     }
 }

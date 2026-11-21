@@ -164,6 +164,29 @@ namespace Shooter.Core
             return travelled;
         }
 
+        // ネットの移動は tick ごとに状態から戻して進めるので、前の終わった理由は持ち越さない。
+        public void Restore(CharacterSlideState state)
+        {
+            if (!state.IsValid)
+            {
+                throw new ArgumentException("state must be valid", nameof(state));
+            }
+
+            _isSliding = state.IsSliding;
+            _direction = state.Direction;
+            _speed = state.Speed;
+            _elapsed = state.Elapsed;
+            _distance = state.Distance;
+            _lastEnd = SlideEnd.None;
+        }
+
+        public CharacterSlideState Capture(float airborneSeconds)
+        {
+            return _isSliding
+                ? CharacterSlideState.Sliding(_direction, _speed, _elapsed, _distance, airborneSeconds)
+                : CharacterSlideState.None;
+        }
+
         public void LimitSpeed(float maxSpeed)
         {
             RequireNonNegative(maxSpeed, nameof(maxSpeed));

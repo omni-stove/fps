@@ -13,7 +13,7 @@ namespace Shooter.Server
             RoundSpec round,
             ImpactSpec impact,
             float chargeFraction,
-            int? lockTargetId,
+            ServerLockTarget? lockTarget,
             float tick,
             Vector3 shooterPosition,
             TriggerEdge trigger)
@@ -23,7 +23,7 @@ namespace Shooter.Server
             Round = round ?? throw new ArgumentNullException(nameof(round));
             Impact = impact ?? throw new ArgumentNullException(nameof(impact));
             ChargeFraction = chargeFraction;
-            LockTargetId = lockTargetId;
+            LockTarget = lockTarget;
             Tick = tick;
             ShooterPosition = shooterPosition;
             Trigger = trigger;
@@ -39,7 +39,7 @@ namespace Shooter.Server
 
         public float ChargeFraction { get; }
 
-        public int? LockTargetId { get; }
+        public ServerLockTarget? LockTarget { get; }
 
         public float Tick { get; }
 
@@ -52,7 +52,7 @@ namespace Shooter.Server
             return multiplier == 1f
                 ? this
                 : new ServerShot(
-                    ShooterId, Weapon, Round, Impact.WithDamageMultiplier(multiplier), ChargeFraction, LockTargetId, Tick, ShooterPosition, Trigger);
+                    ShooterId, Weapon, Round, Impact.WithDamageMultiplier(multiplier), ChargeFraction, LockTarget, Tick, ShooterPosition, Trigger);
         }
     }
 }

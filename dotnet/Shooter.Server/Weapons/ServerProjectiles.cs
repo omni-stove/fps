@@ -65,7 +65,14 @@ namespace Shooter.Server
             for (var i = 0; i < _flying.Count; i++)
             {
                 var flying = _flying[i];
-                var step = flying.Flight.Step(deltaSeconds, HomingTarget(flying.Shot));
+                var lured = flying.Flight.LuredDecoyId;
+                var step = flying.Flight.Step(deltaSeconds, HomingTarget(flying.Shot), Decoy(flying.Shot));
+                var luring = flying.Flight.LuredDecoyId;
+                if (luring.HasValue && luring != lured)
+                {
+                    Combat.Context.Log.WriteLine(ServerCountermeasureLog.Lured(flying.Id, flying.Shot.Weapon.Id, luring.Value));
+                }
+
                 if (step.State == BallisticState.Flying)
                 {
                     continue;
@@ -81,12 +88,41 @@ namespace Shooter.Server
         // 弾は巻き戻さずに今の位置で当たるので、追う先も相手の今の位置にする。倒れた・抜けた相手はもう追わない。
         private Vector3? HomingTarget(ServerShot shot)
         {
-            return shot.Round.Homing != null
-                && shot.LockTargetId is int id
-                && Combat.IsHittable(id)
-                && Combat.Context.Bodies.TryGet(id, out var body)
-                    ? body.Center
-                    : (Vector3?)null;
+            if (shot.Round.Homing == null || !(shot.LockTarget is ServerLockTarget target))
+            {
+                return null;
+            }
+
+            if (target.IsVehicle)
+            {
+                return Combat.Vehicles != null && Combat.Vehicles.TryGetCenter(target.Id, out var center) ? center : (Vector3?)null;
+            }
+
+            return Combat.IsHittable(target.Id) && Combat.Context.Bodies.TryGet(target.Id, out var body) ? body.Center : (Vector3?)null;
+        }
+
+        // 撃った後に撒いたフレアにも逸れるよう、撃った時のフレアではなく相手の今のフレアを毎回問い合わせる (Unity の ILockOnTargets.Decoy と同じ)。
+        private ILockOnDecoy Decoy(ServerShot shot)
+        {
+            return shot.Round.Homing != null && shot.LockTarget is ServerLockTarget target && Combat.Vehicles != null
+                ? Combat.Vehicles.DecoyOf(target)
+                : null;
+        }
+
+        // フレアに誘われず相手を追っている誘導弾を並べる。誰に警告を出すか (ServerLockOnWarnings) を決めるのに使う。
+        public void CollectTracking(List<TrackingRound> into)
+        {
+            ArgumentNullException.ThrowIfNull(into);
+            foreach (var flying in _flying)
+            {
+                if (flying.Flight.IsDone || flying.Flight.LuredDecoyId.HasValue || !(flying.Shot.LockTarget is ServerLockTarget target)
+                    || !HomingTarget(flying.Shot).HasValue)
+                {
+                    continue;
+                }
+
+                into.Add(new TrackingRound(flying.Id, flying.Shot.ShooterId, target, flying.Flight.Position));
+            }
         }
 
         public void Contribute(SnapshotList<ProjectileSnapshot> list)

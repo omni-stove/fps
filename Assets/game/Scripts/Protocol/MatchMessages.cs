@@ -31,6 +31,8 @@ namespace Shooter.Protocol
                 new VoteKickRequestMessage(),
                 new BuyRequestMessage(),
                 new InteractRequestMessage(),
+                new PickupRequestMessage(),
+                new DetonateRequestMessage(),
                 new EmoteRequestMessage(),
             };
         }
@@ -75,6 +77,7 @@ namespace Shooter.Protocol
                 new StashStateMessage(),
                 new BuyAnswerMessage(),
                 new PlayerNamesMessage(),
+                new LockOnWarningMessage(),
                 new EmoteStateMessage(),
             };
         }

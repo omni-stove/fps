@@ -279,6 +279,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("暗視と熱源視の覆いと音。空なら Resources/Presentation/VisionVisualsCatalog、それも無ければ既定の色だけで覆う")]
         private VisionVisualCatalog _visionVisuals;
 
+        [SerializeField, Tooltip("場面ごとの BGM (メニュー・試合中・勝ち・負け・試合の終わり)。空なら Resources/Presentation/MusicCatalog、それも無ければ BGM を流さない")]
+        private MusicCatalog _music;
+
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
         private static GameContent _found;
@@ -782,6 +785,12 @@ namespace Shooter.Runtime
         {
             get => _visionVisuals;
             set => _visionVisuals = value;
+        }
+
+        public MusicCatalog Music
+        {
+            get => _music;
+            set => _music = value;
         }
 
         public static GameContent Current

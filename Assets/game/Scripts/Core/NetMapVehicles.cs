@@ -24,6 +24,7 @@ namespace Shooter.Core
         public const string HullItem = "hull";
         public const string DurabilityItem = "durability";
         public const string DriveItem = "drive";
+        public const string CountermeasuresItem = "countermeasures";
 
         public const string RoleItem = "role";
         public const string PoseItem = "pose";
@@ -60,6 +61,15 @@ namespace Shooter.Core
         public const string CorrectionDistanceItem = "correctionDistance";
         public const string BurstSecondsItem = "burstSeconds";
 
+        public const string CountItem = "count";
+        public const string IntervalSecondsItem = "intervalSeconds";
+        public const string LifetimeSecondsItem = "lifetimeSeconds";
+        public const string DecoyConeDegreesItem = "decoyConeDegrees";
+        public const string EjectSpeedItem = "ejectSpeed";
+        public const string GravityMultiplierItem = "gravityMultiplier";
+        public const string EjectOffsetItem = "ejectOffset";
+        public const string EjectDirectionItem = "ejectDirection";
+
         private const string _kind = "map vehicles JSON";
 
         private static readonly string[] _topItems = { VehiclesItem };
@@ -67,7 +77,7 @@ namespace Shooter.Core
         private static readonly string[] _vehicleItems =
         {
             IdItem, PositionItem, RotationItem, MaxHealthItem, EnterRangeItem, SeatsItem, ExitsItem, WeaponsItem, PartsItem, HullItem,
-            DurabilityItem, DriveItem,
+            DurabilityItem, DriveItem, CountermeasuresItem,
         };
 
         private static readonly string[] _seatItems =
@@ -90,6 +100,12 @@ namespace Shooter.Core
         };
 
         private static readonly string[] _driveItems = { MaxSpeedItem, CorrectionDistanceItem, BurstSecondsItem };
+
+        private static readonly string[] _countermeasureItems =
+        {
+            CountItem, IntervalSecondsItem, LifetimeSecondsItem, DecoyConeDegreesItem, EjectSpeedItem, GravityMultiplierItem, EjectOffsetItem,
+            EjectDirectionItem,
+        };
 
         public NetMapVehicles(IReadOnlyList<MapVehicle> vehicles)
         {
@@ -207,6 +223,7 @@ namespace Shooter.Core
 
             var durability = ReadDurability(fields.Object(DurabilityItem, _durabilityItems));
             var drive = ReadDrive(fields.Object(DriveItem, _driveItems));
+            var countermeasures = ReadCountermeasures(fields.Object(CountermeasuresItem, _countermeasureItems));
             var spec = Guard(fields, () => new VehicleSpec(
                 fields.ToText(fields.ItemPath(IdItem), fields.Require(IdItem)),
                 fields.ReadInt(MaxHealthItem, VehicleSpec.DefaultMaxHealth),
@@ -223,7 +240,28 @@ namespace Shooter.Core
                 hull,
                 ReadPoints(fields, ExitsItem),
                 weapons,
-                drive));
+                drive,
+                countermeasures));
+        }
+
+        // 項目が無い乗り物はフレアを積んでいない。Unity の乗り物も VehicleCountermeasures を付けたものだけが撒くため。
+        private static MapVehicleCountermeasures ReadCountermeasures(ServerDataJson.Fields fields)
+        {
+            if (fields == null)
+            {
+                return null;
+            }
+
+            var spec = Guard(fields, () => new CountermeasureSpec(
+                fields.ReadInt(CountItem, CountermeasureSpec.DefaultCount),
+                fields.ReadFloat(IntervalSecondsItem, CountermeasureSpec.DefaultIntervalSeconds),
+                fields.ReadFloat(LifetimeSecondsItem, CountermeasureSpec.DefaultLifetimeSeconds),
+                fields.ReadFloat(DecoyConeDegreesItem, CountermeasureSpec.DefaultDecoyConeDegrees),
+                fields.ReadFloat(EjectSpeedItem, CountermeasureSpec.DefaultEjectSpeed),
+                fields.ReadFloat(GravityMultiplierItem, CountermeasureSpec.DefaultGravityMultiplier)));
+            var offset = fields.Has(EjectOffsetItem) ? fields.ReadVector3(EjectOffsetItem) : MapVehicleCountermeasures.DefaultEjectOffset;
+            var direction = fields.Has(EjectDirectionItem) ? fields.ReadVector3(EjectDirectionItem) : MapVehicleCountermeasures.DefaultEjectDirection;
+            return Guard(fields, () => new MapVehicleCountermeasures(spec, offset, direction));
         }
 
         private static VehicleDurabilitySpec ReadDurability(ServerDataJson.Fields fields)
@@ -409,6 +447,27 @@ namespace Shooter.Core
             writer.Float(CorrectionDistanceItem, vehicle.Drive.CorrectionDistance);
             writer.Float(BurstSecondsItem, vehicle.Drive.BurstSeconds);
             writer.EndObject();
+            WriteCountermeasures(writer, vehicle.Countermeasures);
+            writer.EndObject();
+        }
+
+        private static void WriteCountermeasures(JsonWriter writer, MapVehicleCountermeasures countermeasures)
+        {
+            if (countermeasures == null)
+            {
+                return;
+            }
+
+            var spec = countermeasures.Spec;
+            writer.BeginObject(CountermeasuresItem);
+            writer.Int(CountItem, spec.Count);
+            writer.Float(IntervalSecondsItem, spec.IntervalSeconds);
+            writer.Float(LifetimeSecondsItem, spec.LifetimeSeconds);
+            writer.Float(DecoyConeDegreesItem, spec.DecoyConeDegrees);
+            writer.Float(EjectSpeedItem, spec.EjectSpeed);
+            writer.Float(GravityMultiplierItem, spec.GravityMultiplier);
+            writer.Vector3(EjectOffsetItem, countermeasures.EjectOffset);
+            writer.Vector3(EjectDirectionItem, countermeasures.EjectDirection);
             writer.EndObject();
         }
 

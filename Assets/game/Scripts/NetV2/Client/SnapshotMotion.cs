@@ -85,7 +85,8 @@ namespace Shooter.NetV2
                 CompleteWallRun(authoritative, predicted.WallRun),
                 authoritative.AirJumpsUsed,
                 authoritative.JumpGraceLeft,
-                authoritative.Parachute);
+                authoritative.Parachute,
+                authoritative.Slide);
         }
 
         public static CharacterMotorState WithWallRun(CharacterMotorState state, CharacterWallRunState wallRun)
@@ -106,7 +107,8 @@ namespace Shooter.NetV2
                 wallRun,
                 state.AirJumpsUsed,
                 state.JumpGraceLeft,
-                state.Parachute);
+                state.Parachute,
+                state.Slide);
         }
 
         private static CharacterSwimState CompleteSwim(
@@ -184,6 +186,7 @@ namespace Shooter.NetV2
                 input = input.WithoutDodge();
             }
 
+            // slideAllowed は入れない。actions.slide と滑りの状態はまだクライアントへ届かないので、予測で滑らせるとサーバーの答えと毎回食い違う
             return input.With(
                 vaultAllowed: rules.Vault == Vault.On,
                 proneAllowed: rules.Prone == Prone.On,
@@ -193,7 +196,8 @@ namespace Shooter.NetV2
                 lean: LeanInput.Combine(frame.Has(InputButtons.LeanLeft), frame.Has(InputButtons.LeanRight)),
                 openParachute: frame.Has(InputButtons.OpenParachute),
                 closeParachute: frame.Has(InputButtons.CloseParachute),
-                parachuteAllowed: rules.Parachute == Parachute.On);
+                parachuteAllowed: rules.Parachute == Parachute.On,
+                slide: frame.Has(InputButtons.Slide));
         }
 
         // 近接は押している間を送る。サーバー (ServerMelee) とクライアント (ClientMelee) はどちらも押し始めた tick だけ振るので、押したままでは振り直さない
@@ -209,7 +213,8 @@ namespace Shooter.NetV2
             bool leanRight = false,
             bool melee = false,
             bool openParachute = false,
-            bool closeParachute = false)
+            bool closeParachute = false,
+            bool slide = false)
         {
             var buttons = InputButtons.None;
             buttons |= sprint ? InputButtons.Sprint : InputButtons.None;
@@ -224,6 +229,7 @@ namespace Shooter.NetV2
             buttons |= melee ? InputButtons.Melee : InputButtons.None;
             buttons |= openParachute ? InputButtons.OpenParachute : InputButtons.None;
             buttons |= closeParachute ? InputButtons.CloseParachute : InputButtons.None;
+            buttons |= slide ? InputButtons.Slide : InputButtons.None;
             return buttons;
         }
 

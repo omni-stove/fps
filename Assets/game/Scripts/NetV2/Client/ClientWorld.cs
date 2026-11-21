@@ -175,6 +175,7 @@ namespace Shooter.NetV2
                 Swim = motor.Swim,
                 WallRun = motor.WallRun,
                 Parachute = motor.Parachute,
+                Slide = motor.Slide,
             };
         }
 

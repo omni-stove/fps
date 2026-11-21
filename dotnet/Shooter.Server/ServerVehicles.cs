@@ -91,6 +91,7 @@ namespace Shooter.Server
         {
             _tick = tick;
             _now += deltaSeconds;
+            TickCountermeasures(deltaSeconds);
             foreach (var car in _cars)
             {
                 car.Drive.Refill(deltaSeconds);
@@ -176,6 +177,8 @@ namespace Shooter.Server
                     return Leave(playerId);
                 case VehicleAction.SwitchSeat:
                     return Switch(playerId, seat);
+                case VehicleAction.Countermeasure:
+                    return DeployCountermeasure(playerId);
                 default:
                     return false;
             }
@@ -604,6 +607,9 @@ namespace Shooter.Server
 
             public VehiclePartDamageSync Parts { get; set; }
 
+            // フレアを積んでいない乗り物は null。
+            public CountermeasurePod Flares { get; private set; }
+
             public int LastSequence { get; set; }
 
             public int Generation { get; set; }
@@ -620,6 +626,7 @@ namespace Shooter.Server
                 Exploded = false;
                 LastAttacker = null;
                 Parts = VehiclePartDamageSync.None;
+                Flares = Map.Countermeasures == null ? null : new CountermeasurePod(Map.Countermeasures.Spec);
                 LastSequence = -1;
                 Durability = new VehicleDurability(Map.Spec.Durability);
                 Drive.Reset();

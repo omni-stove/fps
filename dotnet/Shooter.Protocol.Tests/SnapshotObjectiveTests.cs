@@ -667,6 +667,12 @@ namespace Shooter.Protocol.Tests
         [TestCase(ObjectiveItemKind.SupplyCrate, 5, true, 2f)]
         [TestCase(ObjectiveItemKind.DeathBox, 6, true, 1.25f)]
         [TestCase(ObjectiveItemKind.ExtractionPoint, 7, true, 8f)]
+        [TestCase(ObjectiveItemKind.WeaponPickup, 9, false, 1f)]
+        [TestCase(ObjectiveItemKind.AmmoPickup, 10, true, 1f)]
+        [TestCase(ObjectiveItemKind.HealthPickup, 11, false, 1.5f)]
+        [TestCase(ObjectiveItemKind.ArmorPickup, 12, true, 1f)]
+        [TestCase(ObjectiveItemKind.ItemPickup, 13, false, 0.5f)]
+        [TestCase(ObjectiveItemKind.AmmoCrate, 14, true, 1.6f)]
         public void ABoxOrAnExtractionPointRoundTrips(ObjectiveItemKind kind, int value, bool opened, float radius)
         {
             var sent = Build(100);
@@ -777,15 +783,45 @@ namespace Shooter.Protocol.Tests
         public void AnUnknownItemKindIsUnreadable()
         {
             var sent = Build(100);
-            AddItem(sent, 1, ObjectiveItemKind.ExtractionPoint, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
+            AddItem(sent, 1, ObjectiveItemKind.AmmoCrate, Team.Alpha, PlayerIds.None, Vector3.Zero, ObjectiveItemState.Home, PlayerIds.None);
             var bytes = Bytes(sent, null);
 
             // 物の種類は、末尾の 種類 (1)・陣営 (1)・持ち主 (4)・位置 (12)・状態 (1)・運んでいる人 (4)・設置物の並びの数 (1) の頭にある
             var kindAt = bytes.Length - (1 + 1 + 4 + 12 + 1 + 4 + 1);
-            Assert.That(bytes[kindAt], Is.EqualTo((byte)ObjectiveItemKind.ExtractionPoint));
-            bytes[kindAt] = (byte)(ObjectiveItemKind.ExtractionPoint + 1);
+            Assert.That(bytes[kindAt], Is.EqualTo((byte)ObjectiveItemKind.AmmoCrate));
+            bytes[kindAt] = (byte)(ObjectiveItemKind.AmmoCrate + 1);
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void TheItemKindsKeepTheirValues()
+        {
+            Assert.That((int)ObjectiveItemKind.Flag, Is.EqualTo(0));
+            Assert.That((int)ObjectiveItemKind.ExtractionPoint, Is.EqualTo(7));
+            Assert.That((int)ObjectiveItemKind.Leader, Is.EqualTo(8));
+            Assert.That((int)ObjectiveItemKind.WeaponPickup, Is.EqualTo(9));
+            Assert.That((int)ObjectiveItemKind.AmmoCrate, Is.EqualTo(14));
+            Assert.That(Enum.GetValues<ObjectiveItemKind>().Length, Is.EqualTo(15));
+        }
+
+        [TestCase(ObjectiveItemState.Carried, 4)]
+        [TestCase(ObjectiveItemState.Dropped, PlayerIds.None)]
+        public void AGuardianLeaderRoundTrips(ObjectiveItemState state, int carrier)
+        {
+            var sent = Build(100);
+            AddItem(sent, 1, ObjectiveItemKind.Leader, Team.Bravo, 4, new Vector3(3f, 1f, -4f), state, carrier);
+
+            var got = Send(sent, null);
+
+            Assert.That(got.ObjectiveItems.Count, Is.EqualTo(1));
+            Assert.That(got.ObjectiveItems[0].Kind, Is.EqualTo(ObjectiveItemKind.Leader));
+            Assert.That(got.ObjectiveItems[0].Team, Is.EqualTo(Team.Bravo));
+            Assert.That(got.ObjectiveItems[0].HasOwner, Is.True);
+            Assert.That(got.ObjectiveItems[0].OwnerId, Is.EqualTo(4));
+            Assert.That(got.ObjectiveItems[0].State, Is.EqualTo(state));
+            Assert.That(got.ObjectiveItems[0].HasCarrier, Is.EqualTo(state == ObjectiveItemState.Carried));
+            Assert.That(got.ObjectiveItems[0].ChangedBits(sent.ObjectiveItems[0]), Is.Zero);
         }
 
         [Test]

@@ -174,6 +174,26 @@ namespace Shooter.NetV2
             return true;
         }
 
+        // 撒けるのは運転席だけなので (サーバーの ServerVehicles.DeployCountermeasure と同じ)、ほかの席や歩いている間は送らない。
+        // 撒く数と間隔はサーバーが数えるので、残りや待ち時間では止めない。
+        public bool FillCountermeasure(VehicleRequestMessage message, int driverSeat)
+        {
+            if (message == null)
+            {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            if (!LocalSeat.IsRiding || driverSeat < 0 || LocalSeat.Seat != driverSeat)
+            {
+                return false;
+            }
+
+            message.Action = VehicleAction.Countermeasure;
+            message.Vehicle = LocalSeat.Vehicle;
+            message.Seat = LocalSeat.Seat;
+            return true;
+        }
+
         public void Correct(VehicleCorrectedMessage message)
         {
             if (message == null)

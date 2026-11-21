@@ -143,7 +143,7 @@ Editor のスクリプトが作るアセットとシーンの置き場 (出力�
    書き出したクライアントでは `-mode client -address <ホスト> -port 7777` を付けて起動すると、メニューを通らずにつなぐ。
 5. Bot は人が 1 人もいないと置かれないので、試すときはクライアントを 1 人つなぐ。
 
-ドローン・盾・暗視とサーマルはオフラインだけで、サーバーでは効かない。
+ドローン・暗視とサーマルはオフラインだけで、サーバーでは効かない。
 
 ## データで変えられる場所
 
@@ -164,7 +164,7 @@ Editor のスクリプトが作るアセットとシーンの置き場 (出力�
 | 乗り物 | `VehicleDefinition`・`HelicopterDefinition`・`BoatDefinition`・`AircraftDefinition` | 乗り物の部品 |
 | キャンペーン | `MissionDefinition`・`MissionCatalog`・`BossDefinition` | `GameContent` の **Missions** |
 | メニューから移るシーン | `MenuSceneSettings` | `GameContent` の **Menu Scenes** |
-| 見た目と音 | `PresentationCatalog`・`ViewmodelCatalog`・`WeaponExtrasCatalog`・`AttachmentModelCatalog`・`HitFeedbackCatalog`・`DamageFeedbackCatalog`・`SurfaceImpactCatalog`・`FootstepSurfaceCatalog`・`RagdollCatalog`・`SuppressionCatalog`・`CameraShakeSettings`・`DamageNumberCatalog`・`AimBlockCatalog`・`ItemIconCatalog`・`StreakIconCatalog`・`WaterCatalog`・`ReticleCatalog`・`StatusEffectVisualCatalog`・`FlashOverlayCatalog`・`CosmeticVisualCatalog`・`EmoteCatalog`・`VisionVisualCatalog` | `GameContent` の「見た目・音」の欄 |
+| 見た目と音 | `PresentationCatalog`・`ViewmodelCatalog`・`WeaponExtrasCatalog`・`AttachmentModelCatalog`・`HitFeedbackCatalog`・`DamageFeedbackCatalog`・`SurfaceImpactCatalog`・`FootstepSurfaceCatalog`・`RagdollCatalog`・`SuppressionCatalog`・`CameraShakeSettings`・`DamageNumberCatalog`・`AimBlockCatalog`・`ItemIconCatalog`・`StreakIconCatalog`・`WaterCatalog`・`ReticleCatalog`・`StatusEffectVisualCatalog`・`FlashOverlayCatalog`・`CosmeticVisualCatalog`・`EmoteCatalog`・`VisionVisualCatalog`・`MusicCatalog` | `GameContent` の「見た目・音」の欄 |
 | 体 | 根に Animator の Prefab | `GameContent` の **Character Rig** |
 | 文言 | `Resources/Localization/<言語>/*.json` | 画面 (Demo では `GameText`・`LocalizedTexts`) |
 | 戦闘の調整値 | `grenade.json`・`melee.json`・`knockback.json`・`stagger.json`・`suppression.json`・`aim-assist.json`・`streaks.json`・`assist.json` | `GameContent` の同じ名前の欄 |

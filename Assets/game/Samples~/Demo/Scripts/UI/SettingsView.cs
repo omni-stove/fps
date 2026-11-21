@@ -1736,6 +1736,8 @@ namespace Shooter.Runtime
                     return "rumble-strength";
                 case ControlValue.UiScale:
                     return "ui-scale";
+                case ControlValue.MusicVolume:
+                    return "music-volume";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }

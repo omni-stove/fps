@@ -37,9 +37,8 @@ namespace Shooter.Protocol.Tests
             Assert.That(MessageTable.IsReserved(60000), Is.False);
         }
 
-        // 予約した Id は前の版と同じく読まずに断るが、知らない Id とは理由を分ける
+        // 予約した Id は前の版と同じく読まずに断るが、知らない Id とは理由を分ける。拾う要求は型を足したので、もう断らない
         [TestCase(MessageIds.EmoteRequest)]
-        [TestCase(MessageIds.PickupRequest)]
         [TestCase(MessageIds.DroneControl)]
         public void AReservedIdIsRejectedByBothSidesUntilItsMessageIsAdded(ushort id)
         {
@@ -346,6 +345,8 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.VoteKickRequest)]
         [TestCase(MessageIds.BuyRequest)]
         [TestCase(MessageIds.InteractRequest)]
+        [TestCase(MessageIds.PickupRequest)]
+        [TestCase(MessageIds.DetonateRequest)]
         public void TheNewRequestsAreOnlyReadByTheServer(ushort id)
         {
             Assert.That(MatchMessages.CreateServerTable().TryGet(id, out _), Is.True);
@@ -387,6 +388,15 @@ namespace Shooter.Protocol.Tests
             Assert.That(buy, Is.InstanceOf<BuyRequestMessage>());
             Assert.That(MatchMessages.CreateClientTable().TryGet(MessageIds.VoteKickState, out var state), Is.True);
             Assert.That(state, Is.InstanceOf<VoteKickStateMessage>());
+        }
+
+        [Test]
+        public void ThePickupRequestKeepsItsReservedIdAndIsReadAsItsType()
+        {
+            Assert.That(new PickupRequestMessage().Id, Is.EqualTo(MessageIds.PickupRequest));
+            Assert.That(MessageTable.IsReserved(MessageIds.PickupRequest), Is.True);
+            Assert.That(MatchMessages.CreateServerTable().TryGet(MessageIds.PickupRequest, out var pickup), Is.True);
+            Assert.That(pickup, Is.InstanceOf<PickupRequestMessage>());
         }
 
         [Test]

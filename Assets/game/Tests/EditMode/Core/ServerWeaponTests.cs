@@ -30,6 +30,48 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void AddReserveAmmoFillsUpToTheMaximumAndSaysWhatWentIn()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 3, reserve: 5));
+            weapon.SetAmmo(3, 4);
+            var changes = 0;
+            weapon.Changed += () => changes++;
+
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(4));
+            Assert.That(weapon.MaxReserveAmmo, Is.EqualTo(5));
+            Assert.That(weapon.AddReserveAmmo(10), Is.EqualTo(1), "only the room left goes in");
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(5));
+            Assert.That(changes, Is.EqualTo(1));
+            Assert.That(weapon.AddReserveAmmo(3), Is.Zero, "a full reserve takes nothing");
+            Assert.That(weapon.AddReserveAmmo(0), Is.Zero);
+            Assert.That(changes, Is.EqualTo(1), "nothing added is not a change");
+            Assert.Throws<ArgumentOutOfRangeException>(() => weapon.AddReserveAmmo(-1));
+        }
+
+        [Test]
+        public void SetAmmoKeepsTheDroppedCountsAndShrinksAnOverfullMagazine()
+        {
+            var weapon = new ServerWeapon(Spec(magazine: 3, reserve: 5));
+            var changes = 0;
+            weapon.Changed += () => changes++;
+
+            weapon.SetAmmo(1, 2);
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(1));
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(2));
+            Assert.That(weapon.MaxReserveAmmo, Is.EqualTo(5), "the maximum stays the spec's");
+            Assert.That(changes, Is.EqualTo(1));
+
+            weapon.SetAmmo(9, 12);
+
+            Assert.That(weapon.AmmoInMagazine, Is.EqualTo(3), "the magazine is cut to its size");
+            Assert.That(weapon.ReserveAmmo, Is.EqualTo(12), "a reserve over the maximum is kept, like a saved weapon");
+            Assert.That(weapon.TryFire(), Is.EqualTo(ShotRejection.None), "the weapon still fires after its ammo is set");
+            Assert.Throws<ArgumentOutOfRangeException>(() => weapon.SetAmmo(-1, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => weapon.SetAmmo(0, -1));
+        }
+
+        [Test]
         public void DoesNotLimitTheFireIntervalItself()
         {
             // 連射間隔は ShotBudget が見るので、同じフレームに届いた射撃も弾がある限り撃てる

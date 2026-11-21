@@ -212,6 +212,45 @@ namespace Shooter.Net.Tests
             Assert.That(mismatches, Is.Empty, mismatches.Count + " of " + probes.Count + " rays differ:\n" + string.Join("\n", mismatches.Take(20)));
         }
 
+        // 3 マップともはしご・水場・乗り物を置くので、書き出したファイルは空でなく、シーンから集め直した数と合う
+        [TestCaseSource(nameof(MapScenes))]
+        public void CommittedLaddersWaterAndVehiclesMatchTheScene(string scenePath)
+        {
+            OpenAndCollect(scenePath, out _);
+            var roots = _scene.GetRootGameObjects();
+            var mapName = MapCollisionExporter.MapName(scenePath);
+
+            var ladders = NetMapLadders.Parse(File.ReadAllText(MapDataFile(mapName, NetMapLadders.Extension)), mapName + NetMapLadders.Extension);
+            var water = NetMapWater.Parse(File.ReadAllText(MapDataFile(mapName, NetMapWater.Extension)), mapName + NetMapWater.Extension);
+            var vehicles = NetMapVehicles.Parse(File.ReadAllText(MapDataFile(mapName, NetMapVehicles.Extension)), mapName + NetMapVehicles.Extension);
+
+            Assert.That(ladders.Ladders, Is.Not.Empty, mapName + " has a ladder tower");
+            Assert.That(water.Water, Is.Not.Empty, mapName + " has a water pool");
+            Assert.That(vehicles.Vehicles, Is.Not.Empty, mapName + " has a vehicle");
+            Assert.That(ladders.Ladders.Count, Is.EqualTo(MapCollisionExporter.CollectLadders(roots).Ladders.Count), "ladders are out of date with " + scenePath);
+            Assert.That(water.Water.Count, Is.EqualTo(MapCollisionExporter.CollectWater(roots).Water.Count), "water is out of date with " + scenePath);
+            Assert.That(
+                vehicles.Vehicles.Select(v => v.Spec.Id),
+                Is.EqualTo(MapVehicleExporter.Collect(roots).Vehicles.Select(v => v.Spec.Id)),
+                "vehicles are out of date with " + scenePath);
+        }
+
+        [TestCaseSource(nameof(MapScenes))]
+        public void EveryMapSceneHasItsMapFeatures(string scenePath)
+        {
+            OpenAndCollect(scenePath, out _);
+
+            Assert.That(NetMapFeatureBuilder.HasFeatures(_scene), Is.True, scenePath + " was built before the map features; run make export-server-data");
+            Assert.That(_scene.GetRootGameObjects().SelectMany(go => go.GetComponentsInChildren<Vehicle>(true)), Is.Not.Empty);
+        }
+
+        private static string MapDataFile(string mapName, string extension)
+        {
+            var path = Path.Combine(MapCollisionExporter.OutputDirectory, mapName + extension);
+            Assert.That(File.Exists(path), Is.True, path + " is missing");
+            return path;
+        }
+
         private List<Collider> OpenAndCollect(string scenePath, out WorldMap map)
         {
             if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) == null)

@@ -10,13 +10,11 @@ namespace Shooter.Runtime
         // はしごや乗り物の座席など、掴まる・乗る動きより低くする。
         public const int DefaultPriority = 10;
 
-        // 坂の継ぎ目で一瞬浮いただけでは終えないよう、接地が外れてから少し待つ。
-        public const float AirborneGraceSeconds = 0.15f;
+        public const float AirborneGraceSeconds = SlideStep.AirborneGraceSeconds;
 
-        public const float BlockedRatio = 0.5f;
+        public const float BlockedRatio = SlideStep.BlockedRatio;
 
-        // 坂の上でカプセルの中心の真下が足より低くても届くよう、足元からさらに伸ばす。
-        public const float GroundProbeMargin = 0.6f;
+        public const float GroundProbeMargin = SlideStep.GroundProbeMargin;
 
         private const int MaxGroundHits = 8;
 
@@ -249,11 +247,14 @@ namespace Shooter.Runtime
             }
 
             var grounded = TryProbeGround(mover, out var normal);
-            var along = grounded ? Vector3.ProjectOnPlane(direction, normal) : direction;
-            along = along.sqrMagnitude > 1e-6f ? along.normalized : direction;
-            var slopeSine = Mathf.Clamp(-along.y, -1f, 1f);
+            var slopeSine = SlideStep.SlopeSine(
+                new System.Numerics.Vector3(direction.x, direction.y, direction.z),
+                new System.Numerics.Vector3(normal.x, normal.y, normal.z),
+                grounded,
+                out var slopeAlong);
+            var along = new Vector3(slopeAlong.X, slopeAlong.Y, slopeAlong.Z);
 
-            var travelled = _motion.Step(deltaSeconds, grounded ? slopeSine : 0f);
+            var travelled = _motion.Step(deltaSeconds, slopeSine);
             var displacement = along * travelled;
             var velocity = along * _motion.Speed;
 
@@ -347,24 +348,19 @@ namespace Shooter.Runtime
             }
 
             var velocity = _mover.Motor.Velocity;
-            var horizontal = new System.Numerics.Vector2(velocity.X, velocity.Z);
-            speed = horizontal.Length();
-
-            // 歩きより速くなければダッシュで走っているとは言えず、滑り出しの加速が歩きやその場からの瞬間移動になってしまう。
-            if (!(speed > _mover.WalkSpeed))
+            if (!SlideStep.TryMeasureEntry(new System.Numerics.Vector2(velocity.X, velocity.Z), _mover.WalkSpeed, out direction, out speed))
             {
-                speed = 0f;
                 return false;
             }
 
             // 滑り続けている間は呼ばれないので、払えるかを聞くのは滑り出すときだけになる。ほかの条件より後に聞き、断ったログを出し過ぎない。
             if (!_mover.HasStaminaFor(StaminaUse.Slide))
             {
+                direction = System.Numerics.Vector2.Zero;
                 speed = 0f;
                 return false;
             }
 
-            direction = horizontal / speed;
             return true;
         }
 
@@ -378,13 +374,10 @@ namespace Shooter.Runtime
         private void LimitIfBlocked(PlayerController mover, Vector3 direction)
         {
             var position = mover.transform.position;
-            if (_expectedHorizontal > 1e-4f)
+            var moved = Vector3.Dot(position - _stepFrom, direction);
+            if (SlideStep.TryLimitForBlocked(_motion.Speed, moved, _expectedHorizontal, out var limited))
             {
-                var moved = Vector3.Dot(position - _stepFrom, direction);
-                if (moved < _expectedHorizontal * BlockedRatio)
-                {
-                    _motion.LimitSpeed(Mathf.Max(0f, _motion.Speed * Mathf.Max(0f, moved) / _expectedHorizontal));
-                }
+                _motion.LimitSpeed(limited);
             }
 
             _stepFrom = position;
@@ -401,7 +394,7 @@ namespace Shooter.Runtime
         private MovementOverrideStep Jump(PlayerController mover, Vector3 direction, float deltaSeconds)
         {
             var horizontal = direction * _motion.Speed;
-            var start = Mathf.Sqrt(2f * mover.Gravity * mover.JumpHeight);
+            var start = SlideStep.JumpSpeed(mover.Gravity, mover.JumpHeight);
             var end = start - (mover.Gravity * deltaSeconds);
             var displacement = (horizontal * deltaSeconds) + (Vector3.up * ((start + end) * 0.5f * deltaSeconds));
             _motion.Finish(SlideEnd.Jumped);

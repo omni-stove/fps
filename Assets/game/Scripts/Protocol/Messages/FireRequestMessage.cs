@@ -3,13 +3,18 @@ using System.Numerics;
 
 namespace Shooter.Protocol
 {
-    public sealed class FireRequestMessage : IMessage
+    public sealed class FireRequestMessage : IMessage, IReadsOlderVersions
     {
-        public const byte CurrentVersion = 2;
+        public const byte CurrentVersion = 3;
+
+        // 乗り物を狙えない前の版のクライアントの射撃も受け付けられるよう、ロックの相手を人として読む
+        public const byte OldestVersion = 2;
 
         public ushort Id => MessageIds.FireRequest;
 
         public byte Version => CurrentVersion;
+
+        public byte OldestReadableVersion => OldestVersion;
 
         public string WeaponId { get; set; } = "";
 
@@ -33,6 +38,9 @@ namespace Shooter.Protocol
 
         public int LockTargetId { get; set; }
 
+        // Player なら LockTargetId は人の Id、Vehicle なら乗り物の番号 (スナップショットの VehicleSnapshot.Index)。
+        public LockTargetKind LockTargetKind { get; set; }
+
         // ビームや火炎のように押している間ずっと出る撃ち方で、押しっぱなしの間に 1 発ずつ要求を送らずに済むよう、押した・離した知らせを運ぶ。
         public TriggerEdge Trigger { get; set; }
 
@@ -54,9 +62,15 @@ namespace Shooter.Protocol
             writer.WriteByte(AmmoTypeIndex);
             writer.WriteInt32(HasLockTarget ? LockTargetId : PlayerIds.None);
             writer.WriteByte((byte)Trigger);
+            writer.WriteByte((byte)(HasLockTarget ? LockTargetKind : LockTargetKind.Player));
         }
 
         public void Read(MessageReader reader)
+        {
+            ReadOlder(reader, CurrentVersion);
+        }
+
+        public void ReadOlder(MessageReader reader, byte version)
         {
             WeaponId = reader.ReadString(MatchProtocol.MaxContentIdBytes, WeaponId);
             Origin = reader.ReadFiniteVector3("shot origin");
@@ -71,6 +85,10 @@ namespace Shooter.Protocol
             HasLockTarget = lockTarget != PlayerIds.None;
             LockTargetId = HasLockTarget ? lockTarget : 0;
             Trigger = (TriggerEdge)reader.ReadByteBelow(EnumRange<TriggerEdge>.Count, "trigger edge");
+            var kind = version >= 3
+                ? (LockTargetKind)reader.ReadByteBelow(EnumRange<LockTargetKind>.Count, "lock target kind")
+                : LockTargetKind.Player;
+            LockTargetKind = HasLockTarget ? kind : LockTargetKind.Player;
         }
     }
 }

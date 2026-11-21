@@ -23,6 +23,7 @@ namespace Shooter.Server
 
             // 掛けた先は置き直す前の場所なので、縄は外す
             ReleaseGrapple(mover, GrappleEnd.Interrupted);
+            CancelMantle(mover);
             mover.Simulation.SpawnPosition = position;
             mover.State = new CharacterMotorState(position, Vector3.Zero, false, false);
             mover.Simulation.Place(mover.State);
@@ -46,6 +47,7 @@ namespace Shooter.Server
             }
 
             ReleaseGrapple(mover, GrappleEnd.Interrupted);
+            CancelMantle(mover);
             var simulation = mover.Simulation;
             mover.State = simulation.Deploy(
                 new CharacterMotorState(position, Vector3.Zero, false, false), _settings.Rules.Actions.Parachute == Parachute.On);
@@ -94,6 +96,7 @@ namespace Shooter.Server
             }
 
             ReleaseGrapple(mover, GrappleEnd.Interrupted);
+            CancelMantle(mover);
             mover.Riding = true;
             mover.State = new CharacterMotorState(position, velocity, true, crouched);
             mover.Simulation.Place(mover.State);

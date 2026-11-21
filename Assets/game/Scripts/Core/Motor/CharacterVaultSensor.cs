@@ -34,24 +34,47 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(spec));
             }
 
-            var maxHeight = spec.VaultMaxHeight;
-            var forward = CharacterMotorSimulation.YawForward(yaw);
-            var feetY = _body.FeetY(position);
-            if (!TryFindFace(position, feetY, forward, maxHeight, spec.VaultReach, out var hit))
+            return TryMeasure(position, yaw, spec.VaultMaxHeight, spec.VaultReach, spec.VaultMaxDepth, out var sample, out var forward)
+                ? VaultProbe.Evaluate(sample, forward, spec, _body.Radius, _isPathClear)
+                : VaultProbeResult.None;
+        }
+
+        // 面の当て方と上端の測り方は乗り越えと同じで、高さの上限だけを崖のぼりの上限に替える。
+        // 奥行きは上に立てる広さの先から測る (PlayerController.MeasureMantle と同じ)。乗り越えの上限で測ると、立てる段を狭いと誤るため。
+        public VaultProbeResult ProbeMantle(Vector3 position, float yaw, MotorSpec spec)
+        {
+            if (spec == null)
             {
-                return VaultProbeResult.None;
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            var footing = VaultProbe.MantleFootingDepth(_body.Radius);
+            return TryMeasure(position, yaw, spec.MantleMaxHeight, spec.VaultReach, footing, out var sample, out var forward)
+                ? VaultProbe.EvaluateMantle(sample, forward, spec, _body.Radius, _isPathClear)
+                : VaultProbeResult.None;
+        }
+
+        private bool TryMeasure(
+            Vector3 position, float yaw, float maxHeight, float reach, float depthReach, out VaultObstacleSample sample, out Vector3 forward)
+        {
+            forward = CharacterMotorSimulation.YawForward(yaw);
+            sample = default;
+            var feetY = _body.FeetY(position);
+            if (!TryFindFace(position, feetY, forward, maxHeight, reach, out var hit))
+            {
+                return false;
             }
 
             var flat = new Vector3(hit.Normal.X, 0f, hit.Normal.Z);
             var flatLength = MathF.Sqrt((flat.X * flat.X) + (flat.Z * flat.Z));
             var into = flatLength > 0f ? -flat / flatLength : Vector3.Zero;
             var topHeight = MeasureTop(hit, into, feetY, maxHeight);
-            var depth = into == Vector3.Zero ? float.PositiveInfinity : MeasureDepth(hit, into, spec.VaultMaxDepth);
+            var depth = into == Vector3.Zero ? float.PositiveInfinity : MeasureDepth(hit, into, depthReach);
             var along = (forward.X * into.X) + (forward.Z * into.Z);
             var width = into == Vector3.Zero ? 0f : VaultProbe.MeasureFaceWidth(hit.Point, into, _body.Radius, _faceRaycast);
-            var sample = new VaultObstacleSample(hit.Distance * along, hit.Normal, topHeight, depth, width);
+            sample = new VaultObstacleSample(hit.Distance * along, hit.Normal, topHeight, depth, width);
             _pathOrigin = position;
-            return VaultProbe.Evaluate(sample, forward, spec, _body.Radius, _isPathClear);
+            return true;
         }
 
         // 1 本では張り出した縁の下をくぐるので高さを並べる。並べ方と選び方は PlayerController.TryFindVaultFace と揃え、予測と答えを同じにする

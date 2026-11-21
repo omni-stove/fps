@@ -25,6 +25,8 @@ namespace Shooter.Core
         public const string DecoyItem = "decoy";
         public const string BeaconItem = "beacon";
         public const string DroneItem = "drone";
+        public const string MineItem = "mine";
+        public const string RemoteChargeItem = "remoteCharge";
 
         public const string WeaponIdItem = "weaponId";
         public const string RoundsItem = "rounds";
@@ -45,6 +47,13 @@ namespace Shooter.Core
         public const string SpotRadiusItem = "spotRadius";
         public const string SpotIntervalSecondsItem = "spotIntervalSeconds";
         public const string RevealSecondsItem = "revealSeconds";
+
+        public const string ArmSecondsItem = "armSeconds";
+        public const string TriggerRadiusItem = "triggerRadius";
+        public const string MaxDamageItem = "maxDamage";
+        public const string DamageRadiusItem = "damageRadius";
+        public const string FullDamageRadiusItem = "fullDamageRadius";
+        public const string StructureDamageAtCenterItem = "structureDamageAtCenter";
 
         private const string _kind = "deployable JSON";
 
@@ -71,6 +80,8 @@ namespace Shooter.Core
             DecoyItem,
             BeaconItem,
             DroneItem,
+            MineItem,
+            RemoteChargeItem,
         };
 
         public static IReadOnlyList<string> TurretItemNames { get; } = new[]
@@ -95,6 +106,25 @@ namespace Shooter.Core
             SpotRadiusItem,
             SpotIntervalSecondsItem,
             RevealSecondsItem,
+        };
+
+        public static IReadOnlyList<string> MineItemNames { get; } = new[]
+        {
+            ArmSecondsItem,
+            TriggerRadiusItem,
+            MaxDamageItem,
+            DamageRadiusItem,
+            FullDamageRadiusItem,
+            StructureDamageAtCenterItem,
+        };
+
+        // 起爆の押し方の長さ (detonateTapSeconds) は読まない。起爆の要求はクライアントが押し方を見分けてから送るので、サーバーが受けるかには効かない
+        public static IReadOnlyList<string> RemoteChargeItemNames { get; } = new[]
+        {
+            MaxDamageItem,
+            DamageRadiusItem,
+            FullDamageRadiusItem,
+            StructureDamageAtCenterItem,
         };
 
         public static DeployCatalog Parse(string text, string sourceName)
@@ -132,12 +162,6 @@ namespace Shooter.Core
         {
             var id = entry.ToText(entry.ItemPath(IdItem), entry.Require(IdItem));
             var role = entry.ToEnum<DeployRole>(entry.ItemPath(RoleItem), entry.Require(RoleItem));
-            // 地雷と遠隔爆弾は列挙にだけ先に足してあり、形の既定も置いた後の振る舞いもまだ無いので、足す前と同じく読むときに断る
-            if (role == DeployRole.Mine || role == DeployRole.RemoteCharge)
-            {
-                throw entry.Rejected(entry.ItemPath(RoleItem), $"role {role} is not supported yet");
-            }
-
             var deploy = ReadDeploy(entry, DeployType.DefaultDeploy(role));
             var ability = ReadAbility(entry);
 
@@ -145,6 +169,8 @@ namespace Shooter.Core
             var decoyFields = entry.Object(DecoyItem, DecoyItemNames);
             var beaconFields = entry.Object(BeaconItem, BeaconItemNames);
             var droneFields = entry.Object(DroneItem, DroneItemNames);
+            var mineFields = entry.Object(MineItem, MineItemNames);
+            var remoteChargeFields = entry.Object(RemoteChargeItem, RemoteChargeItemNames);
             if (role == DeployRole.Turret && turretFields == null)
             {
                 throw entry.Rejected(entry.ItemPath(TurretItem), "a Turret needs a turret object with weaponId");
@@ -191,9 +217,31 @@ namespace Shooter.Core
                 drone = DroneSpec.Default;
             }
 
+            MineSpec mine = null;
+            if (mineFields != null)
+            {
+                mine = ReadMine(mineFields);
+            }
+            else if (role == DeployRole.Mine)
+            {
+                // 囮と同じく、地雷の値はどれも既定があるので、mine を書かなければ既定の地雷にする。
+                mine = MineSpec.Default;
+            }
+
+            RemoteChargeSpec remoteCharge = null;
+            if (remoteChargeFields != null)
+            {
+                remoteCharge = ReadRemoteCharge(remoteChargeFields);
+            }
+            else if (role == DeployRole.RemoteCharge)
+            {
+                // 囮と同じく、C4 の値はどれも既定があるので、remoteCharge を書かなければ既定の C4 にする。
+                remoteCharge = RemoteChargeSpec.Default;
+            }
+
             try
             {
-                return new DeployType(id, role, deploy, turret, weaponId, decoy, beacon, drone, ability);
+                return new DeployType(id, role, deploy, turret, weaponId, decoy, beacon, drone, ability, mine, remoteCharge);
             }
             catch (ArgumentException e)
             {
@@ -299,6 +347,68 @@ namespace Shooter.Core
             catch (ArgumentException e)
             {
                 throw Rejected(fields, DroneItemNames, e);
+            }
+        }
+
+        private static MineSpec ReadMine(ServerDataJson.Fields fields)
+        {
+            var armSeconds = fields.ReadFloat(ArmSecondsItem, MineSpec.DefaultArmSeconds);
+            var triggerRadius = fields.ReadFloat(TriggerRadiusItem, MineSpec.DefaultTriggerRadius);
+            var explosion = ReadExplosion(
+                fields,
+                MineItemNames,
+                MineSpec.DefaultMaxDamage,
+                MineSpec.DefaultDamageRadius,
+                MineSpec.DefaultFullDamageRadius,
+                MineSpec.DefaultStructureDamageAtCenter);
+            try
+            {
+                return new MineSpec(armSeconds, triggerRadius, explosion);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(fields, MineItemNames, e);
+            }
+        }
+
+        private static RemoteChargeSpec ReadRemoteCharge(ServerDataJson.Fields fields)
+        {
+            var explosion = ReadExplosion(
+                fields,
+                RemoteChargeItemNames,
+                RemoteChargeSpec.DefaultMaxDamage,
+                RemoteChargeSpec.DefaultDamageRadius,
+                RemoteChargeSpec.DefaultFullDamageRadius,
+                RemoteChargeSpec.DefaultStructureDamageAtCenter);
+            try
+            {
+                return new RemoteChargeSpec(RemoteChargeSpec.DefaultDetonateTapSeconds, explosion);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(fields, RemoteChargeItemNames, e);
+            }
+        }
+
+        // 項目名はアセットの欄 (_damageRadius) にそろえたので、ExplosionDamage の引数名 radius だけは名前を直して断った項目を示す
+        private static ExplosionSpec ReadExplosion(
+            ServerDataJson.Fields fields, IReadOnlyList<string> known, int maxDamage, float damageRadius, float fullDamageRadius, int structureDamage)
+        {
+            maxDamage = fields.ReadInt(MaxDamageItem, maxDamage);
+            damageRadius = fields.ReadFloat(DamageRadiusItem, damageRadius);
+            fullDamageRadius = fields.ReadFloat(FullDamageRadiusItem, fullDamageRadius);
+            structureDamage = fields.ReadInt(StructureDamageAtCenterItem, structureDamage);
+            try
+            {
+                return new ExplosionSpec(new ExplosionDamage(maxDamage, damageRadius, fullDamageRadius), structureDamage);
+            }
+            catch (ArgumentException e) when (string.Equals(e.ParamName, "radius", StringComparison.Ordinal))
+            {
+                throw fields.Rejected(fields.ItemPath(DamageRadiusItem), e.Message, e);
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(fields, known, e);
             }
         }
 

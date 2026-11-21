@@ -118,6 +118,25 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void WithMantleOnJumpingWhileHangingHopsOffInsteadOfClimbing()
+        {
+            Start(GameRules.Default.WithActions(ActionRules.Default.WithAbilities(Abilities.On).WithMantle(Mantle.On)));
+            Settle();
+            Send(InputButtons.Grapple);
+            PullUntilHanging();
+
+            Send(InputButtons.Jump);
+
+            Assert.That(_movement.IsGrappling(1), Is.False);
+            Assert.That(_movement.IsMantling(1), Is.False);
+            _movement.TryGetState(1, out var state);
+            var hop = MathF.Sqrt(2f * MotorSpec.DefaultGravity * MotorSpec.DefaultJumpHeight);
+            Assert.That(state.Velocity.Y, Is.EqualTo(hop).Within(1e-3f));
+            Assert.That(_log.ToString(), Does.Contain("[Grapple] released reason=Jumped"));
+            Assert.That(_log.ToString(), Does.Not.Contain("mantling=true"));
+        }
+
+        [Test]
         public void JumpingWhilePulledLetsGoWithTheMomentum()
         {
             Start();

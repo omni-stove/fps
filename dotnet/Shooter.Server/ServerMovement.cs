@@ -128,7 +128,7 @@ namespace Shooter.Server
         private CharacterMotorSimulation CreateSimulation(Vector3 spawn)
         {
             var body = new CharacterBody(_context.World, _settings.Mover, _settings.Stance);
-            return new CharacterMotorSimulation(body, new PlayerMotor(_settings.Motor), _tickSeconds, _settings.KillPlaneY, _settings.Prone)
+            var simulation = new CharacterMotorSimulation(body, new PlayerMotor(_settings.Motor), _tickSeconds, _settings.KillPlaneY, _settings.Prone)
             {
                 SpawnPosition = spawn,
                 Ladders = _context.Map.Ladders.Ladders,
@@ -138,6 +138,8 @@ namespace Shooter.Server
                 WallRun = _settings.WallRun,
                 Parachute = _settings.Parachute,
             };
+            ConfigureSlide(simulation);
+            return simulation;
         }
 
         // 体は作るときに世界の当たり・はしご・水を受け取るので、作り直す。乗り物も替わるので座席から外し、置き直しは続くルールの出現に任せる
@@ -147,6 +149,7 @@ namespace Shooter.Server
             {
                 ReleaseGrapple(mover, GrappleEnd.Lost);
                 var position = mover.State.Position;
+                CancelMantle(mover);
                 mover.Simulation = CreateSimulation(position);
                 mover.Riding = false;
                 mover.State = new CharacterMotorState(position, Vector3.Zero, false, false);
@@ -231,9 +234,15 @@ namespace Shooter.Server
 
             public bool Aiming { get; set; }
 
+            public bool Sprinting { get; set; }
+
             public bool Downed { get; set; }
 
             public bool Riding { get; set; }
+
+            public VaultPath MantlePath { get; set; }
+
+            public float MantleElapsed { get; set; }
 
             public float NextWarning { get; set; }
 

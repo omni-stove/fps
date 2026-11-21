@@ -263,6 +263,27 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void DetonateRequest()
+        {
+            var got = ToServer<DetonateRequestMessage>(new DetonateRequestMessage { TypeId = "deploy-remote-charge" });
+
+            Assert.That(new DetonateRequestMessage().Id, Is.EqualTo(MessageIds.DetonateRequest));
+            Assert.That(MessageIds.DetonateRequest, Is.EqualTo(39));
+            Assert.That(got.TypeId, Is.EqualTo("deploy-remote-charge"));
+        }
+
+        [Test]
+        public void ADetonateRequestWithoutATypeIsNotWrittenOrRead()
+        {
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(new DetonateRequestMessage()));
+
+            var writer = Head(MessageIds.DetonateRequest, DetonateRequestMessage.CurrentVersion);
+            writer.WriteString("");
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+        }
+
+        [Test]
         public void ReportRequest()
         {
             var got = ToServer<ReportRequestMessage>(

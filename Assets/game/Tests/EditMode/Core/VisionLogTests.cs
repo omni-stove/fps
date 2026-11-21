@@ -26,6 +26,20 @@ namespace Shooter.Core.Tests
             Assert.That(VisionLog.Goggles(null, VisionMode.Night, false), Is.EqualTo("[Vision] goggles owner=- mode=Night off"));
             Assert.That(VisionLog.GogglesOffOnDeath("player"), Is.EqualTo("[Vision] goggles owner=player off reason=died"));
             Assert.Throws<ArgumentOutOfRangeException>(() => VisionLog.Goggles("player", (VisionMode)99, true));
+            Assert.That(VisionLog.GogglesOffAbilitiesOff("3"), Is.EqualTo("[Vision] goggles owner=3 off reason=abilities-off"));
+        }
+
+        [Test]
+        public void NetLinesNameTheGogglesSlotsAndTheOwner()
+        {
+            Assert.That(VisionLog.NetSlots(new[] { "goggles-night", null }), Is.EqualTo("[Vision] net goggles slots=goggles-night,-"));
+            Assert.That(VisionLog.NetSlots(Array.Empty<string>()), Is.EqualTo("[Vision] net goggles slots="));
+            Assert.That(VisionLog.NetAttached("7"), Is.EqualTo("[Vision] net vision attached owner=7"));
+            Assert.That(VisionLog.NetAttached(null), Is.EqualTo("[Vision] net vision attached owner=-"));
+            Assert.Throws<ArgumentNullException>(() => VisionLog.NetSlots(null));
+            Assert.That(VisionLog.NetSlotsEmptied("broken"), Is.EqualTo("[Vision] net goggles slots emptied: broken"));
+            Assert.That(VisionLog.NetSlotInvalid(1, "mode listed twice"), Is.EqualTo("[Vision] net goggles slot=2 not equipped: mode listed twice"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => VisionLog.NetSlotInvalid(-1, "x"));
         }
 
         [Test]

@@ -92,7 +92,23 @@ namespace Shooter.Editor
                 Hull(vehicle),
                 Points(root, vehicle.ExitPoints),
                 weapons,
-                drive);
+                drive,
+                Countermeasures(vehicle));
+        }
+
+        // 切ってある VehicleCountermeasures はオフラインでも撒かないので、書き出さずにサーバーでも積んでいないことにする。
+        // 設定が使えない値なら ToSpec が投げ、Collect がこの乗り物を書き出せない一覧に載せる
+        private static MapVehicleCountermeasures Countermeasures(Vehicle vehicle)
+        {
+            var flares = vehicle.GetComponent<VehicleCountermeasures>();
+            if (flares == null || !flares.enabled)
+            {
+                return null;
+            }
+
+            var settings = flares.Settings;
+            return new MapVehicleCountermeasures(
+                settings.ToSpec(), ToNumerics(settings.EjectLocalOffset), ToNumerics(settings.EjectLocalDirection));
         }
 
         // 箱でない当たり判定は、乗り物から見た向きの外接箱で近づける。サーバーの車体は箱の集まりだけで当てるため。

@@ -187,6 +187,13 @@ namespace Shooter.Editor
                     WriteText(vehiclesPath, NetMapVehicles.Write(vehicles));
                     written.Add(vehiclesPath);
                     Debug.Log(LogTag + " wrote " + vehiclesPath + " from " + scenePath + " (" + vehicles.Vehicles.Count + " vehicles)");
+
+                    var pickups = MapPickupExporter.Collect(scene.GetRootGameObjects());
+                    var pickupsPath = Path.Combine(outputDirectory, MapName(scenePath) + NetMapPickups.Extension);
+                    WriteText(pickupsPath, NetMapPickups.Write(pickups));
+                    written.Add(pickupsPath);
+                    Debug.Log(LogTag + " wrote " + pickupsPath + " from " + scenePath + " (" + pickups.Pickups.Count + " pickups, "
+                        + pickups.AmmoCrates.Count + " ammo crates)");
                 }
             }
             finally
@@ -354,6 +361,7 @@ namespace Shooter.Editor
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapLadders.Extension));
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapWater.Extension));
             files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapVehicles.Extension));
+            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapPickups.Extension));
             foreach (var path in files)
             {
                 if (kept.Contains(Path.GetFullPath(path)))

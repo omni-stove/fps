@@ -121,7 +121,7 @@ namespace Shooter.Net.Tests
         {
             Assert.That(ServerRulesExporter.IsPlaceableOnline(_deployables, "deploy-beacon"), Is.True);
             Assert.That(ServerRulesExporter.IsPlaceableOnline(_deployables, "deploy-shield"), Is.True);
-            Assert.That(ServerRulesExporter.IsPlaceableOnline(_deployables, "deploy-drone"), Is.False, "the server does not fly drones");
+            Assert.That(ServerRulesExporter.IsPlaceableOnline(_deployables, "deploy-drone"), Is.True, "the server flies drones");
             Assert.That(ServerRulesExporter.IsPlaceableOnline(_deployables, "deploy-turret"), Is.False, "not in the file");
             Assert.That(ServerRulesExporter.IsPlaceableOnline(_deployables, string.Empty), Is.False);
             Assert.That(ServerRulesExporter.IsPlaceableOnline(_deployables, null), Is.False);
@@ -136,15 +136,15 @@ namespace Shooter.Net.Tests
 
             var abilities = ServerRulesExporter.ToLoadoutAbilities(loadout, catalog, _deployables);
 
-            Assert.That(abilities, Is.EqualTo(new[] { "deploy-shield", "deploy-beacon" }), "the goggles and the drone are not placed by the server");
+            Assert.That(abilities, Is.EqualTo(new[] { "deploy-shield", "deploy-beacon", "deploy-drone" }), "the goggles are not placed by the server");
         }
 
         [Test]
-        public void ADroneInTheLoadoutIsLeftOut()
+        public void ADroneInTheLoadoutIsKept()
         {
             var abilities = ServerRulesExporter.ToLoadoutAbilities(Loadout(_drone, _shield), Catalog(_drone, _shield), _deployables);
 
-            Assert.That(abilities, Is.EqualTo(new[] { "deploy-shield" }));
+            Assert.That(abilities, Is.EqualTo(new[] { "deploy-drone", "deploy-shield" }));
         }
 
         [Test]

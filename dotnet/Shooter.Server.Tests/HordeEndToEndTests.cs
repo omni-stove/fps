@@ -9,7 +9,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    // ServerObjectiveFactory への登録は結線の issue で行うので、MatchRulesModule の選び方を差し替えて HordeRules を載せ、
+    // 作った HordeRules を手元に持ち、ServerObjectiveParts を組まずに門の防衛物だけを渡すため、MatchRulesModule の選び方を差し替えて HordeRules を載せ、
     // 移動・ルール・戦闘・Bot を MatchServer と同じ順で回す。敵は ServerBots の Bot として波ごとに入る
     public sealed class HordeEndToEndTests
     {
@@ -231,7 +231,8 @@ namespace Shooter.Server.Tests
         private void Start(bool withGate = false)
         {
             var actions = ActionRules.Default.WithDowned(Downed.Off).WithLadder(Ladder.Off);
-            var rules = GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
+            var rules = GameRules.Default.WithActions(actions).WithObjective(MatchObjective.Horde)
+                .WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
             var settings = new NetMatchSettings(horde: _settings);
             var data = new ServerRulesData("Horde", TestRules.File(rules, settings, "Horde"), PingSpec.Default, "memory", null);
             var motor = ServerModules.MotorSettingsFrom(data);

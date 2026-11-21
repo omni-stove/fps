@@ -25,6 +25,7 @@ namespace Shooter.Server
         private readonly ServerMovement _movement;
         private readonly List<Car> _cars = new List<Car>();
         private readonly SortedDictionary<int, Seat> _riders = new SortedDictionary<int, Seat>();
+        private readonly Dictionary<int, long> _releaseTeleportTicks = new Dictionary<int, long>();
         private readonly List<int> _riderIds = new List<int>();
         private readonly VehicleCorrectedMessage _corrected = new VehicleCorrectedMessage();
         private readonly TeleportedMessage _teleported = new TeleportedMessage();
@@ -473,6 +474,7 @@ namespace Shooter.Server
             if (teleport && _bodies.TryGet(playerId, out var body))
             {
                 _bodies.Teleport(playerId, origin, body.Yaw, _tick);
+                _releaseTeleportTicks[playerId] = _tick;
                 _teleported.PlayerId = playerId;
                 _teleported.Tick = (int)Math.Min(_tick, int.MaxValue);
                 _teleported.Position = origin;

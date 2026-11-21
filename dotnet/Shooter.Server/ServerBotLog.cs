@@ -74,6 +74,26 @@ namespace Shooter.Server
             return ServerBots.LogTag + " sniper player=" + Text(playerId) + " fired multiplier=" + F2(damageMultiplier);
         }
 
+        public static string GunSeek(int playerId, string gun, float distance)
+        {
+            return ServerBots.LogTag + " gunner player=" + Text(playerId) + " seek gun=" + gun + " distance=" + F2(distance);
+        }
+
+        public static string GunManned(int playerId, string gun)
+        {
+            return ServerBots.LogTag + " gunner player=" + Text(playerId) + " man gun=" + gun;
+        }
+
+        public static string GunLeft(int playerId, string gun, MountedGunLeaveCause cause)
+        {
+            return ServerBots.LogTag + " gunner player=" + Text(playerId) + " leave gun=" + gun + " cause=" + cause;
+        }
+
+        public static string GunLost(int playerId, string gun)
+        {
+            return ServerBots.LogTag + " gunner player=" + Text(playerId) + " lost gun=" + gun;
+        }
+
         private static string Lower(EnemyArchetype archetype) => archetype.ToString().ToLowerInvariant();
 
         private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);

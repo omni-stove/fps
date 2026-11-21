@@ -8,7 +8,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    // InfectedRules は ServerObjectiveFactory にまだ登録していないので、MatchRulesModule の目的の選び方を差し替えて試合を通す
+    // 最初の感染者を決まった人にするため、MatchRulesModule の目的の選び方を差し替えて、選ぶ添字を渡した InfectedRules で試合を通す
     public sealed class MatchRulesInfectedTests
     {
         private const float _tickSeconds = 1f / 60f;

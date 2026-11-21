@@ -7,7 +7,7 @@ using Shooter.Protocol;
 namespace Shooter.Server.Tests
 {
     // Execution の目的 (ExecutionRules) で、ダウンした敵に近接のボタンでとどめを刺せ (テイクダウンと同じ ServerMelee の仕組み)、
-    // 全員が倒れた側がラウンドを落とすことを確かめる。ExecutionRules は ServerObjectiveFactory にまだ登録していないので、目的の選び方を差し替える。
+    // 全員が倒れた側がラウンドを落とすことを確かめる。目的は既定の選び方 (ServerObjectiveFactory) で作る。
     // 1 と 3 が Alpha、2 と 4 が Bravo。2 を 1 の 1.5 m 東 (体の表面まで 1 m) に置き、3 と 4 は離しておく
     public sealed partial class ServerMeleeTests
     {
@@ -356,10 +356,7 @@ namespace Shooter.Server.Tests
                 execution: new ExecutionSpec(_executeSeconds, ExecutionSpec.DefaultExecuteRange));
             Start(
                 rules.WithActions(rules.Actions.WithDowned(Downed.Revive)).WithObjective(MatchObjective.Execution),
-                settings: settings,
-                createObjective: (objective, s, host) => objective == MatchObjective.Execution
-                    ? new ExecutionRules(s, host)
-                    : ServerObjectiveFactory.Create(objective, s, host));
+                settings: settings);
             Join(1);
             Join(2);
             Join(3);

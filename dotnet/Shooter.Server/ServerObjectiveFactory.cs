@@ -22,7 +22,12 @@ namespace Shooter.Server
             (MatchObjective.GunGame, (settings, host, parts) => new GunGameRules(settings, host)),
             (MatchObjective.Payload, (settings, host, parts) => new PayloadRules(settings, host)),
             (MatchObjective.BattleRoyale, (settings, host, parts) => CreateBattleRoyale(host, RequireParts(MatchObjective.BattleRoyale, parts))),
-            (MatchObjective.Extraction, (settings, host, parts) => CreateExtraction(host, RequireParts(MatchObjective.Extraction, parts))));
+            (MatchObjective.Extraction, (settings, host, parts) => CreateExtraction(host, RequireParts(MatchObjective.Extraction, parts))),
+
+            (MatchObjective.Horde, (settings, host, parts) => new HordeRules(settings, host, parts?.Fortifications)),
+            (MatchObjective.Infected, (settings, host, parts) => new InfectedRules(settings, host)),
+            (MatchObjective.Guardian, (settings, host, parts) => new GuardianRules(settings, host, parts?.Seed)),
+            (MatchObjective.Execution, (settings, host, parts) => new ExecutionRules(settings, host)));
 
         public static IReadOnlyCollection<MatchObjective> Supported => _creators.Keys;
 

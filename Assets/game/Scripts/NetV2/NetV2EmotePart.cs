@@ -67,6 +67,17 @@ namespace Shooter.NetV2
 
         public IReadOnlyList<EmoteSpec> Emotes => _emotes;
 
+        // NetV2ClientParts.Registered に並べる口。再生では要求を受ける相手がいないので輪を開かせず、記録された相手のエモートを見せるだけにする
+        public static INetV2ClientPart Create(NetV2ClientPartsContext context)
+        {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            return new NetV2EmotePart(context.Client, context.Send, held: context.Replay ? () => false : (Func<bool>)null, log: context.Log);
+        }
+
         public Emote Rule => _rule;
 
         public bool CanEmote => !_disposed && _rule == Emote.On && _canAct;

@@ -52,7 +52,10 @@ docker compose -f docker/server/compose.yaml up -d
 - `NetBattleRoyale` の箱の表はキットの `loot.json` に無いので、ゲームが表を足すまで箱は空で開く。
 - 地面の拾い物 (`PickupSpawnPoint`) と弾薬箱 (`AmmoCrate`) は `make export-server-data` がマップごとの `<マップ>.pickups.json` に書き出す。書き出す前のマップでは拾い物が無いだけで動く。サーバーには防具が無いので、防具の拾い物は拾えない。
 - Bot は人が 1 人もいないと置かれない。試すときはクライアントを 1 人つなぐ。
-- ドローン・暗視とサーマルはオフラインだけで、サーバーでは効かない。
+- ルールの `actions` は、`stealth` のほかはオフラインと同じくサーバーでも効く。`stealth` を `On` にしたルールで起動すると、サーバーは `[Rules] warning: actions stealth ...` を出してそれを無視する。
+- スタミナの調整値は `server-data/tuning/stamina.json` を置いたときだけ読み、無ければ Core の `StaminaSpec` の既定で動く (Unity にも JSON は無い)。
+- ドローンはサーバーが飛ばすので、使うときは `deployables.json` に `Drone` の種類を足す。暗視とサーマルは手元の画面だけで決まり、サーバーは扱わない。
+- `Horde` で直す・置ける防衛物は、`make export-server-data` がマップの建物と一緒に書き出した `HordeFortification` だけ。書き出す前のマップでは、直す・置く要求をいつも断る。
 - プレイリストでは `match.*` と武器が最初の項目のルールのまま変わらないので、後の項目で使うモードの節も最初の項目に書く。
 - `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力の上限と速さ (`infectedMaxHealth`・`infectedSpeedMultiplier`) は感染したときから効き、試合の頭で生存者の値に戻る。`infectedWeaponId` の武器はルールのロードアウトか武器の一覧 (カタログ) に無いと起動 (と次のルールへの切り替え) を断る。空なら感染しても持っている武器のまま。クライアントの体力の表示の上限は接続のときに受けた全員共通の値 (`match.maxHealth`) のままなので、感染者は上限を超えた体力が出る。
 - `Execution` はラウンドの数と秒を `match.round*` に、とどめの秒数と距離を `match.execution` に書く。とどめは近接のボタンで刺すので、ルールの `melee` を `On` にする (`Off` ならダウン中の敵を撃って倒せる)。各チームの最後の 1 人もダウンし、全員がダウンしてもラウンドは終わらず、とどめを刺されるか出血で倒れきった側が落とす。とどめの進み具合は刺されている人のスナップショットの行 (`DownedSync`) に載り、刺している人の HUD に「とどめ NN%」として出る。

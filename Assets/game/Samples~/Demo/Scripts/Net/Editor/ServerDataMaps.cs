@@ -4,9 +4,11 @@ using System.IO;
 using System.Linq;
 using Shooter.Core;
 using Shooter.Runtime;
+using Unity.AI.Navigation;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
@@ -46,6 +48,103 @@ namespace Shooter.Editor
 
             EnsureFlagBases();
             EnsurePayloadCarts();
+            EnsureMapFeatures();
+        }
+
+        // はしご・水場・乗り物を置く前に作ったシーンは、旗の台と同じく作り直さずに置き物だけを足し、塔の足場の分だけ NavMesh を焼き直して書き出しに載せる。
+        public static IReadOnlyList<string> EnsureMapFeatures()
+        {
+            float? captureRadius = null;
+            float Radius()
+            {
+                captureRadius ??= NetSceneBuilder.CaptureRadius(NetSceneBuilder.LoadOrBuildMatch());
+                return captureRadius.Value;
+            }
+
+            var added = new List<string>();
+            if (AddMapFeaturesIfMissing(
+                    NetSceneBuilder.ScenePath, () => NetSceneBuilder.LoadFeatures(Radius()), NetSceneBuilder.RequireNavigable))
+            {
+                added.Add(NetSceneBuilder.ScenePath);
+            }
+
+            if (AddMapFeaturesIfMissing(
+                    ArenaSceneBuilder.ScenePath, () => ArenaSceneBuilder.LoadFeatures(Radius()), ArenaSceneBuilder.RequireNavigable))
+            {
+                added.Add(ArenaSceneBuilder.ScenePath);
+            }
+
+            if (AddMapFeaturesIfMissing(
+                    NetSceneBuilder.BattleRoyaleScenePath, NetSceneBuilder.LoadBattleRoyaleFeatures, NetSceneBuilder.RequireBattleRoyaleNavigable))
+            {
+                added.Add(NetSceneBuilder.BattleRoyaleScenePath);
+            }
+
+            return added;
+        }
+
+        // はしご・水・乗り物が 1 つでもあれば、ゲームが置き直したものとみなして触らない。
+        public static bool AddMapFeaturesIfMissing(
+            string scenePath, Func<NetMapFeatureLayout> layout, Action<NetMapFeatureLayout> requireNavigable)
+        {
+            if (layout == null)
+            {
+                throw new ArgumentNullException(nameof(layout));
+            }
+
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) == null)
+            {
+                throw new FileNotFoundException(LogTag + " " + scenePath + " is missing", scenePath);
+            }
+
+            var scene = EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
+            if (NetMapFeatureBuilder.HasFeatures(scene))
+            {
+                return false;
+            }
+
+            var features = layout();
+            if (features.Count == 0)
+            {
+                return false;
+            }
+
+            var surface = RequireOneNavMeshSurface(scene, scenePath);
+            var navMeshDataPath = AssetDatabase.GetAssetPath(surface.navMeshData);
+            if (string.IsNullOrEmpty(navMeshDataPath))
+            {
+                throw new InvalidOperationException(LogTag + " the NavMeshSurface on '" + surface.name + "' in " + scenePath
+                    + " has no saved NavMesh data; rebuild the scene");
+            }
+
+            // 塔の足場は動かない当たりなので、焼き直さないとサーバーの Bot が足場の中を歩いてしまう
+            NetMapFeatureBuilder.PlaceTerrain(scene, NetMapFeatureBuilder.TerrainParent(surface), features);
+            SceneBuildHelpers.BakeNavMesh(surface);
+            SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
+            requireNavigable?.Invoke(features);
+            NetMapFeatureBuilder.PlaceVehicles(scene, null, features);
+
+            if (!EditorSceneManager.SaveScene(scene, scenePath))
+            {
+                throw new IOException(LogTag + " failed to save " + scenePath);
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log(LogTag + " added " + features.LadderTowers.Count + " ladder tower(s), " + features.WaterPools.Count + " water pool(s) and "
+                + features.Vehicles.Count + " vehicle(s) to " + scenePath + " and rebaked " + navMeshDataPath + "; commit them");
+            return true;
+        }
+
+        private static NavMeshSurface RequireOneNavMeshSurface(Scene scene, string scenePath)
+        {
+            var surfaces = scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<NavMeshSurface>(true)).ToList();
+            if (surfaces.Count != 1)
+            {
+                throw new InvalidOperationException(LogTag + " " + scenePath + " has " + surfaces.Count
+                    + " NavMeshSurfaces; adding the map features rebakes one, so rebuild the scene instead");
+            }
+
+            return surfaces[0];
         }
 
         // 台車を置く前に作ったシーンは、旗の台と同じく作り直さずに台車と道筋だけを足して書き出しに載せる。

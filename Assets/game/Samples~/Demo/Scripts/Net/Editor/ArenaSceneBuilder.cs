@@ -155,6 +155,22 @@ namespace Shooter.Editor
         // 道のりの真ん中 (中央の拠点の横) を中継点にする
         public static readonly IReadOnlyList<int> PayloadCheckpoints = new[] { 3 };
 
+        public static string FeatureLayoutPath => NetMapFeatureBuilder.LayoutPath(MapName);
+
+        // 台車の幅 (2m) の半分に人がすれ違える幅を足し、道筋の上に塔や乗り物を置かないようにする。
+        public const float PayloadRouteClearance = 2f;
+
+        // 西の外周沿いに両チームのはしごの塔を鏡に置き、その間に車を 1 台、東の建物の外に水場を置く。どれも出現地点・拠点・旗の台・台車の道筋から離す。
+        // 位置はマップの JSON (FeatureLayoutPath) を作るときの既定で、作った後は JSON の値を使う。
+        public static NetMapFeatureLayout DefaultFeatures => new NetMapFeatureLayout(
+            new[]
+            {
+                new NetMapLadderTower("Ladder Tower Alpha", new Vector3(-25f, GroundY, -14f), new Vector3(4f, 3f, 4f), NetMapFeatureLayout.East, 0.8f),
+                new NetMapLadderTower("Ladder Tower Bravo", MirrorZ(new Vector3(-25f, GroundY, -14f)), new Vector3(4f, 3f, 4f), NetMapFeatureLayout.East, 0.8f),
+            },
+            new[] { new NetMapWaterPool("Pond East", new Vector3(25f, GroundY, 0f), new Vector3(5f, 3f, 10f), 2.5f) },
+            new[] { new NetMapVehicleSpot("Car West", NetMapFeatureBuilder.CarKind, new Vector3(-25f, GroundY, 0f), 0f) });
+
         public static void Build()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -186,6 +202,9 @@ namespace Shooter.Editor
                     + string.Join("; ", baseOverlaps));
             }
 
+            // 試合の設定と同じく、置き方の JSON もシーンを作る前に読んで値だけ持つ
+            var features = LoadFeatures(captureRadius);
+
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             // NewScene(Single) は参照されていないアセットをアンロードするので、プレハブはシーンを作ってから読む
@@ -196,19 +215,74 @@ namespace Shooter.Editor
 
             // 建物の部品は NavMeshObstacle で NavMesh を削るので、壊れたところを通れるよう地形だけを置いた状態で焼く
             var surface = CreateLevel(scene);
+            NetMapFeatureBuilder.PlaceTerrain(scene, NetMapFeatureBuilder.TerrainParent(surface), features);
             SceneBuildHelpers.BakeNavMesh(surface);
             SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
-            RequireNavigable();
+            RequireNavigable(features);
 
             PopulateScene(scene, pieceVisualPrefab, captureRadius);
+            NetMapFeatureBuilder.PlaceVehicles(scene, null, features);
             SaveScene(scene, scenePath);
 
             BuildSceneList.Register(scenePath);
             AssetDatabase.SaveAssets();
             Debug.Log(LogTag + " wrote " + scenePath + " and " + navMeshDataPath + " (" + SpawnPoints.Count + " spawn point(s), "
                 + Buildings.Count + " building(s), " + ControlPoints.Count + " control point(s), "
-                + FlagBases.Count + " flag base(s)); start a server with "
+                + FlagBases.Count + " flag base(s), " + features.LadderTowers.Count + " ladder tower(s), "
+                + features.WaterPools.Count + " water pool(s), " + features.Vehicles.Count + " vehicle(s)); start a server with "
                 + NetLaunchOptions.MapFlag + " " + MapName);
+        }
+
+        public static NetMapFeatureLayout LoadFeatures(float captureRadius)
+        {
+            var features = NetMapFeatureBuilder.LoadOrBuild(FeatureLayoutPath, DefaultFeatures);
+            var problems = FeatureProblems(features, captureRadius);
+            if (problems.Count > 0)
+            {
+                throw new InvalidOperationException(LogTag + " " + FeatureLayoutPath + " does not fit the arena: " + string.Join("; ", problems));
+            }
+
+            return features;
+        }
+
+        // 建物は壊れて形が変わるので、塔や乗り物は建物の外にしか置けない (Obstacles に建物の床の広さを含める)。
+        public static List<string> FeatureProblems(NetMapFeatureLayout features, float captureRadius)
+        {
+            var keepClear = new List<(string Name, Vector3 Position, float Radius)>();
+            foreach (var (spawnName, position, _) in SpawnPoints)
+            {
+                keepClear.Add((spawnName, Feet(position), NetSceneBuilder.FeatureSpawnClearance));
+            }
+
+            foreach (var (pointName, position, _) in ControlPoints)
+            {
+                keepClear.Add((pointName, position, ControlPointRadius + ControlPointClearance));
+            }
+
+            foreach (var (side, position) in FlagBases)
+            {
+                keepClear.Add((NetSceneBuilder.FlagBaseName(side), position, captureRadius + ControlPointClearance));
+            }
+
+            for (var i = 0; i < PayloadRoutePoints.Count; i++)
+            {
+                keepClear.Add(("payload route point " + i, PayloadRoutePoints[i], PayloadRouteClearance));
+            }
+
+            return NetMapFeatureBuilder.Problems(features, HalfExtent, Obstacles(), keepClear);
+        }
+
+        public static void RequireNavigable(NetMapFeatureLayout features)
+        {
+            RequireNavigable();
+            var ladders = NetSceneBuilder.LadderApproachPoints(features);
+            if (ladders.Count == 0)
+            {
+                return;
+            }
+
+            SceneBuildHelpers.RequireOnNavMesh(ladders, NavMeshCheckRadius, "ladder foot");
+            SceneBuildHelpers.RequireReachable(Feet(SpawnPoints[0].Position), ladders, NavMeshCheckRadius, "ladder foot");
         }
 
         public static NavMeshSurface CreateLevel(Scene scene)

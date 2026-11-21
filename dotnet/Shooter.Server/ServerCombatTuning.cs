@@ -7,7 +7,8 @@ namespace Shooter.Server
 {
     // 近接・ストリーク・設置物の調整値。Unity では Resources の JSON (Tuning/melee・Tuning/streaks) と設置物の一覧から読むので、
     // サーバーは同じ形の JSON を server-data/tuning から読み、無ければ同じく既定値 (設置物は何も置かせない) で動かす。
-    // アンチチート (anticheat.json) はサーバーだけが使うが、探し方と壊れたファイルで止めるところを他とそろえるため、ここで一緒に読む
+    // アンチチート (anticheat.json) はサーバーだけが使うが、探し方と壊れたファイルで止めるところを他とそろえるため、ここで一緒に読む。
+    // スタミナ・よろけ・制圧 (ServerPlayerStatusTuning) とエモートの一覧も、起動の口 (ServerModules.Create) の引数を増やさずに渡すため、ここに載せる
     internal sealed class ServerCombatTuning
     {
         public const string MeleeFileName = "melee.json";
@@ -22,7 +23,10 @@ namespace Shooter.Server
             DeployCatalog deployables = null,
             string deployablesPath = null,
             AntiCheatTuning antiCheat = null,
-            string antiCheatPath = null)
+            string antiCheatPath = null,
+            ServerPlayerStatusTuning playerStatus = null,
+            IReadOnlyList<EmoteSpec> emotes = null,
+            string emotesPath = null)
         {
             Melee = melee ?? MeleeSpec.Default;
             MeleePath = meleePath;
@@ -32,6 +36,9 @@ namespace Shooter.Server
             DeployablesPath = deployablesPath;
             AntiCheat = antiCheat ?? AntiCheatTuning.Default;
             AntiCheatPath = antiCheatPath;
+            PlayerStatus = playerStatus ?? ServerPlayerStatusTuning.Default;
+            Emotes = emotes ?? EmoteSpec.DefaultEmotes;
+            EmotesPath = emotesPath;
         }
 
         public static ServerCombatTuning Default { get; } = new ServerCombatTuning();
@@ -52,6 +59,12 @@ namespace Shooter.Server
 
         public string AntiCheatPath { get; }
 
+        public ServerPlayerStatusTuning PlayerStatus { get; }
+
+        public IReadOnlyList<EmoteSpec> Emotes { get; }
+
+        public string EmotesPath { get; }
+
         public string LogLine => ServerProgram.LogTag + " combat tuning"
             + " melee=" + (MeleePath ?? "default")
             + " streaks=" + (StreaksPath ?? "default")
@@ -66,13 +79,15 @@ namespace Shooter.Server
             if (!TryRead(searchRoots, MeleeFileName, "melee", MeleeJson.Parse, out var melee, out var meleePath, out error)
                 || !TryRead(searchRoots, StreaksFileName, "streak", StreakJson.Parse, out var streaks, out var streaksPath, out error)
                 || !ServerDeployables.TryLoadCatalog(searchRoots, out var deployables, out var deployablesPath, out error)
-                || !TryRead(searchRoots, AntiCheatFileName, "anticheat", AntiCheatTuningJson.Parse, out var antiCheat, out var antiCheatPath, out error))
+                || !TryRead(searchRoots, AntiCheatFileName, "anticheat", AntiCheatTuningJson.Parse, out var antiCheat, out var antiCheatPath, out error)
+                || !ServerPlayerStatusTuning.TryLoad(searchRoots, out var playerStatus, out error)
+                || !ServerEmotes.TryLoadEmotes(searchRoots, out var emotes, out var emotesPath, out error))
             {
                 return false;
             }
 
             tuning = new ServerCombatTuning(
-                melee, meleePath, streaks, streaksPath, deployables, deployablesPath, antiCheat, antiCheatPath);
+                melee, meleePath, streaks, streaksPath, deployables, deployablesPath, antiCheat, antiCheatPath, playerStatus, emotes, emotesPath);
             return true;
         }
 

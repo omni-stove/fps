@@ -93,10 +93,10 @@ namespace Shooter.Server.Tests
         [Test]
         public void AnUnusableTypeIsNotOffered()
         {
-            var drone = new DeployType(_droneId, DeployRole.Drone, DeployType.DefaultDeploy(DeployRole.Drone), drone: DroneSpec.Default);
+            var turret = new DeployType(_turretId, DeployRole.Turret, DeployType.DefaultDeploy(DeployRole.Turret), TurretSpec.Default, "weapon-missing");
             var shield = new DeployType(_shieldId, DeployRole.Shield, DeployType.DefaultDeploy(DeployRole.Shield));
 
-            Start(new DeployCatalog(new[] { drone, shield }));
+            Start(new DeployCatalog(new[] { turret, shield }));
 
             Assert.That(_log.ToString(), Does.Contain("[Deploy] net abilities=deploy-shield default=deploy-shield,- from=catalog"));
         }

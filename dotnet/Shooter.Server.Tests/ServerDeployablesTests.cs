@@ -409,7 +409,7 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void ADroneIsRefusedWithTheReasonAndOtherTypesStayUsable()
+        public void ADroneIsUsableAlongsideTheOtherTypes()
         {
             var drone = new DeployType(_droneId, DeployRole.Drone, DeployType.DefaultDeploy(DeployRole.Drone), drone: DroneSpec.Default);
             var shield = new DeployType(_shieldId, DeployRole.Shield, DeployType.DefaultDeploy(DeployRole.Shield));
@@ -418,16 +418,9 @@ namespace Shooter.Server.Tests
             Join(2);
             Step(0.2f);
 
-            Assert.That(
-                _log.ToString(),
-                Does.Contain("[Deploy] net kind=deploy-drone unusable: " + ServerDeployables.DroneUnsupported));
-            Assert.That(ServerDeployables.DroneUnsupported, Does.Contain("Drone").And.Contain("dedicated server"));
-            Assert.That(_log.ToString(), Does.Contain("[Deploy] net types=2 usable=1 from=memory"));
-            Assert.That(_deployables.Place(1, _droneId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.Unusable));
-            Assert.That(_deployables.Count, Is.Zero);
-            Assert.That(Rows(1), Is.Empty, "nothing is sent for a refused drone");
-
-            Assert.That(_deployables.Place(1, _shieldId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.None));
+            Assert.That(_log.ToString(), Does.Not.Contain("unusable"));
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] net types=2 usable=2 from=memory"));
+            Assert.That(_deployables.Place(1, _droneId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.None));
             Assert.That(_deployables.Count, Is.EqualTo(1));
         }
 
@@ -452,7 +445,7 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void ADroneReadFromTheCatalogFileIsRefused()
+        public void ADroneReadFromTheCatalogFileIsUsable()
         {
             using var directory = new TempDirectory();
             var tuning = Path.Combine(directory.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
@@ -470,9 +463,9 @@ namespace Shooter.Server.Tests
             Join(2);
             Step(0.2f);
 
-            Assert.That(_log.ToString(), Does.Contain("[Deploy] net kind=deploy-drone unusable: " + ServerDeployables.DroneUnsupported));
-            Assert.That(_deployables.Place(1, _droneId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.Unusable));
-            Assert.That(_deployables.Count, Is.Zero);
+            Assert.That(_log.ToString(), Does.Contain("[Deploy] net types=1 usable=1 from=memory"));
+            Assert.That(_deployables.Place(1, _droneId, _alphaFront, 90f), Is.EqualTo(ServerDeployRefusal.None));
+            Assert.That(_deployables.Count, Is.EqualTo(1));
         }
 
         [Test]
@@ -539,7 +532,6 @@ namespace Shooter.Server.Tests
             IReadOnlyList<RespawnAnchor> respawnAnchors = null,
             IReadOnlyList<string> loadoutAbilities = null,
             bool otherMap = false,
-            bool flyDrones = false,
             WorldCollider extra = null,
             NetMapVehicles vehicles = null)
         {
@@ -583,7 +575,7 @@ namespace Shooter.Server.Tests
             _rules = new MatchRulesModule();
             _vehicles = vehicles != null ? new ServerVehicles(_rules, movement) : null;
             _combat = new ServerCombat(_rules, movement, _vehicles);
-            _deployables = new ServerDeployables(_rules, _combat, catalog, "memory", flyDrones);
+            _deployables = new ServerDeployables(_rules, _combat, catalog, "memory");
             _host = new ServerHost();
             _host.Register(movement);
             _host.Register(_rules);

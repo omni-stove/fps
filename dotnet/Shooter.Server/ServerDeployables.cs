@@ -15,8 +15,6 @@ namespace Shooter.Server
     {
         public const string CatalogFileName = "deployables.json";
 
-        internal const string DroneUnsupported = "a Drone is piloted only offline; the dedicated server does not fly drones or send them yet";
-
         // 持ち主は手元の時計で回数と間隔を数えてから送るので、届くまでの揺れで少し早く着いた要求は断らない (ServerPlayerWeapons.ChargeArrivalToleranceSeconds と同じ考え)
         public const float UseArrivalToleranceSeconds = 0.2f;
 
@@ -29,7 +27,6 @@ namespace Shooter.Server
         private readonly DeployCatalog _catalog;
         private readonly ServerAbilityChoices _abilities;
         private readonly string _catalogPath;
-        private readonly bool _flyDrones;
         private readonly SortedDictionary<int, Placed> _placed = new SortedDictionary<int, Placed>();
         private readonly Dictionary<(int Owner, string TypeId), DeployRoster<Placed>> _rosters =
             new Dictionary<(int Owner, string TypeId), DeployRoster<Placed>>();
@@ -50,16 +47,13 @@ namespace Shooter.Server
         private float _now;
         private float _nextRejectWarningTime = float.NegativeInfinity;
 
-        // flyDrones はドローンを置かせて飛ばすか。結線するまでは既定で断り、起動の口 (ServerModuleFactory) は今までどおり置かせない
         public ServerDeployables(
-            MatchRulesModule rules, ServerCombat combat, DeployCatalog catalog = null, string catalogPath = null, bool flyDrones = false,
-            GrappleType grapple = null)
+            MatchRulesModule rules, ServerCombat combat, DeployCatalog catalog = null, string catalogPath = null, GrappleType grapple = null)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
             _catalog = catalog ?? DeployCatalog.Empty;
             _catalogPath = catalogPath;
-            _flyDrones = flyDrones;
 
             // 人の弾・爆発が置いた物に当たるよう、戦闘の当たり判定に置いた物を渡す (乗り物の ServerVehicles.Combat と同じつなぎ方)
             combat.Deployables = this;
@@ -559,12 +553,6 @@ namespace Shooter.Server
             {
                 return "the id is longer than " + MatchProtocol.MaxContentIdBytes.ToString(System.Globalization.CultureInfo.InvariantCulture)
                     + " bytes and cannot be sent";
-            }
-
-            // 結線するまではクライアントの操縦の部品が登録されておらず、置かせても操縦できない物が残るだけになるので、置く前に断る
-            if (type.Role == DeployRole.Drone && !_flyDrones)
-            {
-                return DroneUnsupported;
             }
 
             if (type.Role != DeployRole.Turret)

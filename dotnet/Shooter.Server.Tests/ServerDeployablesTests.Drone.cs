@@ -255,7 +255,7 @@ namespace Shooter.Server.Tests
                 new DeployType(_droneId, DeployRole.Drone, DeployType.DefaultDeploy(DeployRole.Drone), drone: spec, ability: free),
                 new DeployType(_shieldId, DeployRole.Shield, DeployType.DefaultDeploy(DeployRole.Shield), ability: free),
             });
-            Start(catalog, flyDrones: true, extra: extra);
+            Start(catalog, extra: extra);
             Join(1);
             Join(2);
             Step(0.2f);

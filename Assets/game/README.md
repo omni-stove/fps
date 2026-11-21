@@ -123,13 +123,13 @@ private void OnDisable()
 - 照準の `SightSpec.visionMode` (`Night`・`Thermal`) は覗いている間だけ効く。ゴーグルは `VisionGogglesDefinition` (アビリティ) で、アビリティのキーで掛け外しする。見え方を複数並べる (`Modes`) と、押すたびに 1 つ目で掛ける→次の見え方→…→外す、と進む。掛けるときだけ回数と待ち時間を使う。
   どちらも操作するプレイヤーの `VisionModeController` が決め、今の見え方を `GameSignals.Vision` (`VisionStatus`) に出す。
 - 画面は `GameSignals.Vision` を見て覆いを描く。覆いの画像と色・入れ切りの音・サーマルで敵に貼る材質は `GameContent` の vision のカタログ (`VisionVisualCatalog`) から取り、
-  空なら色だけで覆い、材質はコードで作る。オフラインだけで、ネット対戦では効かない。
+  空なら色だけで覆い、材質はコードで作る。ネット対戦では `NetV2VisionPart` が手元で同じように掛け外しし、サーバーは扱わない。
 
 #### ドローン
 
 - `DroneDeployDefinition` (置ける物のアビリティ) を持たせる。置くとその場から操縦を始め、近くの敵をミニマップと印に出す。置いている間にアビリティを短く押すと戻す。
 - 操縦の状態 (操縦しているか・電池と離れられる距離の残り・見つけた敵の数) は `GameSignals.Drone` (`DroneStatus`) に出る。見た目は置ける物の見た目に入れ、空なら胴と羽の箱を作る。
-- オフラインだけ。専用サーバーは置く要求を断る。
+- ネット対戦では専用サーバーが飛ばし (`server-data/tuning/deployables.json` に `Drone` の種類を置く)、`NetV2DronePart` が操縦の入力を送る。近くの敵に印を付けるのはオフラインだけ。
 
 #### 盾
 

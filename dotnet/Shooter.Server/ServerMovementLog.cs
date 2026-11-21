@@ -28,6 +28,19 @@ namespace Shooter.Server
             return Head("vault", playerId, tick) + " vaulting=" + Bool(vaulting);
         }
 
+        public static string Mantle(int playerId, int tick, bool mantling)
+        {
+            return Head("mantle", playerId, tick) + " mantling=" + Bool(mantling);
+        }
+
+        // オフラインの PlayerController.FormatMantleProbeLog と同じ値を出し、上れなかった理由と測った段を同じ見方で追えるようにする
+        public static string MantleProbe(int playerId, int tick, VaultVerdict verdict, float height, float depth)
+        {
+            var depthText = float.IsPositiveInfinity(depth) ? "inf" : depth.ToString("F2", CultureInfo.InvariantCulture);
+            return Head("mantle", playerId, tick) + " probe=" + verdict + " height=" + height.ToString("F2", CultureInfo.InvariantCulture)
+                + " depth=" + depthText;
+        }
+
         public static string Prone(int playerId, int tick, bool prone)
         {
             return Head("prone", playerId, tick) + " prone=" + Bool(prone);

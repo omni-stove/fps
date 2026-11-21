@@ -6,7 +6,7 @@ namespace Shooter.Server
     // 1 つの入力で替わった動きをログに出し、着地と息切れを戦闘のモジュールへ知らせる
     internal sealed partial class ServerMovement
     {
-        private void Report(Mover mover, int tick, CharacterMotorState previous, CharacterMotorState current)
+        private void Report(Mover mover, int tick, CharacterMotorState previous, CharacterMotorState current, bool mantled)
         {
             var playerId = mover.Player.PlayerId;
             if (previous.IsCrouched != current.IsCrouched)
@@ -53,13 +53,14 @@ namespace Shooter.Server
                 _log.WriteLine(ServerMovementLog.KnockbackLanded(playerId, tick, current.Position));
             }
 
+            // 崖のぼりの tick は Step を通らず、前の判定が残ったままなので、パラシュートの判定は読まない
             var simulation = mover.Simulation;
-            if (simulation.LastParachuteVerdict.HasValue)
+            if (!mantled && simulation.LastParachuteVerdict.HasValue)
             {
                 _log.WriteLine(ServerMovementLog.ParachuteOpen(playerId, tick, simulation.LastParachuteVerdict.Value, simulation.LastParachuteHeight));
             }
 
-            if (simulation.LastParachuteClose.HasValue)
+            if (!mantled && simulation.LastParachuteClose.HasValue)
             {
                 _log.WriteLine(ServerMovementLog.ParachuteClosed(playerId, tick, simulation.LastParachuteClose.Value));
             }

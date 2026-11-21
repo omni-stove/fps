@@ -255,8 +255,8 @@ namespace Shooter.Server
                     _bash = new MeleeSwing(shield.Bash);
                     _shield = new ShieldEnemyBehavior(_guard, _bash);
 
-                    // 板の大きさと扇は持つ盾 (RiotShieldSpec) の既定にし、遅さだけ盾持ちの値にする
-                    _plate = new RiotShieldSpec(moveSpeedMultiplier: shield.ApproachSpeedMultiplier, bash: shield.Bash);
+                    // 板の大きさと扇は持つ盾 (RiotShieldSpec) の既定にする。遅さは GaitMove が掛けるので、板の倍率は 1 にして二重に掛けない
+                    _plate = new RiotShieldSpec(moveSpeedMultiplier: 1f, bash: shield.Bash);
                     Brain.AddBehavior(_shield);
                     break;
                 case EnemyArchetype.Sniper:

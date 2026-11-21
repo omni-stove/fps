@@ -915,7 +915,12 @@ namespace Shooter.Runtime
                 return;
             }
 
-            if (_focusRow >= ConfirmRow)
+            if (_focusRow == PresetRow)
+            {
+                // 左右で切り替えられるので、決定には文字を打たずに押せる「新しく保存」を割り当てる
+                SaveAsNewPreset();
+            }
+            else if (_focusRow >= ConfirmRow)
             {
                 Confirm();
             }

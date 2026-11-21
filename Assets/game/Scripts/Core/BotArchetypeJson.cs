@@ -40,6 +40,11 @@ namespace Shooter.Core
         public const string RadiusItem = "radius";
         public const string FullDamageRadiusItem = "fullDamageRadius";
 
+        public const string MountedGunItem = "mountedGun";
+        public const string SeekRadiusItem = "seekRadius";
+        public const string GiveUpSecondsItem = "giveUpSeconds";
+        public const string RemountDelaySecondsItem = "remountDelaySeconds";
+
         public static IReadOnlyList<string> ShieldItemNames { get; } = new[]
         {
             ApproachSpeedMultiplierItem, HoldDistanceItem, MeleeLowerSecondsItem, ExplosionLowerSecondsItem, BashItem,
@@ -79,6 +84,8 @@ namespace Shooter.Core
         };
 
         public static IReadOnlyList<string> BlastItemNames { get; } = new[] { MaxDamageItem, RadiusItem, FullDamageRadiusItem };
+
+        public static IReadOnlyList<string> MountedGunItemNames { get; } = new[] { SeekRadiusItem, GiveUpSecondsItem, RemountDelaySecondsItem };
 
         public static ShieldSpec ReadShield(ServerDataJson.Fields parent, ShieldSpec fallback)
         {
@@ -147,6 +154,23 @@ namespace Shooter.Core
                 fields.ReadFloat(RunSpeedMultiplierItem, fallback.RunSpeedMultiplier),
                 blast,
                 deathBlast));
+        }
+
+        // 固定銃座はオフラインでも種類 (EnemyArchetype) ではなく別の部品 (EnemyMountedGunner) が持つので、archetype に足さず別の項目にする。
+        // 項目が無ければ null を返して乗りに行かせない。空のオブジェクトなら MountedGunUseSpec の既定で乗りに行く
+        public static MountedGunUseSpec ReadMountedGun(ServerDataJson.Fields parent)
+        {
+            var fields = parent.Object(MountedGunItem, MountedGunItemNames);
+            if (fields == null)
+            {
+                return null;
+            }
+
+            var fallback = MountedGunUseSpec.Default;
+            return Build(fields, MountedGunItemNames, () => new MountedGunUseSpec(
+                fields.ReadFloat(SeekRadiusItem, fallback.SeekRadius),
+                fields.ReadFloat(GiveUpSecondsItem, fallback.GiveUpSeconds),
+                fields.ReadFloat(RemountDelaySecondsItem, fallback.RemountDelaySeconds)));
         }
 
         private static MeleeSpec ReadBash(ServerDataJson.Fields fields, MeleeSpec fallback)

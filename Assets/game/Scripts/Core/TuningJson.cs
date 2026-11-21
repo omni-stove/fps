@@ -221,6 +221,7 @@ namespace Shooter.Core
             BotArchetypeJson.SniperItem,
             BotArchetypeJson.ChargerItem,
             BotArchetypeJson.BomberItem,
+            BotArchetypeJson.MountedGunItem,
         };
 
         // GrenadeTypesItem も CarriedItem も無いオブジェクトは、種類が 1 つだった頃の形として、その 1 種類だけを持つ並びに読む。
@@ -360,6 +361,7 @@ namespace Shooter.Core
             var sniper = BotArchetypeJson.ReadSniper(fields, brain.Sniper);
             var charger = BotArchetypeJson.ReadCharger(fields, brain.Charger);
             var bomber = BotArchetypeJson.ReadBomber(fields, brain.Bomber);
+            var mountedGun = BotArchetypeJson.ReadMountedGun(fields);
             EnemySpec readBrain;
             try
             {
@@ -443,7 +445,8 @@ namespace Shooter.Core
                     fields.ReadFloat(RallyRouteRadiusFractionItem, defaults.RallyRouteRadiusFraction),
                     fields.ReadFloat(RallyRouteAngleStepDegreesItem, defaults.RallyRouteAngleStepDegrees),
                     fields.ReadFloat(RallyMoveRadiusFractionItem, defaults.RallyMoveRadiusFraction),
-                    readTactics);
+                    readTactics,
+                    mountedGun);
             }
             catch (ArgumentException e)
             {

@@ -16,7 +16,8 @@ namespace Shooter.Server.Tests
         public static readonly Vector3 UpperSpawn = new Vector3(0f, PlatformY + 1.1f, 16f);
 
         // 床は x・z が -30〜30 の平らな四角
-        public static ServerMapData Flat(NetMapPoints points, NetMapStructures structures = null, IEnumerable<WorldCollider> extra = null)
+        public static ServerMapData Flat(
+            NetMapPoints points, NetMapStructures structures = null, IEnumerable<WorldCollider> extra = null, NetMapVehicles vehicles = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -28,7 +29,7 @@ namespace Shooter.Server.Tests
             }
 
             var navMesh = new NavMeshFile(Quads((-29.5f, -29.5f, 29.5f, 29.5f, FloorY)), Triangles(1));
-            return new ServerMapData("BotFlat", new WorldMap(colliders), navMesh, "memory", points, structures);
+            return new ServerMapData("BotFlat", new WorldMap(colliders), navMesh, "memory", points, structures, vehicles: vehicles);
         }
 
         // z<10 の床から、z=10 の面に +Z を向いて立てたはしご (幅 0.8、高さ 3) で、z>=10 の高さ 3 の足場へ上る。

@@ -21,6 +21,7 @@ namespace Shooter.Server
         private readonly ServerCombat _combat;
         private readonly ServerDeployables _deployables;
         private readonly ServerMelee _melee;
+        private readonly ServerVehicles _vehicles;
         private readonly List<ServerDecoy> _decoys = new List<ServerDecoy>();
         private readonly SortedDictionary<int, ServerBotAgent> _agents = new SortedDictionary<int, ServerBotAgent>();
         private readonly List<int> _ids = new List<int>();
@@ -44,15 +45,22 @@ namespace Shooter.Server
         // null なら Bot は出現地点を巡っている
         private Vector3? _ralliedAt;
 
-        // deployables が null なら、囮に気を引かれない (置いた物の無いサーバー)。melee が null なら殴らない (近接の無いサーバー)
+        // deployables が null なら、囮に気を引かれない (置いた物の無いサーバー)。melee が null なら殴らない (近接の無いサーバー)。
+        // vehicles が null なら固定銃座に乗らない (乗り物の無いサーバー)
         public ServerBots(
-            MatchRulesModule rules, ServerMovement movement, ServerCombat combat, ServerDeployables deployables = null, ServerMelee melee = null)
+            MatchRulesModule rules,
+            ServerMovement movement,
+            ServerCombat combat,
+            ServerDeployables deployables = null,
+            ServerMelee melee = null,
+            ServerVehicles vehicles = null)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _movement = movement ?? throw new ArgumentNullException(nameof(movement));
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
             _deployables = deployables;
             _melee = melee;
+            _vehicles = vehicles;
         }
 
         public string Name => "bots";
@@ -579,6 +587,17 @@ namespace Shooter.Server
             if (thinking)
             {
                 perception = Perceive(agent, body, session);
+            }
+
+            if (StepMountedGun(agent, body, perception, thinking, tick, dt))
+            {
+                LogPosition(agent, session);
+                return;
+            }
+
+            if (thinking)
+            {
+                OfferMountedGun(agent, feet, perception);
                 agent.EnableMelee(_melee != null && _melee.IsOn);
                 if (agent.PrepareCover(perception, _coverProbe))
                 {
@@ -668,6 +687,13 @@ namespace Shooter.Server
 
             _movement.TryGetState(playerId, out var after);
             ReportLadder(agent, after.Ladder, route);
+            // 乗った tick は、歩きながらの射撃 (持っている武器の向き) を座席の武器で撃たないよう、ここで終える
+            if (thinking && !traversing && !after.Ladder.IsClimbing && TryBoardMountedGun(agent, body.Position + new Vector3(0f, body.Shape.BottomY, 0f)))
+            {
+                LogPosition(agent, session);
+                return;
+            }
+
             if (agent.IsStuck(body.Position, step != BotRouteStep.None && move != Vector2.Zero))
             {
                 _log.WriteLine(LogTag + " stuck player=" + Text(playerId) + " state=" + agent.Brain.State + "; abandoning the goal");

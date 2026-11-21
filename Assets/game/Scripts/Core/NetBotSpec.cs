@@ -71,7 +71,8 @@ namespace Shooter.Core
             float rallyRouteRadiusFraction = DefaultRallyRouteRadiusFraction,
             float rallyRouteAngleStepDegrees = DefaultRallyRouteAngleStepDegrees,
             float rallyMoveRadiusFraction = DefaultRallyMoveRadiusFraction,
-            BotTacticsSpec tactics = null)
+            BotTacticsSpec tactics = null,
+            MountedGunUseSpec mountedGun = null)
         {
             Brain = brain ?? throw new ArgumentNullException(nameof(brain));
             Input = input ?? throw new ArgumentNullException(nameof(input));
@@ -100,6 +101,7 @@ namespace Shooter.Core
             StuckSeconds = stuckSeconds;
             StuckProgress = stuckProgress;
             Tactics = tactics ?? BotTacticsSpec.Default;
+            MountedGun = mountedGun;
         }
 
         public EnemySpec Brain { get; }
@@ -123,6 +125,10 @@ namespace Shooter.Core
         public float RallyMoveRadiusFraction { get; }
 
         public BotTacticsSpec Tactics { get; }
+
+        // 固定銃座に乗りに行く間合いと降りるまでの秒数。null なら乗りに行かない。
+        // 既定を持たせないのは、bots.json に書いていないサーバーの Bot が銃座へ寄り道し始めないため
+        public MountedGunUseSpec MountedGun { get; }
 
         private static void RequireNonNegative(float value, string name)
         {

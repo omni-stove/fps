@@ -122,7 +122,7 @@ namespace Shooter.Server
             {
                 WeaponsDropped = playerId => inventories.HoldWeapons(playerId),
             };
-            var bots = new ServerBots(rules, movement, combat, deployables, melee);
+            var bots = new ServerBots(rules, movement, combat, deployables, melee, vehicles);
             modules.Add(bots);
 
             // 近接・ストリーク・設置物は戦闘の DealDamage・Explode でダメージを与え、キルカムは戦闘が出すキルでクリップを送るので、戦闘より後。

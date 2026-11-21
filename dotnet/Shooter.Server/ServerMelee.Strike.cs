@@ -31,7 +31,11 @@ namespace Shooter.Server
 
             var distance = Vector3.Distance(origin, point);
             _log.WriteLine(MeleeLog.Hit(Text(attackerId), Text(target), spec.Damage, distance));
-            _combat.DealDamage(attackerId, target, spec.Damage, weaponId ?? StrikeWeaponId(attacker), HitZone.Body, attacker.Position, DamageKind.Melee);
+            var outcome = _combat.DealDamage(attackerId, target, spec.Damage, weaponId ?? StrikeWeaponId(attacker), HitZone.Body, attacker.Position, DamageKind.Melee);
+            if (outcome != DamageOutcome.Ignored)
+            {
+                _combat.NoteWounded(target, DamageKind.Melee);
+            }
         }
 
         // 並びは Id の小さい順にそろえ、同じ距離の相手を毎回同じに選ぶ (MeleeStrike.TryFind と同じ)。壁越しの相手は外す

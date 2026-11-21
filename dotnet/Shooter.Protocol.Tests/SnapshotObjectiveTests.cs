@@ -1020,6 +1020,124 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void TheBotArchetypeAndCueRoundTrip()
+        {
+            var sent = Build(100);
+            ref var charger = ref AddPlayer(sent, 1);
+            charger.IsBot = true;
+            charger.Archetype = EnemyArchetype.Charger;
+            charger.ArchetypeCue = BotArchetypeCue.Warning;
+            AddPlayer(sent, 2);
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Players[0].Archetype, Is.EqualTo(EnemyArchetype.Charger));
+            Assert.That(got.Players[0].ArchetypeCue, Is.EqualTo(BotArchetypeCue.Warning));
+            Assert.That(got.Players[1].Archetype, Is.EqualTo(EnemyArchetype.Rifleman));
+            Assert.That(got.Players[1].ArchetypeCue, Is.EqualTo(BotArchetypeCue.None));
+            Assert.That(got.Players[0].ChangedBits(sent.Players[0]), Is.Zero);
+        }
+
+        [Test]
+        public void ChangingTheCueIsSentWithTheIdentityAndResolves()
+        {
+            var baseline = Build(100);
+            ref var before = ref AddPlayer(baseline, 1);
+            before.Archetype = EnemyArchetype.Sniper;
+            before.SquadId = 2;
+            var current = Build(101);
+            ref var after = ref AddPlayer(current, 1);
+            after.Archetype = EnemyArchetype.Sniper;
+            after.SquadId = 2;
+            after.ArchetypeCue = BotArchetypeCue.Attacking;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Identity));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].Archetype, Is.EqualTo(EnemyArchetype.Sniper));
+            Assert.That(got.Players[0].ArchetypeCue, Is.EqualTo(BotArchetypeCue.Attacking));
+            Assert.That(got.Players[0].SquadId, Is.EqualTo(2));
+            Assert.That(got.Players[0].WeaponId, Is.EqualTo("rifle"));
+        }
+
+        [Test]
+        public void AnUnchangedArchetypeIsNotResent()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1).Archetype = EnemyArchetype.Bomber;
+            var current = Build(101);
+            AddPlayer(current, 1).Archetype = EnemyArchetype.Bomber;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.None));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].Archetype, Is.EqualTo(EnemyArchetype.Bomber));
+        }
+
+        // 種類と予兆は Identity にいつも 1 バイトずつ載るので、値を変えても Identity の大きさは変わらない
+        [Test]
+        public void TheArchetypeDoesNotGrowAnIdentityThatIsSentAnyway()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1);
+            var plain = Build(101);
+            AddPlayer(plain, 1).SquadId = 1;
+            var bot = Build(101);
+            ref var row = ref AddPlayer(bot, 1);
+            row.SquadId = 1;
+            row.Archetype = EnemyArchetype.Shield;
+            row.ArchetypeCue = BotArchetypeCue.Exposed;
+
+            Assert.That(Size(bot, baseline), Is.EqualTo(Size(plain, baseline)));
+        }
+
+        [TestCase(EnemyArchetype.Bomber, 5)]
+        public void AnUnknownArchetypeIsRejected(EnemyArchetype archetype, int unknown)
+        {
+            var sent = Build(100);
+            AddPlayer(sent, 1).Archetype = archetype;
+            var plain = Build(100);
+            AddPlayer(plain, 1);
+            var bytes = Bytes(sent, null);
+            var other = Bytes(plain, null);
+
+            // 種類のバイトだけが違うので、種類の無い行と比べて場所を見つける
+            var at = 0;
+            while (bytes[at] == other[at])
+            {
+                at++;
+            }
+
+            Assert.That(bytes[at], Is.EqualTo((byte)archetype));
+            bytes[at] = (byte)unknown;
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void AnUnknownCueIsRejected()
+        {
+            var sent = Build(100);
+            AddPlayer(sent, 1).ArchetypeCue = BotArchetypeCue.Exposed;
+            var plain = Build(100);
+            AddPlayer(plain, 1);
+            var bytes = Bytes(sent, null);
+            var other = Bytes(plain, null);
+            var at = 0;
+            while (bytes[at] == other[at])
+            {
+                at++;
+            }
+
+            Assert.That(bytes[at], Is.EqualTo((byte)BotArchetypeCue.Exposed));
+            bytes[at] = 4;
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
         public void TheOwnersRedeployAndExtractionRoundTrip()
         {
             var sent = Build(100);

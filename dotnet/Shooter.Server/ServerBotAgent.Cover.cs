@@ -29,6 +29,7 @@ namespace Shooter.Server
             var tactics = _spec.Tactics;
             var threat = perception.Target ?? (perception.WasHit ? perception.HitSource : null);
             var wants = tactics.TakeCover
+                && UsesTactics
                 && threat.HasValue
                 && (perception.WasHit || perception.HealthFraction < Brain.Spec.CoverHealthFraction);
             if (!wants || Clock < _nextCoverSearch)

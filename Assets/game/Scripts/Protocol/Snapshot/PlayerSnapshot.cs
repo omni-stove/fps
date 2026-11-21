@@ -28,6 +28,12 @@ namespace Shooter.Protocol
         // 分隊の番号は 1 バイトをすべて使うので、分隊に入っていない人を番号で表せず、Bot の旗と同じバイトに載せる
         public bool OutsideSquad { get; set; }
 
+        // Bot の見た目の種類と、その予兆。部分のビットに空きが無いので Identity に載せる。
+        // 予兆は 1 回の攻撃で数回しか変わらず、Concealed と同じく変わった時だけ Identity を送れば足りる
+        public EnemyArchetype Archetype { get; set; }
+
+        public BotArchetypeCue ArchetypeCue { get; set; }
+
         public Vector3 Position { get; set; }
         public Vector3 Velocity { get; set; }
 
@@ -99,6 +105,8 @@ namespace Shooter.Protocol
                 || Concealed != baseline.Concealed
                 || OutsideSquad != baseline.OutsideSquad
                 || SquadId != baseline.SquadId
+                || Archetype != baseline.Archetype
+                || ArchetypeCue != baseline.ArchetypeCue
                 || !string.Equals(CosmeticId ?? "", baseline.CosmeticId ?? "", System.StringComparison.Ordinal))
             {
                 bits |= PlayerFields.Identity;
@@ -218,6 +226,8 @@ namespace Shooter.Protocol
                 writer.WriteByte((byte)((IsBot ? 1 : 0) | (Concealed ? 2 : 0) | (OutsideSquad ? 4 : 0)));
                 writer.WriteString(CosmeticId, MatchProtocol.MaxContentIdBytes);
                 writer.WriteByte(SquadId);
+                writer.WriteByte((byte)Archetype);
+                writer.WriteByte((byte)ArchetypeCue);
             }
 
             if ((fields & PlayerFields.Motion) != 0)
@@ -355,6 +365,8 @@ namespace Shooter.Protocol
                 OutsideSquad = (flags & 4) != 0;
                 CosmeticId = reader.ReadString(MatchProtocol.MaxContentIdBytes, CosmeticId);
                 SquadId = reader.ReadByte();
+                Archetype = (EnemyArchetype)reader.ReadByteBelow(EnumRange<EnemyArchetype>.Count, "bot archetype");
+                ArchetypeCue = (BotArchetypeCue)reader.ReadByteBelow(EnumRange<BotArchetypeCue>.Count, "bot archetype cue");
             }
 
             if ((fields & PlayerFields.Motion) != 0)
@@ -480,6 +492,8 @@ namespace Shooter.Protocol
                 OutsideSquad = baseline.OutsideSquad;
                 CosmeticId = baseline.CosmeticId;
                 SquadId = baseline.SquadId;
+                Archetype = baseline.Archetype;
+                ArchetypeCue = baseline.ArchetypeCue;
             }
 
             if ((missing & PlayerFields.Motion) != 0)

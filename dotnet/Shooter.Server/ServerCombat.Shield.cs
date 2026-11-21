@@ -21,7 +21,9 @@ namespace Shooter.Server
                 var held = HeldShield(fighter, body);
                 var raised = held != null && !_movement.IsSprinting(fighter.PlayerId);
                 LogShield(fighter, held, raised);
-                body.RaisedShield = raised ? held.Shield : null;
+
+                // 盾持ちの Bot は盾の武器を持たないので、Bot のモジュールの決めた板を立てる (上げ下げのログは Bot のモジュールが出す)
+                body.RaisedShield = raised ? held.Shield : BotShieldOf(fighter.PlayerId, body);
             }
         }
 

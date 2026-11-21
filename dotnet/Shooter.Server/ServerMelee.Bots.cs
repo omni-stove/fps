@@ -1,3 +1,4 @@
+using System;
 using Shooter.Core;
 
 namespace Shooter.Server
@@ -22,6 +23,20 @@ namespace Shooter.Server
             }
 
             Begin(GetOrAdd(playerId));
+            return true;
+        }
+
+        // 盾持ちの Bot の殴り。振りの時間は Bot が持つ盾の振り (ShieldEnemyBehavior の MeleeSwing) で進めるので、ここは当たりの瞬間に相手を選んで与えるだけにする。
+        // 盾は Bot の攻撃そのものなので、人の近接を切るルール (Melee) では止めない
+        internal bool BotBash(int playerId, MeleeSpec spec)
+        {
+            ArgumentNullException.ThrowIfNull(spec);
+            if (!BotRoster.IsBotId(playerId) || _context == null || !_combat.IsHittable(playerId))
+            {
+                return false;
+            }
+
+            Strike(playerId, spec, ServerCombat.BotBodyWeaponId);
             return true;
         }
     }

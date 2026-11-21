@@ -37,7 +37,7 @@ namespace Shooter.Server
         {
             if (_melee != null)
             {
-                _melee.Enabled = rulesAllow && _spec.Tactics.MeleeAttacks;
+                _melee.Enabled = rulesAllow && _spec.Tactics.MeleeAttacks && AllowsMelee;
             }
         }
 

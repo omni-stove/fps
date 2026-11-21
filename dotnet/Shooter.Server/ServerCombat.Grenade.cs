@@ -300,6 +300,8 @@ namespace Shooter.Server
                 hurtFighter.LastHitDirection = hurtBody.Position - center;
             }
 
+            NoteWounded(hurt, DamageKind.Explosion);
+
             if (hurt == victimId && outcome != DamageOutcome.Killed)
             {
                 PushAway(victimId, center, bodyCenter, explosion.StrengthAt(distance));

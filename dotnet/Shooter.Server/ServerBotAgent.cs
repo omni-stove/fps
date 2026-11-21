@@ -20,7 +20,8 @@ namespace Shooter.Server
             _sightBlocker = sightBlocker ?? throw new ArgumentNullException(nameof(sightBlocker));
             _random = random ?? throw new ArgumentNullException(nameof(random));
             Brain = new EnemyBrain(spec.Brain);
-            Brain.SetPatrolRoute(route);
+            AddArchetypeBehaviors();
+            SetRoute(route);
             Driver = new BotDriver(spec.Input, random);
             Route = new ServerBotRoute(navigation, spec);
             Decoys = new ServerDecoyPerception(playerId);
@@ -90,6 +91,7 @@ namespace Shooter.Server
             Brain.UseCover(null);
             _nextCoverSearch = Clock;
             _nextGrenadeAt = Clock;
+            ResetArchetype();
         }
     }
 }

@@ -272,6 +272,7 @@ namespace Shooter.Server
         private static void Conceal(ref PlayerSnapshot row)
         {
             row.Concealed = true;
+            row.ArchetypeCue = BotArchetypeCue.None;
             row.Position = Vector3.Zero;
             row.Velocity = Vector3.Zero;
             row.Yaw = 0f;

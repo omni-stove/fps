@@ -122,7 +122,8 @@ namespace Shooter.Server
             {
                 WeaponsDropped = playerId => inventories.HoldWeapons(playerId),
             };
-            modules.Add(new ServerBots(rules, movement, combat, deployables, melee));
+            var bots = new ServerBots(rules, movement, combat, deployables, melee);
+            modules.Add(bots);
 
             // 近接・ストリーク・設置物は戦闘の DealDamage・Explode でダメージを与え、キルカムは戦闘が出すキルでクリップを送るので、戦闘より後。
             // キルカムは Bot が動いた後の姿勢を残すので、Bot より後
@@ -135,7 +136,7 @@ namespace Shooter.Server
             // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足すので、ルールの直後
             modules.Add(new ServerSnapshots(
                 motorSettings.Rules,
-                new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables },
+                new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables, bots },
                 tuning.AntiCheat,
                 rules));
 

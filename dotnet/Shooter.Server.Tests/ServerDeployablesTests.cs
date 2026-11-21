@@ -537,12 +537,19 @@ namespace Shooter.Server.Tests
             Abilities abilities = Abilities.On,
             IReadOnlyList<RespawnAnchor> respawnAnchors = null,
             IReadOnlyList<string> loadoutAbilities = null,
-            bool otherMap = false)
+            bool otherMap = false,
+            bool flyDrones = false,
+            WorldCollider extra = null)
         {
             var colliders = new List<WorldCollider>
             {
                 WorldCollider.Box(1, 0, WorldCollider.StaticGroup, Vector3.Zero, new Vector3(60f, 0.5f, 60f), Quaternion.Identity),
             };
+            if (extra != null)
+            {
+                colliders.Add(extra);
+            }
+
             if (wall)
             {
                 colliders.Add(WorldCollider.Box(2, 0, WorldCollider.StaticGroup, new Vector3(-2f, 1.2f, 0f), new Vector3(0.3f, 0.2f, 2f), Quaternion.Identity));
@@ -573,7 +580,7 @@ namespace Shooter.Server.Tests
             var movement = new ServerMovement(ServerModules.MotorSettingsFrom(data));
             _rules = new MatchRulesModule();
             _combat = new ServerCombat(_rules, movement);
-            _deployables = new ServerDeployables(_rules, _combat, catalog, "memory");
+            _deployables = new ServerDeployables(_rules, _combat, catalog, "memory", flyDrones);
             _host = new ServerHost();
             _host.Register(movement);
             _host.Register(_rules);

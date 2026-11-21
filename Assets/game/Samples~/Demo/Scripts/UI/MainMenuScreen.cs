@@ -22,6 +22,7 @@ namespace Shooter.Runtime
         public const string QuickMatchButtonName = "menu-quick-match";
         public const string PartyButtonName = "menu-party";
         public const string JoinByCodeButtonName = "menu-join-by-code";
+        public const string ServerBrowserButtonName = "menu-server-browser";
         public const string PlaylistsButtonName = "menu-playlists";
         public const string LoadoutButtonName = "menu-loadout";
         public const string ProfileButtonName = "menu-profile";
@@ -67,6 +68,7 @@ namespace Shooter.Runtime
             QuickMatchButtonName,
             PartyButtonName,
             JoinByCodeButtonName,
+            ServerBrowserButtonName,
             LoadoutButtonName,
             ProfileButtonName,
             StatsButtonName,
@@ -97,6 +99,8 @@ namespace Shooter.Runtime
                     return StashButtonName;
                 case MainMenuPanelKind.Playlists:
                     return PlaylistsButtonName;
+                case MainMenuPanelKind.ServerBrowser:
+                    return ServerBrowserButtonName;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(kind), kind, "unknown main menu screen");
             }
@@ -1340,6 +1344,9 @@ namespace Shooter.Runtime
                     break;
                 case JoinByCodeButtonName:
                     OpenCustomMatch();
+                    break;
+                case ServerBrowserButtonName:
+                    OpenPanel(MainMenuPanelKind.ServerBrowser);
                     break;
                 case PlaylistsButtonName:
                     OpenPanel(MainMenuPanelKind.Playlists);

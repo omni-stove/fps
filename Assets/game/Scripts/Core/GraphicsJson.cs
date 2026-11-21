@@ -60,7 +60,7 @@ namespace Shooter.Core
             }
         }
 
-        private static IReadOnlyList<int> ReadChoices(ServerDataJson.Fields fields)
+        private static int[] ReadChoices(ServerDataJson.Fields fields)
         {
             if (!fields.Has(FrameRateChoicesItem))
             {

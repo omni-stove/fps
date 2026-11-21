@@ -337,6 +337,24 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheLeadingSquadDoesNotCountPlayersOutsideTheSquads()
+        {
+            var ended = Snapshot(100, squadsRemaining: 1, state: GameModeState.Ended);
+            Kill(ended, _self);
+            Kill(ended, _squadmate);
+            Kill(ended, _oneA);
+            Kill(ended, _oneB);
+            Kill(ended, _twoB);
+            for (var id = 90; id <= 91; id++)
+            {
+                AddPlayer(ended, id, 0);
+                ended.Players[ended.Players.IndexOf(id)].OutsideSquad = true;
+            }
+
+            Assert.That(ClientBattleRoyaleStatus.LeadingSquad(ended.Players), Is.EqualTo(_squadTwo));
+        }
+
+        [Test]
         public void BadArgumentsAreRejected()
         {
             Assert.Throws<ArgumentNullException>(() => _status.Apply(null));

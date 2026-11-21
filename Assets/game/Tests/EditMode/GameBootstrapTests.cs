@@ -538,6 +538,26 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void ThePlayerSpawnsWithTheActivePreset()
+        {
+            using (var scene = new SavedLoadoutScene(_rules))
+            {
+                var presets = scene.Store.LoadPresets();
+                presets.Add("Rifle", new LoadoutChoice(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+                presets.Add("Close", new LoadoutChoice(
+                    new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }, new[] { SavedLoadoutScene.BeaconId, AbilitySelection.None }));
+                presets.Select(1);
+                scene.Store.SavePresets(presets);
+
+                var world = scene.Build();
+
+                Assert.That(world.Weapon.Definitions, Is.EqualTo(new[] { scene.Assets.Smg, scene.Assets.Handgun }), "the second preset is the active one");
+                Assert.That(world.Abilities.Definition(0), Is.SameAs(scene.Beacon));
+                Assert.That(scene.Bootstrap.PlayerLoadout.RestoredWeapons, Is.True);
+            }
+        }
+
+        [Test]
         public void SavingNoneInAbility1LeavesNothingToUse()
         {
             using (var scene = new SavedLoadoutScene(_rules))
@@ -1014,7 +1034,7 @@ namespace Shooter.Tests.EditMode
                 _content.AbilityCatalog = _catalog;
                 GameContent.Use(_content);
 
-                Store = new LoadoutPreferenceStore("Shooter.Tests.GameBootstrap.Loadout." + Guid.NewGuid().ToString("N"));
+                Store = new LoadoutPreferenceStore("Shooter.Tests.GameBootstrap.Loadout." + Guid.NewGuid().ToString("N"), LoadoutPresetSpec.Default);
                 _host = new GameObject("Bootstrap-SavedLoadout");
                 Bootstrap = _host.AddComponent<GameBootstrap>();
                 Bootstrap.CreatesFloor = false;

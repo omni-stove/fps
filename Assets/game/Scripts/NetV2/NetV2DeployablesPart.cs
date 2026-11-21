@@ -102,10 +102,12 @@ namespace Shooter.NetV2
             _definitions.TryGetValue(typeId ?? "", out var definition);
             var turret = definition as TurretDeployDefinition;
             var beacon = definition as BeaconDeployDefinition;
+            var drone = definition as DroneDeployDefinition;
             var visual = definition != null && definition.Prefab != null
                 ? UnityEngine.Object.Instantiate(definition.Prefab)
                 : turret != null ? turret.CreateLook()
                 : beacon != null ? beacon.CreateLook()
+                : drone != null ? drone.CreateLook()
                 : CreatePlaceholder(kind, definition);
             visual.name = "Net" + (string.IsNullOrEmpty(typeId) ? kind.ToString() : typeId);
             Quiet(visual);
@@ -181,6 +183,8 @@ namespace Shooter.NetV2
                     return DeployRole.Decoy;
                 case DeployableKind.Beacon:
                     return DeployRole.Beacon;
+                case DeployableKind.Drone:
+                    return DeployRole.Drone;
                 default:
                     return DeployRole.Shield;
             }

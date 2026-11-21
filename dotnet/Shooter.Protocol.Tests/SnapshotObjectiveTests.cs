@@ -17,9 +17,9 @@ namespace Shooter.Protocol.Tests
         private const int _battleRoyaleBytes = 8 + 4 + 8 + 4 + 4 + 4 + 4;
 
         [Test]
-        public void TheVersionIs24()
+        public void TheVersionIs25()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(24));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(25));
         }
 
         [Test]
@@ -871,6 +871,29 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void BeingOutsideTheSquadsRoundTripsWithTheIdentity()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1);
+            var current = Build(101);
+            ref var outside = ref AddPlayer(current, 1);
+            outside.OutsideSquad = true;
+            outside.IsBot = true;
+            outside.Concealed = true;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Identity));
+            Assert.That(got.Players[0].OutsideSquad, Is.True);
+            Assert.That(got.Players[0].IsBot, Is.True);
+            Assert.That(got.Players[0].Concealed, Is.True);
+            Assert.That(got.Players[0].SquadId, Is.Zero);
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].OutsideSquad, Is.True, "the baseline does not overwrite a sent flag");
+            Assert.That(Send(baseline, null).Players[0].OutsideSquad, Is.False);
+        }
+
+        [Test]
         public void ConcealedAndBotRoundTripTogether()
         {
             var sent = Build(100);
@@ -972,7 +995,7 @@ namespace Shooter.Protocol.Tests
             }
 
             Assert.That(bytes[at], Is.EqualTo(1));
-            bytes[at] = 1 << 2;
+            bytes[at] = 1 << 3;
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
         }

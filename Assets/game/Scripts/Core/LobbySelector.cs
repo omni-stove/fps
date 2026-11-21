@@ -127,6 +127,22 @@ namespace Shooter.Core
             return Rejection(lobby, version, partySize, out _);
         }
 
+        // サーバー一覧に出せるか。満員は入れないが、遊ばれているサーバーとして見せるので弾かない。
+        public static bool IsListable(LobbyInfo lobby, string version)
+        {
+            if (lobby == null)
+            {
+                throw new ArgumentNullException(nameof(lobby));
+            }
+
+            if (lobby.IsPrivate)
+            {
+                return false;
+            }
+
+            return Rejection(lobby, version, 1, out var kind) == null || kind == RejectionKind.Full;
+        }
+
         // 非公開のサーバーはコードを知る人のためのものなので、Quick Match と違って private では弾かない。
         public static JoinCodeOutcome PickByJoinCode(
             IReadOnlyList<LobbyInfo> lobbies, string code, string version, int partySize, out LobbyInfo picked)

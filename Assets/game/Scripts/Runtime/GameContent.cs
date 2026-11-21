@@ -147,6 +147,8 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("味方・敵・目的の物などの色の組 (標準・色覚向け) の JSON。空なら Resources/Tuning/palettes")]
         private TextAsset _palettesTuning;
 
+        [SerializeField, Tooltip("保存しておけるロードアウトの組の数と名前の長さの JSON。空なら Resources/Tuning/loadout-presets")]
+        private TextAsset _loadoutPresetsTuning;
         [SerializeField, Tooltip("グラフィック設定の初期値 (画質・VSync・fps 上限) と選べる fps 上限の JSON。空なら Resources/Tuning/graphics")]
         private TextAsset _graphicsTuning;
 
@@ -535,6 +537,10 @@ namespace Shooter.Runtime
             set => _palettesTuning = value;
         }
 
+        public TextAsset LoadoutPresetsTuning
+        {
+            get => _loadoutPresetsTuning;
+            set => _loadoutPresetsTuning = value;
         public TextAsset GraphicsTuning
         {
             get => _graphicsTuning;

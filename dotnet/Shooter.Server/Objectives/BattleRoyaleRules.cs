@@ -403,6 +403,7 @@ namespace Shooter.Server
         {
             var mode = _battleRoyale.Mode;
             snapshot.SquadId = mode.HasPlayer(playerId) ? (byte)mode.GetSide(playerId).Id : (byte)0;
+            snapshot.OutsideSquad = !mode.HasPlayer(playerId);
         }
 
         // 戻れる回数と戻るまでの秒数は持ち主にだけ送る

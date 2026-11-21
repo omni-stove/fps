@@ -280,6 +280,75 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void ABotSwingsAtAHumanWithinReach()
+        {
+            var rules = Rules();
+            Start(BotTestMaps.Flat(FlatPoints()), rules.WithActions(rules.Actions.WithMelee(Melee.On)), bots: 2, melee: true);
+            Join(1);
+            Tick();
+            var botId = _bots.BotIds.Single();
+
+            PlaceHumanFrom(botId, 1.5f);
+            Step(1f);
+
+            Assert.That(_log.ToString(), Does.Contain("[Melee] swing id=" + Text(botId)), _log.ToString());
+        }
+
+        [Test]
+        public void WithoutTheMeleeRuleABotDoesNotSwing()
+        {
+            Start(BotTestMaps.Flat(FlatPoints()), Rules(), bots: 2, melee: true);
+            Join(1);
+            Tick();
+            var botId = _bots.BotIds.Single();
+
+            PlaceHumanFrom(botId, 1.5f);
+            Step(1f);
+
+            Assert.That(_log.ToString(), Does.Not.Contain("[Melee] swing id=" + Text(botId)));
+        }
+
+        [Test]
+        public void ABotThrowsAGrenadeWhereItLostSightOfAHuman()
+        {
+            var rules = Rules();
+            Start(
+                BotTestMaps.Flat(FlatPoints()),
+                rules.WithActions(rules.Actions.WithGrenade(Grenade.On).WithGrenadeCount(2)),
+                bots: 2);
+            Join(1);
+            Tick();
+            var botId = _bots.BotIds.Single();
+
+            // 撃ち始める (反応の 0.6 秒) より前に見えなくし、最後に見た所を追わせる
+            PlaceHumanFrom(botId, 12f);
+            Step(0.3f);
+            _combat.SightBlockers.Add(new BlockEverything());
+            Step(1f);
+
+            var log = _log.ToString();
+            Assert.That(log, Does.Contain("[Bot] grenade player=" + Text(botId) + " state=Chase"), log);
+            Assert.That(log, Does.Contain("[Grenade] net thrown player=" + Text(botId)));
+        }
+
+        [Test]
+        public void ABotDoesNotThrowAGrenadeWhenTheRulesHaveNone()
+        {
+            Start(BotTestMaps.Flat(FlatPoints()), Rules(), bots: 2);
+            Join(1);
+            Tick();
+            var botId = _bots.BotIds.Single();
+
+            PlaceHumanFrom(botId, 12f);
+            Step(0.3f);
+            _combat.SightBlockers.Add(new BlockEverything());
+            Step(1f);
+
+            Assert.That(_log.ToString(), Does.Not.Contain("[Bot] grenade player="));
+            Assert.That(_combat.LiveGrenadeCount, Is.Zero);
+        }
+
+        [Test]
         public void ABotClimbsDownAndUpTheLadderToReachItsPatrolPoints()
         {
             // 見える距離を縮めて人を目に入れず、出現地点 (足場の上と下) を巡回させる
@@ -482,6 +551,14 @@ namespace Shooter.Server.Tests
                 new NetMapPayload(Team.Bravo, new[] { new Vector3(0f, 0f, 8f), new Vector3(0f, 0f, -8f) }, null, 3f, 4f));
         }
 
+        // 人を Bot から地図の中ほどへ向けて distance だけ離して置く
+        private void PlaceHumanFrom(int botId, float distance)
+        {
+            Assert.That(_context.Bodies.TryGet(botId, out var bot), Is.True);
+            var toCenter = Vector3.Normalize(new Vector3(-bot.Position.X, 0f, -bot.Position.Z));
+            _context.Bodies.Teleport(1, bot.Position + (toCenter * distance), 0f, _host.TickCount);
+        }
+
         private static bool Near(Vector3 position, Vector3 spawn)
         {
             return Vector3.Distance(Flat(position), Flat(spawn)) < 1.5f && Math.Abs(position.Y - spawn.Y) < 0.5f;
@@ -518,7 +595,7 @@ namespace Shooter.Server.Tests
             return GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
         }
 
-        private void Start(ServerMapData map, GameRules rules, int bots, NetBotSpec spec = null, IMatchObjectiveRules objective = null)
+        private void Start(ServerMapData map, GameRules rules, int bots, NetBotSpec spec = null, IMatchObjectiveRules objective = null, bool melee = false)
         {
             var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules), PingSpec.Default, "memory", null, bots: spec);
             var settings = ServerModules.MotorSettingsFrom(data);
@@ -530,12 +607,18 @@ namespace Shooter.Server.Tests
             _rules = objective == null ? new MatchRulesModule() : new MatchRulesModule((_, _, _) => objective);
             var combat = new ServerCombat(_rules, _movement);
             _combat = combat;
-            _bots = new ServerBots(_rules, _movement, combat);
+            var swings = melee ? new ServerMelee(combat, _movement, MeleeSpec.Default) : null;
+            _bots = new ServerBots(_rules, _movement, combat, melee: swings);
             _host = new ServerHost();
             _host.Register(_movement);
             _host.Register(_rules);
             _host.Register(combat);
             _host.Register(_bots);
+            if (swings != null)
+            {
+                _host.Register(swings);
+            }
+
             _host.Register(new ServerSnapshots(rules, new ISnapshotContributor[] { _movement, _rules, combat }, TestAntiCheat.Off));
             _host.Start(_context);
         }

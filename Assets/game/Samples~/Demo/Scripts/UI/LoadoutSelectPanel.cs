@@ -917,8 +917,24 @@ namespace Shooter.Runtime
 
             if (_focusRow == PresetRow)
             {
-                // 左右で切り替えられるので、決定には文字を打たずに押せる「新しく保存」を割り当てる
-                SaveAsNewPreset();
+                // フォーカス中のボタンへの決定は上で止めているので、押されたボタンの動作をここで呼ぶ。
+                // それ以外は、文字を打たずに押せる「新しく保存」を割り当てる
+                if (evt.target == _renamePreset)
+                {
+                    RenamePreset();
+                }
+                else if (evt.target == _presetPrevious)
+                {
+                    CyclePreset(-1);
+                }
+                else if (evt.target == _presetNext)
+                {
+                    CyclePreset(1);
+                }
+                else
+                {
+                    SaveAsNewPreset();
+                }
             }
             else if (_focusRow >= ConfirmRow)
             {

@@ -23,6 +23,47 @@ namespace Shooter.Server
 
         private readonly int[] _overlaps = new int[_overlapCapacity];
 
+        // 持ち主の画面の位置はサーバーより遅れているので、届く距離には撃った弾の始点と同じだけのずれを許す。
+        // 面に貼る C4 は、オフラインの RemoteChargeDeployDefinition.Survey と同じく体の中心からのまっすぐな距離で測る
+        private bool InReach(DeployType type, ServerBody body, Vector3 position)
+        {
+            var allowed = type.Deploy.MaxRange + _data.Settings.MaxShotOriginOffset;
+            if (type.Role == DeployRole.RemoteCharge)
+            {
+                return Vector3.Distance(position, body.Center) <= allowed;
+            }
+
+            var offset = position - body.Position;
+            var horizontal = MathF.Sqrt((offset.X * offset.X) + (offset.Z * offset.Z));
+
+            // 真上の屋根や壁の向こうの床を送られても置けないよう、上下のずれに上限を置く
+            return horizontal <= allowed && MathF.Abs(offset.Y) <= MaxVerticalReach;
+        }
+
+        // 床に立てる物の置き場所。持ち主の体から置く地点まで壁が無いかも見る
+        private ServerDeployRefusal Stand(
+            ServerBody body, DeploySpec spec, Vector3 position, float facing, out Vector3 point, out Vector3 normal, out int surfaceId)
+        {
+            normal = Vector3.UnitY;
+            surfaceId = 0;
+            var verdict = Survey(spec, position, facing, out point);
+            if (verdict != DeployVerdict.Ok)
+            {
+                return RefusalOf(verdict);
+            }
+
+            // 置く地点の物 (梁など) は足場の判定が Blocked で断るので、射線はその後に見る
+            var sight = position + new Vector3(0f, SightLift, 0f) - body.Center;
+            var sightDistance = sight.Length();
+            if (sightDistance > 1e-4f
+                && _context.World.Raycast(body.Center, sight / sightDistance, sightDistance, ServerHitboxes.RaycastLayers, out _))
+            {
+                return ServerDeployRefusal.OutOfReach;
+            }
+
+            return ServerDeployRefusal.None;
+        }
+
         private DeployVerdict Survey(DeploySpec spec, Vector3 position, float yaw, out Vector3 point)
         {
             point = position;

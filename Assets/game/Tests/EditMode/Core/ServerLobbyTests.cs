@@ -293,7 +293,10 @@ namespace Shooter.Core.Tests
         public void EveryObjectiveHasItsOwnModeName()
         {
             var names = new HashSet<string>();
-            foreach (MatchObjective objective in Enum.GetValues<MatchObjective>())
+            // Unity の .NET には Enum.GetValues<TEnum>() が無いので、dotnet でだけ出る CA2263 を止める
+#pragma warning disable CA2263
+            foreach (MatchObjective objective in Enum.GetValues(typeof(MatchObjective)))
+#pragma warning restore CA2263
             {
                 Assert.That(names.Add(ServerLobby.ModeName(objective)), Is.True, objective.ToString());
             }

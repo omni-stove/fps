@@ -180,6 +180,24 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void NetMatchToMotorCarriesTheSameSlideTuningAsOffline()
+        {
+            _match = ScriptableObject.CreateInstance<NetMatchDefinition>();
+            _match.MotorSettings = _settings;
+
+            var motor = _match.ToMotor();
+
+            var offline = TraversalTuning.Current.Slide;
+
+            Assert.That(motor.Slide.StartSpeed, Is.EqualTo(offline.StartSpeed));
+            Assert.That(motor.Slide.Deceleration, Is.EqualTo(offline.Deceleration));
+            Assert.That(motor.Slide.EndSpeed, Is.EqualTo(offline.EndSpeed));
+            Assert.That(motor.Slide.MinSeconds, Is.EqualTo(offline.MinSeconds));
+            Assert.That(motor.Slide.MaxSeconds, Is.EqualTo(offline.MaxSeconds));
+            Assert.That(motor.Slide.SlopeAcceleration, Is.EqualTo(offline.SlopeAcceleration));
+        }
+
+        [Test]
         public void PlayerControllerReadsTheProneFromItsSettings()
         {
             _settings.Prone = new ProneSpec(1.1f, 2.4f, 20f, 0.25f, 4f, 0.8f);

@@ -40,7 +40,8 @@ namespace Shooter.Core.Tests
             FriendlyFire friendlyFire = FriendlyFire.Off,
             float reconnectGraceSeconds = TeamDeathmatchSession.DefaultReconnectGraceSeconds,
             int pointsPerAssist = TeamDeathmatchSpec.DefaultPointsPerAssist,
-            AssistSpec assist = null)
+            AssistSpec assist = null,
+            bool downsLastStanding = false)
         {
             var points = new[]
             {
@@ -60,7 +61,8 @@ namespace Shooter.Core.Tests
                 d.ReserveAmmoMultiplier,
                 d.Destruction);
             var session = new TeamDeathmatchSession(
-                new TeamDeathmatchSpec(scoreLimit, timeLimitSeconds, respawnSeconds, rules, pointsPerAssist: pointsPerAssist),
+                new TeamDeathmatchSpec(
+                    scoreLimit, timeLimitSeconds, respawnSeconds, rules, pointsPerAssist: pointsPerAssist, downsLastStanding: downsLastStanding),
                 _maxHealth,
                 points,
                 new SpawnSelector(),
@@ -1248,9 +1250,11 @@ namespace Shooter.Core.Tests
             GameRules rules,
             int scoreLimit = 10,
             float respawnSeconds = 3f,
-            float? restartDelaySeconds = null)
+            float? restartDelaySeconds = null,
+            bool downsLastStanding = false)
         {
-            var session = Create(scoreLimit: scoreLimit, respawnSeconds: respawnSeconds, restartDelaySeconds: restartDelaySeconds, rules: rules);
+            var session = Create(
+                scoreLimit: scoreLimit, respawnSeconds: respawnSeconds, restartDelaySeconds: restartDelaySeconds, rules: rules, downsLastStanding: downsLastStanding);
             session.Join(1);
             session.Join(2);
             session.Join(3);
@@ -1557,6 +1561,92 @@ namespace Shooter.Core.Tests
             Assert.That(session.IsAlive(1), Is.False);
             Assert.That(session.IsAlive(3), Is.False);
             Assert.That(session.IsDowned(1), Is.False);
+        }
+
+        [Test]
+        public void DownsLastStandingDownsTheLastStandingPlayer()
+        {
+            var session = Create(rules: DownedRules(), downsLastStanding: true);
+            session.Join(1);
+            session.Join(2);
+            _events.Clear();
+
+            Assert.That(session.ApplyDamage(2, 1, _maxHealth), Is.EqualTo(DamageOutcome.Downed));
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1")));
+            Assert.That(_downedChanged, Is.EqualTo(Ids(1)));
+            Assert.That(session.IsDowned(1), Is.True);
+            Assert.That(session.IsAlive(1), Is.True);
+            Assert.That(session.GetScore(Team.Bravo), Is.Zero);
+        }
+
+        [Test]
+        public void DownsLastStandingKeepsAWipedOutTeamDowned()
+        {
+            var session = CreateTwoOnTwo(DownedRules(), downsLastStanding: true);
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            Assert.That(session.ApplyDamage(4, 3, _maxHealth), Is.EqualTo(DamageOutcome.Downed));
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "down 4>3")));
+            Assert.That(session.IsDowned(1), Is.True);
+            Assert.That(session.IsDowned(3), Is.True);
+            Assert.That(session.TryRevive(3, 1, _reviveSeconds), Is.False, "a downed ally cannot revive");
+        }
+
+        [Test]
+        public void DownsLastStandingStillFinishesADownedPlayerAndBleedsOut()
+        {
+            var session = CreateTwoOnTwo(DownedRules(), respawnSeconds: 100f, downsLastStanding: true);
+            session.ApplyDamage(2, 1, _maxHealth);
+            session.ApplyDamage(4, 3, _maxHealth);
+
+            Assert.That(session.ApplyDamage(2, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+            Assert.That(session.IsDowned(3), Is.True, "the other downed player is not killed with the first");
+
+            session.Tick(_bleedoutSeconds);
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1", "down 4>3", "kill 2>1", "score 0-1", "kill 4>3", "score 0-2")));
+            Assert.That(session.IsAlive(3), Is.False);
+        }
+
+        [Test]
+        public void DownsLastStandingKeepsTheDownedWhenTheLastAllyLeaves()
+        {
+            var session = CreateTwoOnTwo(DownedRules(), downsLastStanding: true);
+            session.ApplyDamage(2, 1, _maxHealth);
+
+            session.Leave(3);
+
+            Assert.That(_events, Is.EqualTo(Events("down 2>1")));
+            Assert.That(session.IsDowned(1), Is.True);
+        }
+
+        [Test]
+        public void DownsLastStandingStillKillsASuicideWithoutDowning()
+        {
+            var session = CreateTwoOnTwo(DownedRules(), downsLastStanding: true);
+
+            Assert.That(session.ApplyDamage(1, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+            Assert.That(session.IsDowned(1), Is.False);
+        }
+
+        [Test]
+        public void DownsLastStandingDoesNothingWithoutDowned()
+        {
+            var session = Create(downsLastStanding: true);
+            session.Join(1);
+            session.Join(2);
+
+            Assert.That(session.ApplyDamage(2, 1, _maxHealth), Is.EqualTo(DamageOutcome.Killed));
+            Assert.That(session.IsDowned(1), Is.False);
+        }
+
+        [Test]
+        public void DownsLastStandingIsOffByDefault()
+        {
+            Assert.That(new TeamDeathmatchSpec(10, 60f, 3f).DownsLastStanding, Is.False);
+            Assert.That(new TeamDeathmatchSpec(10, 60f, 3f, downsLastStanding: true).DownsLastStanding, Is.True);
         }
 
         [Test]

@@ -443,7 +443,7 @@ namespace Shooter.Core
                 }
 
                 // ダウンさせても全滅ですぐ倒すことになるときは、Downed と Killed を続けて出さずに初めから倒す
-                if (_downed != null && attackerId != victimId && HasOtherStandingAlly(victimId))
+                if (_downed != null && attackerId != victimId && (Spec.DownsLastStanding || HasOtherStandingAlly(victimId)))
                 {
                     _downed.Down(victimId, attackerId, byEnemy: !byAlly);
                     Downed?.Invoke(attackerId, victimId);
@@ -557,7 +557,7 @@ namespace Shooter.Core
 
         private void KillWipedOutTeams()
         {
-            if (_downed == null || _downed.Count == 0 || State != GameModeState.Playing)
+            if (_downed == null || _downed.Count == 0 || State != GameModeState.Playing || Spec.DownsLastStanding)
             {
                 return;
             }

@@ -55,6 +55,7 @@ namespace Shooter.NetV2
         private Func<float> _blindSeconds;
         private IInventoryControl _inventory;
         private ClientSearchAndDestroyStatus _searchAndDestroy;
+        private ClientExecutionStatus _execution;
         private ClientHardpointStatus _hardpoint;
         private ClientKillConfirmedStatus _killConfirmed;
         private ClientPayloadStatus _payload;
@@ -137,6 +138,7 @@ namespace Shooter.NetV2
             netHud._roster = new Roster(netHud);
             netHud._captureTheFlag = new ClientCaptureTheFlagStatus(localPlayerId);
             netHud._searchAndDestroy = new ClientSearchAndDestroyStatus(localPlayerId);
+            netHud._execution = new ClientExecutionStatus(localPlayerId);
             netHud._hardpoint = new ClientHardpointStatus(localPlayerId);
             netHud._killConfirmed = new ClientKillConfirmedStatus(localPlayerId);
             netHud._payload = new ClientPayloadStatus(localPlayerId);
@@ -493,6 +495,7 @@ namespace Shooter.NetV2
             // || だと先の Apply で後の Apply が飛ばされ、目的が変わったときに後の側の状態が残るので | ですべてに渡す
             var changed = (_captureTheFlag != null && _captureTheFlag.Apply(snapshot))
                 | (_searchAndDestroy != null && _searchAndDestroy.Apply(snapshot))
+                | (_execution != null && _execution.Apply(snapshot))
                 | (_hardpoint != null && _hardpoint.Apply(snapshot))
                 | ApplyDomination(snapshot)
                 | (_killConfirmed != null && _killConfirmed.Apply(snapshot))
@@ -505,6 +508,7 @@ namespace Shooter.NetV2
                 // 1 つが出したあとに、別のものが消えたことで null を出して上書きしないように、残っているものを出す
                 PublishModeStatus(_captureTheFlag?.Status
                     ?? _searchAndDestroy?.Status
+                    ?? _execution?.Status
                     ?? _hardpoint?.Status
                     ?? _dominationStatus
                     ?? _killConfirmed?.Status
@@ -846,6 +850,7 @@ namespace Shooter.NetV2
             PublishModeStatus(null);
             _captureTheFlag?.Clear();
             _searchAndDestroy?.Reset();
+            _execution?.Clear();
             _hardpoint?.Clear();
             _killConfirmed?.Reset();
             _payload?.Clear();

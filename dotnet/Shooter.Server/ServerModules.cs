@@ -133,10 +133,11 @@ namespace Shooter.Server
             modules.Add(deployables);
             modules.Add(new ServerKillCam(rules, combat));
 
-            // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足すので、ルールの直後
+            // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足すので、ルールの直後。
+            // 近接はルールが書いたダウンの欄にとどめの進み具合を書き足すので、ルールより後
             modules.Add(new ServerSnapshots(
                 motorSettings.Rules,
-                new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables, bots },
+                new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables, bots, melee },
                 tuning.AntiCheat,
                 rules));
 

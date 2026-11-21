@@ -55,7 +55,7 @@ docker compose -f docker/server/compose.yaml up -d
 - ドローン・暗視とサーマルはオフラインだけで、サーバーでは効かない。
 - プレイリストでは `match.*` と武器が最初の項目のルールのまま変わらないので、後の項目で使うモードの節も最初の項目に書く。
 - `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力・速さ・武器 (`infectedMaxHealth`・`infectedSpeedMultiplier`・`infectedWeaponId`) はまだサーバーでは変わらない。
-- `Execution` はラウンドの数と秒を `match.round*` に、とどめの秒数と距離を `match.execution` に書く。とどめは近接のボタンで刺すので、ルールの `melee` を `On` にする (`Off` ならダウン中の敵を撃って倒せる)。各チームの最後の 1 人はダウンせずにそのまま倒れる。
+- `Execution` はラウンドの数と秒を `match.round*` に、とどめの秒数と距離を `match.execution` に書く。とどめは近接のボタンで刺すので、ルールの `melee` を `On` にする (`Off` ならダウン中の敵を撃って倒せる)。各チームの最後の 1 人もダウンし、全員がダウンしてもラウンドは終わらず、とどめを刺されるか出血で倒れきった側が落とす。とどめの進み具合は刺されている人のスナップショットの行 (`DownedSync`) に載り、刺している人の HUD に「とどめ NN%」として出る。
 
 ## CI のテンプレート
 

@@ -90,6 +90,90 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheEnemyTheLocalPlayerIsExecutingIsTheInteractTarget()
+        {
+            var snapshot = Snapshot(phase: RoundPhase.Live);
+            Row(snapshot, _enemy).Downed = new DownedSync(true, 12, 0).WithExecutor(_self, 45);
+            Row(snapshot, _otherEnemy).Downed = new DownedSync(true, 8, 0);
+
+            _status.Apply(snapshot);
+
+            var execution = _status.Execution;
+            Assert.That(execution.InteractTargetId, Is.EqualTo(_enemy));
+            Assert.That(HudFormat.RevivePercent(execution.View.GetExecuteProgress(_enemy)), Is.EqualTo(45), "the percent the server sent comes back to the HUD");
+            Assert.That(execution.View.GetExecuteProgress(_otherEnemy), Is.Zero);
+            Assert.That(execution.View.GetExecuteProgress(99), Is.Zero);
+        }
+
+        [Test]
+        public void AnExecutionBySomeoneElseIsNotTheLocalPlayersTarget()
+        {
+            var snapshot = Snapshot(phase: RoundPhase.Live);
+            Row(snapshot, _enemy).Downed = new DownedSync(true, 12, 0).WithExecutor(_ally, 30);
+
+            _status.Apply(snapshot);
+
+            Assert.That(_status.Execution.InteractTargetId, Is.Null);
+            Assert.That(HudFormat.RevivePercent(_status.Execution.View.GetExecuteProgress(_enemy)), Is.EqualTo(30));
+        }
+
+        [Test]
+        public void WithoutTheLocalPlayerThereIsNoInteractTarget()
+        {
+            var snapshot = Snapshot(phase: RoundPhase.Live, includeSelf: false);
+            Row(snapshot, _enemy).Downed = new DownedSync(true, 12, 0).WithExecutor(_self, 30);
+
+            _status.Apply(snapshot);
+
+            Assert.That(_status.Execution.LocalPlayerId, Is.Null);
+            Assert.That(_status.Execution.InteractTargetId, Is.Null);
+        }
+
+        [TestCase(0, 0)]
+        [TestCase(1, 1)]
+        [TestCase(66, 66)]
+        [TestCase(99, 99)]
+        [TestCase(100, 100)]
+        public void TheExecutePercentReadsBackUnchanged(int sent, int shown)
+        {
+            var snapshot = Snapshot(phase: RoundPhase.Live);
+            Row(snapshot, _enemy).Downed = new DownedSync(true, 5, 0).WithExecutor(_self, (byte)sent);
+
+            _status.Apply(snapshot);
+
+            Assert.That(HudFormat.RevivePercent(_status.Execution.View.GetExecuteProgress(_enemy)), Is.EqualTo(shown));
+        }
+
+        [Test]
+        public void AdvancingTheExecutionReplacesTheStatus()
+        {
+            var first = Snapshot(phase: RoundPhase.Live, remaining: 60);
+            Row(first, _enemy).Downed = new DownedSync(true, 12, 0).WithExecutor(_self, 20);
+            _status.Apply(first);
+            var before = _status.Execution;
+            var next = Snapshot(phase: RoundPhase.Live, remaining: 60);
+            Row(next, _enemy).Downed = new DownedSync(true, 12, 0).WithExecutor(_self, 70);
+
+            Assert.That(_status.Apply(next), Is.True);
+            Assert.That(HudFormat.RevivePercent(_status.Execution.View.GetExecuteProgress(_enemy)), Is.EqualTo(70));
+            Assert.That(HudFormat.RevivePercent(before.View.GetExecuteProgress(_enemy)), Is.EqualTo(20), "the status already handed out keeps its own view");
+        }
+
+        [Test]
+        public void AStoppedExecutionClearsTheInteractTarget()
+        {
+            var first = Snapshot(phase: RoundPhase.Live, remaining: 60);
+            Row(first, _enemy).Downed = new DownedSync(true, 12, 0).WithExecutor(_self, 50);
+            _status.Apply(first);
+            var next = Snapshot(phase: RoundPhase.Live, remaining: 60);
+            Row(next, _enemy).Downed = new DownedSync(true, 12, 0);
+
+            Assert.That(_status.Apply(next), Is.True);
+            Assert.That(_status.Execution.InteractTargetId, Is.Null);
+            Assert.That(_status.Execution.View.GetExecuteProgress(_enemy), Is.Zero);
+        }
+
+        [Test]
         public void DuringPreparationThePreviousRoundAndTheCountdownAreShown()
         {
             var snapshot = Snapshot(phase: RoundPhase.Preparing, roundNumber: 2, roundsToWin: 3, alphaWins: 0, bravoWins: 1, remaining: 3);

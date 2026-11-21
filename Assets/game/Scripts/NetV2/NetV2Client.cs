@@ -188,6 +188,31 @@ namespace Shooter.NetV2
             return null;
         }
 
+        // サーバー一覧で選んだ公開サーバーへつなぐ口。参加コードは無いので接続のデータにも載せない。
+        public static string ConnectToServer(ServerJoinResult result)
+        {
+            if (result == null)
+            {
+                throw new ArgumentNullException(nameof(result));
+            }
+
+            if (result.Outcome != ServerJoinOutcome.Joined)
+            {
+                return "no server was picked from the list (" + result.Outcome + ")";
+            }
+
+            if (Current != null && !Current._finished)
+            {
+                return "already in an online match";
+            }
+
+            ReleaseFinished();
+            var client = Create(true);
+            client._matchLobby = result.MatchLobby;
+            client.Connect(result.Options);
+            return null;
+        }
+
         // ReplayLibrary の再生の口。読めないファイルや版の違うファイルは、画面を替える前に例外で断り、一覧に理由を出させる (ReplayLibrary.Play)。
         public static bool BeginReplay(string path)
         {

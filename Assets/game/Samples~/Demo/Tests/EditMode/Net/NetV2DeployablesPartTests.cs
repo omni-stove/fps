@@ -156,6 +156,44 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void ADroneWithoutAPrefabIsShownAsItsBodyAndRotorsWithoutCollidersOrItsOfflineFlight()
+        {
+            var drone = ScriptableObject.CreateInstance<DroneDeployDefinition>();
+            drone.Id = "deploy-drone";
+            _created.Add(drone);
+            _part.Dispose();
+            _part = new NetV2DeployablesPart(Send, () => 1, new DeployAbilityDefinition[] { drone }, _logs.Add);
+
+            var view = (NetV2DeployablesPart.View)_part.Show(
+                DeployableKind.Drone, "deploy-drone", Team.Bravo, false, new System.Numerics.Vector3(1f, 2f, 3f), 45f);
+            _created.Add(view.Visual);
+
+            var root = view.Visual.transform;
+            Assert.That(root.Find(DroneDeployDefinition.BodyName), Is.Not.Null);
+            Assert.That(root.Find(DroneDeployDefinition.RotorName + "0"), Is.Not.Null);
+            Assert.That(root.position, Is.EqualTo(new Vector3(1f, 2f, 3f)));
+            Assert.That(root.eulerAngles.y, Is.EqualTo(45f).Within(1e-3f));
+            Assert.That(view.Visual.GetComponentsInChildren<Collider>(), Has.All.Matches<Collider>(c => !c.enabled));
+            Assert.That(view.Visual.GetComponentInChildren<ReconDrone>(), Is.Null, "the server flies it, not the client");
+            Assert.That(_logs, Does.Contain("[Deploy] net look kind=deploy-drone role=Drone prefab=False"));
+
+            view.Move(new System.Numerics.Vector3(4f, 5f, 6f), 90f);
+
+            Assert.That(root.position, Is.EqualTo(new Vector3(4f, 5f, 6f)), "a flying drone follows the snapshot");
+            Assert.That(root.eulerAngles.y, Is.EqualTo(90f).Within(1e-3f));
+        }
+
+        [Test]
+        public void ADroneWithoutADefinitionIsShownAsTheDroneBox()
+        {
+            var view = Show(DeployableKind.Drone, "deploy-unknown-drone", System.Numerics.Vector3.Zero, 0f);
+
+            Assert.That(
+                view.Visual.transform.Find("Box").localScale,
+                Is.EqualTo(new Vector3(DroneSpec.DefaultWidth, DroneSpec.DefaultHeight, DroneSpec.DefaultDepth)));
+        }
+
+        [Test]
         public void ASnapshotShowsAndRemovesWhatTheServerLists()
         {
             var snapshot = new SnapshotMessage();

@@ -50,6 +50,11 @@ namespace Shooter.Server
                 return;
             }
 
+            Begin(swinger);
+        }
+
+        private void Begin(Swinger swinger)
+        {
             swinger.Swing.TryStart();
             swinger.SwingWeaponId = null;
             _log.WriteLine(MeleeLog.Swing(Text(swinger.PlayerId)));

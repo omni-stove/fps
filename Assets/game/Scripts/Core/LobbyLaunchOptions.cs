@@ -24,6 +24,14 @@ namespace Shooter.Core
 
         public const int MaxSearchResults = 25;
 
+        // クイックマッチと違って人が選ぶ一覧なので、1 つを選ぶ検索より多く取る。EOS の検索の上限 (EOS_LOBBY_MAX_SEARCH_RESULTS) は 200。
+        public const int MaxBrowserResults = 100;
+
+        public const float ServerBrowserTimeoutSeconds = 15f;
+
+        // 返らない ping (ICMP を落とすサーバー) を待ち続けず、測れなかったものとして一覧に出す。
+        public const float ServerPingTimeoutSeconds = 2f;
+
         public const int MaxBucketVersionLength = 32;
 
         private static readonly LobbyCommand[] _commands = { LobbyCommand.QuickMatch };

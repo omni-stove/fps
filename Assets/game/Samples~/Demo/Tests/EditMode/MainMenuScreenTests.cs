@@ -120,8 +120,8 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void EveryDestinationHasAButton()
         {
-            // 設定・ロードアウト・プロフィール・パーティ・コードで入る・登録した画面 6 つは遷移ではないので行き先の一覧には無く、ボタンだけがある
-            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 11));
+            // 設定・ロードアウト・プロフィール・パーティ・コードで入る・登録した画面 7 つは遷移ではないので行き先の一覧には無く、ボタンだけがある
+            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 12));
             foreach (var kind in MainMenuPanels.Kinds)
             {
                 Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.PanelButtonName(kind)));
@@ -155,8 +155,8 @@ namespace Shooter.Tests.EditMode
             _screen.MoveFocus(1);
             Assert.That(_screen.FocusIndex, Is.EqualTo(1));
             _screen.MoveFocus(1);
-            Assert.That(_screen.FocusIndex, Is.EqualTo(4), "the hidden party and join-by-code buttons are skipped on the way to the loadout");
-            Assert.That(MainMenuScreen.ButtonNames[4], Is.EqualTo(MainMenuScreen.LoadoutButtonName));
+            Assert.That(_screen.FocusIndex, Is.EqualTo(5), "the hidden party, join-by-code and server browser buttons are skipped on the way to the loadout");
+            Assert.That(MainMenuScreen.ButtonNames[5], Is.EqualTo(MainMenuScreen.LoadoutButtonName));
             _screen.MoveFocus(-1);
             Assert.That(_screen.FocusIndex, Is.EqualTo(1), "and on the way back to quick match");
             _screen.MoveFocus(-1);
@@ -340,16 +340,17 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_screen.PanelSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
 
-            // プロフィール (5) の次は、隠れた 6 つ (6〜11) を飛ばして射撃場 (12)
+            // クイックマッチ (1) の次は隠れたパーティ・コード・サーバー一覧 (2〜4) を飛ばしてロードアウト (5)、
+            // プロフィール (6) の次は隠れた 6 つ (7〜12) を飛ばして射撃場 (13)
             _screen.MoveFocus(1);
             _screen.MoveFocus(1);
             _screen.MoveFocus(1);
             _screen.MoveFocus(1);
-            Assert.That(_screen.FocusIndex, Is.EqualTo(5));
-            Assert.That(MainMenuScreen.ButtonNames[5], Is.EqualTo(MainMenuScreen.ProfileButtonName));
+            Assert.That(_screen.FocusIndex, Is.EqualTo(6));
+            Assert.That(MainMenuScreen.ButtonNames[6], Is.EqualTo(MainMenuScreen.ProfileButtonName));
             _screen.MoveFocus(1);
-            Assert.That(_screen.FocusIndex, Is.EqualTo(12));
-            Assert.That(MainMenuScreen.ButtonNames[12], Is.EqualTo(MainMenuScreen.RangeButtonName));
+            Assert.That(_screen.FocusIndex, Is.EqualTo(13));
+            Assert.That(MainMenuScreen.ButtonNames[13], Is.EqualTo(MainMenuScreen.RangeButtonName));
 
             _screen.OpenPanel(MainMenuPanelKind.Stats);
 
@@ -370,7 +371,36 @@ namespace Shooter.Tests.EditMode
             {
                 "menu-stats", "menu-leaderboard", "menu-replays", "menu-cosmetics", "menu-stash", "menu-playlists",
             }));
-            Assert.That(MainMenuPanels.Kinds.Select(MainMenuScreen.PanelButtonName), Is.EqualTo(names.GetRange(profile + 1, 6)));
+            Assert.That(MainMenuPanels.Kinds.Take(6).Select(MainMenuScreen.PanelButtonName), Is.EqualTo(names.GetRange(profile + 1, 6)));
+        }
+
+        [Test]
+        public void TheServerBrowserSitsWithTheOtherWaysToJoinAMatch()
+        {
+            var names = MainMenuScreen.ButtonNames.ToList();
+
+            Assert.That(MainMenuScreen.PanelButtonName(MainMenuPanelKind.ServerBrowser), Is.EqualTo(MainMenuScreen.ServerBrowserButtonName));
+            Assert.That(names.IndexOf(MainMenuScreen.ServerBrowserButtonName), Is.EqualTo(names.IndexOf(MainMenuScreen.JoinByCodeButtonName) + 1));
+        }
+
+        [Test]
+        public void TheRegisteredServerBrowserOpensFromItsButtonAndBackReturnsToIt()
+        {
+            FakeMenuPanel opened = null;
+            MainMenuPanels.Register(MainMenuPanelKind.ServerBrowser, slot => opened = new FakeMenuPanel(slot));
+            _screen.Bind(_root);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.ServerBrowserButtonName), Is.True);
+
+            _screen.OpenPanel(MainMenuPanelKind.ServerBrowser);
+
+            Assert.That(_screen.OpenPanelKind, Is.EqualTo(MainMenuPanelKind.ServerBrowser));
+            Assert.That(opened, Is.Not.Null);
+
+            _screen.ClosePanel();
+
+            Assert.That(_screen.IsPanelOpen, Is.False);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.ServerBrowserButtonName));
         }
 
         [Test]

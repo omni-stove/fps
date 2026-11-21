@@ -288,7 +288,9 @@ namespace Shooter.Server.Tests
         [Test]
         public void ABotThatSurvivesTheGunBeingWreckedKeepsItsRemountWait()
         {
-            Start("{\"mountedGun\": {\"remountDelaySeconds\": 30}}", 2);
+            // 既定の爆発は乗っている Bot を倒し、生き残る場合を確かめられない
+            var harmless = new VehicleDurabilitySpec(explosion: new ExplosionSpec(new ExplosionDamage(0, 1f)));
+            Start("{\"mountedGun\": {\"remountDelaySeconds\": 30}}", 2, Turret(harmless));
             Join(1);
             Tick();
             var botId = _bots.BotIds.Single();
@@ -349,14 +351,15 @@ namespace Shooter.Server.Tests
             return agent;
         }
 
-        private static MapVehicle Turret()
+        private static MapVehicle Turret(VehicleDurabilitySpec durability = null)
         {
             var gun = new WeaponSpec(_gunId, "weapon.mounted", WeaponCategory.AssaultRifle, FireMode.Auto, _magazine, 0, 0.1f, 2f, 5, 100f, DamageFalloff.None);
             var spec = new VehicleSpec(
                 "turret",
                 500,
                 new[] { new VehicleSeatSpec(VehicleSeatRole.Gunner, VehicleSeatPose.Standing) },
-                new[] { new VehicleWeaponSpec(_gunId, 0, -60f, 60f, -20f, 30f, 180f) });
+                new[] { new VehicleWeaponSpec(_gunId, 0, -60f, 60f, -20f, 30f, 180f) },
+                durability: durability);
             return new MapVehicle(
                 spec,
                 _gunPosition,

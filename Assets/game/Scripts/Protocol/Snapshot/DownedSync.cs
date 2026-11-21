@@ -67,7 +67,8 @@ namespace Shooter.Protocol
 
                 if (ExecutePercent > FullPercent)
                 {
-                    throw new System.InvalidOperationException("execute percent must be at most " + FullPercent);
+                    // FullPercent を連結すると int を文字列にする経路が Write に入るので、固定の文にしている
+                    throw new System.InvalidOperationException("execute percent must be at most 100");
                 }
 
                 writer.WriteInt32(ExecutorId);

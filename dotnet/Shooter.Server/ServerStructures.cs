@@ -18,6 +18,7 @@ namespace Shooter.Server
         private readonly StructureIntegrity[] _integrity;
         private readonly List<PieceShape> _shapes = new List<PieceShape>();
         private readonly Dictionary<int, PieceShape> _shapeByCollider = new Dictionary<int, PieceShape>();
+        private readonly Dictionary<(int Structure, int Piece), List<PieceShape>> _shapesByPiece = new Dictionary<(int Structure, int Piece), List<PieceShape>>();
         private readonly StructureStateMessage _state = new StructureStateMessage();
         private readonly IReadOnlyList<MapFortification> _fortifications = Array.Empty<MapFortification>();
 
@@ -41,6 +42,13 @@ namespace Shooter.Server
                 var shape = new PieceShape(collider, structure, piece);
                 _shapes.Add(shape);
                 _shapeByCollider[collider.Id] = shape;
+                if (!_shapesByPiece.TryGetValue((structure, piece), out var pieceShapes))
+                {
+                    pieceShapes = new List<PieceShape>();
+                    _shapesByPiece[(structure, piece)] = pieceShapes;
+                }
+
+                pieceShapes.Add(shape);
             }
 
             _integrity = Array.Empty<StructureIntegrity>();
@@ -161,9 +169,14 @@ namespace Shooter.Server
         // 部品の形を shrink 倍に縮めて、カプセル (人の体) と重なるか。オフラインの HordeFortification.IsBlocked が部品の箱を縮めて重なりを見るのと同じ
         public bool PieceOverlaps(int structure, int piece, Vector3 bottom, Vector3 top, float radius, float shrink)
         {
-            foreach (var shape in _shapes)
+            if (!_shapesByPiece.TryGetValue((structure, piece), out var shapes))
             {
-                if (shape.Structure == structure && shape.Piece == piece && shape.Overlaps(bottom, top, radius, shrink))
+                return false;
+            }
+
+            foreach (var shape in shapes)
+            {
+                if (shape.Overlaps(bottom, top, radius, shrink))
                 {
                     return true;
                 }

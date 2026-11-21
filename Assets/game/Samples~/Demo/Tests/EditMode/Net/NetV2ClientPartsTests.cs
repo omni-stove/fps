@@ -578,6 +578,64 @@ namespace Shooter.Net.Tests
             Assert.Throws<ArgumentNullException>(() => new NetV2ClientPartsContext(_client, _ => true, null));
         }
 
+        [Test]
+        public void NoPartIsRegisteredYetSoTheListIsTheBuiltInOne()
+        {
+            Assert.That(NetV2ClientParts.Registered, Is.Empty);
+        }
+
+        [Test]
+        public void RegisteredPartsComeAfterTheBuiltInOnesAndBeforeTheVoicePart()
+        {
+            var first = new FakePart();
+            var second = new FakePart();
+            NetV2ClientPartsContext seen = null;
+            var context = Context(new FakeVoiceSession());
+
+            _parts = NetV2ClientParts.Create(context, new Func<NetV2ClientPartsContext, INetV2ClientPart>[]
+            {
+                c =>
+                {
+                    seen = c;
+                    return first;
+                },
+                _ => null,
+                _ => second,
+            });
+
+            Assert.That(seen, Is.SameAs(context));
+            Assert.That(_parts.Count, Is.EqualTo(21), "18 built-in parts, 2 registered parts and the voice part");
+            Assert.That(_parts[18], Is.SameAs(first));
+            Assert.That(_parts[19], Is.SameAs(second), "a registration that returns null adds no part");
+            Assert.That(_parts[20], Is.InstanceOf<NetV2VoicePart>());
+        }
+
+        [Test]
+        public void ARegistrationThatThrowsDisposesThePartsMadeBeforeIt()
+        {
+            var made = new FakePart();
+
+            var error = Assert.Throws<InvalidOperationException>(() => NetV2ClientParts.Create(
+                Context(null),
+                new Func<NetV2ClientPartsContext, INetV2ClientPart>[]
+                {
+                    _ => made,
+                    _ => throw new InvalidOperationException("broken part"),
+                }));
+
+            Assert.That(error.Message, Is.EqualTo("broken part"));
+            Assert.That(made.Disposed, Is.True);
+        }
+
+        [Test]
+        public void RefusesANullRegistrationListOrEntry()
+        {
+            Assert.Throws<ArgumentNullException>(() => NetV2ClientParts.Create(Context(null), null));
+            var error = Assert.Throws<ArgumentException>(() => NetV2ClientParts.Create(
+                Context(null), new Func<NetV2ClientPartsContext, INetV2ClientPart>[] { _ => new FakePart(), null }));
+            Assert.That(error.Message, Does.StartWith("registered part 1 is null"));
+        }
+
         private NetV2ClientPartsContext Context(IVoiceSession voice)
         {
             return new NetV2ClientPartsContext(_client, _ => true, _logs.Add)
@@ -637,6 +695,29 @@ namespace Shooter.Net.Tests
 
             public void Dispose()
             {
+            }
+        }
+
+        private sealed class FakePart : INetV2ClientPart
+        {
+            public bool Disposed { get; private set; }
+
+            public bool Handle(IMessage message)
+            {
+                return false;
+            }
+
+            public void Apply(SnapshotMessage snapshot)
+            {
+            }
+
+            public void Tick(float deltaSeconds)
+            {
+            }
+
+            public void Dispose()
+            {
+                Disposed = true;
             }
         }
 

@@ -26,5 +26,13 @@ namespace Shooter.Core
         BattleRoyale,
 
         Extraction,
+
+        Horde,
+
+        Infected,
+
+        Guardian,
+
+        Execution,
     }
 }

@@ -5,18 +5,11 @@ using Shooter.Core;
 
 namespace Shooter.Server
 {
-    internal sealed class ServerBotAgent
+    internal sealed partial class ServerBotAgent
     {
-        private const float _minHorizontalLengthSquared = 1e-6f;
-
         private readonly NetBotSpec _spec;
         private readonly ISightBlocker _sightBlocker;
         private readonly Random _random;
-        private Vector3 _progressPosition;
-        private float _progressTime;
-        private bool _tracking;
-        private FireTrigger _trigger;
-        private WeaponSpec _triggerSpec;
         private bool _dead = true;
 
         public ServerBotAgent(int playerId, NetBotSpec spec, ServerBotNavigation navigation, IReadOnlyList<Vector3> route, Random random,
@@ -92,72 +85,6 @@ namespace Shooter.Server
             Route.Clear();
             _tracking = false;
             WasClimbing = false;
-        }
-
-        // はしごの上では上下に進むので、水平ではなく 3 次元の距離で測る
-        public bool IsStuck(Vector3 position, bool moving)
-        {
-            if (!moving || !_tracking)
-            {
-                _tracking = moving;
-                _progressPosition = position;
-                _progressTime = Clock;
-                return false;
-            }
-
-            if (Clock - _progressTime < _spec.StuckSeconds)
-            {
-                return false;
-            }
-
-            var moved = Vector3.Distance(position, _progressPosition);
-            _progressPosition = position;
-            _progressTime = Clock;
-            return moved < _spec.StuckProgress;
-        }
-
-        public bool IsSightBlocked(Vector3 eye, Vector3 target)
-        {
-            return _sightBlocker.Blocks(eye, target);
-        }
-
-        // オフラインの EnemyAgent.IsFacing と同じ見方にする。
-        public bool IsFacing(Vector3 eye, Vector3 direction, Vector3? lookAt)
-        {
-            var tolerance = Brain.Spec.FireToleranceDegrees;
-            if (!lookAt.HasValue || tolerance >= EnemySpec.MaxFireToleranceDegrees)
-            {
-                return true;
-            }
-
-            var toTarget = new Vector2(lookAt.Value.X - eye.X, lookAt.Value.Z - eye.Z);
-            var forward = new Vector2(direction.X, direction.Z);
-            if (toTarget.LengthSquared() < _minHorizontalLengthSquared || forward.LengthSquared() < _minHorizontalLengthSquared)
-            {
-                return true;
-            }
-
-            var cos = Vector2.Dot(Vector2.Normalize(toTarget), Vector2.Normalize(forward));
-            var degrees = Math.Acos(Math.Max(-1f, Math.Min(1f, cos))) * ServerBotMath.DegreesPerRadian;
-            return degrees <= tolerance;
-        }
-
-        public Vector3 Scatter(Vector3 eye, Vector3 direction, Vector3? lookAt)
-        {
-            var range = lookAt.HasValue ? Brain.Spec.RangeSpreadDegreesAt(Vector3.Distance(eye, lookAt.Value)) : 0f;
-            var halfAngle = Math.Min(EnemySpec.MaxSpreadDegrees, Brain.NextShotSpreadDegrees + range);
-            return BlindFireShot.Spread(direction, halfAngle, _random);
-        }
-
-        public FireTrigger TriggerFor(WeaponSpec spec)
-        {
-            if (_trigger == null || !ReferenceEquals(spec, _triggerSpec))
-            {
-                _trigger = new FireTrigger(spec);
-                _triggerSpec = spec;
-            }
-
-            return _trigger;
         }
     }
 }

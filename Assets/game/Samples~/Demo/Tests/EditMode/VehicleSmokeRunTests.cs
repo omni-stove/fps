@@ -9,7 +9,7 @@ namespace Shooter.Tests.EditMode
 {
     public sealed class VehicleSmokeRunTests
     {
-        private const int ExpectedCount = 29;
+        private const int ExpectedCount = 32;
 
         private static readonly string[] _passingRun =
         {
@@ -30,6 +30,9 @@ namespace Shooter.Tests.EditMode
             "[VehicleSmokeRun] hovered 'Helicopter' altitude=5.1 seconds=3.2",
             "[VehicleSmokeRun] advanced 'Helicopter' distance=10.2 altitude=5.6",
             "[Vehicle] 'Helicopter' leave rider=Player seat=0 reason=Request exit=0",
+            "[Vehicle] 'Horse' board rider=Player seat=0 role=Driver",
+            "[VehicleSmokeRun] rode 'Horse' distance=15.3 speed=9.0 gait=Canter",
+            "[Vehicle] 'Horse' leave rider=Player seat=0 reason=Request exit=0",
             "[Vehicle] 'Boat' board rider=Player seat=0 role=Driver",
             "[VehicleSmokeRun] sailed 'Boat' distance=10.1 speed=6.3",
             "[Vehicle] 'Boat' leave rider=Player seat=0 reason=Request exit=0",
@@ -83,25 +86,31 @@ namespace Shooter.Tests.EditMode
             Assert.That(expected[11].Prefix, Is.EqualTo("[VehicleSmokeRun] advanced 'Helicopter' "));
             Assert.That(expected[12].Prefix, Is.EqualTo("[Vehicle] 'Helicopter' leave rider="));
             Assert.That(expected[12].Fragment, Is.EqualTo(" seat=0 reason=Request "));
-            Assert.That(expected[13].Prefix, Is.EqualTo("[Vehicle] 'Boat' board rider="));
-            Assert.That(expected[14].Prefix, Is.EqualTo("[VehicleSmokeRun] sailed 'Boat' "));
-            Assert.That(expected[15].Prefix, Is.EqualTo("[Vehicle] 'Boat' leave rider="));
-            Assert.That(expected[16].Prefix, Is.EqualTo("[VehicleSmokeRun] lapped 'BotCar' "));
-            Assert.That(expected[17].Prefix, Is.EqualTo("[VehicleSmokeRun] circling 'BotAircraft' "));
-            Assert.That(expected[18].Prefix, Is.EqualTo("[Vehicle] 'Aircraft' board rider="));
-            Assert.That(expected[18].Fragment, Is.EqualTo(" seat=0 role=Driver"));
-            Assert.That(expected[19].Prefix, Is.EqualTo("[VehicleSmokeRun] taxied 'Aircraft' "));
-            Assert.That(expected[20].Prefix, Is.EqualTo("[VehicleSmokeRun] flew 'Aircraft' "));
-            Assert.That(expected[21].Prefix, Is.EqualTo("[VehicleSmokeRun] held 'Aircraft' "));
-            Assert.That(expected[22].Prefix, Is.EqualTo("[VehicleSmokeRun] locked 'Aircraft' "));
-            Assert.That(expected[23].Prefix, Is.EqualTo("[Vehicle] 'Aircraft' flare deployed "));
-            Assert.That(expected[24].Prefix, Is.EqualTo("[VehicleSmokeRun] evaded 'Aircraft' "));
-            Assert.That(expected[25].Prefix, Is.EqualTo("[Vehicle] 'Aircraft' part broken part="));
-            Assert.That(expected[25].Fragment, Is.EqualTo(" effect=LeftLift "));
-            Assert.That(expected[26].Prefix, Is.EqualTo("[VehicleSmokeRun] banked 'Aircraft' "));
-            Assert.That(expected[27].Prefix, Is.EqualTo("[Vehicle] 'Aircraft' bail out rider="));
-            Assert.That(expected[27].Fragment, Is.EqualTo(" parachute=Open"));
-            Assert.That(expected[28].Prefix, Is.EqualTo("[VehicleSmokeRun] landed 'Aircraft' "));
+            Assert.That(expected[13].Prefix, Is.EqualTo("[Vehicle] 'Horse' board rider="));
+            Assert.That(expected[13].Fragment, Is.EqualTo(" seat=0 role=Driver"));
+            Assert.That(expected[14].Prefix, Is.EqualTo("[VehicleSmokeRun] rode 'Horse' "));
+            Assert.That(expected[14].Fragment, Is.EqualTo(" gait=Canter"));
+            Assert.That(expected[15].Prefix, Is.EqualTo("[Vehicle] 'Horse' leave rider="));
+            Assert.That(expected[15].Fragment, Is.EqualTo(" seat=0 reason=Request "));
+            Assert.That(expected[16].Prefix, Is.EqualTo("[Vehicle] 'Boat' board rider="));
+            Assert.That(expected[17].Prefix, Is.EqualTo("[VehicleSmokeRun] sailed 'Boat' "));
+            Assert.That(expected[18].Prefix, Is.EqualTo("[Vehicle] 'Boat' leave rider="));
+            Assert.That(expected[19].Prefix, Is.EqualTo("[VehicleSmokeRun] lapped 'BotCar' "));
+            Assert.That(expected[20].Prefix, Is.EqualTo("[VehicleSmokeRun] circling 'BotAircraft' "));
+            Assert.That(expected[21].Prefix, Is.EqualTo("[Vehicle] 'Aircraft' board rider="));
+            Assert.That(expected[21].Fragment, Is.EqualTo(" seat=0 role=Driver"));
+            Assert.That(expected[22].Prefix, Is.EqualTo("[VehicleSmokeRun] taxied 'Aircraft' "));
+            Assert.That(expected[23].Prefix, Is.EqualTo("[VehicleSmokeRun] flew 'Aircraft' "));
+            Assert.That(expected[24].Prefix, Is.EqualTo("[VehicleSmokeRun] held 'Aircraft' "));
+            Assert.That(expected[25].Prefix, Is.EqualTo("[VehicleSmokeRun] locked 'Aircraft' "));
+            Assert.That(expected[26].Prefix, Is.EqualTo("[Vehicle] 'Aircraft' flare deployed "));
+            Assert.That(expected[27].Prefix, Is.EqualTo("[VehicleSmokeRun] evaded 'Aircraft' "));
+            Assert.That(expected[28].Prefix, Is.EqualTo("[Vehicle] 'Aircraft' part broken part="));
+            Assert.That(expected[28].Fragment, Is.EqualTo(" effect=LeftLift "));
+            Assert.That(expected[29].Prefix, Is.EqualTo("[VehicleSmokeRun] banked 'Aircraft' "));
+            Assert.That(expected[30].Prefix, Is.EqualTo("[Vehicle] 'Aircraft' bail out rider="));
+            Assert.That(expected[30].Fragment, Is.EqualTo(" parachute=Open"));
+            Assert.That(expected[31].Prefix, Is.EqualTo("[VehicleSmokeRun] landed 'Aircraft' "));
         }
 
         [Test]
@@ -118,14 +127,14 @@ namespace Shooter.Tests.EditMode
                 .Select(line => line.Replace("part=wing_left effect=LeftLift", "part=wing_right effect=RightLift"))
                 .ToArray();
 
-            Assert.That(VehicleSmokeRun.CountInOrder(Without("[VehicleSmokeRun] taxied"), expected), Is.EqualTo(19), "a run that never turned on the ground stops after boarding");
-            Assert.That(VehicleSmokeRun.CountInOrder(Without("[VehicleSmokeRun] held"), expected), Is.EqualTo(21), "a run that fell while pulling up stops after the climb");
-            Assert.That(VehicleSmokeRun.CountInOrder(rightWing, expected), Is.EqualTo(25), "breaking the right wing is not the left wing");
-            Assert.That(VehicleSmokeRun.CountInOrder(Without("[VehicleSmokeRun] banked"), expected), Is.EqualTo(26));
+            Assert.That(VehicleSmokeRun.CountInOrder(Without("[VehicleSmokeRun] taxied"), expected), Is.EqualTo(22), "a run that never turned on the ground stops after boarding");
+            Assert.That(VehicleSmokeRun.CountInOrder(Without("[VehicleSmokeRun] held"), expected), Is.EqualTo(24), "a run that fell while pulling up stops after the climb");
+            Assert.That(VehicleSmokeRun.CountInOrder(rightWing, expected), Is.EqualTo(28), "breaking the right wing is not the left wing");
+            Assert.That(VehicleSmokeRun.CountInOrder(Without("[VehicleSmokeRun] banked"), expected), Is.EqualTo(29));
         }
 
         [Test]
-        public void TheHelicopterBoatAndBotStepsMustComeInOrder()
+        public void TheHelicopterHorseBoatAndBotStepsMustComeInOrder()
         {
             var expected = VehicleSmokeRun.ExpectedLogs();
             var neverLifted = _passingRun.Take(IndexOf("[VehicleSmokeRun] hovered")).ToArray();
@@ -135,9 +144,26 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(VehicleSmokeRun.CountInOrder(neverLifted, expected), Is.EqualTo(10), "boarding the helicopter counts, the flight does not");
             Assert.That(VehicleSmokeRun.CountInOrder(Without("[VehicleSmokeRun] advanced"), expected), Is.EqualTo(11));
-            Assert.That(VehicleSmokeRun.CountInOrder(aground, expected), Is.EqualTo(14), "a boat that never moved stops after boarding it");
-            Assert.That(VehicleSmokeRun.CountInOrder(stuckBot, expected), Is.EqualTo(16));
-            Assert.That(VehicleSmokeRun.CountInOrder(groundedBot, expected), Is.EqualTo(17));
+            Assert.That(VehicleSmokeRun.CountInOrder(aground, expected), Is.EqualTo(17), "a boat that never moved stops after boarding it");
+            Assert.That(VehicleSmokeRun.CountInOrder(stuckBot, expected), Is.EqualTo(19));
+            Assert.That(VehicleSmokeRun.CountInOrder(groundedBot, expected), Is.EqualTo(20));
+        }
+
+        [Test]
+        public void TheHorseMustBeRiddenAtACanterAndLeft()
+        {
+            var expected = VehicleSmokeRun.ExpectedLogs();
+            var neverBoarded = Without("[Vehicle] 'Horse' board");
+            var neverRode = Without("[VehicleSmokeRun] rode");
+            var onlyTrotted = _passingRun.Select(line => line.Replace("gait=Canter", "gait=Trot")).ToArray();
+            var stillRiding = Without("[Vehicle] 'Horse' leave");
+            var thrown = _passingRun.Select(line => line.Replace("'Horse' leave rider=Player seat=0 reason=Request", "'Horse' leave rider=Player seat=0 reason=Wrecked")).ToArray();
+
+            Assert.That(VehicleSmokeRun.CountInOrder(neverBoarded, expected), Is.EqualTo(13), "the helicopter is done, the horse is not");
+            Assert.That(VehicleSmokeRun.CountInOrder(neverRode, expected), Is.EqualTo(14), "boarding the horse counts, the ride does not");
+            Assert.That(VehicleSmokeRun.CountInOrder(onlyTrotted, expected), Is.EqualTo(14), "a ride that never reached a canter is not a pass");
+            Assert.That(VehicleSmokeRun.CountInOrder(stillRiding, expected), Is.EqualTo(15));
+            Assert.That(VehicleSmokeRun.CountInOrder(thrown, expected), Is.EqualTo(15), "only getting off on request counts as leaving");
         }
 
         [Test]
@@ -153,18 +179,18 @@ namespace Shooter.Tests.EditMode
             var deployed = IndexOf("[Vehicle] 'Aircraft' flare deployed");
             (flareBeforeLock[locked], flareBeforeLock[deployed]) = (flareBeforeLock[deployed], flareBeforeLock[locked]);
 
-            Assert.That(VehicleSmokeRun.CountInOrder(Without("[VehicleSmokeRun] locked"), expected), Is.EqualTo(22));
-            Assert.That(VehicleSmokeRun.CountInOrder(noFlare, expected), Is.EqualTo(23));
-            Assert.That(VehicleSmokeRun.CountInOrder(flareBeforeLock, expected), Is.EqualTo(23), "a flare dropped before the lock does not count as breaking it");
-            Assert.That(VehicleSmokeRun.CountInOrder(stillLocked, expected), Is.EqualTo(24));
-            Assert.That(VehicleSmokeRun.CountInOrder(noParachute, expected), Is.EqualTo(27), "bailing out without a parachute is not a pass");
-            Assert.That(VehicleSmokeRun.CountInOrder(neverLanded, expected), Is.EqualTo(28));
+            Assert.That(VehicleSmokeRun.CountInOrder(Without("[VehicleSmokeRun] locked"), expected), Is.EqualTo(25));
+            Assert.That(VehicleSmokeRun.CountInOrder(noFlare, expected), Is.EqualTo(26));
+            Assert.That(VehicleSmokeRun.CountInOrder(flareBeforeLock, expected), Is.EqualTo(26), "a flare dropped before the lock does not count as breaking it");
+            Assert.That(VehicleSmokeRun.CountInOrder(stillLocked, expected), Is.EqualTo(27));
+            Assert.That(VehicleSmokeRun.CountInOrder(noParachute, expected), Is.EqualTo(30), "bailing out without a parachute is not a pass");
+            Assert.That(VehicleSmokeRun.CountInOrder(neverLanded, expected), Is.EqualTo(31));
         }
 
         [Test]
         public void OnlyTheStepLinesOfTheRunAreCollected()
         {
-            foreach (var verb in new[] { "drove", "hovered", "advanced", "sailed", "lapped", "circling", "taxied", "flew", "held", "locked", "evaded", "banked", "landed" })
+            foreach (var verb in new[] { "drove", "hovered", "advanced", "rode", "sailed", "lapped", "circling", "taxied", "flew", "held", "locked", "evaded", "banked", "landed" })
             {
                 var index = IndexOf("[VehicleSmokeRun] " + verb + " ");
                 Assert.That(index, Is.GreaterThanOrEqualTo(0), verb);
@@ -193,6 +219,8 @@ namespace Shooter.Tests.EditMode
         {
             Assert.That(VehicleSmokeRun.HoveredLog("Helicopter", 5.14f, 3.2f), Is.EqualTo("[VehicleSmokeRun] hovered 'Helicopter' altitude=5.1 seconds=3.2"));
             Assert.That(VehicleSmokeRun.AdvancedLog("Helicopter", 10.24f, 5.56f), Is.EqualTo("[VehicleSmokeRun] advanced 'Helicopter' distance=10.2 altitude=5.6"));
+            Assert.That(VehicleSmokeRun.RodeLog("Horse", 15.26f, 8.96f, HorseGait.Canter), Is.EqualTo("[VehicleSmokeRun] rode 'Horse' distance=15.3 speed=9.0 gait=Canter"));
+            Assert.That(VehicleSmokeRun.RodeLog("Horse", 15.26f, 8.96f, HorseGait.Canter), Does.StartWith(VehicleSmokeRun.RodeLogPrefix("Horse")));
             Assert.That(VehicleSmokeRun.SailedLog("Boat", 10.06f, 6.31f), Is.EqualTo("[VehicleSmokeRun] sailed 'Boat' distance=10.1 speed=6.3"));
             Assert.That(VehicleSmokeRun.LappedLog("BotCar", 4, 31.52f), Is.EqualTo("[VehicleSmokeRun] lapped 'BotCar' points=4 seconds=31.5"));
             Assert.That(VehicleSmokeRun.CirclingLog("BotAircraft", 158.24f, 1), Is.EqualTo("[VehicleSmokeRun] circling 'BotAircraft' altitude=158.2 waypoint=1"));
@@ -245,6 +273,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheRideReachesACanterAndStaysOnTheFloor()
+        {
+            var spec = HorseSpec.Default;
+            var toCanter = spec.CanterThreshold * spec.CanterThreshold / (2f * spec.Acceleration);
+            var toStop = spec.CanterSpeed * spec.CanterSpeed / (2f * spec.Deceleration);
+
+            Assert.That(VehicleSmokeRun.RideDistance, Is.GreaterThan(toCanter), "the horse reaches a canter before the ride is long enough");
+            Assert.That(
+                VehicleRangeSceneBuilder.HorseOrigin.x + VehicleSmokeRun.RideDistance + toStop,
+                Is.LessThan(VehicleRangeSceneBuilder.FloorHalfExtent),
+                "the horse rides east and stops before the edge of the floor");
+            Assert.That(Vector3.Distance(VehicleRangeSceneBuilder.HorseRotation * Vector3.forward, Vector3.right), Is.LessThan(1e-4f), "the horse is placed facing east");
+        }
+
+        [Test]
         public void LongStepsGetLongerTimeouts()
         {
             Assert.That(VehicleSmokeRun.TimeoutFor(VehicleSmokeRun.Step.DestroyCar), Is.EqualTo(VehicleSmokeRun.DestroyTimeoutSeconds));
@@ -252,6 +295,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(VehicleSmokeRun.TimeoutFor(VehicleSmokeRun.Step.WatchBotAircraft), Is.EqualTo(VehicleSmokeRun.LapTimeoutSeconds));
             Assert.That(VehicleSmokeRun.TimeoutFor(VehicleSmokeRun.Step.Parachute), Is.EqualTo(VehicleSmokeRun.LandTimeoutSeconds));
             Assert.That(VehicleSmokeRun.TimeoutFor(VehicleSmokeRun.Step.Lift), Is.EqualTo(VehicleSmokeRun.StepTimeoutSeconds));
+            Assert.That(VehicleSmokeRun.TimeoutFor(VehicleSmokeRun.Step.RideHorse), Is.EqualTo(VehicleSmokeRun.StepTimeoutSeconds));
         }
 
         [Test]
@@ -283,7 +327,7 @@ namespace Shooter.Tests.EditMode
         {
             var grounded = _passingRun.Take(IndexOf("[VehicleSmokeRun] flew")).ToArray();
 
-            Assert.That(VehicleSmokeRun.CountInOrder(grounded, VehicleSmokeRun.ExpectedLogs()), Is.EqualTo(20), "boarding and taxiing count, the rest does not");
+            Assert.That(VehicleSmokeRun.CountInOrder(grounded, VehicleSmokeRun.ExpectedLogs()), Is.EqualTo(23), "boarding and taxiing count, the rest does not");
         }
 
         [Test]
@@ -308,6 +352,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(VehicleRangeSceneBuilder.MountedGunName, Is.EqualTo("MountedGun"));
             Assert.That(VehicleRangeSceneBuilder.CarName, Is.EqualTo("Car"));
             Assert.That(VehicleRangeSceneBuilder.HelicopterName, Is.EqualTo("Helicopter"));
+            Assert.That(VehicleRangeSceneBuilder.HorseName, Is.EqualTo("Horse"));
             Assert.That(VehicleRangeSceneBuilder.BoatName, Is.EqualTo("Boat"));
             Assert.That(VehicleRangeSceneBuilder.BotCarName, Is.EqualTo("BotCar"));
             Assert.That(VehicleRangeSceneBuilder.BotAircraftName, Is.EqualTo("BotAircraft"));

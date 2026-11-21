@@ -10,7 +10,7 @@ using UnityEngine;
 namespace Shooter.Editor
 {
     // batchmode には入力が無いので、Interact / Previous の代わりに PlayerVehicleRider.Interact / SwitchSeat を呼び、
-    // 移動・上下・ブレーキ・狙い・射撃・フレアは PlayerVehicleRider.SeatInputFilter に差し込む。固定銃座・ヘリ・ボート・飛行機までは歩かせずに移す。
+    // 移動・上下・ブレーキ・狙い・射撃・フレアは PlayerVehicleRider.SeatInputFilter に差し込む。固定銃座・ヘリ・馬・ボート・飛行機までは歩かせずに移す。
     // ロックオンのタレットは、飛んでいる飛行機の行く先の地面へ移す。飛行機は数秒で置いた場所から離れ、射程の外へ出てしまうため。
     // Play Mode に入るので、batchmode で呼ぶときは -quit を付けない。
     [InitializeOnLoad]
@@ -28,6 +28,9 @@ namespace Shooter.Editor
         public const float HelicopterAdvanceDistance = 10f;
         public const float LandedAltitude = 0.3f;
         public const float SettledSpeed = 0.5f;
+
+        // 既定の加速では Canter の境目に 5m ほどで届くので、その先も駆け続けて Canter のまま進めることまで見る距離にする。
+        public const float RideDistance = 15f;
 
         public const float SailDistance = 10f;
 
@@ -85,7 +88,7 @@ namespace Shooter.Editor
         private static readonly List<string> _lines = new List<string>();
         private static readonly string[] _stepLogVerbs =
         {
-            "drove", "hovered", "advanced", "sailed", "lapped", "circling", "taxied", "flew", "held", "locked", "evaded", "banked", "landed",
+            "drove", "hovered", "advanced", "rode", "sailed", "lapped", "circling", "taxied", "flew", "held", "locked", "evaded", "banked", "landed",
         };
 
         private static readonly ScriptedSeatInput _input = new ScriptedSeatInput();
@@ -137,6 +140,10 @@ namespace Shooter.Editor
             Advance,
             Land,
             ExitHelicopter,
+            MoveToHorse,
+            BoardHorse,
+            RideHorse,
+            ExitHorse,
             MoveToBoat,
             BoardBoat,
             Sail,
@@ -195,6 +202,7 @@ namespace Shooter.Editor
             var mountedGun = Prefix(VehicleRangeSceneBuilder.MountedGunName);
             var car = Prefix(VehicleRangeSceneBuilder.CarName);
             var helicopter = VehicleRangeSceneBuilder.HelicopterName;
+            var horse = VehicleRangeSceneBuilder.HorseName;
             var boat = VehicleRangeSceneBuilder.BoatName;
             var aircraft = VehicleRangeSceneBuilder.AircraftName;
             return new[]
@@ -212,6 +220,9 @@ namespace Shooter.Editor
                 new LogExpectation(HoveredLogPrefix(helicopter), null),
                 new LogExpectation(AdvancedLogPrefix(helicopter), null),
                 new LogExpectation(Prefix(helicopter) + "leave rider=", " seat=0 reason=" + VehicleLeaveReason.Request + " "),
+                new LogExpectation(Prefix(horse) + "board rider=", " seat=0 role=" + VehicleSeatRole.Driver),
+                new LogExpectation(RodeLogPrefix(horse), " gait=" + HorseGait.Canter),
+                new LogExpectation(Prefix(horse) + "leave rider=", " seat=0 reason=" + VehicleLeaveReason.Request + " "),
                 new LogExpectation(Prefix(boat) + "board rider=", " seat=0 role=" + VehicleSeatRole.Driver),
                 new LogExpectation(SailedLogPrefix(boat), null),
                 new LogExpectation(Prefix(boat) + "leave rider=", " seat=0 reason=" + VehicleLeaveReason.Request + " "),
@@ -253,6 +264,19 @@ namespace Shooter.Editor
             return AdvancedLogPrefix(vehicle)
                 + "distance=" + distance.ToString("0.0", CultureInfo.InvariantCulture)
                 + " altitude=" + altitude.ToString("0.0", CultureInfo.InvariantCulture);
+        }
+
+        public static string RodeLogPrefix(string vehicle)
+        {
+            return $"{LogTag} rode '{vehicle}' ";
+        }
+
+        public static string RodeLog(string vehicle, float distance, float speed, HorseGait gait)
+        {
+            return RodeLogPrefix(vehicle)
+                + "distance=" + distance.ToString("0.0", CultureInfo.InvariantCulture)
+                + " speed=" + speed.ToString("0.0", CultureInfo.InvariantCulture)
+                + " gait=" + gait;
         }
 
         public static string SailedLogPrefix(string vehicle)
@@ -660,14 +684,15 @@ namespace Shooter.Editor
             var mountedGun = FindVehicle(VehicleRangeSceneBuilder.MountedGunName);
             var aircraft = FindVehicle(AircraftFixtureBuilder.VehicleId);
             var helicopter = FindVehicle(VehicleFixtureBuilder.HelicopterVehicleId);
+            var horse = FindVehicle(VehicleFixtureBuilder.HorseVehicleId);
             var boat = FindVehicle(VehicleFixtureBuilder.BoatVehicleId);
             var botCar = FindVehicle(VehicleRangeSceneBuilder.BotCarVehicleId);
             var botAircraft = FindVehicle(VehicleRangeSceneBuilder.BotAircraftVehicleId);
             if (gunCar == null || car == null || mountedGun == null || aircraft == null
-                || helicopter == null || boat == null || botCar == null || botAircraft == null)
+                || helicopter == null || horse == null || boat == null || botCar == null || botAircraft == null)
             {
                 return $"the scene lacks a vehicle (gun car={gunCar != null}, car={car != null}, mounted gun={mountedGun != null}, aircraft={aircraft != null}, "
-                    + $"helicopter={helicopter != null}, boat={boat != null}, bot car={botCar != null}, bot aircraft={botAircraft != null}); "
+                    + $"helicopter={helicopter != null}, horse={horse != null}, boat={boat != null}, bot car={botCar != null}, bot aircraft={botAircraft != null}); "
                     + $"rerun {VehicleRangeSceneBuilder.MenuPath}";
             }
 
@@ -807,6 +832,12 @@ namespace Shooter.Editor
                 case Step.ExitHelicopter:
                     return AdvanceHelicopter(helicopter, now);
 
+                case Step.MoveToHorse:
+                case Step.BoardHorse:
+                case Step.RideHorse:
+                case Step.ExitHorse:
+                    return AdvanceHorse(horse, now);
+
                 case Step.MoveToBoat:
                 case Step.BoardBoat:
                 case Step.Sail:
@@ -911,6 +942,68 @@ namespace Shooter.Editor
                         return $"Interact did not get the player out of '{helicopter.name}'";
                     }
 
+                    StartStep(Step.MoveToHorse, now);
+                    return null;
+
+                default:
+                    return null;
+            }
+        }
+
+        private static string AdvanceHorse(Vehicle horse, double now)
+        {
+            var motor = horse.GetComponent<SimpleHorseMotor>();
+            if (motor == null)
+            {
+                return $"'{horse.name}' has no SimpleHorseMotor";
+            }
+
+            switch (_step)
+            {
+                case Step.MoveToHorse:
+                    MoveToEnterPoint(horse);
+                    StartStep(Step.BoardHorse, now);
+                    return null;
+
+                case Step.BoardHorse:
+                    if (!_rider.Interact() || _rider.Vehicle != horse || _rider.Seat.Role != VehicleSeatRole.Driver)
+                    {
+                        return $"Interact did not seat the player as the rider of '{horse.name}'";
+                    }
+
+                    _driveStart = horse.transform.position;
+                    _driveForward = Heading(horse.transform.rotation, Vector3.forward);
+                    _input.Move = new Vector2(0f, 1f);
+                    _input.Boost = true;
+                    StartStep(Step.RideHorse, now);
+                    return null;
+
+                case Step.RideHorse:
+                    var travelled = Vector3.Dot(horse.transform.position - _driveStart, _driveForward);
+                    if (travelled < RideDistance || motor.Gait != HorseGait.Canter)
+                    {
+                        return null;
+                    }
+
+                    Debug.Log(RodeLog(horse.name, travelled, motor.ForwardSpeed, motor.Gait));
+                    _input.Move = Vector2.zero;
+                    _input.Boost = false;
+                    StartStep(Step.ExitHorse, now);
+                    return null;
+
+                // 止まるまで待ってから降りるのは、駆けたまま降ろすと、降りる位置が馬とともに流れ、降りられたかを馬の速さ次第で確かめることになるため。
+                case Step.ExitHorse:
+                    if (Mathf.Abs(motor.ForwardSpeed) > StoppedSpeed)
+                    {
+                        return null;
+                    }
+
+                    if (!LeaveVehicle())
+                    {
+                        return $"Interact did not get the player off '{horse.name}'";
+                    }
+
+                    _input.Clear();
                     StartStep(Step.MoveToBoat, now);
                     return null;
 

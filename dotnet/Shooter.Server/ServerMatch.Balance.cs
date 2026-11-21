@@ -15,7 +15,7 @@ namespace Shooter.Server
 
         partial void BalanceTeamsForNextMatch()
         {
-            // 目的がチームを決める試合 (Horde) で人数をそろえると、人を敵の側へ移してしまう
+            // 目的がチームを決める試合 (Horde) が続くとき、人数をそろえると人を敵の側へ移してしまう
             if (MoveToFixedTeams())
             {
                 return;
@@ -39,8 +39,8 @@ namespace Shooter.Server
             }
         }
 
-        // 前の試合を別の目的で遊んでいた人を、次の試合の目的が決めるチームへ移す。目的がどのチームも決めなければ false
-        private bool MoveToFixedTeams()
+        // 人を、今の目的が決めるチームへ移す。目的がどのチームも決めなければ false
+        internal bool MoveToFixedTeams()
         {
             var choose = FixedTeam;
             if (choose == null)

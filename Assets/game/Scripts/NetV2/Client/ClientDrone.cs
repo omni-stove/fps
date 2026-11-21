@@ -142,7 +142,7 @@ namespace Shooter.NetV2
             IsPiloting = false;
             if (DroneId.HasValue)
             {
-                if (_sentMoving)
+                if (_sentMoving || _unconfirmed)
                 {
                     Send(Vector2.Zero, 0f, _sentYaw, false, TransportChannel.Reliable);
                 }

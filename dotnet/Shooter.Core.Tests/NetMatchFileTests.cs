@@ -255,6 +255,46 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheZiplineTuningReadsBackAndDefaultsWhenLeftOut()
+        {
+            var defaults = NetMotorSettings.Default;
+            var motor = new NetMotorSettings(
+                defaults.Motor,
+                defaults.Stance,
+                defaults.Mover,
+                defaults.Prone,
+                defaults.Swim,
+                defaults.WallRun,
+                defaults.Parachute,
+                defaults.Slide,
+                new ZiplineTuning(grabRadius: 2f, hangOffset: 1.1f, regrabSeconds: 0.75f));
+            var original = new NetMatchFile(
+                "TeamDeathmatch", GameRules.Default, NetMatchSettings.Default, "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } }),
+                new[] { Rifle(), Handgun() }, 0.4f, null, null, motor);
+
+            var text = NetMatchFile.Write(original);
+            var read = NetMatchFile.Parse(text, "zipline.json").Motor.Zipline;
+
+            Assert.That(read.GrabRadius, Is.EqualTo(2f));
+            Assert.That(read.HangOffset, Is.EqualTo(1.1f));
+            Assert.That(read.RegrabSeconds, Is.EqualTo(0.75f));
+            Assert.That(text, Does.Contain("\"ziplineGrabRadius\": 2"));
+
+            var bareText = "{\"loadout\": {\"slots\": [[\"Handgun\"]], \"weapons\": [\"" + _handgunId + "\"]}, \"weapons\": [" + _handgunJson + "]";
+            var partial = NetMatchFile.Parse(bareText + ", \"motor\": {\"ziplineHangOffset\": 1.5}}", "partial.json").Motor.Zipline;
+
+            Assert.That(partial.HangOffset, Is.EqualTo(1.5f));
+            Assert.That(partial.GrabRadius, Is.EqualTo(ZiplineTuning.DefaultGrabRadius));
+            Assert.That(partial.RegrabSeconds, Is.EqualTo(ZiplineTuning.DefaultRegrabSeconds));
+            Assert.That(NetMotorSettings.Default.Zipline, Is.SameAs(ZiplineTuning.Default));
+
+            var e = Assert.Throws<ServerDataJsonException>(
+                () => NetMatchFile.Parse(bareText + ", \"motor\": {\"ziplineGrabRadius\": -1}}", "bad.json"));
+            Assert.That(e.Message, Does.Contain("motor.ziplineGrabRadius"));
+        }
+
+        [Test]
         public void CarryLoadReadsBackAndDefaultsWhenLeftOut()
         {
             var carry = new CarryLoadSpec(CarrySource.Carried, CarrySource.None, 5f, 0.04f, 0.6f, CarryGaits.Walk | CarryGaits.Sprint);

@@ -23,9 +23,11 @@ namespace Shooter.Server
             NetMapLadders ladders = null,
             NetMapVehicles vehicles = null,
             NetMapWater water = null,
-            NetMapPickups pickups = null)
+            NetMapPickups pickups = null,
+            NetMapZiplines ziplines = null)
         {
             Pickups = pickups ?? NetMapPickups.None;
+            Ziplines = ziplines ?? NetMapZiplines.None;
             Vehicles = vehicles ?? NetMapVehicles.None;
             Water = water ?? NetMapWater.None;
             Points = points;
@@ -74,6 +76,9 @@ namespace Shooter.Server
         // はしごと同じく、書き出す前のマップでも拾い物が無いだけで動けるよう、ファイルが無ければ空にする。
         public NetMapPickups Pickups { get; }
 
+        // はしごと同じく、書き出す前のマップでも掴めないだけで動けるよう、ファイルが無ければ空にする。
+        public NetMapZiplines Ziplines { get; }
+
         public string LogLine => ServerProgram.LogTag + " map " + Name
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
             + " navTriangles=" + NavMesh.Triangles.Count.ToString(CultureInfo.InvariantCulture)
@@ -84,6 +89,7 @@ namespace Shooter.Server
             + " ladders=" + Ladders.Ladders.Count.ToString(CultureInfo.InvariantCulture)
             + " vehicles=" + Vehicles.Vehicles.Count.ToString(CultureInfo.InvariantCulture)
             + " water=" + Water.Water.Count.ToString(CultureInfo.InvariantCulture)
+            + " ziplines=" + Ziplines.Ziplines.Count.ToString(CultureInfo.InvariantCulture)
             + " from=" + Directory;
 
         // 作業ディレクトリを先に見るのは、リポジトリのルートから dotnet run したときにコミットした server-data をそのまま使うため。
@@ -304,9 +310,24 @@ namespace Shooter.Server
                 }
             }
 
+            NetMapZiplines ziplines = null;
+            var ziplinesPath = Path.Combine(directory, map + NetMapZiplines.Extension);
+            if (File.Exists(ziplinesPath))
+            {
+                try
+                {
+                    ziplines = NetMapZiplines.Parse(File.ReadAllText(ziplinesPath), ziplinesPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + ziplinesPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles, water, pickups);
+                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles, water, pickups, ziplines);
             }
             catch (ArgumentException e)
             {

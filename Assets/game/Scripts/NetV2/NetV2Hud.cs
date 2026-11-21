@@ -58,6 +58,7 @@ namespace Shooter.NetV2
         private ClientExecutionStatus _execution;
         private ClientHardpointStatus _hardpoint;
         private ClientKillConfirmedStatus _killConfirmed;
+        private ClientGuardianStatus _guardian;
         private ClientPayloadStatus _payload;
         private int? _payloadCheckpoints;
         private bool _payloadCartLooked;
@@ -141,6 +142,7 @@ namespace Shooter.NetV2
             netHud._execution = new ClientExecutionStatus(localPlayerId);
             netHud._hardpoint = new ClientHardpointStatus(localPlayerId);
             netHud._killConfirmed = new ClientKillConfirmedStatus(localPlayerId);
+            netHud._guardian = new ClientGuardianStatus(localPlayerId);
             netHud._payload = new ClientPayloadStatus(localPlayerId);
             netHud._gunGame = ConfiguredGunGame();
             netHud._battleRoyale = new ClientBattleRoyaleStatus(localPlayerId, Math.Max(1, tickRate));
@@ -293,12 +295,14 @@ namespace Shooter.NetV2
             Refresh();
         }
 
-        // FFA は AlphaPoints・BravoPoints に 1 キルの点とキル数の上限を載せていてチームの点ではないので、GunGame と同じく 0 を出す
+        // FFA は AlphaPoints・BravoPoints に 1 キルの点とキル数の上限を載せていてチームの点ではないので、GunGame と同じく 0 を出す。
+        // Guardian はキルの点を試合の点 (AlphaScore・BravoScore) に入れ、AlphaPoints・BravoPoints を 0 にして送る
         private static int TeamScore(MatchSnapshot match, int score, int points)
         {
             switch (match.Objective)
             {
                 case MatchObjective.None:
+                case MatchObjective.Guardian:
                     return score;
                 case MatchObjective.FreeForAll:
                     return 0;
@@ -499,6 +503,7 @@ namespace Shooter.NetV2
                 | (_hardpoint != null && _hardpoint.Apply(snapshot))
                 | ApplyDomination(snapshot)
                 | (_killConfirmed != null && _killConfirmed.Apply(snapshot))
+                | (_guardian != null && _guardian.Apply(snapshot))
                 | ApplyPayload(snapshot)
                 | (_battleRoyale != null && _battleRoyale.Apply(snapshot, InteractKeyLabel))
                 | ApplyExtraction(snapshot)
@@ -512,6 +517,7 @@ namespace Shooter.NetV2
                     ?? _hardpoint?.Status
                     ?? _dominationStatus
                     ?? _killConfirmed?.Status
+                    ?? _guardian?.Status
                     ?? _payload?.Status
                     ?? _battleRoyale?.Status
                     ?? _extractionStatus
@@ -853,6 +859,7 @@ namespace Shooter.NetV2
             _execution?.Clear();
             _hardpoint?.Clear();
             _killConfirmed?.Reset();
+            _guardian?.Reset();
             _payload?.Clear();
             _payloadCheckpoints = null;
             _payloadCartLooked = false;

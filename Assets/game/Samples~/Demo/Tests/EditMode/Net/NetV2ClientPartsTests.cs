@@ -14,7 +14,7 @@ namespace Shooter.Net.Tests
         // 本物の一覧 (BlockListStore.DefaultKey) を壊さないよう、テストだけのキーに保存する。
         private const string BlocksKey = "Shooter.Tests.NetV2ClientParts.Blocks";
 
-        private const int VoiceIndex = 19;
+        private const int VoiceIndex = 20;
 
         private readonly List<string> _logs = new List<string>();
         private readonly List<string> _decided = new List<string>();
@@ -87,6 +87,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2BuyPart),
                 typeof(NetV2NetStatsPart),
                 typeof(NetV2MatchResultPart),
+                typeof(NetV2GuardianLeaderPart),
             }));
         }
 
@@ -118,6 +119,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2BuyPart),
                 typeof(NetV2NetStatsPart),
                 typeof(NetV2MatchResultPart),
+                typeof(NetV2GuardianLeaderPart),
                 typeof(NetV2VoicePart),
             }));
             Assert.That(((NetV2VoicePart)_parts[VoiceIndex]).Voice, Is.Not.Null);
@@ -149,6 +151,7 @@ namespace Shooter.Net.Tests
                 typeof(NetV2ZonePart),
                 typeof(NetV2PlayerNamesPart),
                 typeof(NetV2ReplayViewPart),
+                typeof(NetV2GuardianLeaderPart),
             }));
             Assert.That(_parts.OfType<NetV2ReportPart>(), Is.Empty, "a replay has no server to send a report to");
             Assert.That(_parts.OfType<NetV2VoteKickPart>(), Is.Empty, "a replay has no server to send a vote to");
@@ -579,9 +582,22 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
-        public void NoPartIsRegisteredYetSoTheListIsTheBuiltInOne()
+        public void TheGuardianLeaderPartIsRegisteredAndMadeFromTheContextInMatchesAndReplays()
         {
-            Assert.That(NetV2ClientParts.Registered, Is.Empty);
+            Assert.That(NetV2ClientParts.Registered.Count, Is.EqualTo(1));
+
+            _parts = NetV2ClientParts.Create(Context(null));
+            Assert.That(_parts.OfType<NetV2GuardianLeaderPart>().Count(), Is.EqualTo(1));
+            Assert.That(_parts[_parts.Count - 1], Is.InstanceOf<NetV2GuardianLeaderPart>(), "registered parts come after the built-in ones");
+            foreach (var part in _parts)
+            {
+                part.Dispose();
+            }
+
+            var replay = Context(null);
+            replay.Replay = true;
+            _parts = NetV2ClientParts.Create(replay);
+            Assert.That(_parts.OfType<NetV2GuardianLeaderPart>().Count(), Is.EqualTo(1), "who leads can be seen when watching a replay too");
         }
 
         [Test]

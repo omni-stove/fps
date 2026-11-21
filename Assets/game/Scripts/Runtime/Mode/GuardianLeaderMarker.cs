@@ -6,6 +6,7 @@ using UnityEngine;
 namespace Shooter.Runtime
 {
     // リーダーの子にしないのは、bot の拡縮や倒れたときの体の傾きを目印が受けないようにするため。毎フレーム位置だけを追う。
+    // オフラインは SideMember を、オンラインは SideMember を持たない相手の体 (Transform) を追うので、追う先と頭の高さの引き方を分けて持つ。
     [DisallowMultipleComponent]
     public sealed class GuardianLeaderMarker : MonoBehaviour
     {
@@ -22,6 +23,9 @@ namespace Shooter.Runtime
 
         private readonly List<Material> _materials = new List<Material>();
         private SideMember _target;
+        private Transform _anchor;
+        private Func<Bounds?> _boundsOf;
+        private Side _side;
         private Renderer[] _renderers = Array.Empty<Renderer>();
         private float _heightAboveHead = DefaultHeightAboveHead;
         private float _spin;
@@ -31,6 +35,11 @@ namespace Shooter.Runtime
         private bool _followsSettings;
 
         public SideMember Target => _target;
+
+        // 追っている先。追う先が消えたら目印も消える
+        public Transform Anchor => _anchor;
+
+        public Side Side => _target != null ? _target.Side : _side;
 
         public Renderer Renderer => _renderers.Length > 0 ? _renderers[0] : null;
 
@@ -73,6 +82,35 @@ namespace Shooter.Runtime
                 throw new ArgumentNullException(nameof(target));
             }
 
+            return CreateCore(target.transform, target, target.Side, null, prefab, heightAboveHead, size);
+        }
+
+        // bounds は頭の高さを決める囲み。null を返す間は追う先の位置から FallbackHeadHeight 上を頭とする
+        public static GuardianLeaderMarker Create(
+            Transform target,
+            Side side,
+            Func<Bounds?> bounds,
+            GameObject prefab = null,
+            float heightAboveHead = DefaultHeightAboveHead,
+            float size = DefaultSize)
+        {
+            if (target == null)
+            {
+                throw new ArgumentNullException(nameof(target));
+            }
+
+            return CreateCore(target, null, side, bounds, prefab, heightAboveHead, size);
+        }
+
+        private static GuardianLeaderMarker CreateCore(
+            Transform anchor,
+            SideMember member,
+            Side side,
+            Func<Bounds?> bounds,
+            GameObject prefab,
+            float heightAboveHead,
+            float size)
+        {
             if (!(heightAboveHead >= 0f) || float.IsInfinity(heightAboveHead))
             {
                 throw new ArgumentOutOfRangeException(nameof(heightAboveHead), heightAboveHead, "heightAboveHead must not be negative and must be finite");
@@ -83,7 +121,7 @@ namespace Shooter.Runtime
                 throw new ArgumentOutOfRangeException(nameof(size), size, "size must be positive and finite");
             }
 
-            var markerName = ObjectNamePrefix + target.name;
+            var markerName = ObjectNamePrefix + anchor.name;
             GameObject go;
             if (prefab != null)
             {
@@ -98,7 +136,10 @@ namespace Shooter.Runtime
             }
 
             var marker = go.AddComponent<GuardianLeaderMarker>();
-            marker._target = target;
+            marker._target = member;
+            marker._anchor = anchor;
+            marker._side = side;
+            marker._boundsOf = bounds;
             marker._heightAboveHead = heightAboveHead;
             marker._isPlaceholder = prefab == null;
             marker._tilt = prefab != null ? prefab.transform.localRotation : PlaceholderTilt;
@@ -154,12 +195,12 @@ namespace Shooter.Runtime
 
         private void ApplyColor()
         {
-            if (_target == null)
+            if (_anchor == null)
             {
                 return;
             }
 
-            var color = ColorOf(_target.Side, _viewerTeam);
+            var color = ColorOf(Side, _viewerTeam);
             foreach (var material in _materials)
             {
                 if (material != null)
@@ -209,22 +250,21 @@ namespace Shooter.Runtime
 
         public void Follow()
         {
-            if (_target == null)
+            if (_anchor == null)
             {
                 return;
             }
 
-            var damageable = _target.Damageable;
             float top;
             Vector3 center;
-            if (damageable != null && damageable.TryGetBounds(out var bounds))
+            if (TryGetHeadBounds(out var bounds))
             {
                 top = bounds.max.y;
                 center = bounds.center;
             }
             else
             {
-                center = _target.transform.position;
+                center = _anchor.position;
                 top = center.y + FallbackHeadHeight;
             }
 
@@ -233,6 +273,25 @@ namespace Shooter.Runtime
             transform.SetPositionAndRotation(
                 new Vector3(center.x, top + _heightAboveHead + lift, center.z),
                 Quaternion.Euler(0f, _spin, 0f) * _tilt);
+        }
+
+        private bool TryGetHeadBounds(out Bounds bounds)
+        {
+            if (_target != null)
+            {
+                var damageable = _target.Damageable;
+                if (damageable != null && damageable.TryGetBounds(out bounds))
+                {
+                    return true;
+                }
+
+                bounds = default;
+                return false;
+            }
+
+            var found = _boundsOf?.Invoke();
+            bounds = found ?? default;
+            return found.HasValue;
         }
 
         // Edit Mode では OnDestroy が呼ばれないので、複製したマテリアルもここで消す。
@@ -245,7 +304,7 @@ namespace Shooter.Runtime
 
         private void LateUpdate()
         {
-            if (_target == null)
+            if (_anchor == null)
             {
                 Destroy(gameObject);
                 return;

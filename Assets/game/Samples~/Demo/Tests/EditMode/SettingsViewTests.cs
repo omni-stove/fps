@@ -21,6 +21,7 @@ namespace Shooter.Tests.EditMode
         private ControlSettingsStore _store;
         private LanguagePreferenceStore _languageStore;
         private VoiceSettingsStore _voiceStore;
+        private GraphicsSettingsStore _graphicsStore;
         private SettingsView _view;
         private VisualElement _container;
 
@@ -36,7 +37,15 @@ namespace Shooter.Tests.EditMode
             _store = new ControlSettingsStore("Shooter.Tests.SettingsView." + suffix);
             _languageStore = new LanguagePreferenceStore("Shooter.Tests.SettingsView.Language." + suffix, _store.Key, GameLanguage.Japanese);
             _voiceStore = new VoiceSettingsStore("Shooter.Tests.SettingsView.Voice." + suffix);
-            _view = new SettingsView(_store, languageStore: _languageStore, voiceStore: _voiceStore);
+
+            // エディターの画質や fps を変えないよう、グラフィック設定は記録するだけの受け手に渡す。
+            _graphicsStore = new GraphicsSettingsStore("Shooter.Tests.SettingsView.Graphics." + suffix, GraphicsSettings.Default);
+            _view = new SettingsView(
+                _store,
+                languageStore: _languageStore,
+                voiceStore: _voiceStore,
+                graphicsStore: _graphicsStore,
+                graphicsSink: new RecordingGraphicsSink(GraphicsSettings.Default));
             _container = new VisualElement();
         }
 
@@ -47,6 +56,7 @@ namespace Shooter.Tests.EditMode
             PlayerPrefs.DeleteKey(_store.Key);
             PlayerPrefs.DeleteKey(_languageStore.Key);
             PlayerPrefs.DeleteKey(_voiceStore.Key);
+            PlayerPrefs.DeleteKey(_graphicsStore.Key);
             PlayerPrefs.Save();
             AppliedControlSettings.Apply(_appliedBefore);
             Localizer.Apply(_languageBefore);
@@ -103,6 +113,10 @@ namespace Shooter.Tests.EditMode
                 SettingsView.PaletteButtonName,
                 SettingsView.SubtitlesButtonName,
                 SettingsView.VoiceMicrophoneButtonName,
+                SettingsView.GraphicsResolutionButtonName,
+                SettingsView.GraphicsQualityButtonName,
+                SettingsView.GraphicsVSyncButtonName,
+                SettingsView.GraphicsFrameRateButtonName,
                 SettingsView.LanguageButtonName,
                 SettingsView.RebindCancelButtonName,
                 SettingsView.RebindUndoButtonName,
@@ -151,6 +165,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(sections, Is.EqualTo(new[]
             {
                 Localizer.Get("settings.section.viewAndSound"),
+                Localizer.Get("settings.section.graphics"),
                 Localizer.Get("settings.section.gamepad"),
                 Localizer.Get("settings.section.gyro"),
                 Localizer.Get("settings.section.effects"),

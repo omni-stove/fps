@@ -323,10 +323,9 @@ namespace Shooter.NetV2
 
             // サーバーと同じマシンで並べて動かすので、裏に回っても止めない
             Application.runInBackground = true;
-            if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, false))
-            {
-                Application.targetFrameRate = 60;
-            }
+
+            // 画面の無いクライアントはデータの headlessFrameRate で、画面のあるクライアントはプレイヤーの fps 上限で回す。
+            AppliedGraphicsSettings.ApplyFrameRate();
 
             _menu = GameUi.Menu;
             if (_menu != null)

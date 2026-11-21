@@ -68,6 +68,41 @@ namespace Shooter.Core
             return string.Format(CultureInfo.InvariantCulture, "{0} no input action '{1}'; the emote wheel is opened only from code", Tag, actionPath);
         }
 
+        public static string NetRequested(string emoteId)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} net requested id={1}", Tag, Id(emoteId));
+        }
+
+        public static string NetStopRequested()
+        {
+            return Tag + " net stop requested";
+        }
+
+        public static string NetNotSent(string emoteId, string reason)
+        {
+            return string.Format(CultureInfo.InvariantCulture, "{0} net not sent id={1} reason={2}", Tag, Id(emoteId), reason);
+        }
+
+        public static string NetPlayed(int playerId, string emoteId, bool hasAnimation)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture,
+                "{0} net played player={1} id={2} animation={3}",
+                Tag, playerId, Id(emoteId), hasAnimation ? "yes" : "none");
+        }
+
+        public static string NetStopped(int playerId, string emoteId, EmoteStopReason reason)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture, "{0} net stopped player={1} id={2} reason={3}", Tag, playerId, Id(emoteId), reason);
+        }
+
+        public static string NetNoBody(int playerId, string emoteId)
+        {
+            return string.Format(
+                CultureInfo.InvariantCulture, "{0} net no body player={1} id={2}; the emote is not shown (the player is out of view)", Tag, playerId, Id(emoteId));
+        }
+
         private static string Id(string id)
         {
             return string.IsNullOrEmpty(id) ? "-" : id;

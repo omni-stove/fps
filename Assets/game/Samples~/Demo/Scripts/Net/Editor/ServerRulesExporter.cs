@@ -47,6 +47,9 @@ namespace Shooter.Editor
         public const string StaggerFileName = "stagger.json";
         public const string SuppressionFileName = "suppression.json";
 
+        // サーバーの ServerEmotes.EmotesFileName と同じ名前にする
+        public const string EmotesFileName = "emotes.json";
+
         public const string SupplyDropsFileName = "supply-drops.json";
         public const string RedeployFileName = "redeploy.json";
 
@@ -570,6 +573,7 @@ namespace Shooter.Editor
                 ExportTuningFile(directory, StashFileName, c => c.StashTuning, StashJson.ResourcePath, StashJson.Parse),
                 ExportTuningFile(directory, StaggerFileName, c => c.StaggerTuning, StaggerActionInstaller.TuningResourcePath, StaggerJson.Parse),
                 ExportTuningFile(directory, SuppressionFileName, c => c.SuppressionTuning, KitTuning.SuppressionResourcePath, SuppressionJson.Parse),
+                ExportTuningFile(directory, EmotesFileName, c => c.EmotesTuning, EmoteJson.ResourcePath, EmoteJson.Parse),
             };
         }
 

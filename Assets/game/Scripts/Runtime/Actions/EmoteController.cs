@@ -7,7 +7,7 @@ using UnityEngine.InputSystem;
 namespace Shooter.Runtime
 {
     // 輪を出すのは Player/Emote を押している間だけで、離すと GameSignals.Emotes から下ろす。選ぶ画面は輪が出ている間に Play を呼ぶ。
-    // 再生は自分の体だけで、ネット対戦の相手には送らない。
+    // オフラインの体だけで動く。ネット対戦では NetV2EmotePart がサーバーへ要求し、サーバーが全員へ配る。
     [DisallowMultipleComponent]
     [DefaultExecutionOrder(110)]
     public sealed class EmoteController : MonoBehaviour, IEmoteControl
@@ -16,8 +16,7 @@ namespace Shooter.Runtime
 
         public const string EmoteActionPath = InputActionPaths.Emote;
 
-        // 調整値の JSON に出さないのは、押し戻しや坂での小さなずれで止めないための遊びで、ゲームが動きとして選ぶ値ではないため。
-        public const float MoveToleranceMeters = 0.05f;
+        public const float MoveToleranceMeters = EmoteSpec.MoveToleranceMeters;
 
         private IReadOnlyList<EmoteSpec> _emotes = EmoteSpec.DefaultEmotes;
         private IReadOnlyList<string> _ids = Array.Empty<string>();

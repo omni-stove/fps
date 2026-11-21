@@ -16,5 +16,9 @@ namespace Shooter.Server
         TooSteep,
         Uneven,
         Blocked,
+
+        // 起爆の要求 (DetonateRequestMessage) だけの理由
+        NotDetonatable,
+        NothingToDetonate,
     }
 }

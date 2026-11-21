@@ -25,6 +25,12 @@ namespace Shooter.Server
             return DeployLog.Prefix(Owner(playerId), knownTypeId) + " net refused reason=" + reason;
         }
 
+        // 置いた物の Id はクライアントが送った数なので、種類は置いた物が見つかったときだけ載せる
+        public static string DroneControlRefused(int playerId, string knownTypeId, int deployableId, ServerDroneControlRefusal reason)
+        {
+            return DeployLog.Prefix(Owner(playerId), knownTypeId) + " net drone control refused serial=" + Text(deployableId) + " reason=" + reason;
+        }
+
         public static string Abilities(IReadOnlyList<string> candidates, IReadOnlyList<string> defaults, bool fromRules)
         {
             ArgumentNullException.ThrowIfNull(candidates);

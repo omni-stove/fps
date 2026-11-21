@@ -8,6 +8,7 @@
         "Shooter.NetV2.Client",
         "Shooter.Runtime",
         "Shooter.Services",
+        "Shooter.Vision",
         "Unity.InputSystem"
     ],
     "includePlatforms": [],

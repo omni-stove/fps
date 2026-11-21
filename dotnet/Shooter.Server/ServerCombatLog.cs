@@ -17,6 +17,12 @@ namespace Shooter.Server
             return ServerCombat.LogTag + " reload-cancelled player=" + Text(playerId) + " by=" + by;
         }
 
+        public static string ShieldBlocked(int holderId, int shooterId, string weaponId, int damage)
+        {
+            return ServerCombat.LogTag + " riot-shield blocked id=" + Text(holderId) + " attacker=" + Text(shooterId)
+                + " weapon=" + (string.IsNullOrEmpty(weaponId) ? "none" : weaponId) + " dmg=" + Text(damage);
+        }
+
         private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);
     }
 }

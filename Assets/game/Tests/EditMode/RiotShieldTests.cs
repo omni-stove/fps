@@ -119,8 +119,11 @@ namespace Shooter.Tests.EditMode
             Assert.That(held.WeaponId, Is.EqualTo(ShieldId));
             Assert.That(held.transform.parent, Is.SameAs(_body.transform));
             Assert.That(held.name, Is.EqualTo(HeldRiotShield.PlaceholderName));
-            Assert.That(held.transform.localPosition, Is.EqualTo(new Vector3(0f, 0f, HeldRiotShield.PlaceholderForward)));
-            Assert.That(held.transform.localScale, Is.EqualTo(new Vector3(RiotShieldSpec.DefaultWidth, RiotShieldSpec.DefaultHeight, HeldRiotShield.PlaceholderThickness)));
+            // サーバー (ServerHitboxes) は同じ RiotShieldSpec の値で板を置くので、オフラインの仮の板もその値の所に出る
+            Assert.That(held.transform.localPosition, Is.EqualTo(new Vector3(0f, 0f, RiotShieldSpec.HeldForward)));
+            Assert.That(held.transform.localScale, Is.EqualTo(new Vector3(RiotShieldSpec.DefaultWidth, RiotShieldSpec.DefaultHeight, RiotShieldSpec.HeldThickness)));
+            Assert.That(HeldRiotShield.PlaceholderForward, Is.EqualTo(0.6f));
+            Assert.That(HeldRiotShield.PlaceholderThickness, Is.EqualTo(0.05f));
             Assert.That(held.gameObject.layer, Is.EqualTo(_body.layer), "the plate is on the layer bullets hit the holder on");
             Assert.That(held.Plate.BlockArcDegrees, Is.EqualTo(RiotShieldSpec.DefaultBlockArcDegrees));
             Assert.That(held.IsRaised, Is.True);

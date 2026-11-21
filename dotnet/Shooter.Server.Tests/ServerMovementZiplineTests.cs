@@ -244,6 +244,35 @@ namespace Shooter.Server.Tests
             Assert.That(_log.ToString(), Does.Not.Contain("[Net] zipline "));
         }
 
+        [Test]
+        public void ASlideEndedJustBeforeGrabbingIsLoggedOnceWhileRiding()
+        {
+            // 掴める距離を 3 m に広げ、滑り終えてしゃがんだままの低い手からも線に届くようにする
+            var rules = _ziplineOn.WithActions(_ziplineOn.Actions.WithSlide(Slide.On));
+            Start(rules, OneLine(), new ZiplineTuning(grabRadius: 3f));
+            for (var i = 0; i < 5; i++)
+            {
+                Send(InputButtons.Sprint, new Vector2(0f, 1f));
+            }
+
+            Send(InputButtons.Sprint | InputButtons.Crouch | InputButtons.Slide, new Vector2(0f, 1f));
+            Assert.That(_movement.IsSliding(1), Is.True, "the player should be sliding before the slide ends");
+            for (var i = 0; i < _mostRideTicks && _movement.IsSliding(1); i++)
+            {
+                Send(InputButtons.Sprint | InputButtons.Crouch | InputButtons.Slide, new Vector2(0f, 1f));
+            }
+
+            Assert.That(_movement.IsSliding(1), Is.False, "the slide ends on its own");
+
+            Send(InputButtons.Jump);
+            Assert.That(_movement.IsZiplining(1), Is.True, "the player should grab the line after the slide");
+            SendIdle(10);
+
+            var ends = _log.ToString().Split('\n');
+            var count = Array.FindAll(ends, line => line.Contains("[Net] slide owner=1") && line.Contains(" end reason=")).Length;
+            Assert.That(count, Is.EqualTo(1));
+        }
+
         private static NetMapZiplines OneLine()
         {
             return Line(_lineStart, _lineEnd);

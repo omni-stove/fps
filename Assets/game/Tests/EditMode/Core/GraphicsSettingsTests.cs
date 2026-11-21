@@ -10,6 +10,8 @@ namespace Shooter.Core.Tests
     {
         private static readonly GraphicsSettings _chosen = new GraphicsSettings(new ScreenResolution(1920, 1080), 2, true, 144);
 
+        private static readonly string[] _rootProblems = { "the root must be an object" };
+
         [Test]
         public void TheDefaultKeepsTheDisplayTheProjectLevelAndNoLimit()
         {
@@ -133,7 +135,7 @@ namespace Shooter.Core.Tests
             Assert.That(problems[0], Does.StartWith("not valid JSON"));
 
             Assert.That(GraphicsSettings.FromJson("[]", _chosen, out problems), Is.SameAs(_chosen));
-            Assert.That(problems, Is.EqualTo(new[] { "the root must be an object" }));
+            Assert.That(problems, Is.EqualTo(_rootProblems));
 
             Assert.That(GraphicsSettings.FromJson("{\"version\":2,\"vSync\":false}", _chosen, out problems), Is.SameAs(_chosen));
             Assert.That(problems[0], Does.StartWith("unsupported version"));

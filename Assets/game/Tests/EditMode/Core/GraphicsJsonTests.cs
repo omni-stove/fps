@@ -8,6 +8,7 @@ namespace Shooter.Core.Tests
     {
         private static readonly string[] _expectedItemNames = { "vSync", "frameRateLimit", "qualityLevel", "frameRateChoices", "headlessFrameRate" };
         private static readonly int[] _choices = { 45, 90 };
+        private static readonly int[] _defaultChoices = { 30, 60, 120, 144, 240 };
 
         [Test]
         public void ReadsEveryItem()
@@ -30,7 +31,7 @@ namespace Shooter.Core.Tests
             Assert.That(empty.FrameRateChoices, Is.EqualTo(GraphicsSpec.DefaultFrameRateChoices));
             Assert.That(empty.HeadlessFrameRate, Is.EqualTo(GraphicsSpec.DefaultHeadlessFrameRate));
             Assert.That(GraphicsSpec.Default.HeadlessFrameRate, Is.EqualTo(60));
-            Assert.That(GraphicsSpec.Default.FrameRateChoices, Is.EqualTo(new[] { 30, 60, 120, 144, 240 }));
+            Assert.That(GraphicsSpec.Default.FrameRateChoices, Is.EqualTo(_defaultChoices));
         }
 
         [Test]

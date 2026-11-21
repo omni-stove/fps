@@ -228,6 +228,8 @@ namespace Shooter.Server
 
             public bool Aiming { get; set; }
 
+            public bool Sprinting { get; set; }
+
             public bool Downed { get; set; }
 
             public bool Riding { get; set; }

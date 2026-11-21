@@ -23,6 +23,11 @@ namespace Shooter.Core
 
         public const float MaxBlockArcDegrees = 360f;
 
+        // 持ち主の原点 (体の中心) から盾の板の中心までの前への距離と、板の厚さ (m)。体の半径 (0.5m) より前に出し、体と重ねない。
+        // オフラインの仮の板 (HeldRiotShield) とサーバーの当たり (ServerHitboxes) が同じ所に板を置くよう、ここ 1 か所に持つ。
+        public const float HeldForward = 0.6f;
+        public const float HeldThickness = 0.05f;
+
         public static readonly MeleeSpec DefaultBash = new MeleeSpec(
             DefaultBashDamage,
             DefaultBashReach,

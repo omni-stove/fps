@@ -32,7 +32,8 @@ namespace Shooter.Server
                 || _movement.IsRiding(playerId)
                 || !_context.Bodies.TryGet(playerId, out var body)
                 || !body.HasSpawned
-                || body.IsClimbing)
+                || body.IsClimbing
+                || IsPerformingTakedown(playerId))
             {
                 return MeleeRefusal.Busy;
             }
@@ -45,18 +46,23 @@ namespace Shooter.Server
             var refusal = Check(swinger.PlayerId);
             if (refusal != MeleeRefusal.None)
             {
-                if (_now >= _nextRefusalLogTime)
-                {
-                    _nextRefusalLogTime = _now + _refusalLogInterval;
-                    _log.WriteLine(MeleeLog.Refused(Text(swinger.PlayerId), refusal));
-                }
-
+                LogRefused(swinger.PlayerId, refusal);
                 return;
             }
 
             swinger.Swing.TryStart();
+            swinger.SwingWeaponId = null;
             _log.WriteLine(MeleeLog.Swing(Text(swinger.PlayerId)));
             _combat.InterruptReload(swinger.PlayerId, ReloadInterrupt.Melee);
+        }
+
+        private void LogRefused(int playerId, MeleeRefusal refusal)
+        {
+            if (_now >= _nextRefusalLogTime)
+            {
+                _nextRefusalLogTime = _now + _refusalLogInterval;
+                _log.WriteLine(MeleeLog.Refused(Text(playerId), refusal));
+            }
         }
 
         private bool IsStanding(int playerId)

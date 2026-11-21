@@ -34,6 +34,7 @@ namespace Shooter.Server.Tests
         private MatchRulesModule _rules;
         private ServerCombat _combat;
         private ServerDeployables _deployables;
+        private ServerVehicles _vehicles;
 
         [SetUp]
         public void SetUp()
@@ -539,7 +540,8 @@ namespace Shooter.Server.Tests
             IReadOnlyList<string> loadoutAbilities = null,
             bool otherMap = false,
             bool flyDrones = false,
-            WorldCollider extra = null)
+            WorldCollider extra = null,
+            NetMapVehicles vehicles = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -557,7 +559,7 @@ namespace Shooter.Server.Tests
             }
 
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
-            var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points);
+            var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points, vehicles: vehicles);
             var data = new ServerRulesData(
                 "TeamDeathmatch", TestRules.File(Rules(abilities, respawnAnchors), abilities: loadoutAbilities), PingSpec.Default, "memory", null);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(false, TextWriter.Null, _log), () => _time);
@@ -579,11 +581,17 @@ namespace Shooter.Server.Tests
                 data);
             var movement = new ServerMovement(ServerModules.MotorSettingsFrom(data));
             _rules = new MatchRulesModule();
-            _combat = new ServerCombat(_rules, movement);
+            _vehicles = vehicles != null ? new ServerVehicles(_rules, movement) : null;
+            _combat = new ServerCombat(_rules, movement, _vehicles);
             _deployables = new ServerDeployables(_rules, _combat, catalog, "memory", flyDrones);
             _host = new ServerHost();
             _host.Register(movement);
             _host.Register(_rules);
+            if (_vehicles != null)
+            {
+                _host.Register(_vehicles);
+            }
+
             _host.Register(_combat);
             _host.Register(_deployables);
             _host.Start(_context);

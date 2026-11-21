@@ -140,7 +140,8 @@ namespace Shooter.Server
         // サーバーの当たりは箱で重なりを調べられないので、狭い辺を直径にしたカプセルを長い辺に沿って並べて箱を埋める
         private bool IsWorldInBox(Vector3 point, Vector3 right, Vector3 forward, float halfWidth, float halfDepth, float bottom, float top)
         {
-            var radius = Math.Min(halfWidth, halfDepth);
+            // 地雷のような薄い物では、箱の高さより太いカプセルが箱の下へはみ出して足元の床に触れ、いつも置けなくなるので、高さの半分までに抑える
+            var radius = Math.Min(Math.Min(halfWidth, halfDepth), (top - bottom) / 2f);
             var longHalf = Math.Max(halfWidth, halfDepth);
             var along = halfWidth >= halfDepth ? right : forward;
             var count = Math.Max(1, (int)MathF.Ceiling(longHalf / radius));

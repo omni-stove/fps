@@ -10,6 +10,10 @@ namespace Shooter.Server.Tests
     {
         private static readonly DateTime _time = new DateTime(2026, 11, 21, 9, 0, 0, DateTimeKind.Utc);
 
+        private static readonly string[] _allKeys = { "slide", "mantle", "zipline", "stamina", "stagger", "suppression", "emote", "stealth" };
+
+        private static readonly string[] _slideAndEmote = { "slide", "emote" };
+
         private static IEnumerable<TestCaseData> OneActionOn()
         {
             yield return new TestCaseData(ActionRules.Default.WithSlide(Slide.On), "slide").SetName("SlideOn");
@@ -71,7 +75,7 @@ namespace Shooter.Server.Tests
 
             var enabled = ServerUnsupportedActions.EnabledIn(GameRules.Default.WithActions(actions));
 
-            Assert.That(enabled, Is.EqualTo(new[] { "slide", "mantle", "zipline", "stamina", "stagger", "suppression", "emote", "stealth" }));
+            Assert.That(enabled, Is.EqualTo(_allKeys));
         }
 
         [Test]
@@ -83,7 +87,7 @@ namespace Shooter.Server.Tests
         [Test]
         public void TheWarningNamesTheRulesAndEveryAction()
         {
-            var line = ServerUnsupportedActionsLog.Warning("TeamDeathmatch", new[] { "slide", "emote" });
+            var line = ServerUnsupportedActionsLog.Warning("TeamDeathmatch", _slideAndEmote);
 
             Assert.That(line, Is.EqualTo(
                 "[Rules] warning: actions slide, emote are on in rules TeamDeathmatch but the server does not support them; they are ignored"));

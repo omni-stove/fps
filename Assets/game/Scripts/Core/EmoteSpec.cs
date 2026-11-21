@@ -11,6 +11,10 @@ namespace Shooter.Core
 
         public const bool DefaultStopsOnMove = true;
 
+        // 調整値の JSON に出さないのは、押し戻しや坂での小さなずれで止めないための遊びで、ゲームが動きとして選ぶ値ではないため。
+        // オフラインの EmoteController と専用サーバーが同じ幅で「動いた」を決めるよう、ここに 1 つだけ置く。
+        public const float MoveToleranceMeters = 0.05f;
+
         // エモートはゲームがアニメーションを用意して初めて意味を持つので、キットは空の一覧を既定にする。
         public static IReadOnlyList<EmoteSpec> DefaultEmotes { get; } = Array.Empty<EmoteSpec>();
 

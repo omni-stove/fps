@@ -34,6 +34,7 @@ namespace Shooter.Protocol
                 new DroneControlMessage(),
                 new PickupRequestMessage(),
                 new DetonateRequestMessage(),
+                new EmoteRequestMessage(),
             };
         }
 
@@ -78,6 +79,7 @@ namespace Shooter.Protocol
                 new BuyAnswerMessage(),
                 new PlayerNamesMessage(),
                 new LockOnWarningMessage(),
+                new EmoteStateMessage(),
             };
         }
 

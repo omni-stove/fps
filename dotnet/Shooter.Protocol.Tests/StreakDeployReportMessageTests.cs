@@ -11,11 +11,13 @@ namespace Shooter.Protocol.Tests
         private readonly MessageTable _client = MatchMessages.CreateClientTable();
 
         // 31 で置いた物の種類にビーコン (DeployableKind.Beacon) が増え、32 で名簿 (PlayerNamesMessage) が増え、
-        // 33 で入力に縦の向き (InputFrame.Pitch) が増えた。前の版のクライアントはそれを読めないので、つなぐときに断る
+        // 33 で入力に縦の向き (InputFrame.Pitch) が増え、
+        // 34 でエモートの要求と状態 (EmoteRequestMessage・EmoteStateMessage) が増えた。
+        // 前の版のクライアントはそれを読めないので、つなぐときに断る
         [Test]
-        public void TheProtocolVersionIs33()
+        public void TheProtocolVersionIs34()
         {
-            Assert.That(MatchProtocol.Version, Is.EqualTo(33));
+            Assert.That(MatchProtocol.Version, Is.EqualTo(34));
         }
 
         [Test]

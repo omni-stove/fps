@@ -85,6 +85,11 @@ namespace Shooter.Server
             Route.Clear();
             _tracking = false;
             WasClimbing = false;
+
+            // 前の命で探した物陰と投げた間隔は、出現した所では意味が無い
+            Brain.UseCover(null);
+            _nextCoverSearch = Clock;
+            _nextGrenadeAt = Clock;
         }
     }
 }

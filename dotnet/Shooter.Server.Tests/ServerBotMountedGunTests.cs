@@ -235,6 +235,14 @@ namespace Shooter.Server.Tests
             Assert.That(_bots.TryGetAgent(botId, out var agent), Is.True);
             Assert.That(agent.MannedGun, Is.EqualTo(-1));
             Assert.That(agent.GunnerBehavior.RemountRemainingSeconds, Is.GreaterThan(0f));
+
+            // 降りる位置への置き直しは出現し直しではないので、数 tick 進めても待ち時間が消えない
+            for (var i = 0; i < 5; i++)
+            {
+                Tick();
+            }
+
+            Assert.That(agent.GunnerBehavior.RemountRemainingSeconds, Is.GreaterThan(0f));
         }
 
         [Test]

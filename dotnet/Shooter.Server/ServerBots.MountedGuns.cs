@@ -66,6 +66,8 @@ namespace Shooter.Server
                 {
                     _log.WriteLine(ServerBotLog.GunLeft(playerId, name, order.Leave.Value));
                     agent.NoteLeftGun();
+                    // 降りる位置への置き直しを出現し直しとして扱うと、待ち時間と判断の状態が消える
+                    agent.SpawnTick = body.TeleportTick;
                 }
                 else
                 {

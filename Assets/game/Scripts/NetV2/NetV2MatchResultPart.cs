@@ -56,6 +56,14 @@ namespace Shooter.NetV2
                 return;
             }
 
+            // 出撃の結果は Reliable、スナップショットは Unreliable で届く順が決まらないので、結果が届くまで確定させず Ended の間に届いた時点で出す
+            if (snapshot.Match.Objective == MatchObjective.Extraction
+                && snapshot.Players.IndexOf(_client.PlayerId) >= 0
+                && _extraction.Outcome == RaidOutcome.Raiding)
+            {
+                return;
+            }
+
             _raised = true;
             var result = ResultOf(snapshot, _client.PlayerId, _extraction.Outcome);
             if (result.HasValue)

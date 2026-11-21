@@ -100,6 +100,20 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void ChangingInputEveryFrameSendsAtMostOncePerTick()
+        {
+            AppearAndPilot();
+
+            Assert.That(_drone.Steer(Vector2.Zero, 0f, 10f, 0.016f), Is.True);
+            Assert.That(_drone.Steer(Vector2.Zero, 0f, 11f, 0.004f), Is.False, "less than a tick since the last send");
+            Assert.That(_drone.Steer(Vector2.Zero, 0f, 12f, 0.004f), Is.False, "still less than a tick");
+            Assert.That(_drone.Steer(Vector2.Zero, 0f, 13f, 0.01f), Is.True, "a tick has passed, so the latest value is sent");
+
+            Assert.That(_sent, Has.Count.EqualTo(2));
+            Assert.That(_sent[1].Yaw, Is.EqualTo(13f));
+        }
+
+        [Test]
         public void AChangedInputIsSentAtOnceAndAStillDroneSendsNothing()
         {
             AppearAndPilot();

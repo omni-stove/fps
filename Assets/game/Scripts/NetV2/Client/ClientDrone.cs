@@ -21,6 +21,7 @@ namespace Shooter.NetV2
         private readonly DroneControlMessage _control = new DroneControlMessage();
         private readonly HashSet<int> _owned = new HashSet<int>();
         private readonly HashSet<int> _listed = new HashSet<int>();
+        private readonly float _tickSeconds;
         private int _sequence;
         private float _sinceSent;
         private bool _sentMoving;
@@ -30,8 +31,14 @@ namespace Shooter.NetV2
         private float _sentYaw;
         private string _ownerText = "-";
 
-        public ClientDrone(Action<IMessage, TransportChannel> send, Action<string> log = null)
+        public ClientDrone(Action<IMessage, TransportChannel> send, Action<string> log = null, int tickRate = TickClock.DefaultTickRate)
         {
+            if (tickRate <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tickRate), tickRate, "tickRate must be positive");
+            }
+
+            _tickSeconds = 1f / tickRate;
             _send = send ?? throw new ArgumentNullException(nameof(send));
             _log = log;
         }
@@ -191,6 +198,12 @@ namespace Shooter.NetV2
             }
 
             if (!changed && (!moving || _sinceSent < ResendSeconds))
+            {
+                return false;
+            }
+
+            // サーバーは tick ごとに最後の入力しか使わないので、変わっていても 1 tick 経つまでは送らず、次に送るときに最後の値をまとめる
+            if (changed && _sinceSent < _tickSeconds)
             {
                 return false;
             }

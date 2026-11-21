@@ -109,7 +109,13 @@ namespace Shooter.Tests.EditMode
 
             var recorder = ProgressionBootstrap.Install(new ProgressionRecorder(storage, _spec, new OfflineParticipants()));
 
-            Assert.That(recorder.Profile, Is.EqualTo(new PlayerProfile(600, 3, 1, 2, 1)));
+            // 入れるときに実績を照らし直して読んだ記録に届いたものを足すので、実績の欄は比べず記録の値だけを見る
+            var profile = recorder.Profile;
+            Assert.That(profile.Xp, Is.EqualTo(600));
+            Assert.That(profile.Kills, Is.EqualTo(3));
+            Assert.That(profile.Deaths, Is.EqualTo(1));
+            Assert.That(profile.Matches, Is.EqualTo(2));
+            Assert.That(profile.Wins, Is.EqualTo(1));
             Assert.That(recorder.Level, Is.EqualTo(2));
             Assert.That(Unlocks.IsUnlocked(ScopeId), Is.True);
         }
@@ -201,7 +207,13 @@ namespace Shooter.Tests.EditMode
 
             ProgressionBootstrap.ReloadPulledProfile(ProfileStore.Slot);
 
-            Assert.That(recorder.Profile, Is.EqualTo(new PlayerProfile(600, 3, 1, 2, 1)));
+            // 入れるときに実績を照らし直して読んだ記録に届いたものを足すので、実績の欄は比べず記録の値だけを見る
+            var profile = recorder.Profile;
+            Assert.That(profile.Xp, Is.EqualTo(600));
+            Assert.That(profile.Kills, Is.EqualTo(3));
+            Assert.That(profile.Deaths, Is.EqualTo(1));
+            Assert.That(profile.Matches, Is.EqualTo(2));
+            Assert.That(profile.Wins, Is.EqualTo(1));
             Assert.That(recorder.Level, Is.EqualTo(2));
             Assert.That(Unlocks.IsUnlocked(ScopeId), Is.True);
             Assert.That(changes, Is.EqualTo(1));

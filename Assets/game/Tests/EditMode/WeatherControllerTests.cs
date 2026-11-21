@@ -191,8 +191,28 @@ namespace Shooter.Tests.EditMode
         {
             _controller.Sun = null;
             RenderSettings.sun = null;
+            // RenderSettings.sun falls back to the brightest active directional light, so the open scene's lights are turned off here.
+            var sceneLights = new List<GameObject>();
+            foreach (var light in Object.FindObjectsByType<Light>(FindObjectsInactive.Exclude))
+            {
+                if (light.type == LightType.Directional)
+                {
+                    sceneLights.Add(light.gameObject);
+                    light.gameObject.SetActive(false);
+                }
+            }
 
-            _controller.Select(WeatherSpec.OvercastDuskId, null);
+            try
+            {
+                _controller.Select(WeatherSpec.OvercastDuskId, null);
+            }
+            finally
+            {
+                foreach (var sceneLight in sceneLights)
+                {
+                    sceneLight.SetActive(true);
+                }
+            }
 
             var built = _controller.AppliedLight;
             Assert.That(built, Is.Not.Null);

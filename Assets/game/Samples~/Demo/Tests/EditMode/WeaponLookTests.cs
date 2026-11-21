@@ -90,6 +90,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheRiotShieldGetsAPanelWithAViewportInsteadOfAGun()
+        {
+            var shield = Looks()["RiotShield"];
+
+            Assert.That(shield.Has(WeaponLook.ShieldPanelName), Is.True);
+            Assert.That(shield.Has(WeaponLook.ViewportName), Is.True);
+            Assert.That(shield.Has(WeaponLook.GripName), Is.True);
+            Assert.That(shield.Has(WeaponLook.BarrelName), Is.False);
+            Assert.That(shield.Has(WeaponLook.ReceiverName), Is.False);
+            Assert.That(shield.Bounds.size.x, Is.EqualTo(0.3f).Within(1e-5f));
+            Assert.That(shield.Bounds.size.y, Is.EqualTo(0.6f).Within(1e-5f));
+            Assert.Throws<System.ArgumentNullException>(() => WeaponLook.ShieldFor(null));
+        }
+
+        [Test]
         public void AMeleeLookGrowsWithTheReachAndStaysInHand()
         {
             var shortReach = WeaponLook.MeleeFor(new MeleeWeaponSpec(new MeleeSpec(30, 1f, 70f, 0.35f, 0.05f, 0.12f, 0f)));

@@ -72,6 +72,7 @@ namespace Shooter.Tests.EditMode
             AddBootstrap();
 
             var root = new MountedGunRangeFixture().Place(_scene, new[] { _rifle, _heatGun });
+            Physics.SyncTransforms();
 
             Assert.That(root.name, Is.EqualTo(MountedGunRangeFixture.RootName));
             Assert.That(root.scene, Is.EqualTo(_scene));

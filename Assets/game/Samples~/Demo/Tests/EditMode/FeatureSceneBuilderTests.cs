@@ -125,7 +125,7 @@ namespace Shooter.Tests.EditMode
                 Assert.That(Flat(footprint).Intersects(spawn), Is.False, name + " is on the spawn");
                 foreach (var dummy in dummies)
                 {
-                    Assert.That(Flat(footprint).Intersects(new Bounds(dummy, Vector3.one)), Is.False, $"{name} is on the dummy at {dummy}");
+                    Assert.That(OverlapsOnTheFloor(footprint, new Bounds(dummy, Vector3.one)), Is.False, $"{name} is on the dummy at {dummy}");
                 }
 
                 for (var j = i + 1; j < stations.Count; j++)
@@ -247,9 +247,21 @@ namespace Shooter.Tests.EditMode
             Assert.That(bootstrap.CreatesFloor, Is.False);
             Assert.That(bootstrap.GetComponent<MatchRunner>(), Is.Not.Null);
             Assert.That(_scene.rootCount, Is.EqualTo(3 + feature.Stations.Count));
-            foreach (var station in feature.Stations)
+
+            // 置く物には自分の場所に根を置くものがあるので、同じ物をずらさずにもう一度置いて比べ、ずらした分だけ動いたかを見る。
+            var placed = feature.Stations.Select(s => Find(s.Fixture.Name)).ToArray();
+            for (var i = 0; i < feature.Stations.Count; i++)
             {
-                Assert.That(Vector3.Distance(Find(station.Fixture.Name).transform.position, station.Offset), Is.LessThan(Epsilon), station.Fixture.Name);
+                var station = feature.Stations[i];
+                var own = station.Fixture.Place(_scene, feature.Rules);
+                try
+                {
+                    Assert.That(Vector3.Distance(placed[i].transform.position, own.transform.position + station.Offset), Is.LessThan(Epsilon), station.Fixture.Name);
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(own);
+                }
             }
         }
 
@@ -397,6 +409,12 @@ namespace Shooter.Tests.EditMode
             Assert.That(names, Has.No.Member("FeatureCoversFixture"));
             Assert.That(names, Has.No.Member("FeatureVaultWallFixture"));
             Assert.That(names, Has.No.Member("TraversalFeatureFixture"));
+        }
+
+        // Bounds.Intersects は辺が触れているだけでも重なりと数えるが、ダミーの 1 m 四方に辺が触れているだけの置き場はダミーをふさがないので、内側に入り込んだときだけ重なりとする。
+        private static bool OverlapsOnTheFloor(Bounds a, Bounds b)
+        {
+            return a.min.x < b.max.x && b.min.x < a.max.x && a.min.z < b.max.z && b.min.z < a.max.z;
         }
 
         private static Bounds Flat(Bounds bounds)

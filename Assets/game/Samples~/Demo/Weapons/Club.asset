@@ -1,0 +1,222 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17d9a3e5c2b84f60a8e4b1c7d3f95a02, type: 3}
+  m_Name: Club
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.WeaponDefinition
+  _id: 79d598f9-4151-4934-b953-2d4cf52118db
+  _nameKey: weapon.club
+  _description: 
+  _category: 8
+  _fireMode: 0
+  _magazineSize: 30
+  _reserveAmmo: 90
+  _fireInterval: 0.1
+  _reloadSeconds: 2
+  _damage: 25
+  _range: 100
+  _falloffStart: 3.4028235e+38
+  _falloffEnd: 3.4028235e+38
+  _falloffMinMultiplier: 1
+  _explosionRadius: 0
+  _adsFieldOfView: 50
+  _blindFireSpreadDegrees: 0
+  _activeReloadWindowStart: 0.5
+  _activeReloadWindowLength: 0.15
+  _activeReloadFailSeconds: 0.5
+  _recoilPitchDegrees: 0
+  _recoilYawDegrees: 0
+  _recoilRecoveryPerSecond: 0
+  _recoilRecoveryDelaySeconds: 0.15
+  _hipSpreadDegrees: 0
+  _adsSpreadDegrees: 0
+  _moveSpreadDegrees: 0
+  _hasAdsMoveSpreadDegrees: 0
+  _adsMoveSpreadDegrees: 0
+  _shotNoiseRadius: 50
+  _weight: 2.5
+  _moveSpeedMultiplier: 0.95
+  _hasDrawSeconds: 0
+  _drawSeconds: 0
+  _holsterSeconds: 0
+  _burst:
+    _enabled: 0
+    _roundsPerBurst: 3
+    _roundIntervalSeconds: 0.08
+  _charge:
+    _enabled: 0
+    _chargeSeconds: 1
+    _minChargeFraction: 0.25
+    _fullChargeDamageMultiplier: 2
+    _firesWhenFull: 0
+    _firesBelowMin: 0
+    _fullChargeSpeedMultiplier: 1
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.8
+      _fullPitch: 1.4
+      _startVolume: 1
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _spinUp:
+    _enabled: 0
+    _spinUpSeconds: 1
+    _startIntervalMultiplier: 3
+    _spinDownSeconds: 0.5
+    _sound:
+      _loop: {fileID: 0}
+      _startPitch: 0.5
+      _fullPitch: 1
+      _startVolume: 0.3
+      _fullVolume: 1
+      _readySound: {fileID: 0}
+  _cycle:
+    _enabled: 0
+    _cycleSeconds: 1
+    _leavesAds: 1
+    _sound: {fileID: 0}
+  _ammoKind: 0
+  _reloadStyle: 0
+  _reloadSecondsPerRound: 0
+  _heat:
+    _heatPerShot: 0.1
+    _coolPerSecond: 0.5
+    _coolDelaySeconds: 0.25
+    _overheatSeconds: 1.5
+  _delivery: 0
+  _pelletCount: 1
+  _pelletSpreadDegrees: 0
+  _roundRadius: 0
+  _penetration:
+    _enabled: 0
+    _maxPenetrations: 1
+    _damageMultiplierPerPenetration: 0.7
+    _maxThickness: 0.5
+    _materials: []
+  _ricochet:
+    _enabled: 0
+    _maxBounces: 1
+    _maxGrazingAngleDegrees: 30
+    _damageMultiplierPerBounce: 0.6
+  _projectile:
+    _speed: 60
+    _gravityMultiplier: 1
+    _lifetimeSeconds: 5
+    _onWorldHit: 0
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+    _stuckSeconds: 10
+  _homing:
+    _enabled: 0
+    _lockOnSeconds: 1
+    _lockOnConeDegrees: 15
+    _turnDegreesPerSecond: 120
+    _lockingSound: {fileID: 0}
+    _lockedSound: {fileID: 0}
+  _beam:
+    _tickSeconds: 0.1
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _spray:
+    _tickSeconds: 0.1
+    _coneDegrees: 10
+    _visualId: 
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _explosion:
+    _enabled: 0
+    _maxDamage: 100
+    _radius: 5
+    _fullDamageRadius: 1
+    _structureDamageAtCenter: 0
+    _detonation: 0
+    _visual: {fileID: 0}
+    _sound: {fileID: 0}
+  _statusEffect:
+    _enabled: 0
+    _kindId: burn
+    _durationSeconds: 3
+    _tickSeconds: 0.5
+    _damagePerTick: 5
+    _visualId: 
+  _areaEffect:
+    _enabled: 0
+    _radius: 4
+    _durationSeconds: 6
+    _tickSeconds: 1
+    _damagePerTick: 5
+    _statusEffect:
+      _enabled: 0
+      _kindId: burn
+      _durationSeconds: 3
+      _tickSeconds: 0.5
+      _damagePerTick: 5
+      _visualId: 
+    _visualId: 
+  _extraZoomLevels: []
+  _breathHold:
+    _enabled: 0
+    _maxHoldSeconds: 4
+    _recoverSeconds: 2
+    _swayMultiplier: 0.2
+  _swayDegrees: 0
+  _sight:
+    _enabled: 0
+    _reticleId: 
+    _scopeOverlay: 0
+    _eyeViewInThirdPerson: 0
+    _aimedInProgress: 0.9
+    _visionMode: 0
+  _ammoTypes: []
+  _shield:
+    _enabled: 0
+    _blockArcDegrees: 120
+    _width: 0.6
+    _height: 1.2
+    _moveSpeedMultiplier: 0.8
+    _bashDamage: 40
+    _bashReach: 1.6
+    _bashArcDegrees: 90
+    _bashSwingSeconds: 0.6
+    _bashCooldownSeconds: 0.5
+    _bashImpactSeconds: 0.25
+    _bashLungeDistance: 0.5
+    _prefab: {fileID: 0}
+  _melee:
+    _enabled: 1
+    _damage: 55
+    _reach: 2.3
+    _arcDegrees: 80
+    _swingSeconds: 0.7
+    _cooldownSeconds: 0.2
+    _impactSeconds: 0.32
+    _lungeDistance: 0.5
+    _canCharge: 1
+    _heavyDamage: 130
+    _heavyReach: 2.5
+    _heavyArcDegrees: 90
+    _heavySwingSeconds: 0.95
+    _heavyCooldownSeconds: 0.35
+    _heavyImpactSeconds: 0.42
+    _heavyLungeDistance: 1.2
+    _chargeDelaySeconds: 0.2
+    _chargeSeconds: 1.1
+    _canThrow: 1
+    _throwDamage: 60
+    _throwSpeed: 13
+    _throwUpwardDegrees: 8
+    _throwSpinDegreesPerSecond: 540
+    _throwRadius: 0.16
+    _throwMaxFlightSeconds: 8
+    _thrownCollectMode: 0
+    _thrownPrefab: {fileID: 0}

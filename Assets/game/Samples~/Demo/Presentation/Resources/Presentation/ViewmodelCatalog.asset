@@ -109,12 +109,60 @@ MonoBehaviour:
       _meleeSweepDegrees: 40
       _meleeRollDegrees: 30
       _meleeWindupFraction: 0.6
+  - _weaponId: 79d598f9-4151-4934-b953-2d4cf52118db
+    _prefab: {fileID: 5155460975293396964, guid: 339e44313142e48838f5bcaf54f70db4, type: 3}
+    _offset: {x: 0.18, y: -0.2, z: 0.2}
+    _adsOffset: {x: 0, y: 0, z: 0.2}
+    _sway:
+      _bobHorizontalMeters: 0.018
+      _bobVerticalMeters: 0.008
+      _bobCyclesPerMeter: 0.55
+      _bobReferenceSpeed: 5
+      _bobSharpness: 8
+      _lookLagSeconds: 0.02
+      _maxLookLagDegrees: 5
+      _lookLagSharpness: 12
+      _kickBackMeters: 0.03
+      _kickPitchDegrees: 2
+      _kickReturnPerSecond: 12
+      _maxKicks: 3
+      _adsSwayScale: 0.15
+      _adsKickScale: 0.4
+      _meleeWindupBackMeters: 0.06
+      _meleeThrustMeters: 0.2
+      _meleeSweepDegrees: 40
+      _meleeRollDegrees: 30
+      _meleeWindupFraction: 0.6
   - _weaponId: 7639c28b-90a0-40e4-9def-64cbfaa472b1
     _prefab: {fileID: 2365733326798765666, guid: a5c18cdf127a54ec9bf60482c871fa3e, type: 3}
     _offset: {x: 0.14, y: -0.14, z: 0.2}
     _adsOffset: {x: 0, y: 0, z: 0.2}
     _sway:
       _bobHorizontalMeters: 0.012
+      _bobVerticalMeters: 0.008
+      _bobCyclesPerMeter: 0.55
+      _bobReferenceSpeed: 5
+      _bobSharpness: 8
+      _lookLagSeconds: 0.02
+      _maxLookLagDegrees: 5
+      _lookLagSharpness: 12
+      _kickBackMeters: 0.03
+      _kickPitchDegrees: 2
+      _kickReturnPerSecond: 12
+      _maxKicks: 3
+      _adsSwayScale: 0.15
+      _adsKickScale: 0.4
+      _meleeWindupBackMeters: 0.06
+      _meleeThrustMeters: 0.2
+      _meleeSweepDegrees: 40
+      _meleeRollDegrees: 30
+      _meleeWindupFraction: 0.6
+  - _weaponId: 2b92ec24-9e3b-4b5a-bf0a-ebaf3b48b544
+    _prefab: {fileID: 42387251653535185, guid: fe0dc34b511d3476c90b51493da2f486, type: 3}
+    _offset: {x: 0.18, y: -0.2, z: 0.2}
+    _adsOffset: {x: 0, y: 0, z: 0.2}
+    _sway:
+      _bobHorizontalMeters: 0.018
       _bobVerticalMeters: 0.008
       _bobCyclesPerMeter: 0.55
       _bobReferenceSpeed: 5
@@ -349,6 +397,30 @@ MonoBehaviour:
       _meleeSweepDegrees: 40
       _meleeRollDegrees: 30
       _meleeWindupFraction: 0.6
+  - _weaponId: e1920316-c182-4151-9273-26f94c3adaf9
+    _prefab: {fileID: 1023164753671423292, guid: d26762a6a0e264c29881858fbbd27089, type: 3}
+    _offset: {x: 0.18, y: -0.2, z: 0.2}
+    _adsOffset: {x: 0, y: 0, z: 0.2}
+    _sway:
+      _bobHorizontalMeters: 0.018
+      _bobVerticalMeters: 0.008
+      _bobCyclesPerMeter: 0.55
+      _bobReferenceSpeed: 5
+      _bobSharpness: 8
+      _lookLagSeconds: 0.02
+      _maxLookLagDegrees: 5
+      _lookLagSharpness: 12
+      _kickBackMeters: 0.03
+      _kickPitchDegrees: 2
+      _kickReturnPerSecond: 12
+      _maxKicks: 3
+      _adsSwayScale: 0.15
+      _adsKickScale: 0.4
+      _meleeWindupBackMeters: 0.06
+      _meleeThrustMeters: 0.2
+      _meleeSweepDegrees: 40
+      _meleeRollDegrees: 30
+      _meleeWindupFraction: 0.6
   - _weaponId: 4d8e2a6f-1b3c-4e5d-9f7a-8c0b2d4e6f13
     _prefab: {fileID: 6095850649926613147, guid: 786836d47f86341d0a4d82de4ad92f77, type: 3}
     _offset: {x: 0.14, y: -0.14, z: 0.2}
@@ -413,6 +485,30 @@ MonoBehaviour:
       _kickBackMeters: 0.03
       _kickPitchDegrees: 2
       _kickReturnPerSecond: 12
+      _maxKicks: 3
+      _adsSwayScale: 0.15
+      _adsKickScale: 0.4
+      _meleeWindupBackMeters: 0.06
+      _meleeThrustMeters: 0.2
+      _meleeSweepDegrees: 40
+      _meleeRollDegrees: 30
+      _meleeWindupFraction: 0.6
+  - _weaponId: 3e7b9c41-5a2d-4f86-b1c3-9d4e7a2f6b18
+    _prefab: {fileID: 2907821262940282357, guid: ff18293ec9a6241adbe4623d1a16b1e4, type: 3}
+    _offset: {x: 0.12, y: -0.12, z: 0.25}
+    _adsOffset: {x: 0, y: 0, z: 0.32}
+    _sway:
+      _bobHorizontalMeters: 0.012
+      _bobVerticalMeters: 0.008
+      _bobCyclesPerMeter: 0.55
+      _bobReferenceSpeed: 5
+      _bobSharpness: 8
+      _lookLagSeconds: 0.02
+      _maxLookLagDegrees: 5
+      _lookLagSharpness: 12
+      _kickBackMeters: 0.02
+      _kickPitchDegrees: 4
+      _kickReturnPerSecond: 14
       _maxKicks: 3
       _adsSwayScale: 0.15
       _adsKickScale: 0.4

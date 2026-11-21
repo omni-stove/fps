@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dcb1b3194e7c93dc0128f6271114e29e, type: 3}
+  m_Name: NullAbility
+  m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.NullAbilityDefinition
+  _id: null-ability
+  _maxCharges: 2
+  _rechargeSeconds: 6
+  _cooldownSeconds: 1.5
+  _windupSeconds: 0.25

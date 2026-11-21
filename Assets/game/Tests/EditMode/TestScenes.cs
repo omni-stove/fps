@@ -1,4 +1,3 @@
-using System.IO;
 using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 
@@ -26,14 +25,9 @@ namespace Shooter.Tests.EditMode
             return EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
         }
 
+        // Temp は AssetDatabase に取り込まれず OpenScene で開き直せないので、毎回作って保存し直す。
         private static void OpenBaseScene()
         {
-            if (File.Exists(BaseScenePath))
-            {
-                EditorSceneManager.OpenScene(BaseScenePath, OpenSceneMode.Single);
-                return;
-            }
-
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             EditorSceneManager.SaveScene(scene, BaseScenePath);
         }

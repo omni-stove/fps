@@ -115,6 +115,7 @@ namespace Shooter.Runtime
         {
             _anchors.Clear();
             element.Clear();
+            element.style.display = DisplayStyle.None;
             Apply();
         }
 

@@ -998,7 +998,7 @@ namespace Shooter.Tests.EditMode
                 Assert.That(GameRulesDebugDraft.Read(rules, field), Is.EqualTo(expected), field.ToString());
             }
 
-            Assert.That(GameRulesAssetBuilder.PlaygroundToggles, Has.Count.EqualTo(21));
+            Assert.That(GameRulesAssetBuilder.PlaygroundToggles.Count(), Is.EqualTo(21));
             Assert.That(GameRulesAssetBuilder.PlaygroundToggles, Has.No.Member(GameRulesDebugField.AimToFire), "aiming to fire would tie up the other moves");
             Assert.That(GameRulesAssetBuilder.PlaygroundToggles, Has.No.Member(GameRulesDebugField.Downed), "a solo match never downs the player");
             Assert.That(rules.ViewMode, Is.EqualTo(ViewMode.ThirdPerson), "cover is shown in third person");

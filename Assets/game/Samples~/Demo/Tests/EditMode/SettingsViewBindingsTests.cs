@@ -133,18 +133,18 @@ namespace Shooter.Tests.EditMode
             _view.Open(_container);
             _view.SetBinding(ReloadKey, "<Keyboard>/m");
 
-            var result = _view.SetBinding(ReloadKey, "<Keyboard>/e");
+            var result = _view.SetBinding(ReloadKey, "<Keyboard>/g");
 
             Assert.That(result.Conflicts.Count(), Is.EqualTo(1));
-            Assert.That(result.Conflicts[0].ActionName, Is.EqualTo("Interact"));
+            Assert.That(result.Conflicts[0].ActionName, Is.EqualTo("Grenade"));
             Assert.That(_view.PendingConflict, Is.SameAs(result));
             var notice = _container.Q<Label>(SettingsView.RebindNoticeName);
             Assert.That(IsDisplayed(notice.parent), Is.True);
-            Assert.That(notice.text, Does.Contain(InputActionLabels.LabelOf("Interact")));
+            Assert.That(notice.text, Does.Contain(InputActionLabels.LabelOf("Grenade")));
             Assert.That(IsDisplayed(_container.Q<Button>(SettingsView.RebindUndoButtonName)), Is.True);
             Assert.That(IsDisplayed(_container.Q<Button>(SettingsView.RebindKeepButtonName)), Is.True);
             Assert.That(IsDisplayed(_container.Q<Button>(SettingsView.RebindCancelButtonName)), Is.False);
-            Assert.That(_view.Bindings.PathOf(ReloadKey), Is.EqualTo("<Keyboard>/e"), "it takes effect until undone");
+            Assert.That(_view.Bindings.PathOf(ReloadKey), Is.EqualTo("<Keyboard>/g"), "it takes effect until undone");
 
             Assert.That(_view.UndoRebind(), Is.True);
 
@@ -158,7 +158,7 @@ namespace Shooter.Tests.EditMode
         public void UndoingTheFirstChangeGoesBackToTheDefault()
         {
             _view.Open(_container);
-            _view.SetBinding(ReloadKey, "<Keyboard>/e");
+            _view.SetBinding(ReloadKey, "<Keyboard>/g");
 
             _view.UndoRebind();
 
@@ -261,13 +261,13 @@ namespace Shooter.Tests.EditMode
         public void ClosingWithAnUndecidedOverlapKeepsIt()
         {
             _view.Open(_container);
-            _view.SetBinding(ReloadKey, "<Keyboard>/e");
+            _view.SetBinding(ReloadKey, "<Keyboard>/g");
 
             Assert.That(_view.Close(), Is.True);
 
             _restarted = ProjectActionsClone.Create();
             _bindingStore.Load(_restarted);
-            Assert.That(new PlayerBindings(_restarted).PathOf(ReloadKey), Is.EqualTo("<Keyboard>/e"));
+            Assert.That(new PlayerBindings(_restarted).PathOf(ReloadKey), Is.EqualTo("<Keyboard>/g"));
         }
 
         [Test]

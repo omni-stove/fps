@@ -44,6 +44,7 @@ namespace Shooter.Tests.EditMode
         [TearDown]
         public void TearDown()
         {
+            DecoyPerception.DetachAll();
             foreach (var deployable in Object.FindObjectsByType<Deployable>(FindObjectsInactive.Include))
             {
                 Object.DestroyImmediate(deployable.gameObject);
@@ -170,6 +171,20 @@ namespace Shooter.Tests.EditMode
             Place(2);
 
             Assert.That(agent.PerceptionContributors.OfType<DecoyPerception>().Count(), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void AnEnemyInitializedAfterAPlacedDecoyGetsTheLureUntilDetached()
+        {
+            Place();
+
+            var late = CreateEnemy(Side.Bravo);
+            Assert.That(late.PerceptionContributors.OfType<DecoyPerception>().Count(), Is.EqualTo(1));
+
+            DecoyPerception.DetachAll();
+            var afterDetach = CreateEnemy(Side.Bravo);
+            Assert.That(afterDetach.PerceptionContributors.OfType<DecoyPerception>(), Is.Empty);
+            Assert.That(late.PerceptionContributors.OfType<DecoyPerception>().Count(), Is.EqualTo(1));
         }
 
         [Test]

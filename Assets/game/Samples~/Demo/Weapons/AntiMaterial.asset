@@ -196,3 +196,31 @@ MonoBehaviour:
     _bashImpactSeconds: 0.25
     _bashLungeDistance: 0.5
     _prefab: {fileID: 0}
+  _melee:
+    _enabled: 0
+    _damage: 35
+    _reach: 2
+    _arcDegrees: 80
+    _swingSeconds: 0.4
+    _cooldownSeconds: 0.1
+    _impactSeconds: 0.15
+    _lungeDistance: 0.3
+    _canCharge: 0
+    _heavyDamage: 70
+    _heavyReach: 2
+    _heavyArcDegrees: 80
+    _heavySwingSeconds: 0.6
+    _heavyCooldownSeconds: 0.1
+    _heavyImpactSeconds: 0.22500001
+    _heavyLungeDistance: 0.6
+    _chargeDelaySeconds: 0.2
+    _chargeSeconds: 0.8
+    _canThrow: 0
+    _throwDamage: 60
+    _throwSpeed: 18
+    _throwUpwardDegrees: 4
+    _throwSpinDegreesPerSecond: 720
+    _throwRadius: 0.12
+    _throwMaxFlightSeconds: 8
+    _thrownCollectMode: 0
+    _thrownPrefab: {fileID: 0}

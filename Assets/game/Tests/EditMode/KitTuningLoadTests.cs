@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
+using System.Linq;
 using Shooter.Core;
 using Shooter.Runtime;
 using NUnit.Framework;
@@ -68,7 +69,7 @@ namespace Shooter.Tests.EditMode
 
             var fromContent = KitTuning.Leaderboards;
 
-            Assert.That(fromContent.Boards, Has.Count.EqualTo(1));
+            Assert.That(fromContent.Boards.Count(), Is.EqualTo(1));
             Assert.That(fromContent.Find("best").Aggregation, Is.EqualTo(LeaderboardAggregation.Max));
             Assert.That(fromContent.PageSize, Is.EqualTo(10));
             KitTuning.Reload();

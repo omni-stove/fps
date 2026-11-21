@@ -3,6 +3,7 @@
     "rootNamespace": "Shooter.Tests.EditMode",
     "references": [
         "Shooter.Tests.Support",
+        "Shooter.Tests.Components",
         "Shooter.Core",
         "Shooter.Campaign.Core",
         "Shooter.Runtime",

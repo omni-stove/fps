@@ -8,12 +8,13 @@ using Object = UnityEngine.Object;
 
 namespace Shooter.Tests.EditMode
 {
-    // 板は厚さ 0.5・幅 8 で、置いた位置の上面が y = 0。体は高さ 2・半径 0.5・中心 0 なので、立つと本体は y = 1 に来る。
+    // 板は厚さ 0.5・幅 8 で、置いた位置の上面が y = 0。体は高さ 2・半径 0.5・中心 0 なので、立つと本体は y = 1 + skinWidth に来る。
     public sealed class PlayerControllerPlatformTests
     {
         private const float _tick = 0.02f;
         private const int _settleTicks = 10;
         private const float _halfThickness = 0.25f;
+        private const float _skinWidth = 0.08f;
 
         private readonly List<Object> _created = new List<Object>();
         private GameObject _body;
@@ -223,11 +224,14 @@ namespace Shooter.Tests.EditMode
         {
             _body = new GameObject("Rider");
             _created.Add(_body);
-            _body.transform.position = position;
+            // CharacterController は床から skinWidth だけ浮いて立つので、置く高さを始めからそこにする。
+            // 床に接して置くと、最初に横や上へ運ばれた Move で skin の分だけ持ち上がり、運ばれた量に混ざる
+            _body.transform.position = position + (Vector3.up * _skinWidth);
             var controller = _body.AddComponent<CharacterController>();
             controller.height = 2f;
             controller.radius = 0.5f;
             controller.center = Vector3.zero;
+            controller.skinWidth = _skinWidth;
 
             var eye = new GameObject(GameBootstrap.EyeName).transform;
             eye.SetParent(_body.transform, false);

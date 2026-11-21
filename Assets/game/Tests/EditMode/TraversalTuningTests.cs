@@ -153,7 +153,8 @@ namespace Shooter.Tests.EditMode
             UseTraversalJson("BrokenTraversal", "{\"slide\": {\"maxSeconds\": 0}}");
             LogAssert.Expect(
                 LogType.Error,
-                new Regex(@"^\[Tuning\] traversal JSON 'GameContent '.*' \(BrokenTraversal\)' item 'slide\.maxSeconds' is invalid: .*; using the default values instead$", RegexOptions.Singleline));
+                // LogAssert は Regex を文字列にして持ち直すので RegexOptions が落ちる。改行をまたぐのはパターンの (?s) で指定する
+                new Regex(@"(?s)^\[Tuning\] traversal JSON 'GameContent '.*' \(BrokenTraversal\)' item 'slide\.maxSeconds' is invalid: .*; using the default values instead$"));
 
             new SlideActionInstaller().Install(_body, GameRules.Default.WithActions(ActionRules.Default.WithSlide(Slide.On)));
 

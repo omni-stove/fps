@@ -1,5 +1,8 @@
+using System.Linq;
+using System.Xml.Linq;
 using Shooter.Runtime;
 using NUnit.Framework;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -21,9 +24,18 @@ namespace Shooter.Tests.EditMode
             Assert.That(slot, Is.Not.Null, slotName);
             Assert.That(root.Query<VisualElement>(slotName).ToList(), Has.Count.EqualTo(1), slotName);
             Assert.That(slot.ClassListContains(slotName), Is.True, "the slot is styled by the class of the same name in Hud.uss");
-            Assert.That(slot.style.display.value, Is.EqualTo(DisplayStyle.None), "the slot stays hidden until a view shows it");
+            Assert.That(InlineStyle(layout, slotName), Does.Contain("display: none"), "the slot stays hidden until a view shows it");
             Assert.That(slot.pickingMode, Is.EqualTo(PickingMode.Ignore), "a hidden slot never takes clicks from the game");
             Assert.That(slot.childCount, Is.EqualTo(0), "the view that shows the slot fills it");
+        }
+
+        // A cloned element's style only holds values set from code, so the UXML's inline style is read from the file.
+        private static string InlineStyle(VisualTreeAsset layout, string elementName)
+        {
+            var element = XDocument.Load(AssetDatabase.GetAssetPath(layout))
+                .Descendants()
+                .Single(e => (string)e.Attribute("name") == elementName);
+            return (string)element.Attribute("style") ?? string.Empty;
         }
 
         [Test]

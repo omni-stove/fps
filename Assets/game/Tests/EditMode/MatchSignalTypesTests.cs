@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Linq;
 using Shooter.Core;
 using NUnit.Framework;
 
@@ -52,7 +53,7 @@ namespace Shooter.Tests.EditMode
             var status = new MinimapStatus(new Vector3(5f, 0f, 5f), -45f, contacts);
             contacts.Add(new MinimapContact(MinimapContactKind.Ping, Vector3.Zero, 0f, null));
 
-            Assert.That(status.Contacts, Has.Count.EqualTo(1));
+            Assert.That(status.Contacts.Count(), Is.EqualTo(1));
             Assert.That(status.SelfHeadingDegrees, Is.EqualTo(315f).Within(1e-3f));
             Assert.That(status, Is.EqualTo(new MinimapStatus(new Vector3(5f, 0f, 5f), 315f, new[] { contacts[0] })));
             Assert.That(new MinimapStatus(Vector3.Zero, 0f, null).Contacts, Is.Empty);

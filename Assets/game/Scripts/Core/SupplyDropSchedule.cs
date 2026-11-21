@@ -8,6 +8,9 @@ namespace Shooter.Core
     {
         public const int NoStage = -1;
 
+        // 待ちを float で引いていくので、足すと待ちちょうどになる刻み (1 秒を 0.9 + 0.1) でも誤差でわずかに残り、1 フレーム遅れる
+        private const float _snap = 1e-6f;
+
         private float _untilNext;
 
         public SupplyDropSchedule(SupplyDropSpec spec)
@@ -62,7 +65,7 @@ namespace Shooter.Core
             var interval = Spec.StageFor(StageIndex).IntervalSeconds;
             _untilNext -= deltaSeconds;
             var due = 0;
-            while (Remaining > 0 && _untilNext <= 0f)
+            while (Remaining > 0 && _untilNext <= _snap)
             {
                 due++;
                 Remaining--;

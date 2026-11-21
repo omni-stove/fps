@@ -63,6 +63,13 @@ namespace Shooter.Runtime
             }
         }
 
+        // 静的な購読は Play の頭まで残るので、囮を使い終えた場面 (シーンの片付けやテスト) から、後で出る敵に付けないようにする。
+        // もう付いている敵からは外さない。囮が消えれば知覚は元の目標に戻るので、残っても振る舞いは変わらない。
+        public static void DetachAll()
+        {
+            EnemyAgent.Initialized -= OnEnemyInitialized;
+        }
+
         public EnemyPerception Contribute(EnemyPerception perception)
         {
             _perceivedTarget = null;

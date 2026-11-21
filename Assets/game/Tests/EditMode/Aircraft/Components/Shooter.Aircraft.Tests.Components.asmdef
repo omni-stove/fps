@@ -1,0 +1,21 @@
+{
+    "name": "Shooter.Aircraft.Tests.Components",
+    "rootNamespace": "Shooter.Tests.EditMode",
+    "references": [
+        "Shooter.Core",
+        "Shooter.Aircraft.Core",
+        "Shooter.Runtime",
+        "Shooter.Aircraft"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

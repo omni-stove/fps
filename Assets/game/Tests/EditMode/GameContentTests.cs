@@ -241,7 +241,7 @@ namespace Shooter.Tests.EditMode
             var left = GameContentAssets.FillEmpty(
                 Track(ScriptableObject.CreateInstance<GameContent>()), _ => new Object[0], _ => new TextAsset[0]);
             Assert.That(left, Does.Contain("EmoteAnimations"), "the entry lists the emote animations as a slot to fill");
-            Assert.That(left, Does.Contain("EmotesTuning"), "the entry lists the emote JSON as a slot to fill");
+            Assert.That(left, Does.Not.Contain("EmotesTuning"), "a tuning slot with no file falls back to Resources/Tuning");
         }
 
         [Test]

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Shooter.Core;
 using Shooter.Editor;
 using Shooter.Runtime;
@@ -48,17 +49,17 @@ namespace Shooter.Tests.EditMode
         {
             var vehicles = MapVehicleExporter.Collect(new[] { _floor, _car.gameObject });
 
-            Assert.That(vehicles.Vehicles, Has.Count.EqualTo(1));
+            Assert.That(vehicles.Vehicles.Count(), Is.EqualTo(1));
             var car = vehicles.Vehicles[0];
             Assert.That(car.Spec.Id, Is.EqualTo(TestCars.VehicleId));
             Assert.That(car.Spec.MaxHealth, Is.EqualTo(500));
             AssertNear(car.Position, _origin + new Vector3(2f, 0f, 3f));
-            Assert.That(car.Seats, Has.Count.EqualTo(2));
+            Assert.That(car.Seats.Count(), Is.EqualTo(2));
             AssertNear(car.Seats[0].Sit, new Vector3(-0.4f, 0.7f, 0.2f));
             AssertNear(car.Seats[1].Sit, new Vector3(0.4f, 0.7f, 0.2f));
             Assert.That(car.Seats[0].SitYawDegrees, Is.EqualTo(0f).Within(1e-3f));
 
-            Assert.That(car.Hull, Has.Count.EqualTo(1), "the wheel colliders are not part of the hull");
+            Assert.That(car.Hull.Count(), Is.EqualTo(1), "the wheel colliders are not part of the hull");
             AssertNear(car.Hull[0].Center, new Vector3(0f, 0.9f, 0f));
             AssertNear(car.Hull[0].HalfExtents, new Vector3(0.9f, 0.4f, 2f));
 
@@ -83,7 +84,7 @@ namespace Shooter.Tests.EditMode
 
             var read = NetMapVehicles.Parse(NetMapVehicles.Write(vehicles), "memory");
 
-            Assert.That(read.Vehicles, Has.Count.EqualTo(1));
+            Assert.That(read.Vehicles.Count(), Is.EqualTo(1));
             Assert.That(read.Vehicles[0].Spec.Seats[0].Role, Is.EqualTo(VehicleSeatRole.Driver));
             Assert.That(read.Vehicles[0].Spec.Seats[1].Role, Is.EqualTo(VehicleSeatRole.Passenger));
             AssertNear(read.Vehicles[0].Hull[0].HalfExtents, new Vector3(0.9f, 0.4f, 2f));
@@ -94,7 +95,7 @@ namespace Shooter.Tests.EditMode
         {
             var map = MapCollisionExporter.Collect(new[] { _floor, _car.gameObject });
 
-            Assert.That(map.Colliders, Has.Count.EqualTo(1), "only the floor; the server hits the vehicle through its exported hull");
+            Assert.That(map.Colliders.Count(), Is.EqualTo(1), "only the floor; the server hits the vehicle through its exported hull");
         }
 
         [Test]

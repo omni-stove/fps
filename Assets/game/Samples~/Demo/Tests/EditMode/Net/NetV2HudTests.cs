@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Shooter.Core;
 using Shooter.NetV2;
 using Shooter.Protocol;
@@ -659,7 +660,7 @@ namespace Shooter.Net.Tests
 
             Assert.That(GameSignals.Stash.Value.HasValue, Is.True, "the stash panel reads the stash from the server");
             var published = GameSignals.Stash.Value.Value;
-            Assert.That(published.Stacks, Has.Count.EqualTo(1));
+            Assert.That(published.Stacks.Count(), Is.EqualTo(1));
             Assert.That(published.Stacks[0].ItemId, Is.EqualTo(_ammo));
             Assert.That(published.Stacks[0].Count, Is.EqualTo(10));
             Assert.That(published.Capacity, Is.EqualTo(ExtractionRunner.StashTuning.Capacity));

@@ -31,6 +31,19 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void StepsThatAddUpToTheSecondsClearTheSavedNotice()
+        {
+            var notice = new CampaignNotice();
+            notice.ShowSaved(1f);
+
+            notice.Tick(0.9f);
+            Assert.That(notice.Notice, Is.EqualTo(Saved));
+
+            notice.Tick(0.1f);
+            Assert.That(notice.Notice, Is.EqualTo(HudNotice.None), "0.9 + 0.1 reaches 1 second despite the float error");
+        }
+
+        [Test]
         public void SavedShowsForTheGivenSecondsThenClears()
         {
             var notice = new CampaignNotice();

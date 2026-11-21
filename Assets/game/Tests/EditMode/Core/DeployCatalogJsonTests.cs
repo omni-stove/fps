@@ -12,7 +12,7 @@ namespace Shooter.Core.Tests
         private static readonly string[] _expectedTypeItemNames =
         {
             "id", "role", "maxActive", "overflow", "maxHealth", "maxRange", "maxSlopeDegrees", "maxStepHeight", "width", "height", "depth",
-            "maxCharges", "rechargeSeconds", "cooldownSeconds", "turret", "decoy", "beacon", "drone",
+            "maxCharges", "rechargeSeconds", "cooldownSeconds", "turret", "decoy", "beacon", "drone", "mine", "remoteCharge",
         };
 
         private static readonly string[] _expectedTurretItemNames =
@@ -28,6 +28,13 @@ namespace Shooter.Core.Tests
         {
             "speed", "controlRange", "batterySeconds", "spotRadius", "spotIntervalSeconds", "revealSeconds",
         };
+
+        private static readonly string[] _expectedMineItemNames =
+        {
+            "armSeconds", "triggerRadius", "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter",
+        };
+
+        private static readonly string[] _expectedRemoteChargeItemNames = { "maxDamage", "damageRadius", "fullDamageRadius", "structureDamageAtCenter" };
 
         [Test]
         public void ReadsEveryItem()
@@ -254,18 +261,6 @@ namespace Shooter.Core.Tests
             Assert.That(broken.SourceName, Is.EqualTo(_source));
         }
 
-        [TestCase("Mine")]
-        [TestCase("RemoteCharge")]
-        public void TheRolesWithoutRulesYetAreRejectedAtTheRole(string role)
-        {
-            var e = Assert.Throws<TuningJsonException>(
-                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"x\", \"role\": \"" + role + "\"}]}", _source));
-
-            Assert.That(e.SourceName, Is.EqualTo(_source));
-            Assert.That(e.Item, Is.EqualTo("types[0].role"));
-            Assert.That(e.Message, Does.Contain("role " + role + " is not supported yet"));
-        }
-
         [Test]
         public void ItemNamesMatchTheDocumentedNames()
         {
@@ -274,6 +269,113 @@ namespace Shooter.Core.Tests
             Assert.That(DeployCatalogJson.DecoyItemNames, Is.EqualTo(_expectedDecoyItemNames));
             Assert.That(DeployCatalogJson.BeaconItemNames, Is.EqualTo(_expectedBeaconItemNames));
             Assert.That(DeployCatalogJson.DroneItemNames, Is.EqualTo(_expectedDroneItemNames));
+            Assert.That(DeployCatalogJson.MineItemNames, Is.EqualTo(_expectedMineItemNames));
+            Assert.That(DeployCatalogJson.RemoteChargeItemNames, Is.EqualTo(_expectedRemoteChargeItemNames));
+        }
+
+        [Test]
+        public void ReadsAMine()
+        {
+            var catalog = DeployCatalogJson.Parse(
+                "{\"types\": [{\"id\": \"deploy-mine\", \"role\": \"Mine\", \"maxActive\": 4,"
+                + " \"mine\": {\"armSeconds\": 2, \"triggerRadius\": 1.2, \"maxDamage\": 120, \"damageRadius\": 5, \"fullDamageRadius\": 1,"
+                + " \"structureDamageAtCenter\": 80}}]}",
+                _source);
+
+            var mine = catalog.All[0];
+            Assert.That(mine.Role, Is.EqualTo(DeployRole.Mine));
+            Assert.That(mine.Deploy.MaxActive, Is.EqualTo(4));
+            Assert.That(mine.Deploy.MaxHealth, Is.EqualTo(30), "the health is left out and keeps the mine's default");
+            Assert.That(mine.Deploy.Width, Is.EqualTo(0.35f));
+            Assert.That(mine.Mine.ArmSeconds, Is.EqualTo(2f));
+            Assert.That(mine.Mine.TriggerRadius, Is.EqualTo(1.2f));
+            Assert.That(mine.Mine.Explosion.Damage.MaxDamage, Is.EqualTo(120));
+            Assert.That(mine.Mine.Explosion.Damage.Radius, Is.EqualTo(5f));
+            Assert.That(mine.Mine.Explosion.Damage.FullDamageRadius, Is.EqualTo(1f));
+            Assert.That(mine.Mine.Explosion.StructureDamageAtCenter, Is.EqualTo(80));
+            Assert.That(mine.RemoteCharge, Is.Null);
+            Assert.That(mine.Turret, Is.Null);
+        }
+
+        [Test]
+        public void AMineWithoutAMineObjectUsesTheDefaults()
+        {
+            var mine = DeployCatalogJson.Parse("{\"types\": [{\"id\": \"m\", \"role\": \"Mine\"}]}", _source).All[0];
+
+            Assert.That(mine.Deploy.MaxActive, Is.EqualTo(3));
+            Assert.That(mine.Deploy.Overflow, Is.EqualTo(DeployOverflow.ReplaceOldest));
+            Assert.That(mine.Deploy.MaxHealth, Is.EqualTo(30));
+            Assert.That(mine.Deploy.Width, Is.EqualTo(0.35f));
+            Assert.That(mine.Deploy.Height, Is.EqualTo(0.1f));
+            Assert.That(mine.Deploy.Depth, Is.EqualTo(0.35f));
+            Assert.That(mine.Mine, Is.SameAs(MineSpec.Default));
+        }
+
+        [Test]
+        public void ReadsARemoteCharge()
+        {
+            var catalog = DeployCatalogJson.Parse(
+                "{\"types\": [{\"id\": \"deploy-remote-charge\", \"role\": \"RemoteCharge\", \"maxHealth\": 40,"
+                + " \"remoteCharge\": {\"maxDamage\": 200, \"damageRadius\": 6, \"fullDamageRadius\": 2, \"structureDamageAtCenter\": 300}}]}",
+                _source);
+
+            var charge = catalog.All[0];
+            Assert.That(charge.Role, Is.EqualTo(DeployRole.RemoteCharge));
+            Assert.That(charge.Deploy.MaxHealth, Is.EqualTo(40));
+            Assert.That(charge.Deploy.MaxActive, Is.EqualTo(2), "the count is left out and keeps the charge's default");
+            Assert.That(charge.Deploy.Overflow, Is.EqualTo(DeployOverflow.Refuse));
+            Assert.That(charge.Deploy.MaxRange, Is.EqualTo(2.5f));
+            Assert.That(charge.RemoteCharge.Explosion.Damage.MaxDamage, Is.EqualTo(200));
+            Assert.That(charge.RemoteCharge.Explosion.Damage.Radius, Is.EqualTo(6f));
+            Assert.That(charge.RemoteCharge.Explosion.Damage.FullDamageRadius, Is.EqualTo(2f));
+            Assert.That(charge.RemoteCharge.Explosion.StructureDamageAtCenter, Is.EqualTo(300));
+            Assert.That(charge.RemoteCharge.DetonateTapSeconds, Is.EqualTo(RemoteChargeSpec.DefaultDetonateTapSeconds));
+            Assert.That(charge.Mine, Is.Null);
+        }
+
+        [Test]
+        public void ARemoteChargeWithoutARemoteChargeObjectUsesTheDefaults()
+        {
+            var charge = DeployCatalogJson.Parse("{\"types\": [{\"id\": \"c\", \"role\": \"RemoteCharge\"}]}", _source).All[0];
+
+            Assert.That(charge.Deploy.MaxActive, Is.EqualTo(2));
+            Assert.That(charge.Deploy.Overflow, Is.EqualTo(DeployOverflow.Refuse));
+            Assert.That(charge.Deploy.MaxHealth, Is.EqualTo(30));
+            Assert.That(charge.Deploy.MaxRange, Is.EqualTo(2.5f));
+            Assert.That(charge.Deploy.Width, Is.EqualTo(0.25f));
+            Assert.That(charge.Deploy.Height, Is.EqualTo(0.08f));
+            Assert.That(charge.Deploy.Depth, Is.EqualTo(0.18f));
+            Assert.That(charge.RemoteCharge, Is.SameAs(RemoteChargeSpec.Default));
+        }
+
+        [Test]
+        public void ABadMineOrRemoteChargeIsRejectedAtItsItem()
+        {
+            var arm = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"m\", \"role\": \"Mine\", \"mine\": {\"armSeconds\": -1}}]}", _source));
+            var trigger = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"m\", \"role\": \"Mine\", \"mine\": {\"triggerRadius\": 0}}]}", _source));
+            var radius = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"m\", \"role\": \"Mine\", \"mine\": {\"damageRadius\": 0}}]}", _source));
+            var full = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse(
+                    "{\"types\": [{\"id\": \"c\", \"role\": \"RemoteCharge\", \"remoteCharge\": {\"fullDamageRadius\": 9}}]}", _source));
+            var damage = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"c\", \"role\": \"RemoteCharge\", \"remoteCharge\": {\"maxDamage\": -1}}]}", _source));
+            var tap = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse(
+                    "{\"types\": [{\"id\": \"c\", \"role\": \"RemoteCharge\", \"remoteCharge\": {\"detonateTapSeconds\": 0.3}}]}", _source));
+            var misplaced = Assert.Throws<TuningJsonException>(
+                () => DeployCatalogJson.Parse("{\"types\": [{\"id\": \"m\", \"role\": \"Mine\", \"remoteCharge\": {\"maxDamage\": 2}}]}", _source));
+
+            Assert.That(arm.Item, Is.EqualTo("types[0].mine.armSeconds"));
+            Assert.That(arm.InnerException, Is.InstanceOf<ArgumentException>());
+            Assert.That(trigger.Item, Is.EqualTo("types[0].mine.triggerRadius"));
+            Assert.That(radius.Item, Is.EqualTo("types[0].mine.damageRadius"));
+            Assert.That(full.Item, Is.EqualTo("types[0].remoteCharge.fullDamageRadius"));
+            Assert.That(damage.Item, Is.EqualTo("types[0].remoteCharge.maxDamage"));
+            Assert.That(tap.Item, Is.EqualTo("types[0].remoteCharge.detonateTapSeconds"), "the tap length is the client's and is not read");
+            Assert.That(misplaced.Item, Is.EqualTo("types[0].remoteCharge"));
         }
 
         [Test]
@@ -341,6 +443,14 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentException>(() => new DeployType("b", DeployRole.Beacon, DeploySpec.Default));
             Assert.Throws<ArgumentException>(() => new DeployType("d", DeployRole.Decoy, DeploySpec.Default, decoy: DecoySpec.Default, beacon: BeaconSpec.Default));
             Assert.That(new DeployType("b", DeployRole.Beacon, DeploySpec.Default, beacon: BeaconSpec.Default).Beacon, Is.SameAs(BeaconSpec.Default));
+            Assert.Throws<ArgumentException>(() => new DeployType("m", DeployRole.Mine, DeploySpec.Default));
+            Assert.Throws<ArgumentException>(() => new DeployType("c", DeployRole.RemoteCharge, DeploySpec.Default));
+            Assert.Throws<ArgumentException>(() => new DeployType("s", DeployRole.Shield, DeploySpec.Default, mine: MineSpec.Default));
+            Assert.Throws<ArgumentException>(() => new DeployType("m", DeployRole.Mine, DeploySpec.Default, mine: MineSpec.Default, remoteCharge: RemoteChargeSpec.Default));
+            Assert.That(new DeployType("m", DeployRole.Mine, DeploySpec.Default, mine: MineSpec.Default).Mine, Is.SameAs(MineSpec.Default));
+            Assert.That(
+                new DeployType("c", DeployRole.RemoteCharge, DeploySpec.Default, remoteCharge: RemoteChargeSpec.Default).RemoteCharge,
+                Is.SameAs(RemoteChargeSpec.Default));
             Assert.Throws<ArgumentNullException>(() => new DeployType("s", DeployRole.Shield, null));
             Assert.Throws<ArgumentException>(
                 () => new DeployCatalog(new[] { new DeployType("s", DeployRole.Shield, DeploySpec.Default), new DeployType("s", DeployRole.Shield, DeploySpec.Default) }));

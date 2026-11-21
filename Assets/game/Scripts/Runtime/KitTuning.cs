@@ -49,6 +49,7 @@ namespace Shooter.Runtime
 
         public const string PalettesResourcePath = TeamPaletteJson.ResourcePath;
 
+        public const string LoadoutPresetsResourcePath = LoadoutPresetJson.ResourcePath;
         public const string GraphicsResourcePath = GraphicsJson.ResourcePath;
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
@@ -96,6 +97,8 @@ namespace Shooter.Runtime
         public static IReadOnlyList<TeamPalette> Palettes =>
             Load(c => c.PalettesTuning, PalettesResourcePath, TeamPaletteJson.Parse, TeamPalette.All);
 
+        public static LoadoutPresetSpec LoadoutPresets =>
+            Load(c => c.LoadoutPresetsTuning, LoadoutPresetsResourcePath, LoadoutPresetJson.Parse, LoadoutPresetSpec.Default);
         public static GraphicsSpec Graphics =>
             Load(c => c.GraphicsTuning, GraphicsResourcePath, GraphicsJson.Parse, GraphicsSpec.Default);
 

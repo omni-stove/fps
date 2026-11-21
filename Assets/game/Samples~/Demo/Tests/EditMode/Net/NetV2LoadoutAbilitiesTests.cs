@@ -49,7 +49,7 @@ namespace Shooter.Net.Tests
             _deployLogs.Clear();
             _connected = true;
             _pressedSlot = -1;
-            _store = new LoadoutPreferenceStore(StoreKey);
+            _store = new LoadoutPreferenceStore(StoreKey, LoadoutPresetSpec.Default);
             _store.Delete();
 
             var rifle = Weapon("Rifle", new WeaponSpec(

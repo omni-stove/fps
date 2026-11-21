@@ -577,7 +577,10 @@ namespace Shooter.Server
             {
                 _log.WriteLine(ServerBotLog.GunLost(playerId, GunName(agent.MannedGun)));
                 agent.NoteLeftGun();
-                agent.SpawnTick = body.TeleportTick;
+                if (_vehicles.ReleasedByTeleportAt(playerId, body.TeleportTick))
+                {
+                    agent.SpawnTick = body.TeleportTick;
+                }
             }
 
             var respawned = body.TeleportTick != agent.SpawnTick;

@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Shooter.Core;
+using Shooter.Protocol;
 
 namespace Shooter.Server
 {
@@ -75,6 +76,12 @@ namespace Shooter.Server
             var weapon = spec.WeaponsOfSeat(riding.Index)[0];
             gun = new ServerMannedGun(car.Index, weapon, spec.Weapons[weapon], car.Rotation, SeatEye(car));
             return true;
+        }
+
+        // 降ろすときの置き直し (tick) かを見分ける。ルールが出現させた置き直しと取り違えると、Bot の出現し直しが無かったことになる
+        public bool ReleasedByTeleportAt(int playerId, long tick)
+        {
+            return _releaseTeleportTicks.TryGetValue(playerId, out var released) && released == tick;
         }
 
         public bool BotBoard(int playerId, int vehicle)

@@ -311,6 +311,32 @@ namespace Shooter.Server.Tests
             Assert.That(_log.ToString(), Does.Contain("[Bot] gunner player=" + Text(botId) + " lost gun="));
         }
 
+        [Test]
+        public void ABotRespawnedByTheRulesWhileOnTheGunForgetsItsRemountWait()
+        {
+            Start("{\"mountedGun\": {\"remountDelaySeconds\": 30}}", 2);
+            Join(1);
+            Tick();
+            var botId = _bots.BotIds.Single();
+            Teleport(botId, new Vector3(0f, 1.1f, -1.8f));
+            Teleport(1, new Vector3(0f, 1.1f, 15f));
+            for (var elapsed = 0f; elapsed < 5f && !_vehicles.TryGetSeat(botId, out _, out _); elapsed += _tickSeconds)
+            {
+                Tick();
+            }
+
+            Assert.That(_vehicles.TryGetSeat(botId, out _, out _), Is.True, _log.ToString());
+
+            // ラウンドの頭の出現し直しと同じく、乗り物の外から置き直す
+            Teleport(botId, new Vector3(5f, 1.1f, 5f));
+            Tick();
+            Tick();
+
+            Assert.That(_bots.TryGetAgent(botId, out var agent), Is.True);
+            Assert.That(_vehicles.TryGetSeat(botId, out _, out _), Is.False);
+            Assert.That(agent.GunnerBehavior.RemountRemainingSeconds, Is.EqualTo(0f), "a respawn clears the remount wait");
+        }
+
         private static ServerBotAgent Agent(string archetype, string extra = null)
         {
             var json = "{\"archetype\": \"" + archetype + "\"" + (extra != null ? ", " + extra : string.Empty) + "}";

@@ -37,9 +37,8 @@ namespace Shooter.Protocol.Tests
             Assert.That(MessageTable.IsReserved(60000), Is.False);
         }
 
-        // 予約した Id は前の版と同じく読まずに断るが、知らない Id とは理由を分ける。拾う要求は型を足したので、もう断らない
+        // 予約した Id は前の版と同じく読まずに断るが、知らない Id とは理由を分ける。拾う要求とドローンの操縦は型を足したので、もう断らない
         [TestCase(MessageIds.EmoteRequest)]
-        [TestCase(MessageIds.DroneControl)]
         public void AReservedIdIsRejectedByBothSidesUntilItsMessageIsAdded(ushort id)
         {
             var writer = new MessageWriter();
@@ -51,6 +50,58 @@ namespace Shooter.Protocol.Tests
 
             Assert.That(server.Message, Does.Contain("message id " + id + " is reserved"));
             Assert.That(client.Message, Does.Contain("message id " + id + " is reserved"));
+        }
+
+        [Test]
+        public void TheDroneControlRoundTripsToTheServerOnly()
+        {
+            var writer = new MessageWriter();
+            writer.WriteMessage(new DroneControlMessage
+            {
+                Deployable = 7,
+                Sequence = 12,
+                Move = new Vector2(0.5f, -1f),
+                Climb = -0.25f,
+                Yaw = 270f,
+                Recall = true,
+            });
+
+            var got = (DroneControlMessage)MatchMessages.CreateServerTable().Read(writer.AsSegment());
+
+            Assert.That(MessageTable.IsReserved(MessageIds.DroneControl), Is.True, "the id stays reserved after its message is added");
+            Assert.That(got.Id, Is.EqualTo(MessageIds.DroneControl));
+            Assert.That(got.Version, Is.EqualTo(DroneControlMessage.CurrentVersion));
+            Assert.That(got.Deployable, Is.EqualTo(7));
+            Assert.That(got.Sequence, Is.EqualTo(12));
+            Assert.That(got.Move, Is.EqualTo(new Vector2(0.5f, -1f)));
+            Assert.That(got.Climb, Is.EqualTo(-0.25f));
+            Assert.That(got.Yaw, Is.EqualTo(270f));
+            Assert.That(got.Recall, Is.True);
+            var client = Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(writer.AsSegment()));
+            Assert.That(client.Message, Does.Contain("message id " + MessageIds.DroneControl + " is reserved"));
+        }
+
+        [Test]
+        public void ADroneControlWithoutADeployableIsNotWritten()
+        {
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(new DroneControlMessage { Deployable = 0 }));
+            Assert.Throws<InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new DroneControlMessage { Deployable = 1, Sequence = -1 }));
+        }
+
+        [Test]
+        public void ADroneControlWithAClimbOutOfRangeOrANonFiniteMoveIsRejected()
+        {
+            var climb = new MessageWriter();
+            climb.WriteMessage(new DroneControlMessage { Deployable = 1, Climb = 1.5f });
+            var move = new MessageWriter();
+            move.WriteMessage(new DroneControlMessage { Deployable = 1, Move = new Vector2(float.NaN, 0f) });
+            var yaw = new MessageWriter();
+            yaw.WriteMessage(new DroneControlMessage { Deployable = 1, Yaw = float.PositiveInfinity });
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(climb.AsSegment()));
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(move.AsSegment()));
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(yaw.AsSegment()));
         }
 
         [Test]

@@ -841,8 +841,8 @@ namespace Shooter.Runtime
         {
             if (_focusRow == PresetRow)
             {
-                // 切り替える先が無いときは、押せる「新しく保存」に置く
-                return _presets.Count > 1 ? _presetNext : _saveAsNewPreset;
+                // 組の切り替えは左右の入力で済むので、決定は常に「新しく保存」に当てる
+                return _saveAsNewPreset;
             }
 
             if (_focusRow >= ConfirmRow)

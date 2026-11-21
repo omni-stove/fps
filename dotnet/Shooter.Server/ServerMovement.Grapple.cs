@@ -126,7 +126,7 @@ namespace Shooter.Server
 
             if (mover.Hook != null)
             {
-                var refusal = Refusal(mover, false);
+                var refusal = Refusal(mover, previous, false);
                 if (refusal != ServerGrappleRefusal.None)
                 {
                     ReleaseGrapple(mover, GrappleEnd.Interrupted, frame.Tick);
@@ -154,7 +154,7 @@ namespace Shooter.Server
         private bool TryAttach(Mover mover, InputFrame frame, CharacterMotorState previous)
         {
             var playerId = mover.Player.PlayerId;
-            var refusal = Refusal(mover, true);
+            var refusal = Refusal(mover, previous, true);
             if (refusal != ServerGrappleRefusal.None)
             {
                 Warn(mover, ServerGrappleLog.Refused(playerId, frame.Tick, refusal));
@@ -185,14 +185,15 @@ namespace Shooter.Server
             return true;
         }
 
-        private ServerGrappleRefusal Refusal(Mover mover, bool starting)
+        private ServerGrappleRefusal Refusal(Mover mover, CharacterMotorState previous, bool starting)
         {
             if (_grapple == null || _settings.Rules.Actions.Abilities != Abilities.On)
             {
                 return ServerGrappleRefusal.RuleOff;
             }
 
-            if (mover.Downed || mover.Riding)
+            // オフラインの GrappleMovement は吹き飛ばし・パラシュート・はしごに譲る。縄の状態の作り直しでそれらが消えるので、撃たせない
+            if (mover.Downed || mover.Riding || previous.IsKnockedBack || previous.IsParachuting || previous.IsClimbing)
             {
                 return ServerGrappleRefusal.CannotAct;
             }

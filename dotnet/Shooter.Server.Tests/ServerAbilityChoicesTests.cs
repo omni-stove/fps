@@ -12,6 +12,7 @@ namespace Shooter.Server.Tests
         private const string _decoy = "deploy-decoy";
         private const string _beacon = "deploy-beacon";
         private const string _drone = "deploy-drone";
+        private const string _grapple = "grapple";
         private const string _none = AbilitySelection.None;
 
         [Test]
@@ -187,18 +188,98 @@ namespace Shooter.Server.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => _ = new ServerAbilityChoices(null, -1));
         }
 
+        [Test]
+        public void WithoutListedAbilitiesTheGrappleIsOfferedAfterTheDeployables()
+        {
+            var choices = Choices(Grapple());
+
+            Use(choices, null);
+
+            Assert.That(choices.Grapple.Id, Is.EqualTo(_grapple));
+            Assert.That(choices.Candidates, Is.EqualTo(Ids(_turret, _shield, _decoy, _beacon, _grapple)));
+            Assert.That(choices.Default, Is.EqualTo(Ids(_turret, _shield)));
+            Assert.That(choices.HasGrapple(1), Is.False, "the default slots hold two deployables");
+        }
+
+        [Test]
+        public void TheGrappleCanBeListedAndChosen()
+        {
+            var choices = Choices(Grapple());
+            var skipped = new List<string>();
+
+            choices.Use(Ids(_grapple, _shield, "hook-missing"), null, skipped, null);
+
+            Assert.That(skipped, Is.EqualTo(Ids("hook-missing")));
+            Assert.That(choices.Candidates, Is.EqualTo(Ids(_grapple, _shield)));
+            Assert.That(choices.IsGrapple(_grapple), Is.True);
+            Assert.That(choices.IsGrapple(_shield), Is.False);
+            Assert.That(choices.IsGrapple(null), Is.False);
+            Assert.That(choices.HasGrapple(1), Is.True, "the grapple is first in the default");
+
+            choices.Choose(2, Ids(_none, _shield));
+            choices.Equip(2);
+            Assert.That(choices.HasGrapple(2), Is.False);
+
+            choices.Choose(2, Ids(_shield, _grapple));
+            Assert.That(choices.HasGrapple(2), Is.False, "the choice is held from the next spawn");
+            choices.Equip(2);
+            Assert.That(choices.HasGrapple(2), Is.True);
+        }
+
+        [Test]
+        public void WithoutAGrappleItsIdIsNotOffered()
+        {
+            var choices = Choices();
+            var skipped = new List<string>();
+
+            choices.Use(Ids(_grapple, _shield), null, skipped, null);
+
+            Assert.That(choices.Grapple, Is.Null);
+            Assert.That(skipped, Is.EqualTo(Ids(_grapple)));
+            Assert.That(choices.Candidates, Is.EqualTo(Ids(_shield)));
+            Assert.That(choices.IsGrapple(_grapple), Is.False);
+            Assert.That(choices.HasGrapple(1), Is.False);
+        }
+
+        [Test]
+        public void AnUnusableGrappleIsLeftOutLikeAnUnusableDeployable()
+        {
+            var choices = Choices(Grapple());
+
+            choices.Use(null, id => id != _grapple, null, null);
+
+            Assert.That(choices.Candidates, Does.Not.Contain(_grapple));
+        }
+
+        [Test]
+        public void AGrappleThatSharesADeployableIdIsRejected()
+        {
+            var e = Assert.Throws<ArgumentException>(
+                () => _ = Choices(new GrappleType(_shield, GrappleSpec.Default, AbilitySpec.Default)));
+
+            Assert.That(e.ParamName, Is.EqualTo("grapple"));
+        }
+
         // 定数配列を直接渡すと CA1861 になるので params で受ける
         private static string[] Ids(params string[] ids) => ids;
 
-        private static ServerAbilityChoices Choices()
+        private static GrappleType Grapple()
         {
-            return new ServerAbilityChoices(new DeployCatalog(new[]
-            {
-                Type(_turret, DeployRole.Turret),
-                Type(_shield, DeployRole.Shield),
-                Type(_decoy, DeployRole.Decoy),
-                Type(_beacon, DeployRole.Beacon),
-            }));
+            return new GrappleType(_grapple, GrappleSpec.Default, AbilitySpec.Default);
+        }
+
+        private static ServerAbilityChoices Choices(GrappleType grapple = null)
+        {
+            return new ServerAbilityChoices(
+                new DeployCatalog(new[]
+                {
+                    Type(_turret, DeployRole.Turret),
+                    Type(_shield, DeployRole.Shield),
+                    Type(_decoy, DeployRole.Decoy),
+                    Type(_beacon, DeployRole.Beacon),
+                }),
+                AbilitySelection.DefaultSlotCount,
+                grapple);
         }
 
         private static void Use(ServerAbilityChoices choices, IReadOnlyList<string> listed)

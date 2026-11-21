@@ -69,27 +69,47 @@ namespace Shooter.Server
                     closeParachute: frame.Has(InputButtons.CloseParachute))
                 .WithRules(_settings.Rules.Actions);
             input = WithSlideInput(input, frame);
+            input = Restrain(mover, input);
 
             if (mover.Riding)
             {
+                mover.GrappleHeld = frame.Has(InputButtons.Grapple);
+                mover.JumpHeld = frame.Has(InputButtons.Jump);
                 mover.Yaw = input.Yaw;
                 mover.Aiming = input.Restrained().Aim;
                 mover.Sprinting = false;
                 mover.LastProcessedTick = frame.Tick;
+
+                // 座っている間は歩かないので、走っていない入力として時間だけ進め、スタミナを戻す
+                Stepped(mover, default, mover.State, mover.State);
                 Publish(mover);
                 return;
             }
 
             var previous = mover.State;
-            var ziplined = TryZipline(mover, frame.Tick, input);
-            var mantled = !ziplined && TryMantle(mover, frame.Tick, input);
-            var current = ziplined || mantled ? mover.State : mover.Simulation.Step(mover.State, input);
+            // 縄に掛かっている間は縄が体を動かすので、ジップラインと崖のぼりの道は捨てる
+            var grappled = TryStepGrapple(mover, frame, previous, out var current);
+            var ziplined = false;
+            var mantled = false;
+            if (grappled)
+            {
+                CancelZipline(mover);
+                CancelMantle(mover);
+            }
+            else
+            {
+                ziplined = TryZipline(mover, frame.Tick, input);
+                mantled = !ziplined && TryMantle(mover, frame.Tick, input);
+                current = ziplined || mantled ? mover.State : mover.Simulation.Step(mover.State, input);
+            }
+
             mover.State = current;
             mover.Yaw = input.Yaw;
             // 片手で線を掴んでいるので、覗き込まず走らない (オフラインの ZiplineMovement は構えを外し、移動を横取りして走りの入力を読まない)
             mover.Aiming = !ziplined && input.Restrained().Aim;
             mover.Sprinting = !ziplined && input.Restrained().Sprint;
             mover.LastProcessedTick = frame.Tick;
+            Stepped(mover, input, previous, current);
             Publish(mover);
             Report(mover, frame.Tick, previous, current, mantled, ziplined);
         }

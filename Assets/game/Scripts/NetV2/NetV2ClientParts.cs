@@ -173,6 +173,9 @@ namespace Shooter.NetV2
 
                 // 再生の通信路はファイルを読むだけで Ping もロスも無いので、回線の値は試合中だけ出す
                 parts.Add(new NetV2NetStatsPart(client, context.NetStatsIntervalSeconds));
+
+                // 再生は誰かの試合を見返すだけなので、試合の結果を出して XP と腕前を動かすのは試合中だけにする
+                parts.Add(new NetV2MatchResultPart(client));
             }
 
             AddRegistered(parts, context, registered);

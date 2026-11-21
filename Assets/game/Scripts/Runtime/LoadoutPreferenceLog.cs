@@ -30,6 +30,36 @@ namespace Shooter.Runtime
             return $"{LogTag} using the saved loadout weapons={JoinOrDefault(weaponIds)} abilities={JoinOrDefault(abilityIds)}";
         }
 
+        public static string Unreadable(string key, string problem)
+        {
+            return $"{LogTag} saved loadout '{key}': {Reason(problem)}; choosing from the match's loadout instead";
+        }
+
+        public static string PresetsDropped(string key, int dropped, int maxPresets)
+        {
+            return $"{LogTag} saved loadout '{key}': {Number(dropped)} presets beyond the limit of {Number(maxPresets)} are not kept";
+        }
+
+        public static string PresetSwitched(int index, int count)
+        {
+            return $"{LogTag} switched to preset {Number(index)} of {Number(count)}";
+        }
+
+        public static string PresetAdded(int index, int count, int maxPresets)
+        {
+            return $"{LogTag} saved a new preset {Number(index)} ({Number(count)} of at most {Number(maxPresets)})";
+        }
+
+        public static string PresetRenamed(int index)
+        {
+            return $"{LogTag} renamed preset {Number(index)}";
+        }
+
+        public static string PresetsNotSaved(string reason)
+        {
+            return $"{LogTag} could not save the presets: {Reason(reason)}";
+        }
+
         public static string NoLoadout()
         {
             return "no loadout is assigned";

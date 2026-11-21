@@ -36,8 +36,22 @@ namespace Shooter.Runtime
         public const string StatusClass = "loadout-select__status";
         public const string ErrorStatusClass = "loadout-select__status--error";
 
+        public const string PresetsClass = "loadout-select__presets";
+        public const string FocusedPresetsClass = "loadout-select__presets--focused";
+        public const string PresetTitleClass = "loadout-select__preset-title";
+        public const string PresetPickerClass = "loadout-select__preset-picker";
+        public const string PresetStepClass = "loadout-select__preset-step";
+        public const string PresetNameClass = "loadout-select__preset-name";
+        public const string PresetEditClass = "loadout-select__preset-edit";
+        public const string PresetNameFieldClass = "loadout-select__preset-name-field";
+        public const string PresetActionClass = "loadout-select__preset-action";
+
         public const string ConfirmButtonName = "loadout-confirm";
         public const string StatusName = "loadout-status";
+        public const string PresetNameFieldName = "loadout-preset-name";
+
+        // プリセットの行は武器の枠より上に出すが、行の番号は武器の枠を 0 から数えたまま変えないよう、その前の -1 に置く
+        public const int PresetRow = -1;
 
         public const string StyleSheetResourcePath = "Loadout/LoadoutSelect";
 
@@ -58,22 +72,34 @@ namespace Shooter.Runtime
         private readonly Button _confirm;
         private readonly Label _status;
         private readonly VisualElement _navigationRoot;
+        private readonly LoadoutPresetBook _presets;
+        private VisualElement _presetRow;
+        private Label _presetTitle;
+        private Label _presetName;
+        private Button _presetPrevious;
+        private Button _presetNext;
+        private TextField _presetNameField;
+        private Button _renamePreset;
+        private Button _saveAsNewPreset;
         private int _focusRow;
         private bool _busy;
         private bool _disposed;
 
         // 能力の枠は abilities が null なら出さない。abilityCatalog は名前を引くのにだけ使い、引けない能力は Id を出す。
+        // presets が null ならプリセットの行を出さない。一覧を変えるのは呼ぶ側で、パネルは求めるイベントを出し、変わったら RefreshPresets で出し直す。
         public LoadoutSelectPanel(
             VisualElement container,
             LoadoutSelection selection,
             ProgressionLedger ledger = null,
             AbilitySelection abilities = null,
-            AbilityCatalogAsset abilityCatalog = null)
+            AbilityCatalogAsset abilityCatalog = null,
+            LoadoutPresetBook presets = null)
         {
             _container = container ?? throw new ArgumentNullException(nameof(container));
             _selection = selection ?? throw new ArgumentNullException(nameof(selection));
             _abilities = abilities;
             _abilityCatalog = abilityCatalog;
+            _presets = presets;
 
             // 使えるかは selection の述語が決める。ledger から使えるかを引き直すと述語と食い違いうるので、鍵に添えるレベルを引くのにだけ使う
             _ledger = ledger;
@@ -91,6 +117,11 @@ namespace Shooter.Runtime
             var title = new Label(LoadoutFormat.Title);
             title.AddToClassList(TitleClass);
             container.Add(title);
+
+            if (presets != null)
+            {
+                container.Add(BuildPresetRow());
+            }
 
             for (var slot = 0; slot < selection.SlotCount; slot++)
             {
@@ -126,7 +157,34 @@ namespace Shooter.Runtime
 
         public event Action Cancelled;
 
+        // 選び直した組の番号。選択を組の中身で作り直すのは呼ぶ側
+        public event Action<int> PresetSelected;
+
+        // 入力欄の名前と今の選択で、新しい組を足してほしいとき
+        public event Action<string, LoadoutChoice> PresetSaveAsNewRequested;
+
+        // 入力欄の名前を、選んでいる組の名前にしてほしいとき
+        public event Action<string> PresetRenameRequested;
+
         public LoadoutSelection Selection => _selection;
+
+        public LoadoutPresetBook Presets => _presets;
+
+        public bool HasPresets => _presets != null;
+
+        public TextField PresetNameField => _presetNameField;
+
+        public Button PresetPreviousButton => _presetPrevious;
+
+        public Button PresetNextButton => _presetNext;
+
+        public Button RenamePresetButton => _renamePreset;
+
+        public Button SaveAsNewPresetButton => _saveAsNewPreset;
+
+        public string PresetTitle => _presetTitle?.text;
+
+        public string PresetName => _presetName?.text;
 
         public AbilitySelection Abilities => _abilities;
 
@@ -185,12 +243,19 @@ namespace Shooter.Runtime
                 return;
             }
 
-            var count = ConfirmRow + 1;
-            SetFocusRow(((_focusRow + step) % count + count) % count, true);
+            var first = HasPresets ? PresetRow : 0;
+            var count = ConfirmRow + 1 - first;
+            var position = _focusRow - first;
+            SetFocusRow(((position + step) % count + count) % count + first, true);
         }
 
         public bool Cycle(int step)
         {
+            if (_focusRow == PresetRow)
+            {
+                return CyclePreset(step);
+            }
+
             if (_busy || _focusRow >= ConfirmRow)
             {
                 return false;
@@ -261,6 +326,86 @@ namespace Shooter.Runtime
             return true;
         }
 
+        // 組が 1 つしか無ければ切り替える先が無い。最後の組の次は最初の組に戻る
+        public bool CyclePreset(int step)
+        {
+            if (_busy || !HasPresets || step == 0 || _presets.Count < 2)
+            {
+                return false;
+            }
+
+            var count = _presets.Count;
+            var current = Math.Max(0, _presets.ActiveIndex);
+            var next = (int)(((current + (long)step) % count + count) % count);
+            if (next == current)
+            {
+                return false;
+            }
+
+            SetFocusRow(PresetRow, false);
+            PresetSelected?.Invoke(next);
+            return true;
+        }
+
+        public bool SaveAsNewPreset()
+        {
+            if (_busy || !HasPresets)
+            {
+                return false;
+            }
+
+            if (_presets.IsFull)
+            {
+                ShowStatus(LoadoutFormat.PresetFull(_presets.MaxPresets), true);
+                return false;
+            }
+
+            var reason = _selection.Validate();
+            if (reason != null)
+            {
+                ShowStatus(LoadoutFormat.Rejected(reason), true);
+                return false;
+            }
+
+            PresetSaveAsNewRequested?.Invoke(_presetNameField.value, new LoadoutChoice(_selection.WeaponIds, _abilities?.AbilityIds));
+            return true;
+        }
+
+        public bool RenamePreset()
+        {
+            if (_busy || !HasPresets || _presets.Active == null)
+            {
+                return false;
+            }
+
+            PresetRenameRequested?.Invoke(_presetNameField.value);
+            return true;
+        }
+
+        public void FocusPresets()
+        {
+            if (HasPresets)
+            {
+                SetFocusRow(PresetRow, true);
+            }
+        }
+
+        // 呼ぶ側が組の一覧を変えた後に、選んでいる組の名前・番号と、ボタンを押せるかを出し直す
+        public void RefreshPresets()
+        {
+            if (!HasPresets)
+            {
+                return;
+            }
+
+            var active = _presets.Active;
+            var index = _presets.ActiveIndex;
+            _presetTitle.text = active != null ? LoadoutFormat.PresetTitle(index, _presets.Count) : string.Empty;
+            _presetName.text = active != null ? LoadoutFormat.PresetName(active, index) : string.Empty;
+            _presetNameField.SetValueWithoutNotify(active?.Name ?? string.Empty);
+            RefreshPresetButtons();
+        }
+
         public void ShowStatus(string text, bool error)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -295,6 +440,7 @@ namespace Shooter.Runtime
             }
 
             _confirm.SetEnabled(!busy);
+            RefreshPresetButtons();
             if (!busy)
             {
                 FocusCurrent();
@@ -320,6 +466,9 @@ namespace Shooter.Runtime
             }
             Confirmed = null;
             Cancelled = null;
+            PresetSelected = null;
+            PresetSaveAsNewRequested = null;
+            PresetRenameRequested = null;
         }
 
         private static StyleSheet LoadStyleSheet()
@@ -337,6 +486,80 @@ namespace Shooter.Runtime
             }
 
             return _styleSheet;
+        }
+
+        // 前後のボタンで組を切り替え、その下の入力欄で名前を変えるか、今の選択を新しい組として保存する
+        private VisualElement BuildPresetRow()
+        {
+            _presetRow = new VisualElement();
+            _presetRow.AddToClassList(PresetsClass);
+            _presetRow.RegisterCallback<PointerEnterEvent>(_ => SetFocusRow(PresetRow, false));
+
+            _presetTitle = new Label(string.Empty);
+            _presetTitle.AddToClassList(PresetTitleClass);
+            _presetRow.Add(_presetTitle);
+
+            var picker = new VisualElement();
+            picker.AddToClassList(PresetPickerClass);
+            _presetRow.Add(picker);
+
+            _presetPrevious = new Button(() => CyclePreset(-1)) { text = LoadoutFormat.PreviousPreset };
+            _presetPrevious.AddToClassList(PresetStepClass);
+            picker.Add(_presetPrevious);
+
+            _presetName = new Label(string.Empty) { pickingMode = PickingMode.Ignore };
+            _presetName.AddToClassList(PresetNameClass);
+            picker.Add(_presetName);
+
+            _presetNext = new Button(() => CyclePreset(1)) { text = LoadoutFormat.NextPreset };
+            _presetNext.AddToClassList(PresetStepClass);
+            picker.Add(_presetNext);
+
+            var edit = new VisualElement();
+            edit.AddToClassList(PresetEditClass);
+            _presetRow.Add(edit);
+
+            _presetNameField = new TextField(LoadoutFormat.PresetNameLabel)
+            {
+                name = PresetNameFieldName,
+                maxLength = _presets.Spec.MaxNameLength,
+            };
+            _presetNameField.AddToClassList(PresetNameFieldClass);
+            edit.Add(_presetNameField);
+
+            _renamePreset = new Button(() => RenamePreset()) { text = LoadoutFormat.RenamePreset };
+            _renamePreset.AddToClassList(PresetActionClass);
+            edit.Add(_renamePreset);
+
+            _saveAsNewPreset = new Button(() => SaveAsNewPreset()) { text = LoadoutFormat.SaveAsNewPreset };
+            _saveAsNewPreset.AddToClassList(PresetActionClass);
+            edit.Add(_saveAsNewPreset);
+
+            RefreshPresets();
+            return _presetRow;
+        }
+
+        private void RefreshPresetButtons()
+        {
+            if (!HasPresets)
+            {
+                return;
+            }
+
+            var canCycle = !_busy && _presets.Count > 1;
+            _presetPrevious.SetEnabled(canCycle);
+            _presetNext.SetEnabled(canCycle);
+            _presetNameField.SetEnabled(!_busy);
+            _renamePreset.SetEnabled(!_busy && _presets.Active != null);
+
+            // 上限に達していても押せるままにして、押したときに上限を知らせる
+            _saveAsNewPreset.SetEnabled(!_busy);
+        }
+
+        private bool IsInPresetNameField(EventBase evt)
+        {
+            return _presetNameField != null && evt.target is VisualElement target
+                && (target == _presetNameField || _presetNameField.Contains(target));
         }
 
         private VisualElement BuildRow(int slot)
@@ -579,6 +802,7 @@ namespace Shooter.Runtime
             }
 
             _confirm.EnableInClassList(FocusedConfirmClass, _focusRow == ConfirmRow);
+            _presetRow?.EnableInClassList(FocusedPresetsClass, _focusRow == PresetRow);
         }
 
         private void FocusCurrent()
@@ -615,6 +839,12 @@ namespace Shooter.Runtime
 
         private Button CurrentFocusTarget()
         {
+            if (_focusRow == PresetRow)
+            {
+                // 組の切り替えは左右の入力で済むので、決定は常に「新しく保存」に当てる
+                return _saveAsNewPreset;
+            }
+
             if (_focusRow >= ConfirmRow)
             {
                 return _confirm;
@@ -640,8 +870,8 @@ namespace Shooter.Runtime
 
         private void HandleMove(NavigationMoveEvent evt)
         {
-            // 同じパネルの根を共有するポーズメニューが開いている間は、入力をそちらに任せる
-            if (PauseMenu.IsAnyOpen)
+            // 同じパネルの根を共有するポーズメニューが開いている間は、入力をそちらに任せる。名前の入力中の左右は文字の間を動かすのに使う
+            if (PauseMenu.IsAnyOpen || IsInPresetNameField(evt))
             {
                 return;
             }
@@ -677,7 +907,36 @@ namespace Shooter.Runtime
             // フォーカスしているボタンにも届くと、選び直しと決定が二重に走るので、ここで止めて行の順で扱う
             evt.StopPropagation();
             _navigationRoot.focusController?.IgnoreEvent(evt);
-            if (_focusRow >= ConfirmRow)
+
+            // 名前の入力中に決定を押したら、打った名前で組の名前を変える
+            if (IsInPresetNameField(evt))
+            {
+                RenamePreset();
+                return;
+            }
+
+            if (_focusRow == PresetRow)
+            {
+                // フォーカス中のボタンへの決定は上で止めているので、押されたボタンの動作をここで呼ぶ。
+                // それ以外は、文字を打たずに押せる「新しく保存」を割り当てる
+                if (evt.target == _renamePreset)
+                {
+                    RenamePreset();
+                }
+                else if (evt.target == _presetPrevious)
+                {
+                    CyclePreset(-1);
+                }
+                else if (evt.target == _presetNext)
+                {
+                    CyclePreset(1);
+                }
+                else
+                {
+                    SaveAsNewPreset();
+                }
+            }
+            else if (_focusRow >= ConfirmRow)
             {
                 Confirm();
             }

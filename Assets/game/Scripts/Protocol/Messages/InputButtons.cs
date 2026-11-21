@@ -18,6 +18,10 @@ namespace Shooter.Protocol
         Melee = 512,
         OpenParachute = 1024,
         CloseParachute = 2048,
-        All = Sprint | Jump | Crouch | Cover | Aim | Dodge | Prone | LeanLeft | LeanRight | Melee | OpenParachute | CloseParachute,
+        Slide = 4096,
+        Grapple = 8192,
+        Takedown = 16384,
+        All = Sprint | Jump | Crouch | Cover | Aim | Dodge | Prone | LeanLeft | LeanRight | Melee | OpenParachute | CloseParachute
+            | Slide | Grapple | Takedown,
     }
 }

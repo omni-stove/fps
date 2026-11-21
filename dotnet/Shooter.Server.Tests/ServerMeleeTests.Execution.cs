@@ -380,6 +380,8 @@ namespace Shooter.Server.Tests
             Face(attackerId);
             Press(attackerId);
             Hold(attackerId, InputButtons.None, _executeTicks);
+            // 各チームの最後の 1 人のとどめは、ラウンドの判定が入る分だけ 1 tick 遅れて倒れきる
+            Tick();
             Assert.That(_rules.Session.IsAlive(victimId), Is.False, _log.ToString());
         }
     }

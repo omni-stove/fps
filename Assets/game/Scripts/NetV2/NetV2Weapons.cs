@@ -5,7 +5,7 @@ using Shooter.Runtime;
 
 namespace Shooter.NetV2
 {
-    // サーバーのルールのファイルも同じアセットから書き出すので、アセットは Netcode のクライアントと同じく入口 (GameContent) のものを使う。
+    // サーバーのルールのファイルも同じアセットから書き出すので、アセットは入口 (GameContent) のものを使う。
     internal sealed class NetV2Weapons
     {
         private string _triggerWeaponId;

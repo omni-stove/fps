@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 namespace Shooter.Runtime
 {
-    // オフラインのプレイヤーもオンラインのプレイヤー (Shooter.Net の NetPlayer など) も同じアセットのアクションを使うので、
+    // オフラインのプレイヤーもオンラインのプレイヤー (Shooter.NetV2) も同じアセットのアクションを使うので、
     // プロジェクト全体の Input Actions にシーンを読む前 (どのプレイヤーの Awake よりも前) に 1 回入れれば両方に効く。
     public static class AppliedInputBindings
     {

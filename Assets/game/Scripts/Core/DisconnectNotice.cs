@@ -91,7 +91,7 @@ namespace Shooter.Core
             return true;
         }
 
-        // Netcode や transport が自分で入れる切断理由の文言は版で変わるので、分け方には使わずログにだけ残す。
+        // transport が自分で入れる切断理由の文言は版で変わるので、分け方には使わずログにだけ残す。
         // 符号の無い切断は、サーバーが知らせずに消えた (止まった・落ちた・回線が切れた) ので、相手の応答が途絶えたものとして扱う。
         public static DisconnectNotice Classify(string reason, bool wasConnected, string localVersion)
         {

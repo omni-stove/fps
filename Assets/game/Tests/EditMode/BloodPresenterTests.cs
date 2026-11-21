@@ -195,7 +195,7 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheWallProbeSkipsCharacterControllersOnTheWay()
         {
-            var other = Track(new GameObject("NetPlayer"));
+            var other = Track(new GameObject("NetBody"));
             other.transform.position = new Vector3(0f, 1f, 10.8f);
             other.AddComponent<CharacterController>();
             var wall = Wall("Wall", new Vector3(0f, 1f, 11.5f));

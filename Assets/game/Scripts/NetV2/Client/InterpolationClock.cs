@@ -3,10 +3,8 @@ using System;
 namespace Shooter.NetV2
 {
     // 届いた tick へ飛ばずフレームの時間で少しずつ寄せるのは、届き方の揺れで表示が止まったり跳んだりしないため。
-    // 寄せ方の値は Netcode のクライアント (NetworkPlayerMotor の補間) と同じにする。
     public sealed class InterpolationClock
     {
-        // Netcode のクライアント (NetworkPlayerMotor.InterpolationDelayTicks) と同じ遅れ。
         public const float DefaultDelayTicks = 2f;
 
         private const float _catchUpGain = 0.1f;

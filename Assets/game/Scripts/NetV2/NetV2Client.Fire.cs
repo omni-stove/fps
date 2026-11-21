@@ -50,7 +50,7 @@ namespace Shooter.NetV2
                 _client.Send(_grenade, TransportChannel.Reliable);
             }
 
-            // 付けられないと分かっている印は送らない (Netcode の NetTeamDeathmatch.CanRequestPing と同じく、ルールで付けられて生きているときだけ)
+            // 付けられないと分かっている印は送らない (ルールで付けられて生きているときだけ)
             if (_local.TakePing() && CanPing())
             {
                 Debug.Log(PingLog.Tag + " net request", this);

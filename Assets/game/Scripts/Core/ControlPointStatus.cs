@@ -2,7 +2,7 @@ using System;
 
 namespace Shooter.Core
 {
-    // 通信の手順 (Netcode の NetControlPointState・Shooter.Protocol の ControlPointSnapshot) に依らずに HUD が描けるよう、ここで受け取る。
+    // 通信の手順 (Shooter.Protocol の ControlPointSnapshot) に依らずに HUD が描けるよう、ここで受け取る。
     public readonly struct ControlPointStatus : IEquatable<ControlPointStatus>
     {
         public const int FullPercent = 100;

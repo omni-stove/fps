@@ -628,7 +628,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(_player.GetComponent<MeshRenderer>().enabled, Is.False, "the capsule stays hidden");
         }
 
-        // NetSceneBuilder の NetPlayer と同じく、本体にレンダラーは無く、当たりは CharacterController。
+        // ネット対戦の本体と同じく、本体にレンダラーは無く、当たりは CharacterController。
         private static GameObject CreateNetworkBody(out FakeCharacterPoseSource source, out CharacterAnimator animator)
         {
             var body = new GameObject("NetBody");

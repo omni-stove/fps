@@ -1,14 +1,14 @@
 namespace Shooter.Protocol
 {
     // マップはクライアントの -map ではなくここで受け取る。-map はホスト・サーバーだけが選び、クライアントは
-    // つないだサーバーのマップへ合わせる (Netcode のシーン管理と同じ意味) ため。
+    // つないだサーバーのマップへ合わせるため。
     // 移動の値 (Motor) もここで受け取る。サーバーは起動したルールのファイルの値で動かし、クライアントはどのルールで
     // 起動したかを知らないので、自分の持つ既定値で予測すると片方だけ変えたときに毎 tick ずれるため。
     public sealed class ConnectAcceptedMessage : IMessage
     {
         public const byte CurrentVersion = 12;
 
-        // .NET のサーバーと Netcode のプレイヤーの既定と同じにする。
+        // .NET のサーバーの既定と同じにする。
         public const float DefaultKillPlaneY = -50f;
 
         public ushort Id => MessageIds.ConnectAccepted;

@@ -4,7 +4,7 @@ namespace Shooter.Protocol
 {
     public sealed class EosTransportOptions
     {
-        // Netcode の EOS の transport (EosP2PTransport.ConnectTimeoutSeconds) と同じく、ログインからつながるまで 20 秒待つ。
+        // EOS はログインから P2P がつながるまで UDP より時間がかかるので、20 秒待つ。
         public const int DefaultConnectTimeoutMilliseconds = 20000;
 
         // サーバーは待ち受けを始める前にログインを済ませるので、つなぐ側より長く待つ。

@@ -37,7 +37,7 @@ namespace Shooter.NetV2
             }
         }
 
-        // リロードを始めた (サーバーの自動リロードを含む) ときにリロード音を鳴らす (Netcode の NetPlayer と同じ)
+        // リロードを始めた (サーバーの自動リロードを含む) ときにリロード音を鳴らす
         private void PlayReloadSound(SnapshotMessage snapshot)
         {
             if (!snapshot.HasOwner)
@@ -118,7 +118,7 @@ namespace Shooter.NetV2
                     HandleTeleported(teleported);
                     break;
                 case ShotIndexCorrectedMessage corrected:
-                    // Netcode のクライアント (NetShotSequence.Correct) と同じく、まだサーバーが数えていない弾の分も含めて同じだけずらす
+                    // まだサーバーが数えていない弾の分も含めて同じだけずらす
                     if (corrected.Generation != _shotGeneration)
                     {
                         _shotIndex = unchecked(_shotIndex + (corrected.ServerIndex - corrected.ClientIndex));

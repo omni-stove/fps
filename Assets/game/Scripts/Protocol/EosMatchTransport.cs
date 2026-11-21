@@ -9,7 +9,7 @@ using Shooter.Core;
 namespace Shooter.Protocol
 {
     // SDK の呼び出しは IEosP2P に任せるので、サーバー (EOS の C# SDK) とクライアント (PlayEveryWare のプラグイン) で同じ手順になる。
-    // ソケット名とチャンネルは Netcode の EOS の transport (Shooter.NetEos.EosP2PTransport) と同じにする:
+    // ソケット名とチャンネルはサーバーとクライアントで同じにする:
     // 落ちてよいものはチャンネル 0、順に届くものはチャンネル 2 で送り、チャンネル 3 は Easy Anti-Cheat のために空けておく。
     // EOS は接続を閉じた理由を相手に渡せず、閉じると送りかけのパケットを捨てうるので、切るときは理由を載せた知らせを順に届くチャンネルで
     // データの後ろに送り、受け取った側が閉じるのを待つ (EosTransportOptions.CloseLingerMilliseconds を過ぎたらこちらから閉じる)。
@@ -617,7 +617,7 @@ namespace Shooter.Protocol
                     }
 
                 default:
-                    // チャンネル 1 は Netcode の transport の順序なしの送り方、3 は Easy Anti-Cheat のもので、この通信路では使わない
+                    // チャンネル 1 は使わず、3 は Easy Anti-Cheat のもので、この通信路では使わない
                     return;
             }
         }

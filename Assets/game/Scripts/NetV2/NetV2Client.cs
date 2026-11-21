@@ -15,7 +15,6 @@ namespace Shooter.NetV2
         public const string LogTag = "[Net]";
         public const string CombatLogTag = "[Combat]";
 
-        // Netcode のクライアント (NetBootstrap) と同じ終了コード
         public const int ExitDisconnected = 0;
         public const int ExitInvalidArguments = NetClientLaunch.ExitInvalidArguments;
         public const int ExitMisconfigured = 3;
@@ -23,7 +22,7 @@ namespace Shooter.NetV2
         public const int ExitTransportFailure = 6;
         public const int ExitLobbyFailed = 7;
 
-        // Netcode のクライアントと同じく、同じプロセスのままつなぎ直したときだけ成績を引き継ぐよう、プロセスごとに 1 つ作る。
+        // 同じプロセスのままつなぎ直したときだけ成績を引き継ぐよう、プロセスごとに 1 つ作る。
         private static readonly string _deviceKey = RejoinKey.NewDeviceKey();
 
         private readonly Dictionary<int, NetV2RemotePlayer> _remotes = new Dictionary<int, NetV2RemotePlayer>();
@@ -438,7 +437,7 @@ namespace Shooter.NetV2
             _client.Connect(string.Empty, 0);
         }
 
-        // Netcode のクライアントと同じく、EOS を求められても認証情報が揃わなければ UDP でつなぐ。
+        // EOS を求められても認証情報が揃わなければ UDP でつなぐ。
         // 認証情報のファイルが壊れているときは、黙って UDP にすると誤りに気づけないので止める。
         private bool TryPlanTransport(NetLaunchOptions requested, out NetTransportPlan plan, out string error)
         {
@@ -601,7 +600,7 @@ namespace Shooter.NetV2
                 _presentation = _local.GetComponent<WeaponPresentation>();
                 _dryFire = _local.GetComponent<DryFireSound>();
 
-                // 印を見る画面があるのは自分のプレイヤーだけなので、表示もここにだけ付ける (Netcode の NetPlayer と同じ)
+                // 印を見る画面があるのは自分のプレイヤーだけなので、表示もここにだけ付ける
                 _pingDisplay = _local.gameObject.AddComponent<PingController>();
                 _pingDisplay.ShowShared(_pings.Markers);
                 _lockOn = AttachLockOn(_local);
@@ -742,8 +741,8 @@ namespace Shooter.NetV2
             Destroy(gameObject);
         }
 
-        // 接続を失ったのでなければ、Netcode のクライアントを起動引数で動かしたときと同じく、このシーンに留まってログだけ残す。
-        // メニューから始めたときは、Netcode のクライアント (NetBootstrap.ReturnToMenuIfStartedThere) と同じく理由を添えて戻る
+        // 接続を失ったのでなければ、起動引数で動かしたときはこのシーンに留まってログだけ残す。
+        // メニューから始めたときは理由を添えて戻る
         private void Leave(int exitCode, string message, DisconnectNotice notice = null)
         {
             Debug.LogError(message, this);

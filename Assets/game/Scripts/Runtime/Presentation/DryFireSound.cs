@@ -39,7 +39,7 @@ namespace Shooter.Runtime
             }
         }
 
-        // ネット対戦では NetPlayer が WeaponPresentation.IsLocal に持ち主かどうかを代入しているので、自分では決めずにそれに従う。
+        // ネット対戦では NetV2LocalPlayer が WeaponPresentation.IsLocal に持ち主かどうかを代入しているので、自分では決めずにそれに従う。
         public bool IsLocal
         {
             get

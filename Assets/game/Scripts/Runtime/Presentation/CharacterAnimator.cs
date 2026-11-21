@@ -363,8 +363,7 @@ namespace Shooter.Runtime
             return true;
         }
 
-        // プレハブに置いたリグのコライダーは消さない。本体の部品 (NetPlayer) は Awake で子のコライダーを集めているので、
-        // ここで消すと壊れた参照が残る。プレハブを作る側 (NetSceneBuilder) がコライダーを持たせない。
+        // プレハブに置いたリグはプレハブを作る側 (NetSceneBuilder など) がコライダーを持たせないので、ここではコライダーを消さない。
         private bool TryAdoptRig()
         {
             var existing = transform.Find(RigObjectName);

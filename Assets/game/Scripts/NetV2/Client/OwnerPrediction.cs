@@ -9,7 +9,6 @@ namespace Shooter.NetV2
     // InputMessage.MaxFrames 個まで載せ直す。
     public sealed class OwnerPrediction
     {
-        // Netcode のクライアント (NetworkPlayerMotor.ReconcileTolerance) と同じ許容値。
         public const float DefaultTolerance = 0.05f;
 
         private readonly CharacterMotorSimulation _simulation;

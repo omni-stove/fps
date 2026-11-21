@@ -56,6 +56,8 @@ namespace Shooter.Server
 
         public float? RemainingSeconds => null;
 
+        public ObjectiveRally? BotRally => null;
+
         public bool LeadersChosen => _leadersChosen;
 
         public int? LeaderOf(Team team)
@@ -125,6 +127,14 @@ namespace Shooter.Server
         public void PlayerLeft(int playerId)
         {
             _waiting.Remove(playerId);
+
+            // 終わった後に倒れたことにすると、時間切れで決まった勝者がスナップショットで変わってしまう
+            var session = _host.Session;
+            if (session != null && session.State != GameModeState.Playing)
+            {
+                return;
+            }
+
             foreach (var team in _teams)
             {
                 if (_leaders.TryGetValue(team, out var leader) && leader == playerId && !_fallen.Contains(team))

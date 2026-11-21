@@ -160,7 +160,7 @@ namespace Shooter.Server.Tests
             var agent = Agent("Shield");
 
             Assert.That(agent.RaisedShield, Is.Not.Null);
-            Assert.That(agent.RaisedShield.MoveSpeedMultiplier, Is.EqualTo(ShieldSpec.DefaultApproachSpeedMultiplier));
+            Assert.That(agent.RaisedShield.MoveSpeedMultiplier, Is.EqualTo(1f));
             Assert.That(agent.RaisedShield.Bash, Is.SameAs(ShieldSpec.DefaultBash));
             Assert.That(agent.GaitMultiplier, Is.EqualTo(ShieldSpec.DefaultApproachSpeedMultiplier));
             Assert.That(agent.SprintAllowed, Is.False);

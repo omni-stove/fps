@@ -32,11 +32,16 @@ namespace Shooter.Editor
         public const string BotsFileName = "bots.json";
         public const string AssistFileName = "assist.json";
 
-        // 財布の額は試合の設定 (match.economy) に乗せて書き出すので、このファイルには買える品と値段の一覧だけを置く
-        public const string EconomyFileName = "economy.json";
-
         // サーバーの ServerRulesData.LootTuningFileName と同じ名前にする
         public const string LootFileName = "loot.json";
+
+        // サーバーの ServerCombatTuning.MeleeFileName・StreaksFileName と同じ名前にする
+        public const string MeleeFileName = "melee.json";
+        public const string StreaksFileName = "streaks.json";
+
+        // サーバーの ServerRulesData.ExtractionTuningFileName・StashTuningFileName と同じ名前にする
+        public const string ExtractionFileName = "extraction.json";
+        public const string StashFileName = "stash.json";
 
         public const string SupplyDropsFileName = "supply-drops.json";
         public const string RedeployFileName = "redeploy.json";
@@ -554,6 +559,10 @@ namespace Shooter.Editor
                 ExportTuningFile(directory, LootFileName, c => c.LootTuning, LootJson.ResourcePath, LootJson.Parse),
                 ExportTuningFile(directory, SupplyDropsFileName, c => c.SupplyDropsTuning, KitTuning.SupplyDropsResourcePath, SupplyDropJson.Parse),
                 ExportTuningFile(directory, RedeployFileName, c => c.RedeployTuning, RedeployJson.ResourcePath, RedeployJson.Parse),
+                ExportTuningFile(directory, MeleeFileName, c => c.MeleeTuning, MeleeActionInstaller.TuningResourcePath, MeleeJson.Parse),
+                ExportTuningFile(directory, StreaksFileName, c => c.StreaksTuning, StreakJson.ResourcePath, StreakJson.Parse),
+                ExportTuningFile(directory, ExtractionFileName, c => c.ExtractionTuning, ExtractionJson.ResourcePath, ExtractionJson.Parse),
+                ExportTuningFile(directory, StashFileName, c => c.StashTuning, StashJson.ResourcePath, StashJson.Parse),
             };
         }
 

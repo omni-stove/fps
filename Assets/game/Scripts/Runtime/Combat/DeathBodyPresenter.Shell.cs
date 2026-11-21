@@ -17,7 +17,7 @@ namespace Shooter.Runtime
                 }
             }
 
-            // CharacterController は移動の持ち主 (PlayerController / NetworkPlayerMotor) が有効・無効を決める
+            // CharacterController は移動の持ち主 (PlayerController やネット対戦の本体) が有効・無効を決める
             foreach (var bodyCollider in GetComponentsInChildren<Collider>(true))
             {
                 if (bodyCollider != null && !(bodyCollider is CharacterController))

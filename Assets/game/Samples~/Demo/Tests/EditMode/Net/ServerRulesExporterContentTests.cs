@@ -92,6 +92,10 @@ namespace Shooter.Net.Tests
                 Path.Combine(_directory, "loot.json"),
                 Path.Combine(_directory, "supply-drops.json"),
                 Path.Combine(_directory, "redeploy.json"),
+                Path.Combine(_directory, "melee.json"),
+                Path.Combine(_directory, "streaks.json"),
+                Path.Combine(_directory, "extraction.json"),
+                Path.Combine(_directory, "stash.json"),
             }));
             Assert.That(File.ReadAllText(Path.Combine(_directory, "knockback.json")), Is.EqualTo(knockback));
             Assert.That(File.ReadAllText(Path.Combine(_directory, "bots.json")), Is.EqualTo(bots));
@@ -133,6 +137,19 @@ namespace Shooter.Net.Tests
 
             var resources = Resources.Load<TextAsset>(KitTuning.BotsResourcePath);
             Assert.That(File.ReadAllText(Path.Combine(_directory, "bots.json")), Is.EqualTo(resources.text));
+        }
+
+        [TestCase("melee.json", MeleeActionInstaller.TuningResourcePath)]
+        [TestCase("streaks.json", StreakJson.ResourcePath)]
+        [TestCase("extraction.json", ExtractionJson.ResourcePath)]
+        [TestCase("stash.json", StashJson.ResourcePath)]
+        public void WithoutGameContentTheServerReadTuningOfResourcesIsWritten(string fileName, string resourcePath)
+        {
+            ServerRulesExporter.ExportTuning(_directory);
+
+            var resources = Resources.Load<TextAsset>(resourcePath);
+            Assert.That(resources, Is.Not.Null, resourcePath);
+            Assert.That(File.ReadAllText(Path.Combine(_directory, fileName)), Is.EqualTo(resources.text));
         }
 
         [Test]

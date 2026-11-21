@@ -42,7 +42,7 @@ namespace Shooter.Net.Tests
                 .Select(t => t.name)
                 .ToArray();
 
-            Assert.That(missing, Is.Empty, "objects with removed (Netcode) components; " + _rerun);
+            Assert.That(missing, Is.Empty, "objects with missing scripts; " + _rerun);
         }
 
         [Test]

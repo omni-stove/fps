@@ -5,15 +5,13 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    // Unity の Shooter.NetEos.EosAntiCheat と同じく EAC が無効でも Hello を送り、片方だけ有効なら同じ理由で抜ける。
+    // EAC が無効でも Hello を送り、片方だけ有効ならサーバーと同じ理由で抜ける。
     // サーバーをピアとして登録しないのは、ClientServer モードの EAC ではクライアントがサーバーを登録せず、
     // メッセージを受け渡すだけだから。セッションを承認の後に始めるのは、サーバーが承認の前に届いたメッセージで切るため。
     public sealed class ClientAntiCheat
     {
-        // Unity の EosAntiCheat.HelloIntervalSeconds とそろえる。
         public const double HelloIntervalSeconds = 1;
 
-        // Unity の EosAntiCheat.HelloTimeoutSeconds とそろえる。
         public const double HelloTimeoutSeconds = 15;
 
         // EOS の P2P のクライアントがホストを指していた Id とそろえ、手順書のログと同じにする。

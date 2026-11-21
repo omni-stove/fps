@@ -80,7 +80,7 @@ namespace Shooter.Server
         }
 
         // オフラインの CanGrab と同じく、ルールで使えて、倒れておらず、乗り物・カバー・ほかの横取り (はしご・パラシュート・崖のぼり) の最中でないときだけ掴む。
-        // 回避・乗り越え・飛び込み・泳ぎ・伏せの最中も断るのは、オフラインはそれらを横取りの始めに打ち切るが、ここで打ち切ると状態の欄を作り直すことになり、
+        // 回避・乗り越え・飛び込み・泳ぎ・伏せ・スライディングの最中も断るのは、オフラインはそれらを横取りの始めに打ち切るが、ここで打ち切ると状態の欄を作り直すことになり、
         // 離した後のふつうの動きが打ち切る前の続きから動いてしまうため
         private bool CanGrabZipline(Mover mover)
         {
@@ -99,7 +99,8 @@ namespace Shooter.Server
                 && !state.IsDodging
                 && !state.IsDiving
                 && !state.IsSwimming
-                && !state.IsProne;
+                && !state.IsProne
+                && !state.IsSliding;
         }
 
         private bool TryGrabZipline(Mover mover, int tick, float yaw)

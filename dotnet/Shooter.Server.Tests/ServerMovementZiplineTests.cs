@@ -224,6 +224,26 @@ namespace Shooter.Server.Tests
             Assert.That(_movement.IsZiplining(1), Is.True);
         }
 
+        [Test]
+        public void JumpingWhileSlidingUnderTheLineDoesNotGrabIt()
+        {
+            // 掴める距離を 3 m に広げ、しゃがんで滑っている低い手からも線に届くようにする
+            var rules = _ziplineOn.WithActions(_ziplineOn.Actions.WithSlide(Slide.On));
+            Start(rules, OneLine(), new ZiplineTuning(grabRadius: 3f));
+            for (var i = 0; i < 5; i++)
+            {
+                Send(InputButtons.Sprint, new Vector2(0f, 1f));
+            }
+
+            Send(InputButtons.Sprint | InputButtons.Crouch | InputButtons.Slide, new Vector2(0f, 1f));
+            Assert.That(_movement.IsSliding(1), Is.True, "the player should be sliding before the jump");
+
+            Send(InputButtons.Sprint | InputButtons.Crouch | InputButtons.Slide | InputButtons.Jump, new Vector2(0f, 1f));
+
+            Assert.That(_movement.IsZiplining(1), Is.False, "a slide is refused like a dodge, so the slide state is not dropped unlogged");
+            Assert.That(_log.ToString(), Does.Not.Contain("[Net] zipline "));
+        }
+
         private static NetMapZiplines OneLine()
         {
             return Line(_lineStart, _lineEnd);
@@ -275,6 +295,7 @@ namespace Shooter.Server.Tests
                 defaults.Swim,
                 defaults.WallRun,
                 defaults.Parachute,
+                defaults.Slide,
                 zipline ?? ZiplineTuning.Default,
                 rules,
                 defaults.KillPlaneY,

@@ -90,6 +90,21 @@ namespace Shooter.NetV2
 
         public NetV2LocalPlayer LocalPlayer => _local;
 
+        // 持っている武器に自分の付けた物を効かせた照準器。武器がまだ届いていない・どのアセットにも無いときは null
+        public SightSpec OwnSight
+        {
+            get
+            {
+                if (_client == null)
+                {
+                    return null;
+                }
+
+                var spec = _weapons.OwnSpecFor(ClientFire.CurrentWeaponId(CurrentOwner()));
+                return spec != null ? spec.Aim.Sight : null;
+            }
+        }
+
         public GameObject GrenadePrefab { get; set; }
 
         // 部品を作る (つなぐ・再生する) 前に置く。null なら箱と脱出地点の形をコードで作る
@@ -323,10 +338,9 @@ namespace Shooter.NetV2
 
             // サーバーと同じマシンで並べて動かすので、裏に回っても止めない
             Application.runInBackground = true;
-            if (NetStartup.IsHeadlessPlayer(Application.isEditor, Application.isBatchMode, false))
-            {
-                Application.targetFrameRate = 60;
-            }
+
+            // 画面の無いクライアントはデータの headlessFrameRate で、画面のあるクライアントはプレイヤーの fps 上限で回す。
+            AppliedGraphicsSettings.ApplyFrameRate();
 
             _menu = GameUi.Menu;
             if (_menu != null)

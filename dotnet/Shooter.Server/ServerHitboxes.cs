@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Shooter.Core;
+using Shooter.Protocol;
 
 namespace Shooter.Server
 {
@@ -57,6 +58,7 @@ namespace Shooter.Server
                 {
                     _lag.Record(
                         tick, body.PlayerId, body.Position, body.Stance != PlayerStance.Standing, LeanStep.EyeOffset(body.Lean, body.Yaw, _motor));
+                    RecordShield(tick, body);
                 }
             }
 
@@ -86,6 +88,7 @@ namespace Shooter.Server
         public void Forget(int playerId)
         {
             _lag.Remove(playerId);
+            _shields.Remove(playerId);
         }
 
         public bool Cast(
@@ -212,6 +215,8 @@ namespace Shooter.Server
                 found = true;
             }
 
+            // 盾の板は持ち主の体より前にあるので、体の当たりを決めた後に、それより手前で板に当たるかを見る
+            found |= NearerHeldShield(origin, unit, radius, found ? hit.Distance : range, clamped, _rewound, ref hit);
             hit = hit.WithRewind(LastRecordedTick - clamped);
             return found;
         }
@@ -443,9 +448,11 @@ namespace Shooter.Server
         private ShotHit(
             Vector3 point, Vector3 normal, float distance, bool hitTarget, int targetId, Vector3 targetPosition, bool targetCrouched,
             HitZone zone, int colliderId, int layer, float rewindTicks, int vehicle = -1, float damageMultiplier = 1f, string vehiclePartId = null,
-            int deployable = 0)
+            int deployable = 0, int? shieldHolder = null)
         {
             DeployableId = deployable;
+            HitShield = shieldHolder.HasValue;
+            ShieldHolderId = shieldHolder ?? PlayerIds.None;
             VehicleIndex = vehicle;
             DamageMultiplier = damageMultiplier;
             VehiclePartId = vehiclePartId;
@@ -498,6 +505,12 @@ namespace Shooter.Server
 
         public bool HitDeployable => DeployableId > 0;
 
+        // 持っている盾の板が止めた弾の、盾の持ち主。持ち主には当たっていないので、HitTarget は false のまま。
+        // 当たったかを Id の値で見分けないのは、default の ShotHit (外れ) の Id 0 を盾に当たったと読まないため
+        public int ShieldHolderId { get; }
+
+        public bool HitShield { get; }
+
         public static ShotHit World(WorldHit hit)
         {
             return new ShotHit(hit.Point, hit.Normal, hit.Distance, false, 0, default, false, HitZone.Body, hit.ColliderId, hit.Layer, 0f);
@@ -524,11 +537,29 @@ namespace Shooter.Server
             return new ShotHit(point, normal, distance, false, 0, default, false, HitZone.Body, -1, 0, 0f, deployable: deployableId);
         }
 
+        public static ShotHit Shield(Vector3 point, Vector3 normal, float distance, int holderId)
+        {
+            if (holderId == PlayerIds.None)
+            {
+                throw new ArgumentOutOfRangeException(nameof(holderId), holderId, "holderId must name a player");
+            }
+
+            return new ShotHit(point, normal, distance, false, 0, default, false, HitZone.Body, -1, 0, 0f, shieldHolder: holderId);
+        }
+
         public ShotHit WithRewind(float rewindTicks)
         {
             return new ShotHit(
                 Point, Normal, Distance, HitTarget, TargetId, TargetPosition, TargetCrouched, Zone, ColliderId, Layer, rewindTicks, VehicleIndex,
-                DamageMultiplier, VehiclePartId, DeployableId);
+                DamageMultiplier, VehiclePartId, DeployableId, HitShield ? ShieldHolderId : null);
+        }
+
+        // 跳ねた弾・飛ぶ弾は距離減衰を進んだ道のりで決めるので、当たった物はそのままに距離だけを替える
+        public ShotHit WithDistance(float distance)
+        {
+            return new ShotHit(
+                Point, Normal, distance, HitTarget, TargetId, TargetPosition, TargetCrouched, Zone, ColliderId, Layer, RewindTicks, VehicleIndex,
+                DamageMultiplier, VehiclePartId, DeployableId, HitShield ? ShieldHolderId : null);
         }
     }
 }

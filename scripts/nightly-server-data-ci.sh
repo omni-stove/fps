@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CI (テンプレートの templates/github-workflows/map-data.yml) から、マップのデータ (server-data/maps の .fpsmap・.fpsnav・.structures.json・.ladders.json) を
+# CI (テンプレートの templates/github-workflows/map-data.yml) から、マップのデータ (server-data/maps の .fpsmap・.fpsnav・.structures.json・.ladders.json・.water.json・.vehicles.json) を
 # unityci/editor のコンテナの Unity で書き出し直し (make export-server-data と同じ MapCollisionExporter.Export)、
 # コミットしたものと違えば失敗する。シーンを変えて書き出し忘れたまま、.NET のサーバーが古いマップで動くのに気づくため。
 # 使い方: UNITY_LICENSE=<Unity_lic.ulf の中身> scripts/nightly-server-data-ci.sh

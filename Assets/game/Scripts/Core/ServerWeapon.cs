@@ -39,6 +39,8 @@ namespace Shooter.Core
 
         public int StartingReserveAmmo => _weapon.StartingReserveAmmo;
 
+        public int MaxReserveAmmo => _weapon.MaxReserveAmmo;
+
         public bool HasAmmoPool => _weapon.AmmoPool != null;
         public bool IsReloading => _weapon.IsReloading;
 
@@ -158,6 +160,51 @@ namespace Shooter.Core
             _weapon.Reloaded -= HandleReloaded;
             _weapon.UseAmmoPool(null);
             _weapon = CreateWeapon();
+            Changed?.Invoke();
+        }
+
+        // 拾った予備弾や弾薬箱の補給。入った数を返し、上限や無限の予備弾で入らなければ 0
+        public int AddReserveAmmo(int amount)
+        {
+            if (amount < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(amount), amount, "amount must not be negative");
+            }
+
+            var added = amount == 0 ? 0 : _weapon.AddReserveAmmo(amount);
+            if (added > 0)
+            {
+                Changed?.Invoke();
+            }
+
+            return added;
+        }
+
+        // 誰かが落とした武器を拾ったときに、落としたときの弾数で持たせる。弾倉は大きさまでに縮め、予備弾は上限を超えても削らない
+        // (Weapon をセーブの値から作るときと同じ)。予備弾を受け皿から出し入れする武器では、予備弾は受け皿のままにする
+        public void SetAmmo(int ammoInMagazine, int reserveAmmo)
+        {
+            if (ammoInMagazine < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(ammoInMagazine), ammoInMagazine, "ammoInMagazine must not be negative");
+            }
+
+            if (reserveAmmo < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(reserveAmmo), reserveAmmo, "reserveAmmo must not be negative");
+            }
+
+            var ammoType = _weapon.AmmoTypes.Index;
+            _weapon.Reloaded -= HandleReloaded;
+            _weapon.UseAmmoPool(null);
+            _weapon = new Weapon(_innerSpec, Math.Min(ammoInMagazine, Spec.MagazineSize), reserveAmmo, _rules);
+            _weapon.Reloaded += HandleReloaded;
+            if (_pool != null)
+            {
+                _weapon.UseAmmoPool(_pool);
+            }
+
+            _weapon.AmmoTypes.TrySelect(ammoType);
             Changed?.Invoke();
         }
 

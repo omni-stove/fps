@@ -28,6 +28,7 @@ namespace Shooter.Server
             _movement = movement ?? throw new ArgumentNullException(nameof(movement));
             _spec = spec ?? throw new ArgumentNullException(nameof(spec));
             _weaponId = weaponId ?? string.Empty;
+            SyncTakedown();
         }
 
         public string Name => "melee";
@@ -43,6 +44,8 @@ namespace Shooter.Server
                 {
                     swinger.Swing.Spec = value;
                 }
+
+                SyncTakedown();
             }
         }
 
@@ -50,7 +53,7 @@ namespace Shooter.Server
         {
             _context = context ?? throw new ArgumentNullException(nameof(context));
             _log = context.Log;
-            _combat.IsMeleeSwinging = IsSwinging;
+            _combat.IsMeleeSwinging = playerId => IsSwinging(playerId) || IsPerformingTakedown(playerId);
             context.Match.PlayerLeft += HandlePlayerLeft;
             context.Match.MapChanged += HandleMapChanged;
             _combat.Rules.PlayerSpawned += HandlePlayerSpawned;
@@ -71,6 +74,16 @@ namespace Shooter.Server
             _now += deltaSeconds;
             foreach (var swinger in _swingers.Values)
             {
+                // 持ち替えた時点で溜めを捨てる。持ち替えて戻ったときに、前に押していた分で振らないように (WeaponController.FollowChargingWeapon)
+                if (swinger.ChargeWeaponId != null)
+                {
+                    var held = HeldMeleeWeapon(swinger.PlayerId);
+                    if (held == null || !string.Equals(held.Id, swinger.ChargeWeaponId, StringComparison.Ordinal))
+                    {
+                        swinger.DropCharge();
+                    }
+                }
+
                 var swing = swinger.Swing;
                 if (swing.IsSwinging && !IsStanding(swinger.PlayerId))
                 {
@@ -79,11 +92,15 @@ namespace Shooter.Server
                 }
 
                 var spec = swing.CurrentSpec;
+                var weaponId = swinger.SwingWeaponId;
                 if (swing.Tick(deltaSeconds))
                 {
-                    Strike(swinger.PlayerId, spec);
+                    Strike(swinger.PlayerId, spec, weaponId);
                 }
             }
+
+            TickTakedowns(deltaSeconds);
+            TickThrown(deltaSeconds);
         }
 
         public void OnConnected(ConnectionId connection)
@@ -114,11 +131,31 @@ namespace Shooter.Server
 
                 var held = frame.Has(InputButtons.Melee);
                 var pressed = held && !swinger.Held;
+                var released = !held && swinger.Held;
+                var takedown = frame.Has(InputButtons.Takedown);
+                var takedownPressed = takedown && !swinger.TakedownHeld;
+                var aim = frame.Has(InputButtons.Aim);
+                var aimPressed = aim && !swinger.AimHeld;
                 swinger.LastTick = frame.Tick;
                 swinger.Held = held;
-                if (pressed)
+                swinger.TakedownHeld = takedown;
+                swinger.AimHeld = aim;
+
+                // オフラインの近接のボタン (MeleeController.TryMelee) と同じく技を先に試す。テイクダウンだけのボタンは、技が選ばれなくてもふつうの近接に替えない
+                var tookDown = (pressed || takedownPressed) && TryTakedown(swinger.PlayerId);
+                if (pressed && !tookDown && !PressWeapon(swinger, frame.Tick))
                 {
                     TrySwing(swinger);
+                }
+
+                if (released)
+                {
+                    ReleaseWeapon(swinger, frame.Tick);
+                }
+
+                if (aimPressed)
+                {
+                    TryThrow(swinger);
                 }
             }
         }
@@ -137,6 +174,8 @@ namespace Shooter.Server
             _combat.Rules.RulesChanged -= HandleRulesChanged;
             _combat.IsMeleeSwinging = null;
             _swingers.Clear();
+            _takedowns.Clear();
+            _thrown.Clear();
         }
 
         private Swinger GetOrAdd(int playerId)
@@ -152,24 +191,34 @@ namespace Shooter.Server
 
         private void HandlePlayerLeft(ServerPlayer player)
         {
+            StopTakedown(player.PlayerId, ContextMeleeInterruption.Cancelled);
             _swingers.Remove(player.PlayerId);
         }
 
-        // 出現し直した人は振りかけの振りも待ち時間も持ち越さない (オフラインの MeleeController が出現で止めるのと同じ)
+        // 出現し直した人は振りかけの振りも待ち時間も溜めも技も持ち越さない (オフラインの MeleeController が出現で止めるのと同じ)
         private void HandlePlayerSpawned(int playerId)
         {
+            StopTakedown(playerId, ContextMeleeInterruption.Cancelled);
             if (_swingers.TryGetValue(playerId, out var swinger))
             {
                 swinger.Swing.Reset();
+                swinger.SwingWeaponId = null;
+                swinger.DropCharge();
             }
         }
 
+        // 前の試合で投げた武器が次の試合の人に当たらないよう、飛んでいる物も捨てる
         private void HandleMatchStarted()
         {
             foreach (var swinger in _swingers.Values)
             {
                 swinger.Swing.Reset();
+                swinger.SwingWeaponId = null;
+                swinger.DropCharge();
             }
+
+            CancelAllTakedowns();
+            _thrown.Clear();
         }
 
         private void HandleMapChanged(ServerMapData map)
@@ -177,7 +226,7 @@ namespace Shooter.Server
             HandleMatchStarted();
         }
 
-        private sealed class Swinger
+        private sealed partial class Swinger
         {
             public Swinger(int playerId, MeleeSwing swing)
             {

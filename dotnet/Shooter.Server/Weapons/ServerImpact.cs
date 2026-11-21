@@ -15,6 +15,13 @@ namespace Shooter.Server
 
         public void Apply(in ServerShot shot, Vector3 direction, in ShotHit hit)
         {
+            // オフラインの HitscanDelivery.Land と同じく、盾を置いた物より先に見る
+            if (hit.HitShield)
+            {
+                _combat.BlockByShield(shot, hit);
+                return;
+            }
+
             // 敵の置いた物は弾を受け止めて耐久で受け、着弾の効果 (爆発・状態異常・燃える範囲) を出さない (オフラインの Deployable.TryStopBullet と同じ)。
             // 飛ぶ弾の止まった所での起爆 (Detonate) は、受け止めた後にも起きる
             if (hit.HitDeployable)

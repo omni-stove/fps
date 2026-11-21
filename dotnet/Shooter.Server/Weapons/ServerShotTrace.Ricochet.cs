@@ -25,8 +25,8 @@ namespace Shooter.Server
             {
                 var last = segments[segments.Count - 1];
 
-                // 人・乗り物・置いた物に当たった弾はそこで止まり、ダメージを与える。跳ねるのは世界の面だけ。
-                if (!last.HasHit || last.Hit.HitTarget || last.Hit.HitVehicle || last.Hit.HitDeployable)
+                // 人・乗り物・置いた物・持っている盾に当たった弾はそこで止まる。跳ねるのは世界の面だけ。
+                if (!last.HasHit || last.Hit.HitTarget || last.Hit.HitVehicle || last.Hit.HitDeployable || last.Hit.HitShield)
                 {
                     return;
                 }
@@ -53,21 +53,9 @@ namespace Shooter.Server
                 }
 
                 // 距離減衰は弾が跳ねながら進んだ道のりで決める。
-                var hit = WithDistance(_hits[0], travelled + RicochetSurfaceOffset + _hits[0].Distance);
+                var hit = _hits[0].WithDistance(travelled + RicochetSurfaceOffset + _hits[0].Distance);
                 segments.Add(ShotTraceSegment.WithHit(surface, bounced, hit, damageMultiplier));
             }
-        }
-
-        private static ShotHit WithDistance(in ShotHit hit, float distance)
-        {
-            var moved = hit.HitTarget
-                ? ShotHit.Target(hit.Point, hit.Normal, distance, hit.TargetId, hit.TargetPosition, hit.TargetCrouched, hit.Zone)
-                : hit.HitVehicle
-                    ? ShotHit.Vehicle(hit.Point, hit.Normal, distance, hit.VehicleIndex, hit.DamageMultiplier, hit.VehiclePartId)
-                    : hit.HitDeployable
-                        ? ShotHit.Deployable(hit.Point, hit.Normal, distance, hit.DeployableId)
-                        : ShotHit.World(new WorldHit(hit.Point, hit.Normal, distance, hit.ColliderId, hit.Layer));
-            return moved.WithRewind(hit.RewindTicks);
         }
     }
 }

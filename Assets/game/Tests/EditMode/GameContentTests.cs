@@ -264,6 +264,25 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void TheMusicCatalogComesFromTheEntryAndFallsBackToResources()
+        {
+            var content = Content("A");
+            GameContent.Use(content);
+            Assert.That(content.Music, Is.Null);
+            Assert.That(MusicCatalog.Load(), Is.SameAs(Resources.Load<MusicCatalog>(MusicCatalog.ResourcePath)));
+
+            content.Music = Track(ScriptableObject.CreateInstance<MusicCatalog>());
+            Assert.That(MusicCatalog.Load(), Is.SameAs(content.Music));
+
+            content.Music = null;
+            Assert.That(MusicCatalog.Load(), Is.SameAs(Resources.Load<MusicCatalog>(MusicCatalog.ResourcePath)));
+
+            var left = GameContentAssets.FillEmpty(
+                Track(ScriptableObject.CreateInstance<GameContent>()), _ => new Object[0], _ => new TextAsset[0]);
+            Assert.That(left, Does.Contain("Music"), "the entry lists the music as a slot to fill");
+        }
+
+        [Test]
         public void WithoutAVisionCatalogTheDefaultColorsAreUsed()
         {
             Assert.That(VisionVisualCatalog.ColorFor(null, VisionMode.Night), Is.EqualTo(VisionVisualCatalog.DefaultNightColor));
@@ -285,6 +304,7 @@ namespace Shooter.Tests.EditMode
         }
 
         [TestCase("_visionVisuals", "Resources/Presentation/VisionVisualsCatalog")]
+        [TestCase("_music", "Resources/Presentation/MusicCatalog")]
         [TestCase("_emoteAnimations", "Resources/Presentation/EmoteCatalog")]
         [TestCase("_cosmeticVisuals", "Resources/Presentation/CosmeticVisualCatalog")]
         [TestCase("_streakIcons", "Resources/Presentation/StreakIconCatalog")]
@@ -370,6 +390,7 @@ namespace Shooter.Tests.EditMode
                 (() => content.NameplatesTuning, v => content.NameplatesTuning = v),
                 (() => content.PalettesTuning, v => content.PalettesTuning = v),
                 (() => content.LoadoutPresetsTuning, v => content.LoadoutPresetsTuning = v),
+                (() => content.GraphicsTuning, v => content.GraphicsTuning = v),
             };
 
             foreach (var slot in slots)
@@ -455,6 +476,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("_mutatorsTuning", "Resources/Tuning/mutators")]
         [TestCase("_playlistsTuning", "Resources/Tuning/playlists")]
         [TestCase("_loadoutPresetsTuning", "Resources/Tuning/loadout-presets")]
+        [TestCase("_graphicsTuning", "Resources/Tuning/graphics")]
         public void TheTuningFieldsNameTheirResourceFallback(string field, string resourcePath)
         {
             var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -617,7 +639,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(asked, Does.Contain("payload").And.Contain("economy").And.Contain("supply-drops").And.Contain("mutators").And.Contain("playlists"));
             Assert.That(asked, Does.Contain("redeploy").And.Contain("key-sharing").And.Contain("nameplates").And.Contain("palettes"));
             Assert.That(asked, Does.Contain("loadout-presets"));
-            Assert.That(asked, Has.Count.EqualTo(39));
+            Assert.That(asked, Does.Contain("graphics"));
+            Assert.That(asked, Has.Count.EqualTo(40));
         }
 
         [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", "Packages/com.example.kit/Resources/Tuning", true)]

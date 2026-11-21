@@ -145,6 +145,35 @@ namespace Shooter.Editor
             ("Cover Low South East", new Vector3(32f, GroundY + 0.4f, -32f), new Vector3(4f, 0.8f, 0.4f)),
         };
 
+        public static string MapName => MapCollisionExporter.MapName(ScenePath);
+
+        public static string FeatureLayoutPath => NetMapFeatureBuilder.LayoutPath(MapName);
+
+        public static string BattleRoyaleFeatureLayoutPath => NetMapFeatureBuilder.LayoutPath(BattleRoyaleMapName);
+
+        // 出現地点の上に塔や乗り物が重ならないよう、カプセルの半径より広く空ける。
+        public const float FeatureSpawnClearance = 2f;
+
+        // NetTest は北西にはしごの塔、北東に水場、南西に車を置き、陣地の間の通り道と拠点・旗の台からは離す。
+        // 位置はマップの JSON (FeatureLayoutPath) を作るときの既定で、作った後は JSON の値を使う。
+        public static NetMapFeatureLayout DefaultFeatures => new NetMapFeatureLayout(
+            new[] { new NetMapLadderTower("Ladder Tower West", new Vector3(-20f, GroundY, 15f), new Vector3(4f, 3f, 4f), NetMapFeatureLayout.East, 0.8f) },
+            new[] { new NetMapWaterPool("Pond East", new Vector3(20f, GroundY, 15f), new Vector3(8f, 3f, 8f), 2.5f) },
+            new[] { new NetMapVehicleSpot("Car West", NetMapFeatureBuilder.CarKind, new Vector3(-20f, GroundY, -15f), 0f) });
+
+        // BR は出現点の輪と箱の輪の間に、北東にはしごの塔、南西に池、南と北西に車を置く。
+        public static NetMapFeatureLayout BattleRoyaleDefaultFeatures => new NetMapFeatureLayout(
+            new[]
+            {
+                new NetMapLadderTower("Ladder Tower North East", new Vector3(15f, GroundY, 52f), new Vector3(4f, 3f, 4f), NetMapFeatureLayout.South, 0.8f),
+            },
+            new[] { new NetMapWaterPool("Lake South West", new Vector3(-50f, GroundY, -20f), new Vector3(12f, 3f, 12f), 2.5f) },
+            new[]
+            {
+                new NetMapVehicleSpot("Car South", NetMapFeatureBuilder.CarKind, new Vector3(20f, GroundY, -50f), 0f),
+                new NetMapVehicleSpot("Car North West", NetMapFeatureBuilder.CarKind, new Vector3(-20f, GroundY, 50f), 180f),
+            });
+
         public static readonly Vector3 BattleRoyaleSpectatorPosition = new Vector3(0f, 90f, -90f);
 
         public static readonly Quaternion BattleRoyaleSpectatorRotation = Quaternion.Euler(45f, 0f, 0f);
@@ -158,11 +187,15 @@ namespace Shooter.Editor
             }
 
             var match = LoadOrBuildMatch();
-            BuildScene(CaptureRadius(match));
+            var captureRadius = CaptureRadius(match);
+            var features = LoadFeatures(captureRadius);
+            BuildScene(captureRadius, features);
             BuildSceneList.Register(ScenePath);
             AssetDatabase.SaveAssets();
             Debug.Log("[Net] NetSceneBuilder: wrote " + ScenePath + " (match " + MatchDefinitionPath + ", loadout "
-                + AssetDatabase.GetAssetPath(match.Loadout) + ", catalog " + AssetDatabase.GetAssetPath(match.Catalog) + ")");
+                + AssetDatabase.GetAssetPath(match.Loadout) + ", catalog " + AssetDatabase.GetAssetPath(match.Catalog) + ", "
+                + features.LadderTowers.Count + " ladder tower(s), " + features.WaterPools.Count + " water pool(s), "
+                + features.Vehicles.Count + " vehicle(s) from " + FeatureLayoutPath + ")");
         }
 
         public static void BuildBattleRoyale()
@@ -186,6 +219,9 @@ namespace Shooter.Editor
                 throw new InvalidOperationException(LogTag + " the " + BattleRoyaleMapName + " layout is invalid: " + string.Join("; ", problems));
             }
 
+            // NewScene(Single) は参照されていないアセットをアンロードするので、置き方の JSON はシーンを作る前に読んで値だけ持つ
+            var features = LoadBattleRoyaleFeatures();
+
             SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(scenePath));
             SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(navMeshDataPath));
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
@@ -193,11 +229,13 @@ namespace Shooter.Editor
             // 箱・脱出地点・エリアは当たりも形も持たない印なので、地形だけを置いて焼いてから足す
             var ground = CreateBattleRoyaleLevel(scene);
             var surface = SceneBuildHelpers.AddNavMeshSurface(ground, CollectObjects.All);
+            NetMapFeatureBuilder.PlaceTerrain(scene, NetMapFeatureBuilder.TerrainParent(surface), features);
             SceneBuildHelpers.BakeNavMesh(surface);
             SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
-            RequireBattleRoyaleNavigable();
+            RequireBattleRoyaleNavigable(features);
 
             PopulateBattleRoyale(scene);
+            NetMapFeatureBuilder.PlaceVehicles(scene, null, features);
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
                 throw new InvalidOperationException(LogTag + " failed to save " + scenePath);
@@ -207,7 +245,72 @@ namespace Shooter.Editor
             AssetDatabase.SaveAssets();
             Debug.Log(LogTag + " wrote " + scenePath + " and " + navMeshDataPath + " (" + BattleRoyaleSpawnPoints.Count + " spawn point(s), "
                 + BattleRoyaleLootContainers.Count + " loot container(s), " + BattleRoyaleExtractionPoints.Count + " extraction point(s), zone radius "
-                + BattleRoyaleZoneRadius + " m); start a server with " + NetLaunchOptions.MapFlag + " " + BattleRoyaleMapName);
+                + BattleRoyaleZoneRadius + " m, " + features.LadderTowers.Count + " ladder tower(s), " + features.WaterPools.Count + " water pool(s), "
+                + features.Vehicles.Count + " vehicle(s)); start a server with " + NetLaunchOptions.MapFlag + " " + BattleRoyaleMapName);
+        }
+
+        public static NetMapFeatureLayout LoadFeatures(float captureRadius)
+        {
+            var features = NetMapFeatureBuilder.LoadOrBuild(FeatureLayoutPath, DefaultFeatures);
+            var problems = FeatureProblems(features, captureRadius);
+            if (problems.Count > 0)
+            {
+                throw new InvalidOperationException(LogTag + " " + FeatureLayoutPath + " does not fit " + MapName + ": " + string.Join("; ", problems));
+            }
+
+            return features;
+        }
+
+        public static NetMapFeatureLayout LoadBattleRoyaleFeatures()
+        {
+            var features = NetMapFeatureBuilder.LoadOrBuild(BattleRoyaleFeatureLayoutPath, BattleRoyaleDefaultFeatures);
+            var problems = BattleRoyaleFeatureProblems(features);
+            if (problems.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    LogTag + " " + BattleRoyaleFeatureLayoutPath + " does not fit " + BattleRoyaleMapName + ": " + string.Join("; ", problems));
+            }
+
+            return features;
+        }
+
+        public static List<string> FeatureProblems(NetMapFeatureLayout features, float captureRadius)
+        {
+            var keepClear = SpawnPoints.Select(p => (p.Name, Feet(p.Position), FeatureSpawnClearance))
+                .Concat(ControlPoints.Select(p => (p.Name, p.Position, ControlPointZone.DefaultRadius + PlayerRadius)))
+                .Concat(FlagBases.Select(b => (FlagBaseName(b.Side), b.Position, captureRadius + PlayerRadius)));
+            return NetMapFeatureBuilder.Problems(features, SceneBuildHelpers.PlaneHalfExtents(GroundScale).x, CoverWalls, keepClear);
+        }
+
+        public static List<string> BattleRoyaleFeatureProblems(NetMapFeatureLayout features)
+        {
+            var keepClear = BattleRoyaleSpawnPoints.Select(p => (p.Name, Feet(p.Position), FeatureSpawnClearance))
+                .Concat(BattleRoyaleLootContainers.Select(c => (c.Id, c.Position, LootContainer.DefaultReach + PlayerRadius)))
+                .Concat(BattleRoyaleExtractionPoints.Select(p => (p.Id, p.Position, ExtractionZone.DefaultRadius + PlayerRadius)));
+            return NetMapFeatureBuilder.Problems(features, BattleRoyaleHalfExtent, BattleRoyaleCoverWalls, keepClear);
+        }
+
+        // はしごの足元に Bot が歩いて行けないと、サーバーの Bot がはしごを使えないので、焼いた後に確かめる。
+        public static List<Vector3> LadderApproachPoints(NetMapFeatureLayout features)
+        {
+            if (features == null)
+            {
+                throw new ArgumentNullException(nameof(features));
+            }
+
+            var points = new List<Vector3>();
+            foreach (var tower in features.LadderTowers)
+            {
+                var (bottom, facing) = LadderTowerBuilder.LadderPlacement(tower.BaseCenter, tower.Size, tower.SideDirection);
+                points.Add(bottom - (facing * NetMapFeatureBuilder.LadderApproachDepth));
+            }
+
+            return points;
+        }
+
+        private static Vector3 Feet(Vector3 spawnPosition)
+        {
+            return spawnPosition + new Vector3(0f, GroundY, 0f);
         }
 
         public static GameObject CreateBattleRoyaleLevel(Scene scene)
@@ -375,7 +478,7 @@ namespace Shooter.Editor
         }
 
         // サーバーの Bot は箱と脱出地点へ NavMesh で歩くので、焼いた後に出現点から届くかを確かめる
-        private static void RequireBattleRoyaleNavigable()
+        public static void RequireBattleRoyaleNavigable(NetMapFeatureLayout features)
         {
             var spawns = BattleRoyaleSpawnPoints.Select(p => p.Position).ToList();
             SceneBuildHelpers.RequireOnNavMesh(spawns, NavMeshCheckRadius, "spawn point");
@@ -388,6 +491,20 @@ namespace Shooter.Editor
             var exits = BattleRoyaleExtractionPoints.Select(p => p.Position).ToList();
             SceneBuildHelpers.RequireOnNavMesh(exits, NavMeshCheckRadius, "extraction point");
             SceneBuildHelpers.RequireReachable(spawns[0], exits, NavMeshCheckRadius, "extraction point");
+
+            RequireLaddersReachable(spawns[0], features);
+        }
+
+        private static void RequireLaddersReachable(Vector3 from, NetMapFeatureLayout features)
+        {
+            var ladders = LadderApproachPoints(features);
+            if (ladders.Count == 0)
+            {
+                return;
+            }
+
+            SceneBuildHelpers.RequireOnNavMesh(ladders, NavMeshCheckRadius, "ladder foot");
+            SceneBuildHelpers.RequireReachable(from, ladders, NavMeshCheckRadius, "ladder foot");
         }
 
         // 既にある試合の設定はルールの並びなどを上書きしないのは、ゲームが変えた値を残すため。
@@ -524,7 +641,7 @@ namespace Shooter.Editor
             return point;
         }
 
-        private static void BuildScene(float captureRadius)
+        private static void BuildScene(float captureRadius, NetMapFeatureLayout features)
         {
             var scenePath = ScenePath;
             SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(scenePath));
@@ -566,7 +683,9 @@ namespace Shooter.Editor
 
             CreateFlagBases(scene, FlagBases, captureRadius);
 
-            BakeNavMesh(ground);
+            NetMapFeatureBuilder.PlaceTerrain(scene, null, features);
+            BakeNavMesh(ground, features);
+            NetMapFeatureBuilder.PlaceVehicles(scene, null, features);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -575,13 +694,17 @@ namespace Shooter.Editor
         }
 
         // サーバーへの書き出し NavMeshExporter は床の NavMeshSurface から読むので、焼いたデータをそこに持たせる。
-        private static void BakeNavMesh(GameObject ground)
+        private static void BakeNavMesh(GameObject ground, NetMapFeatureLayout features)
         {
             var surface = SceneBuildHelpers.AddNavMeshSurface(ground, CollectObjects.All);
             SceneBuildHelpers.EnsureFolder(System.IO.Path.GetDirectoryName(NavMeshDataPath));
             SceneBuildHelpers.BakeNavMesh(surface);
             SceneBuildHelpers.SaveNavMeshData(surface, NavMeshDataPath);
+            RequireNavigable(features);
+        }
 
+        public static void RequireNavigable(NetMapFeatureLayout features)
+        {
             var spawns = SpawnPoints.Select(point => point.Position).ToList();
             SceneBuildHelpers.RequireOnNavMesh(spawns, NavMeshCheckRadius, "spawn point");
             SceneBuildHelpers.RequireReachable(spawns[0], spawns, NavMeshCheckRadius, "spawn point");
@@ -589,6 +712,8 @@ namespace Shooter.Editor
             var bases = FlagBases.Select(flagBase => flagBase.Position).ToList();
             SceneBuildHelpers.RequireOnNavMesh(bases, NavMeshCheckRadius, "flag base");
             SceneBuildHelpers.RequireReachable(spawns[0], bases, NavMeshCheckRadius, "flag base");
+
+            RequireLaddersReachable(spawns[0], features);
         }
     }
 }

@@ -28,6 +28,19 @@ namespace Shooter.Server
             return Head("vault", playerId, tick) + " vaulting=" + Bool(vaulting);
         }
 
+        public static string Mantle(int playerId, int tick, bool mantling)
+        {
+            return Head("mantle", playerId, tick) + " mantling=" + Bool(mantling);
+        }
+
+        // オフラインの PlayerController.FormatMantleProbeLog と同じ値を出し、上れなかった理由と測った段を同じ見方で追えるようにする
+        public static string MantleProbe(int playerId, int tick, VaultVerdict verdict, float height, float depth)
+        {
+            var depthText = float.IsPositiveInfinity(depth) ? "inf" : depth.ToString("F2", CultureInfo.InvariantCulture);
+            return Head("mantle", playerId, tick) + " probe=" + verdict + " height=" + height.ToString("F2", CultureInfo.InvariantCulture)
+                + " depth=" + depthText;
+        }
+
         public static string Prone(int playerId, int tick, bool prone)
         {
             return Head("prone", playerId, tick) + " prone=" + Bool(prone);
@@ -102,6 +115,20 @@ namespace Shooter.Server
         public static string ParachuteClosed(int playerId, int tick, ParachuteCloseReason reason)
         {
             return Head("parachute", playerId, tick) + " closed reason=" + reason;
+        }
+
+        // オフラインの SlideMotion.FormatStartLog・FormatEndLog と同じ項目と桁にし、同じ見方で追えるようにする
+        public static string SlideStart(int playerId, int tick, float speed, Vector2 direction)
+        {
+            return Head("slide", playerId, tick)
+                + string.Format(CultureInfo.InvariantCulture, " start speed={0:0.00} direction=({1:0.00}, {2:0.00})", speed, direction.X, direction.Y);
+        }
+
+        public static string SlideEnd(int playerId, int tick, Shooter.Core.SlideEnd reason, float speed, float seconds, float distance)
+        {
+            return Head("slide", playerId, tick)
+                + string.Format(
+                    CultureInfo.InvariantCulture, " end reason={0} speed={1:0.00} seconds={2:0.00} distance={3:0.00}", reason, speed, seconds, distance);
         }
 
         private static string Vector(Vector3 value)

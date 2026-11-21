@@ -76,6 +76,19 @@ namespace Shooter.Runtime
             }
         }
 
+        // 勝ち数・待ち・制限時間はネット対戦ではラウンドの欄 (NetMatchDefinition) を使うので、とどめの値だけを渡す
+        public ExecutionSpec ToSpec()
+        {
+            try
+            {
+                return new ExecutionSpec(_executeSeconds, _executeRange);
+            }
+            catch (ArgumentOutOfRangeException e)
+            {
+                throw new InvalidOperationException($"execution definition '{SourceName}' is invalid: {e.Message}", e);
+            }
+        }
+
         private string SourceName => string.IsNullOrEmpty(name) ? "(unnamed execution definition)" : name;
     }
 }

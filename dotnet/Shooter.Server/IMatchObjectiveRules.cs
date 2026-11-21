@@ -96,6 +96,10 @@ namespace Shooter.Server
         // 出現で配る武器の並び (選んだ並び・Gun Game の段) を目的が絞る口。持ち込める物を持ち物庫で決める目的 (Extraction) のため
         IReadOnlyList<WeaponSpec> FilterWeapons(int playerId, IReadOnlyList<WeaponSpec> weapons) => weapons;
 
+        // ダウン中の敵にとどめを刺す近接の技 (ServerMelee がテイクダウンと同じ仕組みで選ぶ)。null でなければ、ダウン中の人へのダメージは
+        // この技のとどめのほかは通さない (オフラインの ExecutionSession と同じく、撃っても倒れない)。null ならダウン中の人も撃って倒せる
+        ContextMeleeMove DownedFinisher => null;
+
         // この Bot を向かわせる先。null なら ServerBots は BotRally か出現地点を巡らせる。
         // 先を少しずつ動かすと Bot の巡る路を毎回作り直すので、同じ先の間は同じ値を返す
         Vector3? BotGoal(int playerId) => null;

@@ -110,7 +110,9 @@ namespace Shooter.Server.Tests
             Assert.That(data.LootPath, Is.Null);
             Assert.That(data.BattleRoyale, Is.SameAs(BattleRoyaleSpec.Default));
             Assert.That(data.BattleRoyalePath, Is.Null);
-            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default economy=none loot=default extraction=default stash=default battleRoyale=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
+            Assert.That(data.PickupDrops, Is.SameAs(PickupDropSpec.Default));
+            Assert.That(data.PickupDropsPath, Is.Null);
+            Assert.That(data.LogLine, Does.StartWith("[Server] rules Domination objective=Domination weapons=2 from=").And.EndWith("ping=default grenade=default bots=default inventory=default knockback=default assist=default chatWords=default economy=none loot=default extraction=default stash=default battleRoyale=default pickupDrops=default walk=5 sprint=8 height=2 crouchHeight=1.2 radius=0.5 weather=default timeOfDay=default"));
         }
 
         [Test]
@@ -484,6 +486,39 @@ namespace Shooter.Server.Tests
             Assert.That(data.LogLine, Does.Contain(" battleRoyale=" + data.BattleRoyalePath + " "));
             Assert.That(data.WithSettings(data.Settings.WithPrivacy(true, "FRIENDS")).BattleRoyale, Is.SameAs(spec));
             Assert.That(data.WithRules(GameRules.Default).BattleRoyalePath, Is.EqualTo(data.BattleRoyalePath));
+        }
+
+        [Test]
+        public void ReadsThePickupDropsTuningBesideTheRulesAndKeepsItThroughChanges()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(
+                Path.Combine(tuning, ServerRulesData.PickupDropsTuningFileName), "{\"dropsWeapon\": false, \"reserveAmmo\": 12}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out var data, out var error), Is.True, error);
+
+            var spec = data.PickupDrops;
+            Assert.That(spec.DropsWeapon, Is.False);
+            Assert.That(spec.ReserveAmmo, Is.EqualTo(12));
+            Assert.That(spec.LifetimeSeconds, Is.EqualTo(PickupDropSpec.DefaultLifetimeSeconds), "an item left out keeps the Core default");
+            Assert.That(data.PickupDropsPath, Does.EndWith(ServerRulesData.PickupDropsTuningFileName));
+            Assert.That(data.LogLine, Does.Contain(" pickupDrops=" + data.PickupDropsPath + " "));
+            Assert.That(data.WithSettings(data.Settings.WithPrivacy(true, "FRIENDS")).PickupDrops, Is.SameAs(spec));
+            Assert.That(data.WithRules(GameRules.Default).PickupDropsPath, Is.EqualTo(data.PickupDropsPath));
+        }
+
+        [Test]
+        public void BrokenPickupDropsTuningStopsTheLoad()
+        {
+            TestRules.Write(_first.Path, "TeamDeathmatch");
+            var tuning = Path.Combine(_first.Path, ServerMapData.DataDirectoryName, ServerRulesData.TuningDirectoryName);
+            Directory.CreateDirectory(tuning);
+            File.WriteAllText(Path.Combine(tuning, ServerRulesData.PickupDropsTuningFileName), "{\"reach\": 0}");
+
+            Assert.That(ServerRulesData.TryLoad("TeamDeathmatch", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.StartWith("cannot read pickup drops tuning: ").And.Contain("reach"));
         }
 
         [Test]

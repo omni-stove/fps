@@ -15,8 +15,8 @@ namespace Shooter.Runtime
         public const int DefaultRepairCostPerPiece = HordeSpec.DefaultRepairCostPerPiece;
         public const float DefaultInteractRadius = HordeSpec.DefaultInteractRadius;
 
-        // 部品の箱を縮めて重なりを見るのは、隣に立っているだけの人を重なりとみなさないため。
-        public const float BlockCheckShrink = 0.9f;
+        // 部品の箱を縮めて重なりを見るのは、隣に立っているだけの人を重なりとみなさないため。専用サーバーと同じ値
+        public const float BlockCheckShrink = MapFortification.BlockCheckShrink;
 
         [SerializeField, Tooltip("始めから置かれているか。オフなら通貨を払って置く場所になる")]
         private bool _startsBuilt = true;

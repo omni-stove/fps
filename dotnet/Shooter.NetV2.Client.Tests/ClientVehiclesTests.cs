@@ -133,6 +133,27 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void OnlyTheDriverAsksToDeployFlaresForTheVehicleTheyDrive()
+        {
+            var vehicles = new ClientVehicles(_playerId);
+            var request = new VehicleRequestMessage();
+            Assert.That(vehicles.FillCountermeasure(request, _driverSeat), Is.False, "not riding");
+
+            vehicles.Apply(Snapshot(1, Vector3.Zero, seat: new VehicleSeatSync(0, 1)));
+            Assert.That(vehicles.FillCountermeasure(request, _driverSeat), Is.False, "a passenger does not deploy");
+            Assert.That(vehicles.FillCountermeasure(request, -1), Is.False, "a vehicle without a driver seat");
+
+            vehicles.Apply(Snapshot(2, Vector3.Zero, seat: new VehicleSeatSync(0, _driverSeat)));
+
+            Assert.That(vehicles.FillCountermeasure(request, _driverSeat), Is.True);
+            Assert.That(request.Action, Is.EqualTo(VehicleAction.Countermeasure));
+            Assert.That(request.Vehicle, Is.Zero);
+            Assert.That(request.Seat, Is.EqualTo(_driverSeat));
+            Assert.That(() => new MessageWriter().WriteMessage(request), Throws.Nothing, "the filled request can be sent");
+            Assert.That(() => vehicles.FillCountermeasure(null, _driverSeat), Throws.ArgumentNullException);
+        }
+
+        [Test]
         public void WhileRidingTheMatchSendsNoWalkingAndFollowsTheServersSeat()
         {
             var match = Join();

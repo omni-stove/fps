@@ -190,6 +190,47 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void LeaderMarkerOnABareTransformTakesTheSideGivenAndTheHeadFromTheBoundsGiven()
+        {
+            var body = Track(new GameObject("NetBody"));
+            body.transform.position = new Vector3(2f, 1f, 3f);
+            Bounds? head = null;
+            var prefab = Prefab("Crown");
+
+            var marker = GuardianLeaderMarker.Create(body.transform, Side.Bravo, () => head, prefab);
+            Track(marker.gameObject);
+
+            Assert.That(marker.Target, Is.Null);
+            Assert.That(marker.Anchor, Is.SameAs(body.transform));
+            Assert.That(marker.Side, Is.EqualTo(Side.Bravo));
+            Assert.That(marker.name, Is.EqualTo(GuardianLeaderMarker.ObjectNamePrefix + "NetBody"));
+            Assert.That(marker.Renderer.sharedMaterial.color, Is.EqualTo(GuardianLeaderMarker.ColorOf(Side.Bravo)).Using(ColorEqualityComparer.Instance));
+
+            // 囲みが無い間は追う先の位置から FallbackHeadHeight を頭とみなす
+            Assert.That(marker.transform.position.x, Is.EqualTo(2f).Within(Tolerance));
+            Assert.That(marker.transform.position.y,
+                Is.EqualTo(1f + GuardianLeaderMarker.FallbackHeadHeight + GuardianLeaderMarker.DefaultHeightAboveHead).Within(Tolerance));
+
+            head = new Bounds(new Vector3(5f, 1f, 6f), new Vector3(1f, 2f, 1f));
+            marker.Follow();
+            Assert.That(marker.transform.position.x, Is.EqualTo(5f).Within(Tolerance));
+            Assert.That(marker.transform.position.z, Is.EqualTo(6f).Within(Tolerance));
+            Assert.That(marker.transform.position.y, Is.EqualTo(2f + GuardianLeaderMarker.DefaultHeightAboveHead).Within(Tolerance));
+
+            marker.ViewerTeam = Team.Bravo;
+            Assert.That(marker.Renderer.sharedMaterial.color,
+                Is.EqualTo(GuardianLeaderMarker.ColorOf(Side.Bravo, Team.Bravo)).Using(ColorEqualityComparer.Instance));
+            marker.Remove();
+        }
+
+        [Test]
+        public void LeaderMarkerRefusesAMissingTransform()
+        {
+            Assert.Throws<System.ArgumentNullException>(() => GuardianLeaderMarker.Create((Transform)null, Side.Alpha, null));
+            Assert.Throws<System.ArgumentNullException>(() => GuardianLeaderMarker.Create((SideMember)null));
+        }
+
+        [Test]
         public void GuardianRunnerPassesItsMarkerPrefab()
         {
             var runner = Track(new GameObject("Runner")).AddComponent<GuardianRunner>();

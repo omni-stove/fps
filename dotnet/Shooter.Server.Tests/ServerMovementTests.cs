@@ -562,6 +562,46 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheBodysSpeedMultiplierScalesTheWalkWithTheCarryLoadAndTheOwnerIsToldTheProduct()
+        {
+            var carry = new CarryLoadSpec(CarrySource.Held, CarrySource.None, 1f, 0.1f, 0f, CarryGaits.All);
+            Start(motor: new MotorSpec(
+                MotorSpec.DefaultWalkSpeed, MotorSpec.DefaultSprintSpeed, MotorSpec.DefaultJumpHeight, MotorSpec.DefaultGravity,
+                MotorSpec.DefaultAirControl, MotorSpec.DefaultCrouchSpeed, carryLoad: carry));
+            Settle();
+            var heavy = new WeaponSpec(TestRules.RifleId, null, WeaponCategory.AssaultRifle, weight: 6f);
+            var body = _context.Bodies.Add(1);
+            body.SetWeapons(heavy, new[] { heavy });
+            body.MoveSpeedMultiplier = 1.5f;
+            _movement.TryGetState(1, out var before);
+
+            for (var i = 0; i < TickClock.DefaultTickRate; i++)
+            {
+                Send(new Vector2(0f, 1f), InputButtons.None);
+            }
+
+            // 重さで 0.5、体の倍率で 1.5 → 0.75
+            _movement.TryGetState(1, out var after);
+            Assert.That(after.Position.Z - before.Position.Z, Is.EqualTo(MotorSpec.DefaultWalkSpeed * 0.75f).Within(0.01f));
+
+            _transport.Sent.Clear();
+            _host.Tick(_tickSeconds);
+            Assert.That(OnlySnapshot().Owner.CarrySpeedMultiplier, Is.EqualTo(0.75f).Within(1e-5f));
+        }
+
+        [Test]
+        public void TheBodysSpeedMultiplierMustBePositiveAndFinite()
+        {
+            var body = new ServerBodies(NetMotorSettings.Default.Stance).Add(1);
+
+            Assert.That(body.MoveSpeedMultiplier, Is.EqualTo(1f));
+            Assert.That(() => body.MoveSpeedMultiplier = 0f, Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => body.MoveSpeedMultiplier = float.PositiveInfinity, Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(() => body.MoveSpeedMultiplier = float.NaN, Throws.InstanceOf<ArgumentOutOfRangeException>());
+            Assert.That(body.MoveSpeedMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
         public void WithoutWeaponsThePlayerWalksAtFullSpeed()
         {
             var carry = new CarryLoadSpec(CarrySource.Carried, CarrySource.Carried, 0f, 0.1f, 0f, CarryGaits.All);

@@ -24,8 +24,7 @@ namespace Shooter.Server
             (MatchObjective.BattleRoyale, (settings, host, parts) => CreateBattleRoyale(host, RequireParts(MatchObjective.BattleRoyale, parts))),
             (MatchObjective.Extraction, (settings, host, parts) => CreateExtraction(host, RequireParts(MatchObjective.Extraction, parts))),
 
-            // 防衛物の部品 (IHordeFortifications) を持つサーバーのモジュールはまだ無いので渡さず、直す・置く要求は NothingToDo で断らせる
-            (MatchObjective.Horde, (settings, host, parts) => new HordeRules(settings, host)),
+            (MatchObjective.Horde, (settings, host, parts) => new HordeRules(settings, host, parts?.Fortifications)),
             (MatchObjective.Infected, (settings, host, parts) => new InfectedRules(settings, host)),
             (MatchObjective.Guardian, (settings, host, parts) => new GuardianRules(settings, host, parts?.Seed)),
             (MatchObjective.Execution, (settings, host, parts) => new ExecutionRules(settings, host)));

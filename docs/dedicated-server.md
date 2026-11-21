@@ -55,9 +55,9 @@ docker compose -f docker/server/compose.yaml up -d
 - ルールの `actions` は、`stealth` のほかはオフラインと同じくサーバーでも効く。`stealth` を `On` にしたルールで起動すると、サーバーは `[Rules] warning: actions stealth ...` を出してそれを無視する。
 - スタミナの調整値は `server-data/tuning/stamina.json` を置いたときだけ読み、無ければ Core の `StaminaSpec` の既定で動く (Unity にも JSON は無い)。
 - ドローンはサーバーが飛ばすので、使うときは `deployables.json` に `Drone` の種類を足す。暗視とサーマルは手元の画面だけで決まり、サーバーは扱わない。
-- `Horde` の防衛物を直す・置く要求は、サーバーに防衛物の部品がまだ無いので、いつも断る。
+- `Horde` で直す・置ける防衛物は、`make export-server-data` がマップの建物と一緒に書き出した `HordeFortification` だけ。書き出す前のマップでは、直す・置く要求をいつも断る。
 - プレイリストでは `match.*` と武器が最初の項目のルールのまま変わらないので、後の項目で使うモードの節も最初の項目に書く。
-- `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力・速さ・武器 (`infectedMaxHealth`・`infectedSpeedMultiplier`・`infectedWeaponId`) はまだサーバーでは変わらない。
+- `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力の上限と速さ (`infectedMaxHealth`・`infectedSpeedMultiplier`) は感染したときから効き、試合の頭で生存者の値に戻る。`infectedWeaponId` の武器はルールのロードアウトか武器の一覧 (カタログ) に無いと起動 (と次のルールへの切り替え) を断る。空なら感染しても持っている武器のまま。クライアントの体力の表示の上限は接続のときに受けた全員共通の値 (`match.maxHealth`) のままなので、感染者は上限を超えた体力が出る。
 - `Execution` はラウンドの数と秒を `match.round*` に、とどめの秒数と距離を `match.execution` に書く。とどめは近接のボタンで刺すので、ルールの `melee` を `On` にする (`Off` ならダウン中の敵を撃って倒せる)。各チームの最後の 1 人はダウンせずにそのまま倒れる。
 
 ## CI のテンプレート

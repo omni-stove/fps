@@ -83,6 +83,9 @@ namespace Shooter.NetV2
 
         // null ならエリアの部品がシーンの ShrinkingZone を探して見た目を引き継ぐ
         public Func<ShrinkingZone> ZoneLook { get; set; }
+
+        // Guardian のリーダーの頭上の目印の見た目 (GuardianRunner.LeaderMarkerPrefab と同じ作り)。null なら仮の菱形を作る
+        public UnityEngine.GameObject LeaderMarkerVisual { get; set; }
     }
 
     public static class NetV2ClientParts
@@ -92,6 +95,7 @@ namespace Shooter.NetV2
         internal static readonly IReadOnlyList<Func<NetV2ClientPartsContext, INetV2ClientPart>> Registered =
             new Func<NetV2ClientPartsContext, INetV2ClientPart>[]
             {
+                NetV2GuardianLeaderPart.Create,
                 NetV2PickupPart.Create,
                 NetV2EmotePart.Create,
                 NetV2DronePart.Create,

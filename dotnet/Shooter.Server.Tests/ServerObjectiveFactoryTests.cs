@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Numerics;
 using NUnit.Framework;
 using Shooter.Core;
 using Shooter.Protocol;
@@ -240,7 +241,20 @@ namespace Shooter.Server.Tests
             Assert.That(spec.ScoreLimit, Is.EqualTo(int.MaxValue));
             Assert.That(spec.TimeLimitSeconds, Is.EqualTo(float.MaxValue));
             Assert.That(spec.RespawnsByRound, Is.True);
-            Assert.That(((HordeRules)objective).Fortify(1), Is.EqualTo(HordePurchaseVerdict.NothingToDo), "no fortification module is wired");
+            Assert.That(((HordeRules)objective).Fortify(1), Is.EqualTo(HordePurchaseVerdict.NothingToDo), "without parts there are no fortifications");
+        }
+
+        [Test]
+        public void HordeTakesTheFortificationsFromTheMatchParts()
+        {
+            var fortifications = new FakeFortifications();
+            var parts = Parts(null);
+            parts = new ServerObjectiveParts(parts.Rules, parts.Loot, parts.World, null, 1, fortifications);
+
+            var objective = ServerObjectiveFactory.Create(MatchObjective.Horde, new NetMatchSettings(), _host, parts);
+            objective.Start();
+
+            Assert.That(fortifications.Prepared, Is.EqualTo(1));
         }
 
         [Test]
@@ -394,6 +408,30 @@ namespace Shooter.Server.Tests
             }
 
             return new ServerObjectiveParts(rules, loot, new BattleRoyaleTestWorld(), store, 1);
+        }
+
+        private sealed class FakeFortifications : IHordeFortifications
+        {
+            public int Prepared { get; private set; }
+
+            public void Prepare()
+            {
+                Prepared++;
+            }
+
+            public void Tick()
+            {
+            }
+
+            public HordeFortificationTarget? FindInReach(Vector3 position, float radius)
+            {
+                return null;
+            }
+
+            public int Restore(int fortificationId, HordeFortificationAction action)
+            {
+                return 0;
+            }
         }
 
         // Session を作る前の目的だけを確かめるので、Session と体は持たない

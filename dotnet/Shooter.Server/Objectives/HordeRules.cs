@@ -10,7 +10,7 @@ namespace Shooter.Server
     // 波・通貨・勝ち負けはオフラインの Horde と同じ Core (WaveSchedule・HordeEconomy・HordeWin) で決める。
     // Session (TeamDeathmatchSession) は倒れた人を自分では戻さず (RespawnsByRound)、点数と時間の上限も届かない値にする。
     // 倒れた守る側は波の間にまとめて戻し、倒された敵の Bot は CorpseSeconds 後に試合から抜いて、空いた分を新しい Bot で足す
-    internal sealed class HordeRules : IMatchObjectiveRules
+    internal sealed class HordeRules : IMatchObjectiveRules, ISnapshotContributor
     {
         public const Team Defenders = Team.Alpha;
         public const Team Attackers = Team.Bravo;
@@ -159,6 +159,7 @@ namespace Shooter.Server
         public void UseMap(ServerMapData map, NetMapPoints points)
         {
             CheckMap(map, points);
+            _fortifications?.Prepare();
         }
 
         public void Start()
@@ -169,6 +170,7 @@ namespace Shooter.Server
             }
 
             _started = true;
+            _fortifications?.Prepare();
             Subscribe(_schedule);
             _host.Log.WriteLine(HordeRulesLog.Started(_settings));
         }
@@ -186,6 +188,8 @@ namespace Shooter.Server
 
         public bool Tick(bool matchPlaying, float deltaSeconds)
         {
+            // 置く場所の防衛物は、試合が始まる前 (守る側を待っている間) から置かれていない姿で見せる
+            _fortifications?.Tick();
             var session = _host.Session;
             if (session == null || session.State == GameModeState.Ended)
             {
@@ -322,6 +326,7 @@ namespace Shooter.Server
             _winner = null;
             _clock = 0f;
             _score = 0;
+            _fortifications?.Prepare();
             _host.SetMatchScores(0, 0);
             _host.Log.WriteLine(HordeRulesLog.Restart());
         }
@@ -343,8 +348,7 @@ namespace Shooter.Server
         public HordePurchaseVerdict Fortify(int playerId)
         {
             var session = _host.Session;
-            if (_fortifications == null || session == null || !session.HasPlayer(playerId) || BotRoster.IsBotId(playerId)
-                || !session.IsAlive(playerId) || session.IsDowned(playerId) || _host.Bodies == null || !_host.Bodies.TryGet(playerId, out var body))
+            if (!CanReach(playerId, out var body))
             {
                 return HordePurchaseVerdict.NothingToDo;
             }
@@ -368,6 +372,35 @@ namespace Shooter.Server
             var restored = _fortifications.Restore(found.Id, found.Action);
             _host.Log.WriteLine(HordeLog.PurchasedLog(found.Action, found.NameKey, restored, cost, _economy.Currency));
             return HordePurchaseVerdict.Ok;
+        }
+
+        // オフラインの HordeRunner の案内と同じく、試合中に立っている守る側にだけ、届く距離のいちばん近い防衛物の額と払えるかを出す。
+        // 戻せる部品が無い (全部が人の体と重なる) なら、要求しても Fortify が断るので NothingToDo で見せる
+        public HordeOfferSync? Offer(int playerId)
+        {
+            var session = _host.Session;
+            if (session == null || session.State != GameModeState.Playing || !CanReach(playerId, out var body))
+            {
+                return null;
+            }
+
+            var target = _fortifications.FindInReach(body.Position, _spec.InteractRadius);
+            if (!target.HasValue || target.Value.Action == HordeFortificationAction.None)
+            {
+                return null;
+            }
+
+            var found = target.Value;
+            var cost = found.Action == HordeFortificationAction.Build ? _spec.BuildCost : _spec.RepairCost(found.RestorablePieces);
+            var verdict = found.RestorablePieces == 0 ? HordePurchaseVerdict.NothingToDo : _economy.Check(true, cost);
+            return new HordeOfferSync(found.Id, found.Action, found.NameKey, cost, verdict);
+        }
+
+        // ほかの人の案内は見せないので、受け取る人の分だけを持ち主の部分に書く
+        public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)
+        {
+            ArgumentNullException.ThrowIfNull(snapshot);
+            snapshot.Owner.HordeOffer = receiver != null ? Offer(receiver.PlayerId) : null;
         }
 
         // 欄は既存のものに載せる: 通貨は AlphaPoints、今の波の残りの敵は BravoPoints、波の番号と数は RoundNumber・RoundsToWin、
@@ -399,6 +432,15 @@ namespace Shooter.Server
 
         public void FillPlayer(int playerId, ref PlayerSnapshot snapshot)
         {
+        }
+
+        // 直す・置くのは立っている人だけ。Bot (波の敵) とダウン中の人は防衛物に触れない
+        private bool CanReach(int playerId, out ServerBody body)
+        {
+            body = null;
+            var session = _host.Session;
+            return _fortifications != null && session != null && session.HasPlayer(playerId) && !BotRoster.IsBotId(playerId)
+                && session.IsAlive(playerId) && !session.IsDowned(playerId) && _host.Bodies != null && _host.Bodies.TryGet(playerId, out body);
         }
 
         private void NewSchedule()

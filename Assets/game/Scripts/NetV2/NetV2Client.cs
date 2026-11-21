@@ -113,6 +113,9 @@ namespace Shooter.NetV2
         // 部品を作る前に置く。null なら地面の拾い物と弾薬箱の形をコードで作る
         public NetV2PickupVisuals PickupVisuals { get; set; }
 
+        // 部品を作る前に置く。null なら Guardian のリーダーの目印をオフラインと同じ仮の菱形で作る
+        public GameObject LeaderMarkerVisual { get; set; }
+
         public static NetV2Client Current { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -467,6 +470,7 @@ namespace Shooter.NetV2
                 ReplayFreeSpeed = () => KitTuning.Replay.FreeSpeed,
                 LootVisuals = LootVisuals,
                 PickupVisuals = PickupVisuals,
+                LeaderMarkerVisual = LeaderMarkerVisual,
             }));
         }
 
@@ -689,7 +693,7 @@ namespace Shooter.NetV2
             lockOn.AimingSource = () => local != null && local.IsAiming;
             lockOn.AimSource = () => new Ray(local.EyePosition, local.AimDirection);
             lockOn.Targets = new ClientLockOnTargets(
-                _client.PlayerId, () => _client.LatestSnapshot, _match.TrySampleRemote, _world.Collision, _client.Motor.Stance);
+                _client.PlayerId, () => _client.LatestSnapshot, _match.TrySampleRemote, _world.Collision, _client.Motor.Stance, _vehicles);
             return lockOn;
         }
 

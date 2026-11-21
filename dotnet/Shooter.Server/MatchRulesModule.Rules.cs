@@ -89,6 +89,11 @@ namespace Shooter.Server
                     FillGunGameWeapons(data, new Dictionary<string, WeaponSpec>(StringComparer.Ordinal));
                 }
 
+                if (objective is InfectedRules)
+                {
+                    FindInfectedWeapon(data);
+                }
+
                 foreach (var map in maps ?? MapsToCheck())
                 {
                     var points = PointsOf(map);
@@ -147,6 +152,7 @@ namespace Shooter.Server
             _objective = _createObjective(rules.Objective, data.Settings, this)
                 ?? throw new InvalidOperationException("no rules were created for the match objective " + rules.Objective);
             PrepareGunGame();
+            PrepareInfected();
             _objective.UseMap(map, points);
             _session = CreateSession(map, points);
             ListenToSession(_session);

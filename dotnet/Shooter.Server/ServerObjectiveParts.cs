@@ -7,13 +7,21 @@ namespace Shooter.Server
     internal sealed class ServerObjectiveParts
     {
         // stashes は起動で --stash-dir を渡されなければ null。そのときは Extraction を作らずに理由を返す
-        public ServerObjectiveParts(MatchRulesModule rules, ServerLoot loot, IBattleRoyaleWorld world, ServerStashStore stashes, int? seed = null)
+        // fortifications は Horde の防衛物。null なら Horde は直す・置く要求を断る
+        public ServerObjectiveParts(
+            MatchRulesModule rules,
+            ServerLoot loot,
+            IBattleRoyaleWorld world,
+            ServerStashStore stashes,
+            int? seed = null,
+            IHordeFortifications fortifications = null)
         {
             Rules = rules ?? throw new ArgumentNullException(nameof(rules));
             Loot = loot ?? throw new ArgumentNullException(nameof(loot));
             World = world ?? throw new ArgumentNullException(nameof(world));
             Stashes = stashes;
             Seed = seed;
+            Fortifications = fortifications;
         }
 
         public MatchRulesModule Rules { get; }
@@ -26,5 +34,7 @@ namespace Shooter.Server
 
         // null なら目的ごとに起動の時刻から決める。テストで同じ動きを繰り返すために渡す
         public int? Seed { get; }
+
+        public IHordeFortifications Fortifications { get; }
     }
 }

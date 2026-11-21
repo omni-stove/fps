@@ -126,6 +126,9 @@ namespace Shooter.Server
                     case DeployRole.Mine:
                         TickMine(placed, deltaSeconds);
                         break;
+                    case DeployRole.RemoteCharge:
+                        Follow(placed);
+                        break;
                 }
             }
 
@@ -186,6 +189,7 @@ namespace Shooter.Server
         // オフラインの AbilityHost が体力を戻すたびに枠を満たすのと同じく、出現し直した人は回数を満たして始める
         private void HandlePlayerSpawned(int playerId)
         {
+            ReleaseFrom(playerId, ServerAnchorLoss.Died);
             RemoveSlots(playerId);
             if (_abilities.Equip(playerId))
             {
@@ -342,10 +346,11 @@ namespace Shooter.Server
             var facing = NormalizeYaw(yaw);
             Vector3 point;
             Vector3 surfaceNormal;
-            int surfaceId;
+            Anchor anchor = null;
+            string surfaceLabel = null;
             var where = type.Role == DeployRole.RemoteCharge
-                ? Attach(body, position, out point, out surfaceNormal, out surfaceId)
-                : Stand(body, spec, position, facing, out point, out surfaceNormal, out surfaceId);
+                ? Attach(body, position, facing, out point, out surfaceNormal, out anchor, out surfaceLabel)
+                : Stand(body, spec, position, facing, out point, out surfaceNormal);
             if (where != ServerDeployRefusal.None)
             {
                 return Refuse(playerId, type.Id, where);
@@ -360,7 +365,10 @@ namespace Shooter.Server
             }
 
             Spend(slot);
-            var placed = new Placed(NextId(), type, playerId, _rules.Session.GetTeam(playerId), point, facing, spec.MaxHealth, surfaceNormal);
+            var placed = new Placed(NextId(), type, playerId, _rules.Session.GetTeam(playerId), point, facing, spec.MaxHealth, surfaceNormal)
+            {
+                Anchor = anchor,
+            };
             if (type.Role == DeployRole.Turret)
             {
                 var weapon = _turretWeapons[type.Id];
@@ -420,7 +428,7 @@ namespace Shooter.Server
 
             if (type.Role == DeployRole.RemoteCharge)
             {
-                _log.WriteLine(RemoteChargeLog.Attached(owner, type.Id, placed.Id, ServerDeployableLog.Surface(surfaceId)));
+                _log.WriteLine(RemoteChargeLog.Attached(owner, type.Id, placed.Id, surfaceLabel));
             }
 
             return ServerDeployRefusal.None;
@@ -691,6 +699,7 @@ namespace Shooter.Server
         {
             var owner = player.PlayerId;
             RemoveAll(placed => placed.OwnerId == owner, DeployRemoval.Discarded);
+            ReleaseFrom(owner, ServerAnchorLoss.Left);
             var keys = new List<(int Owner, string TypeId)>();
             foreach (var key in _rosters.Keys)
             {
@@ -869,8 +878,12 @@ namespace Shooter.Server
 
             public MineState Mine { get; set; }
 
-            // 置いた面の向き。床に立てる物は真上、C4 は貼った面から手前へ向き、爆発の中心を面から離す向きに使う
-            public Vector3 SurfaceNormal { get; }
+            // 置いた面の向き。床に立てる物は真上、C4 は貼った面から手前へ向き、爆発の中心を面から離す向きに使う。
+            // 人や乗り物に貼った C4 は貼った先と一緒に回るので、置いた後も変わる
+            public Vector3 SurfaceNormal { get; set; }
+
+            // 人や乗り物に貼った C4 の付いていく先。マップの面に置いた物と、付いていく先を失った物は null
+            public Anchor Anchor { get; set; }
 
             public void Arm(TurretState turret, WeaponSpec weapon)
             {

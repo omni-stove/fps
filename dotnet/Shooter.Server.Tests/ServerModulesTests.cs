@@ -85,7 +85,7 @@ namespace Shooter.Server.Tests
             Assert.That(status.Tuning, Is.SameAs(playerStatus));
             Assert.That(_modules.OfType<ServerMovement>().Single().InputGate, Is.SameAs(status));
             Assert.That(_modules.OfType<ServerCombat>().Single().PlayerStatus, Is.SameAs(status));
-            Assert.That(_modules.OfType<ServerEmotes>().Single().Emotes.Select(e => e.Id), Is.EqualTo(new[] { "wave" }));
+            Assert.That(_modules.OfType<ServerEmotes>().Single().Emotes.Select(e => e.Id).Single(), Is.EqualTo("wave"));
             Assert.That(_modules.OfType<ServerPickups>().Single().Name, Is.EqualTo("pickups"));
         }
 

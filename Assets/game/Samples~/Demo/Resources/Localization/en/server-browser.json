@@ -29,5 +29,20 @@
   "serverBrowser.column.ping": "Ping",
   "serverBrowser.players": "{0}/{1}",
   "serverBrowser.ping": "{0} ms",
-  "serverBrowser.mode.tdm": "Team Deathmatch"
+  "serverBrowser.mode.tdm": "Team Deathmatch",
+  "serverBrowser.mode.domination": "Domination",
+  "serverBrowser.mode.elimination": "Elimination",
+  "serverBrowser.mode.capture-the-flag": "Capture the Flag",
+  "serverBrowser.mode.hardpoint": "Hardpoint",
+  "serverBrowser.mode.search-and-destroy": "Search and Destroy",
+  "serverBrowser.mode.free-for-all": "Free for All",
+  "serverBrowser.mode.kill-confirmed": "Kill Confirmed",
+  "serverBrowser.mode.gun-game": "Gun Game",
+  "serverBrowser.mode.payload": "Payload",
+  "serverBrowser.mode.battle-royale": "Battle Royale",
+  "serverBrowser.mode.extraction": "Extraction",
+  "serverBrowser.mode.horde": "Horde",
+  "serverBrowser.mode.infected": "Infected",
+  "serverBrowser.mode.guardian": "Guardian",
+  "serverBrowser.mode.execution": "Execution"
 }

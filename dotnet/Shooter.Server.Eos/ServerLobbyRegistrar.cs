@@ -33,6 +33,8 @@ namespace Shooter.Server.Eos
         private int? _publishedSkillAverage;
         private string _map;
         private string _publishedMap;
+        private string _mode;
+        private string _publishedMode;
         private int _updateFailures;
         private int _lobbyGeneration;
         private float _nextUpdateTime;
@@ -108,6 +110,10 @@ namespace Shooter.Server.Eos
         public string Map => _map;
 
         public string PublishedMap => IsRegistered ? _publishedMap : null;
+
+        public string Mode => _mode;
+
+        public string PublishedMode => IsRegistered ? _publishedMode : null;
 
         // 地域は作るときにだけ載せ、PublishChanges では送らない。起動の間は変わらない値を、人が入るたびに書き直さないため。
         public string Region
@@ -195,6 +201,25 @@ namespace Shooter.Server.Eos
 
             _log.WriteLine(_logPrefix + "map " + (_map ?? "none") + " -> " + map);
             _map = map;
+            PublishChanges();
+        }
+
+        // サーバー一覧に今のモードを出すため、次の試合のルールで目的が替わるたびに書き直す。
+        // 地図と同じく null は前の値を載せたままにする。一度も渡されていなければ ServerLobby.Attributes が TeamDeathmatchMode を載せる。
+        public void SetMode(string mode)
+        {
+            if (mode == null || string.Equals(mode, _mode, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (!ServerLobby.IsModeName(mode))
+            {
+                throw new ArgumentException("'" + mode + "' is not a server mode (" + ServerLobby.ModeRule + ")", nameof(mode));
+            }
+
+            _log.WriteLine(_logPrefix + "mode " + (_mode ?? "none") + " -> " + mode);
+            _mode = mode;
             PublishChanges();
         }
 
@@ -306,15 +331,16 @@ namespace Shooter.Server.Eos
             var players = _players;
             var skillAverage = _skillAverage;
             var map = _map;
+            var mode = _mode;
             // ServerLobby.Attributes が voice_enabled=1 を載せるので、RTC 部屋もいつも開く
             _service.CreateLobby(
                 ServerLobby.MaxMembers(_maxPlayers),
                 true,
-                ServerLobby.Attributes(_endpoint, _version, players, _match, skillAverage, _region, map),
-                (lobby, error) => HandleCreated(lobby, error, players, skillAverage, map));
+                ServerLobby.Attributes(_endpoint, _version, players, _match, skillAverage, _region, map, mode),
+                (lobby, error) => HandleCreated(lobby, error, players, skillAverage, map, mode));
         }
 
-        private void HandleCreated(LobbyInfo lobby, string error, int players, int? skillAverage, string map)
+        private void HandleCreated(LobbyInfo lobby, string error, int players, int? skillAverage, string map, string mode)
         {
             if (_step != Step.Creating)
             {
@@ -332,6 +358,8 @@ namespace Shooter.Server.Eos
             _publishedPlayers = players;
             _publishedSkillAverage = skillAverage;
             _publishedMap = map;
+            // 渡されていないときも ServerLobby.Attributes が載せた値を覚え、後から同じモードが渡されても送り直さない
+            _publishedMode = mode ?? ServerLobby.TeamDeathmatchMode;
             _updateFailures = 0;
             _nextUpdateTime = _now;
             _lastError = null;
@@ -339,7 +367,8 @@ namespace Shooter.Server.Eos
             _log.WriteLine(_logPrefix + "registered id=" + lobby.Id + " server=" + _endpoint + " players=" + players
                 + (skillAverage.HasValue ? " skill_average=" + SkillText(skillAverage) : "")
                 + RegionText()
-                + (map != null ? " map=" + map : ""));
+                + (map != null ? " map=" + map : "")
+                + (mode != null ? " mode=" + mode : ""));
             PublishChanges();
         }
 
@@ -354,7 +383,8 @@ namespace Shooter.Server.Eos
             var players = _players;
             var skillAverage = _skillAverage;
             var map = _map;
-            var attributes = new List<LobbyAttribute>(3);
+            var mode = _mode;
+            var attributes = new List<LobbyAttribute>(4);
             if (players != _publishedPlayers)
             {
                 attributes.Add(ServerLobby.PlayersAttribute(players));
@@ -370,16 +400,21 @@ namespace Shooter.Server.Eos
                 attributes.Add(ServerLobby.MapAttribute(map));
             }
 
+            if (mode != null && !string.Equals(mode, _publishedMode, StringComparison.Ordinal))
+            {
+                attributes.Add(ServerLobby.ModeAttribute(mode));
+            }
+
             if (attributes.Count == 0)
             {
                 return;
             }
 
             var generation = _lobbyGeneration;
-            _service.UpdateAttributes(attributes, error => HandleUpdated(error, players, skillAverage, map, generation));
+            _service.UpdateAttributes(attributes, error => HandleUpdated(error, players, skillAverage, map, mode, generation));
         }
 
-        private void HandleUpdated(string error, int players, int? skillAverage, string map, int generation)
+        private void HandleUpdated(string error, int players, int? skillAverage, string map, string mode, int generation)
         {
             // 失ったロビーへの更新の結果を、作り直したロビーの値として数えない
             if (_step != Step.Registered || generation != _lobbyGeneration)
@@ -399,6 +434,11 @@ namespace Shooter.Server.Eos
                 if (map != null)
                 {
                     _publishedMap = map;
+                }
+
+                if (mode != null)
+                {
+                    _publishedMode = mode;
                 }
 
                 _updateFailures = 0;

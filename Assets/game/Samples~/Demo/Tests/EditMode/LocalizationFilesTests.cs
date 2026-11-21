@@ -44,6 +44,22 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void EveryModeTheServerPublishesHasANameInEveryLanguage()
+        {
+            foreach (var language in GameLanguages.All)
+            {
+                var browser = JapaneseGameTextSetUp.LoadLayers(language)
+                    .Single(layer => layer.Key.EndsWith("server-browser.json", StringComparison.Ordinal))
+                    .Value;
+                foreach (MatchObjective objective in Enum.GetValues(typeof(MatchObjective)))
+                {
+                    var key = ServerBrowserText.ModeNameKeyPrefix + ServerLobby.ModeName(objective);
+                    Assert.That(browser.Contains(key), Is.True, GameLanguages.Code(language) + ": " + key);
+                }
+            }
+        }
+
+        [Test]
         public void TheNetTextsAreReadFromTheNetTableOfEveryLanguage()
         {
             foreach (var language in GameLanguages.All)

@@ -167,6 +167,110 @@ namespace Shooter.Server.Eos.Tests
         }
 
         [Test]
+        public void WithoutAModeTheCreatedLobbyCarriesTeamDeathmatch()
+        {
+            Register();
+
+            Assert.That(_registrar.Mode, Is.Null);
+            Assert.That(_registrar.PublishedMode, Is.EqualTo(ServerLobby.TeamDeathmatchMode));
+
+            _registrar.SetMode(ServerLobby.TeamDeathmatchMode);
+
+            Assert.That(_backend.Updates, Is.Empty, "the created lobby already carries tdm");
+        }
+
+        [Test]
+        public void TheModeSetBeforeRegisteringIsInTheCreatedLobby()
+        {
+            _registrar.SetMode("domination");
+            Register();
+
+            Assert.That(ByKey(_backend.CreatedAttributes)[ServerLobby.ModeKey].Text, Is.EqualTo("domination"));
+            Assert.That(_registrar.PublishedMode, Is.EqualTo("domination"));
+            Assert.That(_backend.Updates, Is.Empty, "the created lobby already carries the mode");
+            Assert.That(Lines(), Has.Member("[Lobby] registered id=l1 server=" + _endpoint + " players=0 mode=domination"));
+        }
+
+        [Test]
+        public void AModeChangeUpdatesOnlyTheModeAttribute()
+        {
+            _registrar.SetMode("domination");
+            Register();
+
+            _registrar.SetMode("gun-game");
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1));
+            var update = ByKey(_backend.Updates[0]);
+            Assert.That(update.Keys, Is.EquivalentTo(new[] { ServerLobby.ModeKey }));
+            Assert.That(update[ServerLobby.ModeKey].Text, Is.EqualTo("gun-game"));
+            Assert.That(_registrar.PublishedMode, Is.EqualTo("domination"), "not published until the update is done");
+            _backend.CompleteUpdate();
+            Assert.That(_registrar.PublishedMode, Is.EqualTo("gun-game"));
+            Assert.That(Lines(), Has.Member("[Lobby] mode domination -> gun-game"));
+
+            _registrar.SetMode("gun-game");
+            _registrar.SetMode(null);
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1), "the same mode and no mode send nothing");
+        }
+
+        [Test]
+        public void AMapChangeDuringAModeUpdateIsSentAfterIt()
+        {
+            _registrar.SetMap("harbor");
+            Register();
+
+            _registrar.SetMode("hardpoint");
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1));
+            _registrar.SetMap("quarry");
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1), "the map waits for the mode update");
+            _backend.CompleteUpdate();
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            Assert.That(ByKey(_backend.Updates[1]).Keys, Is.EquivalentTo(new[] { ServerLobby.MapKey }));
+            _backend.CompleteUpdate();
+            Assert.That(_registrar.PublishedMode, Is.EqualTo("hardpoint"));
+            Assert.That(_registrar.PublishedMap, Is.EqualTo("quarry"));
+        }
+
+        [Test]
+        public void AFailedModeUpdateIsRetriedAfterTheInterval()
+        {
+            Register();
+            _registrar.SetMode("payload");
+            _backend.CompleteUpdate("timed out");
+
+            Assert.That(_registrar.PublishedMode, Is.EqualTo(ServerLobby.TeamDeathmatchMode));
+            _registrar.Tick(_interval - 0.1f);
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1));
+
+            _registrar.Tick(_interval);
+            Assert.That(_backend.Updates, Has.Count.EqualTo(2));
+            Assert.That(ByKey(_backend.Updates[1])[ServerLobby.ModeKey].Text, Is.EqualTo("payload"));
+        }
+
+        [Test]
+        public void ARecreatedLobbyCarriesTheLatestMode()
+        {
+            _registrar.SetMode("domination");
+            Register();
+            _registrar.SetMode("payload");
+            _backend.CompleteUpdate();
+
+            _backend.RaiseRemoved("l1", "the lobby was closed");
+            _registrar.Tick(1f);
+
+            Assert.That(_backend.Creates, Is.EqualTo(2));
+            Assert.That(ByKey(_backend.CreatedAttributes)[ServerLobby.ModeKey].Text, Is.EqualTo("payload"));
+        }
+
+        [Test]
+        public void AModeKeyOutsideTheRuleIsRejected()
+        {
+            Assert.Throws<ArgumentException>(() => _registrar.SetMode("Team Deathmatch"));
+            Assert.That(_registrar.Mode, Is.Null);
+        }
+
+        [Test]
         public void TheRegionIsSetOnlyBeforeBegin()
         {
             Assert.That(_registrar.Region, Is.Null);

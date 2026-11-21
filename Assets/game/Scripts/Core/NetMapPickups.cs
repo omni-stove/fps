@@ -187,32 +187,32 @@ namespace Shooter.Core
         }
 
         // 種類が使わない欄 (回復の weapon など) が書いてあれば、書き間違いとして断る
-        private static PickupSpec SpecOf(PickupKind kind, int amount, string weapon, string item, PickupEligibility eligibility)
+        private static PickupSpec SpecOf(PickupKind kind, int amount, string weaponId, string itemId, PickupEligibility eligibility)
         {
-            if (weapon != null && kind != PickupKind.Weapon && kind != PickupKind.ReserveAmmo)
+            if (weaponId != null && kind != PickupKind.Weapon && kind != PickupKind.ReserveAmmo)
             {
-                throw new ArgumentException("only a Weapon or ReserveAmmo pickup names a weapon", "weaponId");
+                throw new ArgumentException("only a Weapon or ReserveAmmo pickup names a weapon", nameof(weaponId));
             }
 
-            if (item != null && kind != PickupKind.Item)
+            if (itemId != null && kind != PickupKind.Item)
             {
-                throw new ArgumentException("only an Item pickup names an item", "itemId");
+                throw new ArgumentException("only an Item pickup names an item", nameof(itemId));
             }
 
             switch (kind)
             {
                 case PickupKind.Weapon:
-                    return PickupSpec.Weapon(weapon, amount, eligibility);
+                    return PickupSpec.Weapon(weaponId, amount, eligibility);
                 case PickupKind.ReserveAmmo:
-                    return PickupSpec.ReserveAmmo(amount, weapon, eligibility);
+                    return PickupSpec.ReserveAmmo(amount, weaponId, eligibility);
                 case PickupKind.Health:
                     return PickupSpec.Health(amount, eligibility);
                 case PickupKind.Armor:
                     return PickupSpec.Armor(amount, eligibility);
                 case PickupKind.Item:
-                    return PickupSpec.Item(item, amount, eligibility);
+                    return PickupSpec.Item(itemId, amount, eligibility);
                 default:
-                    throw new ArgumentException("a pickup spawn point cannot hold a " + kind, "kind");
+                    throw new ArgumentException("a pickup spawn point cannot hold a " + kind, nameof(kind));
             }
         }
 

@@ -5,13 +5,12 @@ using System.Text;
 
 namespace Shooter.Core
 {
-    // Unity にも外部ライブラリにも依存しないよう、入れ子の無い文字列だけの JSON オブジェクトを自前で読み書きする。
+    // Unity にも外部ライブラリにも依存しないよう、入れ子の無い文字列だけの JSON オブジェクトを自前で書き、読みは共通の JsonParser に任せる。
     public static class FlatJsonObject
     {
         // 文字リテラルに U+2028 / U+2029 や BOM を直接書くと、C# が改行として扱ったり不可視で読めなくなったりするため、数値で書く
         private const char _lineSeparator = (char)0x2028;
         private const char _paragraphSeparator = (char)0x2029;
-        private const char _byteOrderMark = (char)0xFEFF;
 
         public static string Format(IReadOnlyList<KeyValuePair<string, string>> values)
         {
@@ -107,232 +106,38 @@ namespace Shooter.Core
             }
 
             values = null;
-            var reader = new Reader(text);
+            JsonNode root;
+            try
+            {
+                root = new JsonParser(text).ParseDocument();
+            }
+            catch (FormatException exception)
+            {
+                error = exception.Message;
+                return false;
+            }
+
+            if (root.Kind != JsonNodeKind.Object)
+            {
+                error = "expected '{' at " + root.Position;
+                return false;
+            }
+
             var result = new Dictionary<string, string>(StringComparer.Ordinal);
-
-            if (reader.Peek() == _byteOrderMark)
+            foreach (var member in root.Members)
             {
-                reader.Advance();
-            }
-
-            reader.SkipWhitespace();
-            if (!reader.Expect('{', out error))
-            {
-                return false;
-            }
-
-            reader.SkipWhitespace();
-            if (reader.Peek() == '}')
-            {
-                reader.Advance();
-            }
-            else
-            {
-                while (true)
+                if (member.Value.Kind != JsonNodeKind.String)
                 {
-                    reader.SkipWhitespace();
-                    var keyPosition = reader.Position;
-                    if (!reader.ReadString(out var key, out error))
-                    {
-                        return false;
-                    }
-
-                    reader.SkipWhitespace();
-                    if (!reader.Expect(':', out error))
-                    {
-                        return false;
-                    }
-
-                    reader.SkipWhitespace();
-                    if (reader.Peek() != '"')
-                    {
-                        error = reader.Describe("only string values are supported for \"" + key + "\"");
-                        return false;
-                    }
-
-                    if (!reader.ReadString(out var value, out error))
-                    {
-                        return false;
-                    }
-
-                    if (result.ContainsKey(key))
-                    {
-                        error = "duplicate key \"" + key + "\" at " + (keyPosition + 1).ToString(CultureInfo.InvariantCulture);
-                        return false;
-                    }
-
-                    result.Add(key, value);
-                    reader.SkipWhitespace();
-                    if (reader.Peek() == ',')
-                    {
-                        reader.Advance();
-                        continue;
-                    }
-
-                    if (!reader.Expect('}', out error))
-                    {
-                        return false;
-                    }
-
-                    break;
+                    error = "only string values are supported for \"" + member.Key + "\" at " + member.Value.Position;
+                    return false;
                 }
-            }
 
-            reader.SkipWhitespace();
-            if (!reader.AtEnd)
-            {
-                error = reader.Describe("unexpected text after the object");
-                return false;
+                result.Add(member.Key, member.Value.Text);
             }
 
             values = result;
             error = null;
             return true;
-        }
-
-        private sealed class Reader
-        {
-            private const char _end = '\0';
-
-            private readonly string _text;
-
-            public Reader(string text)
-            {
-                _text = text;
-            }
-
-            public int Position { get; private set; }
-
-            public bool AtEnd => Position >= _text.Length;
-
-            public char Peek()
-            {
-                return AtEnd ? _end : _text[Position];
-            }
-
-            public void Advance()
-            {
-                Position++;
-            }
-
-            public void SkipWhitespace()
-            {
-                while (!AtEnd && (Peek() == ' ' || Peek() == '\t' || Peek() == '\n' || Peek() == '\r'))
-                {
-                    Position++;
-                }
-            }
-
-            public bool Expect(char expected, out string error)
-            {
-                if (AtEnd || Peek() != expected)
-                {
-                    error = Describe("expected '" + expected + "'");
-                    return false;
-                }
-
-                Position++;
-                error = null;
-                return true;
-            }
-
-            public bool ReadString(out string value, out string error)
-            {
-                value = null;
-                if (!Expect('"', out error))
-                {
-                    return false;
-                }
-
-                var builder = new StringBuilder();
-                while (true)
-                {
-                    if (AtEnd)
-                    {
-                        error = Describe("unterminated string");
-                        return false;
-                    }
-
-                    var c = _text[Position++];
-                    if (c == '"')
-                    {
-                        break;
-                    }
-
-                    if (c < ' ')
-                    {
-                        Position--;
-                        error = Describe("control character in string");
-                        return false;
-                    }
-
-                    if (c != '\\')
-                    {
-                        builder.Append(c);
-                        continue;
-                    }
-
-                    if (AtEnd)
-                    {
-                        error = Describe("unterminated escape");
-                        return false;
-                    }
-
-                    var escaped = _text[Position++];
-                    switch (escaped)
-                    {
-                        case '"':
-                        case '\\':
-                        case '/':
-                            builder.Append(escaped);
-                            break;
-                        case 'b':
-                            builder.Append('\b');
-                            break;
-                        case 'f':
-                            builder.Append('\f');
-                            break;
-                        case 'n':
-                            builder.Append('\n');
-                            break;
-                        case 'r':
-                            builder.Append('\r');
-                            break;
-                        case 't':
-                            builder.Append('\t');
-                            break;
-                        case 'u':
-                            if (Position + 4 > _text.Length
-                                || !int.TryParse(
-                                    _text.AsSpan(Position, 4),
-                                    NumberStyles.AllowHexSpecifier,
-                                    CultureInfo.InvariantCulture,
-                                    out var code))
-                            {
-                                error = Describe("invalid \\u escape");
-                                return false;
-                            }
-
-                            builder.Append((char)code);
-                            Position += 4;
-                            break;
-                        default:
-                            Position--;
-                            error = Describe("invalid escape '\\" + escaped + "'");
-                            return false;
-                    }
-                }
-
-                value = builder.ToString();
-                error = null;
-                return true;
-            }
-
-            public string Describe(string problem)
-            {
-                var at = AtEnd ? "end of input" : "position " + (Position + 1).ToString(CultureInfo.InvariantCulture);
-                return problem + " at " + at;
-            }
         }
     }
 }

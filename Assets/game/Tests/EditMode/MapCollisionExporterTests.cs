@@ -131,6 +131,35 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void WritesTheHordeFortificationsByTheirStructureNumber()
+        {
+            var plain = new GameObject("PlainWall");
+            Place(plain, new Vector3(3f, 0f, -9f), Quaternion.identity, Vector3.one);
+            plain.AddComponent<DestructibleStructure>();
+            var plainPiece = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            plainPiece.transform.SetParent(plain.transform, false);
+            plainPiece.AddComponent<DestructiblePiece>().Initialize(0, DestructiblePiece.DefaultMaxHealth, true, plainPiece.GetComponent<Collider>());
+
+            var building = _root.transform.Find("Building").gameObject;
+            var fortification = building.AddComponent<HordeFortification>();
+            fortification.StartsBuilt = false;
+
+            var structures = MapCollisionExporter.CollectStructures(new[] { _root });
+
+            Assert.That(structures.Structures, Has.Count.EqualTo(2));
+            Assert.That(structures.Fortifications, Has.Count.EqualTo(1), "only the structure with a HordeFortification");
+            var written = structures.Fortifications[0];
+            Assert.That(written.Structure, Is.EqualTo(0), "the building comes first in the hierarchy");
+            Assert.That(written.StartsBuilt, Is.False);
+            Assert.That(written.NameKey, Is.EqualTo("Building"));
+            Assert.That(written.Position.X, Is.EqualTo(_origin.x - 9f).Within(1e-4f));
+            Assert.That(written.Position.Z, Is.EqualTo(_origin.z - 8f).Within(1e-4f));
+
+            fortification.enabled = false;
+            Assert.That(MapCollisionExporter.CollectStructures(new[] { _root }).Fortifications, Is.Empty, "a disabled fortification is not used");
+        }
+
+        [Test]
         public void SkipsTriggersDisabledAndInactiveColliders()
         {
             var sources = new List<Collider>();

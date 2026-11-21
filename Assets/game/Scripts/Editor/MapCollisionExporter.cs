@@ -496,7 +496,8 @@ namespace Shooter.Editor
             return new WorldMap(shapes);
         }
 
-        // 番号は Collect と同じく、有効・無効を問わずシーンの並び順で振る
+        // 番号は Collect と同じく、有効・無効を問わずシーンの並び順で振る。
+        // 防衛物は HordeRunner が無効の物を拾わない (FindObjectsInactive.Exclude) のに合わせ、有効なものだけを書く
         public static NetMapStructures CollectStructures(IReadOnlyList<GameObject> roots)
         {
             if (roots == null)
@@ -505,6 +506,7 @@ namespace Shooter.Editor
             }
 
             var layouts = new List<StructureLayout>();
+            var fortifications = new List<MapFortification>();
             foreach (var root in roots)
             {
                 if (root == null)
@@ -514,11 +516,18 @@ namespace Shooter.Editor
 
                 foreach (var structure in root.GetComponentsInChildren<DestructibleStructure>(true))
                 {
+                    var fortification = structure.GetComponent<HordeFortification>();
+                    if (fortification != null && fortification.enabled && fortification.gameObject.activeInHierarchy)
+                    {
+                        fortifications.Add(new MapFortification(
+                            layouts.Count, ToNumerics(fortification.transform.position), fortification.StartsBuilt, fortification.name));
+                    }
+
                     layouts.Add(structure.Integrity.Layout);
                 }
             }
 
-            return new NetMapStructures(layouts);
+            return new NetMapStructures(layouts, fortifications);
         }
 
         private static int GroupOf(Collider collider, Dictionary<DestructibleStructure, int> structures, Dictionary<Rigidbody, int> bodies)

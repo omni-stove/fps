@@ -35,6 +35,7 @@ namespace Shooter.Protocol
                 new PickupRequestMessage(),
                 new DetonateRequestMessage(),
                 new EmoteRequestMessage(),
+                new HordeFortifyRequestMessage(),
             };
         }
 

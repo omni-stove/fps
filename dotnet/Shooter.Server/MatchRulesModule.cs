@@ -177,6 +177,11 @@ namespace Shooter.Server
                 case BuyRequestMessage buy:
                     OnBuyRequest(player, buy);
                     break;
+                case HordeFortifyRequestMessage _:
+                    // 払えたかは次のスナップショットの通貨と案内で知らせるので、答えは送らない
+                    TouchIdle(player.PlayerId);
+                    _objective?.Fortify(player.PlayerId);
+                    break;
             }
         }
 

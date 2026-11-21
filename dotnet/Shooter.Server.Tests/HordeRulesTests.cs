@@ -245,6 +245,88 @@ namespace Shooter.Server.Tests
 
             Assert.That(_rules.Fortify(1), Is.EqualTo(HordePurchaseVerdict.NothingToDo));
             Assert.That(_rules.Fortify(99), Is.EqualTo(HordePurchaseVerdict.NothingToDo), "not in the match");
+            Assert.That(_rules.Offer(1), Is.Null);
+        }
+
+        [Test]
+        public void TheOfferShowsTheCostAndWhetherItCanBePaidNow()
+        {
+            var fortifications = new FakeFortifications { Target = new HordeFortificationTarget(3, "Wall-North", HordeFortificationAction.Repair, 2) };
+            BeginFighting(fortifications);
+
+            var during = _rules.Offer(1);
+
+            Assert.That(during.HasValue, Is.True);
+            Assert.That(during.Value.FortificationId, Is.EqualTo(3));
+            Assert.That(during.Value.NameKey, Is.EqualTo("Wall-North"));
+            Assert.That(during.Value.Action, Is.EqualTo(HordeFortificationAction.Repair));
+            Assert.That(during.Value.Cost, Is.EqualTo(8), "two pieces at four each");
+            Assert.That(during.Value.Verdict, Is.EqualTo(HordePurchaseVerdict.WaveInProgress));
+            Assert.That(_rules.Offer(_bot), Is.Null, "bots are not offered anything");
+            Assert.That(_rules.Offer(99), Is.Null, "not in the match");
+
+            _host.Session.ApplyDamage(1, _bot, 1000);
+            _host.Session.ApplyDamage(1, _bot + 1, 1000);
+            Assert.That(_rules.Offer(1).Value.Verdict, Is.EqualTo(HordePurchaseVerdict.Ok));
+
+            fortifications.Target = new HordeFortificationTarget(4, "Barricade-NE", HordeFortificationAction.Build, 2);
+            var build = _rules.Offer(1).Value;
+            Assert.That(build.Cost, Is.EqualTo(25));
+            Assert.That(build.Verdict, Is.EqualTo(HordePurchaseVerdict.Ok), "50 is enough");
+
+            fortifications.Target = new HordeFortificationTarget(4, "Barricade-NE", HordeFortificationAction.Build, 0);
+            Assert.That(_rules.Offer(1).Value.Verdict, Is.EqualTo(HordePurchaseVerdict.NothingToDo), "everything left is blocked by bodies");
+
+            fortifications.Target = null;
+            Assert.That(_rules.Offer(1), Is.Null);
+        }
+
+        [Test]
+        public void TheOfferIsNotMadeToTheFallen()
+        {
+            var fortifications = new FakeFortifications { Target = new HordeFortificationTarget(3, "Wall-North", HordeFortificationAction.Repair, 2) };
+            BeginFighting(fortifications);
+
+            _host.Session.ApplyDamage(_bot, 1, 1000);
+
+            Assert.That(_rules.Offer(1), Is.Null);
+            Assert.That(_rules.Fortify(1), Is.EqualTo(HordePurchaseVerdict.NothingToDo));
+        }
+
+        [Test]
+        public void TheOfferIsWrittenOnlyForItsReceiver()
+        {
+            var fortifications = new FakeFortifications { Target = new HordeFortificationTarget(3, "Wall-North", HordeFortificationAction.Repair, 2) };
+            BeginFighting(fortifications);
+            var snapshot = new SnapshotMessage();
+            snapshot.Clear();
+
+            _rules.Contribute(snapshot, new ServerPlayer(new ConnectionId(1), 1, Team.Alpha, "k1"));
+            Assert.That(snapshot.Owner.HordeOffer.Value.FortificationId, Is.EqualTo(3));
+
+            _rules.Contribute(snapshot, new ServerPlayer(new ConnectionId(2), _bot, Team.Bravo, "k2"));
+            Assert.That(snapshot.Owner.HordeOffer, Is.Null, "a stale offer is not left for the next receiver");
+
+            snapshot.Owner.HordeOffer = _rules.Offer(1);
+            _rules.Contribute(snapshot, null);
+            Assert.That(snapshot.Owner.HordeOffer, Is.Null);
+        }
+
+        [Test]
+        public void TheFortificationsAreReadiedOnStartRestartAndEveryTick()
+        {
+            var fortifications = new FakeFortifications();
+            Begin(fortifications);
+
+            Assert.That(fortifications.Prepared, Is.EqualTo(1), "on start");
+            _host.Steps(3);
+            Assert.That(fortifications.Ticks, Is.EqualTo(3));
+
+            _rules.MatchRestarted();
+            Assert.That(fortifications.Prepared, Is.EqualTo(2), "a new match starts from the map's fortifications");
+
+            _rules.UseMap(BotTestMaps.Flat(TestRules.Points()), TestRules.Points());
+            Assert.That(fortifications.Prepared, Is.EqualTo(3), "so does a new map");
         }
 
         [Test]
@@ -283,6 +365,20 @@ namespace Shooter.Server.Tests
             public int Restored { get; private set; }
 
             public float LastRadius { get; private set; }
+
+            public int Prepared { get; private set; }
+
+            public int Ticks { get; private set; }
+
+            public void Prepare()
+            {
+                Prepared++;
+            }
+
+            public void Tick()
+            {
+                Ticks++;
+            }
 
             public HordeFortificationTarget? FindInReach(Vector3 position, float radius)
             {

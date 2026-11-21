@@ -21,6 +21,8 @@ namespace Shooter.Protocol
         Stamina = 1 << 9,
         Stagger = 1 << 10,
         Suppression = 1 << 11,
-        All = Weapon | Loadout | Grenades | CarrySpeed | Knockback | Respawn | Money | Redeploy | Extraction | Stamina | Stagger | Suppression,
+        HordeOffer = 1 << 12,
+        All = Weapon | Loadout | Grenades | CarrySpeed | Knockback | Respawn | Money | Redeploy | Extraction | Stamina | Stagger | Suppression
+            | HordeOffer,
     }
 }

@@ -52,6 +52,9 @@ namespace Shooter.Protocol
 
         public bool Suppressed { get; set; }
 
+        // Horde で届く距離に直す・置く防衛物があれば、その案内。ほかの人の案内は見せないので持ち主にだけ送る
+        public HordeOfferSync? HordeOffer { get; set; }
+
         public GrenadePouchSync Grenades => _grenades;
 
         public ContentIdList EquippedWeaponIds => _equippedWeaponIds;
@@ -80,6 +83,7 @@ namespace Shooter.Protocol
             Stagger = other.Stagger;
             SuppressionLevel = other.SuppressionLevel;
             Suppressed = other.Suppressed;
+            HordeOffer = other.HordeOffer;
             _grenades.CopyFrom(other._grenades);
             _equippedWeaponIds.CopyFrom(other._equippedWeaponIds);
             Present = other.Present;
@@ -148,6 +152,11 @@ namespace Shooter.Protocol
             if (!Same.Bits(SuppressionLevel, baseline.SuppressionLevel) || Suppressed != baseline.Suppressed)
             {
                 fields |= OwnerFields.Suppression;
+            }
+
+            if (HordeOffer != baseline.HordeOffer)
+            {
+                fields |= OwnerFields.HordeOffer;
             }
 
             return fields;
@@ -289,6 +298,16 @@ namespace Shooter.Protocol
                 writer.WriteSingle(SuppressionLevel);
                 writer.WriteBool(Suppressed);
             }
+
+            if ((fields & OwnerFields.HordeOffer) != 0)
+            {
+                var offer = HordeOffer;
+                writer.WriteBool(offer.HasValue);
+                if (offer.HasValue)
+                {
+                    offer.Value.Write(writer);
+                }
+            }
         }
 
         internal void Read(MessageReader reader, OwnerFields fields)
@@ -367,6 +386,11 @@ namespace Shooter.Protocol
                 SuppressionLevel = reader.ReadFiniteSingleBetween(0f, 1f, "suppression level");
                 Suppressed = reader.ReadBool();
             }
+
+            if ((fields & OwnerFields.HordeOffer) != 0)
+            {
+                HordeOffer = reader.ReadBool() ? HordeOfferSync.Read(reader) : (HordeOfferSync?)null;
+            }
         }
 
         internal void FillFrom(OwnerSnapshot baseline)
@@ -434,6 +458,11 @@ namespace Shooter.Protocol
             {
                 SuppressionLevel = baseline.SuppressionLevel;
                 Suppressed = baseline.Suppressed;
+            }
+
+            if ((missing & OwnerFields.HordeOffer) != 0)
+            {
+                HordeOffer = baseline.HordeOffer;
             }
 
             Present = OwnerFields.All;

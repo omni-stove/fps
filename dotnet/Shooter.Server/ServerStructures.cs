@@ -19,6 +19,7 @@ namespace Shooter.Server
         private readonly List<PieceShape> _shapes = new List<PieceShape>();
         private readonly Dictionary<int, PieceShape> _shapeByCollider = new Dictionary<int, PieceShape>();
         private readonly StructureStateMessage _state = new StructureStateMessage();
+        private readonly IReadOnlyList<MapFortification> _fortifications = Array.Empty<MapFortification>();
 
         public ServerStructures(ServerMapData map, TextWriter log)
         {
@@ -71,9 +72,105 @@ namespace Shooter.Server
             {
                 _integrity[i] = new StructureIntegrity(layouts.Structures[i]);
             }
+
+            _fortifications = layouts.Fortifications;
         }
 
         public int Count => _integrity.Length;
+
+        // Horde の防衛物。建物の耐久値を使えないマップ (書き出しが無い・合わない) では、直す部品も無いので空にする
+        public IReadOnlyList<MapFortification> Fortifications => _fortifications;
+
+        public int PieceCount(int structure)
+        {
+            return structure >= 0 && structure < _integrity.Length ? _integrity[structure].Layout.PieceCount : 0;
+        }
+
+        public int DestroyedCount(int structure)
+        {
+            return structure >= 0 && structure < _integrity.Length ? _integrity[structure].DestroyedCount : 0;
+        }
+
+        // Horde の防衛物を戻す。壊すのと違って Enabled を見ないのは、壊れないルール (Destruction.Off) でも置く場所の防衛物は置けるようにするため。
+        // 戻した部品の数を返す。耐久値も満タンに戻る (オフラインの DestructibleStructure.ApplyDestroyedBitset と同じ)
+        public int Restore(int structure, IReadOnlyList<int> pieces, TextWriter log)
+        {
+            ArgumentNullException.ThrowIfNull(pieces);
+            ArgumentNullException.ThrowIfNull(log);
+            if (structure < 0 || structure >= _integrity.Length)
+            {
+                return 0;
+            }
+
+            var integrity = _integrity[structure];
+            var bitset = integrity.ToBitset();
+            var restored = new List<int>();
+            foreach (var piece in pieces)
+            {
+                if (piece >= 0 && piece < integrity.Layout.PieceCount && integrity.IsDestroyed(piece) && !restored.Contains(piece))
+                {
+                    bitset[piece / 64] &= ~(1UL << (piece % 64));
+                    restored.Add(piece);
+                }
+            }
+
+            if (restored.Count == 0)
+            {
+                return 0;
+            }
+
+            integrity.ApplyDestroyedSet(bitset);
+            restored.Sort();
+            foreach (var piece in restored)
+            {
+                _collision.SetGroupEnabled(MapColliderGroups.Piece(structure, piece), true);
+            }
+
+            log.WriteLine(LogTag + " structure=" + Text(structure) + " restored=" + Ids(restored));
+            return restored.Count;
+        }
+
+        // Horde の置く場所の防衛物を、まだ置かれていない姿 (部品が全部無い) にする。崩れの破片を出さないオフラインの HordeFortification.EnsurePrepared と同じ。
+        // 外した部品があれば true
+        public bool RemoveAll(int structure, TextWriter log)
+        {
+            ArgumentNullException.ThrowIfNull(log);
+            if (structure < 0 || structure >= _integrity.Length)
+            {
+                return false;
+            }
+
+            var integrity = _integrity[structure];
+            if (integrity.DestroyedCount == integrity.Layout.PieceCount)
+            {
+                return false;
+            }
+
+            var bitset = new ulong[integrity.BitsetLength];
+            for (var i = 0; i < integrity.Layout.PieceCount; i++)
+            {
+                bitset[i / 64] |= 1UL << (i % 64);
+                _collision.SetGroupEnabled(MapColliderGroups.Piece(structure, i), false);
+            }
+
+            integrity.ApplyDestroyedSet(bitset);
+            log.WriteLine(LogTag + " structure=" + Text(structure) + " removed=all");
+            return true;
+        }
+
+        // 部品の形を shrink 倍に縮めて、カプセル (人の体) と重なるか。オフラインの HordeFortification.IsBlocked が部品の箱を縮めて重なりを見るのと同じ
+        public bool PieceOverlaps(int structure, int piece, Vector3 bottom, Vector3 top, float radius, float shrink)
+        {
+            foreach (var shape in _shapes)
+            {
+                if (shape.Structure == structure && shape.Piece == piece && shape.Overlaps(bottom, top, radius, shrink))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         public bool Enabled { get; set; }
 
@@ -221,6 +318,9 @@ namespace Shooter.Server
 
         private sealed class PieceShape
         {
+            // 交互に寄せる回数の上限。部品も人の体も小さいので、これだけ寄せれば重なりの判定が変わるほどの差は残らない
+            private const int _overlapSteps = 16;
+
             private readonly WorldCollider _collider;
             private readonly Vector3 _min;
             private readonly Vector3 _max;
@@ -249,23 +349,64 @@ namespace Shooter.Server
             // Unity の Collider.ClosestPoint は凸でないメッシュに使えず外接箱で近づけていたので、メッシュは外接箱で測る
             public Vector3 ClosestPoint(Vector3 point)
             {
+                return ClosestPoint(point, 1f);
+            }
+
+            // 形の中心から shrink 倍に縮めた形の、point にいちばん近い点
+            public Vector3 ClosestPoint(Vector3 point, float shrink)
+            {
                 switch (_collider.Kind)
                 {
                     case WorldShapeKind.Box:
                         var inverse = Quaternion.Inverse(_collider.Rotation);
                         var local = Vector3.Transform(point - _collider.Center, inverse);
-                        var clamped = Vector3.Clamp(local, -_collider.HalfExtents, _collider.HalfExtents);
+                        var half = _collider.HalfExtents * shrink;
+                        var clamped = Vector3.Clamp(local, -half, half);
                         return _collider.Center + Vector3.Transform(clamped, _collider.Rotation);
                     case WorldShapeKind.Sphere:
-                        return OnSphere(point, _collider.Center, _collider.Radius);
+                        return OnSphere(point, _collider.Center, _collider.Radius * shrink);
                     case WorldShapeKind.Capsule:
-                        var axis = _collider.Point1 - _collider.Point0;
+                        var middle = (_collider.Point0 + _collider.Point1) * 0.5f;
+                        var point0 = middle + ((_collider.Point0 - middle) * shrink);
+                        var axis = (_collider.Point1 - _collider.Point0) * shrink;
                         var lengthSq = axis.LengthSquared();
-                        var t = lengthSq > 0f ? Math.Clamp(Vector3.Dot(point - _collider.Point0, axis) / lengthSq, 0f, 1f) : 0f;
-                        return OnSphere(point, _collider.Point0 + (axis * t), _collider.Radius);
+                        var t = lengthSq > 0f ? Math.Clamp(Vector3.Dot(point - point0, axis) / lengthSq, 0f, 1f) : 0f;
+                        return OnSphere(point, point0 + (axis * t), _collider.Radius * shrink);
                     default:
-                        return Vector3.Clamp(point, _min, _max);
+                        var center = (_min + _max) * 0.5f;
+                        var extent = (_max - _min) * (0.5f * shrink);
+                        return Vector3.Clamp(point, center - extent, center + extent);
                 }
+            }
+
+            // 縮めた形と、bottom から top までの線分を半径 radius で太らせたカプセルが重なるか。
+            // 形もカプセルの芯も凸なので、互いのいちばん近い点へ交互に寄せると、いちばん近い 2 点に寄っていく
+            public bool Overlaps(Vector3 bottom, Vector3 top, float radius, float shrink)
+            {
+                var onSegment = (bottom + top) * 0.5f;
+                var onShape = ClosestPoint(onSegment, shrink);
+                for (var i = 0; i < _overlapSteps; i++)
+                {
+                    onSegment = ClosestOnSegment(bottom, top, onShape);
+                    var next = ClosestPoint(onSegment, shrink);
+                    if (Vector3.DistanceSquared(next, onShape) < 1e-8f)
+                    {
+                        onShape = next;
+                        break;
+                    }
+
+                    onShape = next;
+                }
+
+                return Vector3.DistanceSquared(onSegment, onShape) < radius * radius;
+            }
+
+            private static Vector3 ClosestOnSegment(Vector3 a, Vector3 b, Vector3 point)
+            {
+                var segment = b - a;
+                var lengthSq = segment.LengthSquared();
+                var t = lengthSq > 0f ? Math.Clamp(Vector3.Dot(point - a, segment) / lengthSq, 0f, 1f) : 0f;
+                return a + (segment * t);
             }
 
             private static Vector3 OnSphere(Vector3 point, Vector3 center, float radius)

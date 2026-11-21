@@ -285,6 +285,32 @@ namespace Shooter.Server.Tests
             Assert.That(_movement.IsRiding(botId), Is.False);
         }
 
+        [Test]
+        public void ABotThatSurvivesTheGunBeingWreckedKeepsItsRemountWait()
+        {
+            Start("{\"mountedGun\": {\"remountDelaySeconds\": 30}}", 2);
+            Join(1);
+            Tick();
+            var botId = _bots.BotIds.Single();
+            Teleport(botId, new Vector3(0f, 1.1f, -1.8f));
+            Teleport(1, new Vector3(0f, 1.1f, 15f));
+            for (var elapsed = 0f; elapsed < 5f && !_vehicles.TryGetSeat(botId, out _, out _); elapsed += _tickSeconds)
+            {
+                Tick();
+            }
+
+            Assert.That(_vehicles.TryGetSeat(botId, out _, out _), Is.True, _log.ToString());
+
+            _vehicles.Damage(0, 100000, 1);
+            Step(5 * _tickSeconds);
+
+            Assert.That(_bots.TryGetAgent(botId, out var agent), Is.True);
+            Assert.That(_vehicles.TryGetSeat(botId, out _, out _), Is.False);
+            Assert.That(agent.MannedGun, Is.EqualTo(-1));
+            Assert.That(agent.GunnerBehavior.RemountRemainingSeconds, Is.GreaterThan(0f), "a wrecked gun is not a respawn");
+            Assert.That(_log.ToString(), Does.Contain("[Bot] gunner player=" + Text(botId) + " lost gun="));
+        }
+
         private static ServerBotAgent Agent(string archetype, string extra = null)
         {
             var json = "{\"archetype\": \"" + archetype + "\"" + (extra != null ? ", " + extra : string.Empty) + "}";

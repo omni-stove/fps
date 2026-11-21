@@ -16,11 +16,6 @@ namespace Shooter.Server
             return vehicle >= 0 && vehicle < _cars.Count && MountedGunShape.Problem(_cars[vehicle].Map.Spec, false) == null;
         }
 
-        public string NameOf(int vehicle)
-        {
-            return _cars[vehicle].Name;
-        }
-
         // 乗る位置 (座席の最初の乗る点。無ければ座る位置)。オフラインの MountedGun.BoardPoint と同じ
         public Vector3 BoardPointOf(int vehicle)
         {

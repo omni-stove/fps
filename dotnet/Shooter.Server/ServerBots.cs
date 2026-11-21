@@ -571,6 +571,15 @@ namespace Shooter.Server
                 return;
             }
 
+            // 生きたまま銃座から降ろされた (壊れた) ときの置き直しは出現し直しではない。ここで外さないと待ち時間と判断の状態が消える
+            if (_vehicles != null && agent.MansGuns && agent.MannedGun >= 0 && !agent.Brain.IsDead
+                && !_vehicles.TryGetMannedGun(playerId, out _))
+            {
+                _log.WriteLine(ServerBotLog.GunLost(playerId, GunName(agent.MannedGun)));
+                agent.NoteLeftGun();
+                agent.SpawnTick = body.TeleportTick;
+            }
+
             var respawned = body.TeleportTick != agent.SpawnTick;
             agent.SpawnTick = body.TeleportTick;
             agent.Restart(respawned);

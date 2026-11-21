@@ -39,16 +39,17 @@ namespace Shooter.Core.Tests
             Assert.That(values["k"], Is.EqualTo("a\"b\\c/d\nA"));
         }
 
-        [TestCase("", "expected '{'")]
+        [TestCase("", "unexpected end of input")]
         [TestCase("[]", "expected '{'")]
         [TestCase("{\"k\": 1}", "only string values")]
         [TestCase("{\"k\": null}", "only string values")]
-        [TestCase("{\"k\": \"v\",}", "expected '\"'")]
+        [TestCase("{\"k\": {\"a\": \"b\"}}", "only string values")]
+        [TestCase("{\"k\": \"v\",}", "expected a string key")]
         [TestCase("{\"k\" \"v\"}", "expected ':'")]
-        [TestCase("{\"k\": \"v\"", "expected '}'")]
+        [TestCase("{\"k\": \"v\"", "expected ','")]
         [TestCase("{\"k\": \"v}", "unterminated string")]
         [TestCase("{\"k\": \"\\x\"}", "invalid escape")]
-        [TestCase("{\"k\": \"\\u12\"}", "invalid \\u escape")]
+        [TestCase("{\"k\": \"\\u12\"}", "invalid unicode escape")]
         [TestCase("{\"k\": \"v\"} extra", "unexpected text")]
         [TestCase("{\"k\": \"v\", \"k\": \"w\"}", "duplicate key")]
         public void RejectsInvalidJson(string json, string expected)
@@ -66,7 +67,25 @@ namespace Shooter.Core.Tests
             var ok = FlatJsonObject.TryParse("{\"k\": 1}", out _, out var error);
 
             Assert.That(ok, Is.False);
-            Assert.That(error, Does.EndWith("at position 7"));
+            Assert.That(error, Does.EndWith("at line 1, column 7"));
+        }
+
+        [Test]
+        public void ReportsLineAndColumnAcrossLines()
+        {
+            var ok = FlatJsonObject.TryParse("{\n  \"a\": \"x\",\n  \"b\": true\n}", out _, out var error);
+
+            Assert.That(ok, Is.False);
+            Assert.That(error, Is.EqualTo("only string values are supported for \"b\" at line 3, column 8"));
+        }
+
+        [Test]
+        public void ReportsPositionOfNonObjectRoot()
+        {
+            var ok = FlatJsonObject.TryParse("  []", out _, out var error);
+
+            Assert.That(ok, Is.False);
+            Assert.That(error, Is.EqualTo("expected '{' at line 1, column 3"));
         }
 
         [Test]

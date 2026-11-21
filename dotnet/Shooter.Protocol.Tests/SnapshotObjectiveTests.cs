@@ -17,9 +17,9 @@ namespace Shooter.Protocol.Tests
         private const int _battleRoyaleBytes = 8 + 4 + 8 + 4 + 4 + 4 + 4;
 
         [Test]
-        public void TheVersionIs25()
+        public void TheVersionIs26()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(25));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(26));
         }
 
         [Test]

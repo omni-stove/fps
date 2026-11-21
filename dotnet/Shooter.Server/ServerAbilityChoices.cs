@@ -10,6 +10,7 @@ namespace Shooter.Server
     // 選んだ並び (Choose) は武器の選択と同じく次の試合でも残り、退出で消える。選んだ並びは次の出現 (Equip) から持たせ、
     // まだ選んでいない人には候補の先頭から枠の数だけを持たせる。持たせた並びは、マップやルールが替わると候補が替わりうるので捨て、
     // 次の出現か次に引かれたときに持たせ直す。
+    // 置く物の他に選べるのはグラップル (grapple.json) だけ。置く物と同じ Id の枠を取り合わないよう、同じ Id は作るときに断る
     internal sealed class ServerAbilityChoices
     {
         private readonly DeployCatalog _catalog;
@@ -18,7 +19,7 @@ namespace Shooter.Server
         private readonly Dictionary<int, ReadOnlyCollection<string>> _equipped = new Dictionary<int, ReadOnlyCollection<string>>();
         private ReadOnlyCollection<string> _default;
 
-        public ServerAbilityChoices(DeployCatalog catalog = null, int slotCount = AbilitySelection.DefaultSlotCount)
+        public ServerAbilityChoices(DeployCatalog catalog = null, int slotCount = AbilitySelection.DefaultSlotCount, GrappleType grapple = null)
         {
             if (slotCount < 0)
             {
@@ -26,17 +27,27 @@ namespace Shooter.Server
             }
 
             _catalog = catalog ?? DeployCatalog.Empty;
+            if (grapple != null && _catalog.TryGet(grapple.Id, out _))
+            {
+                throw new ArgumentException(
+                    "the grapple id is also a deployable id; give the grapple in grapple.json an id deployables.json does not use", nameof(grapple));
+            }
+
+            Grapple = grapple;
             SlotCount = slotCount;
             _default = DefaultOf(_candidates, slotCount);
         }
 
         public int SlotCount { get; }
 
+        // 選べるグラップル。grapple.json が無ければ null
+        public GrappleType Grapple { get; }
+
         public ReadOnlyCollection<string> Candidates => _candidates.AsReadOnly();
 
         public ReadOnlyCollection<string> Default => _default;
 
-        // ルールのファイルの loadout.abilities が null (項目が無い) なら一覧の全部を候補にし、あれば書いた順の Id だけを候補にする。
+        // ルールのファイルの loadout.abilities が null (項目が無い) なら一覧の全部 (置く物の後にグラップル) を候補にし、あれば書いた順の Id だけを候補にする。
         // 一覧に無い Id は skipped に返して候補から外し、置けない種類 (isUsable が false) は既に理由を出しているので黙って外す。
         // 選んだ並びが新しい候補に合わなくなった人は droppedPlayers に返して既定に戻し、持たせた並びは全員分捨てる
         public void Use(
@@ -49,6 +60,11 @@ namespace Shooter.Server
                 {
                     AddCandidate(type.Id, isUsable);
                 }
+
+                if (Grapple != null)
+                {
+                    AddCandidate(Grapple.Id, isUsable);
+                }
             }
             else
             {
@@ -59,7 +75,7 @@ namespace Shooter.Server
                         continue;
                     }
 
-                    if (!_catalog.TryGet(id, out _))
+                    if (!_catalog.TryGet(id, out _) && !IsGrapple(id))
                     {
                         skipped?.Add(id);
                         continue;
@@ -191,6 +207,17 @@ namespace Shooter.Server
             }
 
             return false;
+        }
+
+        public bool IsGrapple(string abilityId)
+        {
+            return Grapple != null && string.Equals(Grapple.Id, abilityId, StringComparison.Ordinal);
+        }
+
+        // グラップルを候補にしていて、その人が今持っている並びにあるか
+        public bool HasGrapple(int playerId)
+        {
+            return Grapple != null && _candidates.Contains(Grapple.Id) && IsEquipped(playerId, Grapple.Id);
         }
 
         public void ForgetEquipped()

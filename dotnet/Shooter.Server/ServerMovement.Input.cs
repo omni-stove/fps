@@ -72,6 +72,8 @@ namespace Shooter.Server
 
             if (mover.Riding)
             {
+                mover.GrappleHeld = frame.Has(InputButtons.Grapple);
+                mover.JumpHeld = frame.Has(InputButtons.Jump);
                 mover.Yaw = input.Yaw;
                 mover.Aiming = input.Restrained().Aim;
                 mover.LastProcessedTick = frame.Tick;
@@ -80,7 +82,11 @@ namespace Shooter.Server
             }
 
             var previous = mover.State;
-            var current = mover.Simulation.Step(previous, input);
+            if (!TryStepGrapple(mover, frame, previous, out var current))
+            {
+                current = mover.Simulation.Step(previous, input);
+            }
+
             mover.State = current;
             mover.Yaw = input.Yaw;
             mover.Aiming = input.Restrained().Aim;

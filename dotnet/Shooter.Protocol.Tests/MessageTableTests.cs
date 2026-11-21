@@ -231,7 +231,7 @@ namespace Shooter.Protocol.Tests
 
             Assert.That((int)InputButtons.OpenParachute, Is.EqualTo(1024));
             Assert.That((int)InputButtons.CloseParachute, Is.EqualTo(2048));
-            Assert.That(InputMessage.CurrentVersion, Is.EqualTo(5));
+            Assert.That(InputMessage.CurrentVersion, Is.EqualTo(6));
             Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.OpenParachute | InputButtons.Sprint));
             Assert.That(got[1].Buttons, Is.EqualTo(InputButtons.CloseParachute));
             Assert.That(InputButtons.All & (InputButtons.OpenParachute | InputButtons.CloseParachute),
@@ -289,7 +289,7 @@ namespace Shooter.Protocol.Tests
             Assert.That((int)InputButtons.OpenParachute, Is.EqualTo(1024));
             Assert.That((int)InputButtons.CloseParachute, Is.EqualTo(2048));
             Assert.That((int)InputButtons.All, Is.EqualTo(32767));
-            Assert.That(InputMessage.CurrentVersion, Is.EqualTo(5));
+            Assert.That(InputMessage.CurrentVersion, Is.EqualTo(6));
         }
 
         [Test]
@@ -300,8 +300,41 @@ namespace Shooter.Protocol.Tests
             var writer = new MessageWriter();
             writer.WriteMessage(one);
 
-            // Id・版 (2 + 1)、受け取ったスナップショットの tick・数・最初の tick (4 + 1 + 4)、移動・向き (8 + 4)、ボタン (2)
-            Assert.That(writer.Length, Is.EqualTo(3 + 9 + 12 + 2));
+            // Id・版 (2 + 1)、受け取ったスナップショットの tick・数・最初の tick (4 + 1 + 4)、移動・横と縦の向き (8 + 4 + 4)、ボタン (2)
+            Assert.That(writer.Length, Is.EqualTo(3 + 9 + 16 + 2));
+        }
+
+        [Test]
+        public void ThePitchIsReadByTheServerAndDefaultsToLevel()
+        {
+            var input = new InputMessage();
+            input.Add(new InputFrame(1, Vector2.Zero, 0.5f, InputButtons.Grapple, 0.75f));
+            input.Add(new InputFrame(2, Vector2.Zero, 0.5f, InputButtons.None, -InputFrame.MaxPitch));
+            input.Add(new InputFrame(3, Vector2.Zero, 0.5f, InputButtons.None));
+            var writer = new MessageWriter();
+            writer.WriteMessage(input);
+
+            var got = (InputMessage)MatchMessages.CreateServerTable().Read(writer.AsSegment());
+
+            Assert.That(got[0].Pitch, Is.EqualTo(0.75f));
+            Assert.That(got[0].Yaw, Is.EqualTo(0.5f));
+            Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.Grapple));
+            Assert.That(got[1].Pitch, Is.EqualTo(-InputFrame.MaxPitch));
+            Assert.That(got[2].Pitch, Is.Zero);
+        }
+
+        [TestCase(float.NaN)]
+        [TestCase(float.PositiveInfinity)]
+        [TestCase(1.6f)]
+        [TestCase(-1.6f)]
+        public void APitchBeyondStraightUpOrDownIsRejected(float pitch)
+        {
+            var input = new InputMessage();
+            input.Add(new InputFrame(1, Vector2.Zero, 0f, InputButtons.None, pitch));
+            var writer = new MessageWriter();
+            writer.WriteMessage(input);
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(writer.AsSegment()));
         }
 
         [TestCase(MessageIds.ChatRequest)]

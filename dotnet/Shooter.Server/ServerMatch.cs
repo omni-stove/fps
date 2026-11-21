@@ -234,14 +234,29 @@ namespace Shooter.Server
             string displayName)
         {
             var rejoined = false;
-            var team = ChooseTeam != null
-                ? ChooseTeam(rejoinKey, out rejoined)
-                : TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
-
-            // パーティより前のチームを先に見るのは、つなぎ直すたびに試合の途中でチームが変わらないようにするため
-            if (!rejoined && !string.IsNullOrEmpty(partyId))
+            var fixedTeam = FixedTeam?.Invoke(BotRoster.IsBotId(playerId));
+            Team team;
+            if (fixedTeam.HasValue)
             {
-                team = ChooseWithParty(partyId);
+                // チームは目的が決めるが、入り直しかどうかはログに残すため ChooseTeam にも尋ねる
+                if (ChooseTeam != null)
+                {
+                    ChooseTeam(rejoinKey, out rejoined);
+                }
+
+                team = fixedTeam.Value;
+            }
+            else
+            {
+                team = ChooseTeam != null
+                    ? ChooseTeam(rejoinKey, out rejoined)
+                    : TeamAssigner.Choose(CountPlayers(Team.Alpha), CountPlayers(Team.Bravo), AlphaScore, BravoScore);
+
+                // パーティより前のチームを先に見るのは、つなぎ直すたびに試合の途中でチームが変わらないようにするため
+                if (!rejoined && !string.IsNullOrEmpty(partyId))
+                {
+                    team = ChooseWithParty(partyId);
+                }
             }
 
             var player = new ServerPlayer(

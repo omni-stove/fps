@@ -761,6 +761,7 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameRulesAssetBuilder.ExtractionRules().RespawnMode, Is.EqualTo(RespawnMode.None));
             Assert.That(GameRulesAssetBuilder.HordeRules().RespawnMode, Is.EqualTo(RespawnMode.Wave));
             Assert.That(GameRulesAssetBuilder.HordeRules().WaveIntervalSeconds, Is.EqualTo(GameRulesAssetBuilder.HordeWaveIntervalSeconds));
+            Assert.That(GameRulesAssetBuilder.HordeRules().Objective, Is.EqualTo(MatchObjective.Horde), "the dedicated server picks its rules by the objective");
 
             foreach (var name in new[] { GameRulesAssetBuilder.FreeForAllName, GameRulesAssetBuilder.KillConfirmedName, GameRulesAssetBuilder.GunGameName,
                          GameRulesAssetBuilder.HardpointName, GameRulesAssetBuilder.GuardianName, GameRulesAssetBuilder.CaptureTheFlagName,

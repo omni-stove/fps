@@ -15,6 +15,7 @@ namespace Shooter.Server
         private readonly List<int> _takedownIds = new List<int>();
         private MeleeSpec _takedownSource;
         private MeleeSpec _takedownSearch;
+        private double _nextNoMoveLogTime = double.NegativeInfinity;
 
         // 相手が気づいていないかを Id で答える口。答えの無い相手 (人) は、オフラインと同じく常にこちらを見ている前提にする。
         // Bot の判断は ServerBots が持ち、ServerMelee は ServerBots に頼らず作るので、作った後に差し込む (UnawareBots)
@@ -94,7 +95,13 @@ namespace Shooter.Server
             var move = _selector.Select(new ContextMeleeSituation(conditions, Vector3.Distance(origin, point)));
             if (move == null)
             {
-                _log.WriteLine(ContextMeleeLog.NoMove(Text(attackerId), Text(targetId), conditions));
+                // テイクダウンのボタンの連打でログを埋められないよう、拒んだ警告と同じく間引く
+                if (_now >= _nextNoMoveLogTime)
+                {
+                    _nextNoMoveLogTime = _now + _refusalLogInterval;
+                    _log.WriteLine(ContextMeleeLog.NoMove(Text(attackerId), Text(targetId), conditions));
+                }
+
                 return false;
             }
 

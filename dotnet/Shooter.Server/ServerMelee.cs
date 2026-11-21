@@ -74,6 +74,16 @@ namespace Shooter.Server
             _now += deltaSeconds;
             foreach (var swinger in _swingers.Values)
             {
+                // 持ち替えた時点で溜めを捨てる。持ち替えて戻ったときに、前に押していた分で振らないように (WeaponController.FollowChargingWeapon)
+                if (swinger.ChargeWeaponId != null)
+                {
+                    var held = HeldMeleeWeapon(swinger.PlayerId);
+                    if (held == null || !string.Equals(held.Id, swinger.ChargeWeaponId, StringComparison.Ordinal))
+                    {
+                        swinger.DropCharge();
+                    }
+                }
+
                 var swing = swinger.Swing;
                 if (swing.IsSwinging && !IsStanding(swinger.PlayerId))
                 {

@@ -145,6 +145,8 @@ namespace Shooter.NetV2
                     break;
                 case StashStateMessage stash:
                     _hud?.Receive(stash);
+                    // 出撃の結果を試合終了の勝敗に使う部品にも渡すため
+                    HandleByParts(stash);
                     break;
                 case StructureStateMessage structure:
                     _structures.Receive(structure);

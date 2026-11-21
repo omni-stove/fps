@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Numerics;
+using Shooter.Core;
 
 namespace Shooter.Server
 {
@@ -13,6 +14,17 @@ namespace Shooter.Server
         public static string GoalCleared(int playerId)
         {
             return ServerBots.LogTag + " goal player=" + Text(playerId) + " cleared";
+        }
+
+        public static string CoverFound(int playerId, int points)
+        {
+            return ServerBots.LogTag + " cover player=" + Text(playerId) + " points=" + Text(points);
+        }
+
+        public static string GrenadeThrown(int playerId, EnemyState state, Vector3 target)
+        {
+            return ServerBots.LogTag + " grenade player=" + Text(playerId) + " state=" + state
+                + " x=" + F2(target.X) + " y=" + F2(target.Y) + " z=" + F2(target.Z);
         }
 
         private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);

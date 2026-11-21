@@ -21,6 +21,8 @@ namespace Shooter.Server
                 return false;
             }
 
+            // 掛けた先は置き直す前の場所なので、縄は外す
+            ReleaseGrapple(mover, GrappleEnd.Interrupted);
             CancelMantle(mover);
             mover.Simulation.SpawnPosition = position;
             mover.State = new CharacterMotorState(position, Vector3.Zero, false, false);
@@ -44,6 +46,7 @@ namespace Shooter.Server
                 return false;
             }
 
+            ReleaseGrapple(mover, GrappleEnd.Interrupted);
             CancelMantle(mover);
             var simulation = mover.Simulation;
             mover.State = simulation.Deploy(
@@ -72,6 +75,8 @@ namespace Shooter.Server
                 return false;
             }
 
+            // 吹き飛ばしはオフラインでも縄より強い (GrappleMovement.OverridePriority) ので、縄を外して飛ばす
+            ReleaseGrapple(mover, GrappleEnd.Interrupted);
             mover.State = CharacterMotorSimulation.Launch(mover.State, velocity);
             _log.WriteLine(ServerMovementLog.KnockbackLaunched(playerId, mover.LastProcessedTick, velocity));
             return true;
@@ -90,6 +95,7 @@ namespace Shooter.Server
                 return false;
             }
 
+            ReleaseGrapple(mover, GrappleEnd.Interrupted);
             CancelMantle(mover);
             mover.Riding = true;
             mover.State = new CharacterMotorState(position, velocity, true, crouched);
@@ -125,6 +131,11 @@ namespace Shooter.Server
             }
 
             mover.Downed = downed;
+            if (downed)
+            {
+                ReleaseGrapple(mover, GrappleEnd.Interrupted);
+            }
+
             return true;
         }
     }

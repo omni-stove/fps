@@ -161,6 +161,9 @@ namespace Shooter.Server
             StartObjective();
             RulesChanged?.Invoke(data);
 
+            // 人数そろえは終わる試合の目的で行われたので、新しい目的がチームを決めるならここで移す
+            _match.MoveToFixedTeams();
+
             // 試合の枠のチーム (並べ直した後) のまま入れ直す。2 チームそろった人で Session が始まり、MatchStarted が出る
             var players = new List<ServerPlayer>(_match.Players);
             foreach (var player in players)

@@ -38,7 +38,7 @@ namespace Shooter.Tests.EditMode
             MenuNavigator.SceneRoot = KitPaths.DefaultRoot;
 
             // 本物の選択 (LoadoutPreferenceStore.DefaultKey) を壊さないよう、テストごとに別のキーを使う
-            _store = new LoadoutPreferenceStore("Shooter.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"));
+            _store = new LoadoutPreferenceStore("Shooter.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"), new LoadoutPresetSpec(3));
             _screen.LoadoutStore = _store;
             _names = new PlayerNameStore("Shooter.Tests.MainMenuName." + Guid.NewGuid().ToString("N"));
             _screen.NameStore = _names;
@@ -120,8 +120,8 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void EveryDestinationHasAButton()
         {
-            // 設定・ロードアウト・プロフィール・パーティ・コードで入る・登録した画面 6 つは遷移ではないので行き先の一覧には無く、ボタンだけがある
-            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 11));
+            // 設定・ロードアウト・プロフィール・パーティ・コードで入る・登録した画面 7 つは遷移ではないので行き先の一覧には無く、ボタンだけがある
+            Assert.That(MainMenuScreen.ButtonNames.Count, Is.EqualTo(MenuRoute.Destinations.Count + 12));
             foreach (var kind in MainMenuPanels.Kinds)
             {
                 Assert.That(MainMenuScreen.ButtonNames, Has.Member(MainMenuScreen.PanelButtonName(kind)));
@@ -155,8 +155,8 @@ namespace Shooter.Tests.EditMode
             _screen.MoveFocus(1);
             Assert.That(_screen.FocusIndex, Is.EqualTo(1));
             _screen.MoveFocus(1);
-            Assert.That(_screen.FocusIndex, Is.EqualTo(4), "the hidden party and join-by-code buttons are skipped on the way to the loadout");
-            Assert.That(MainMenuScreen.ButtonNames[4], Is.EqualTo(MainMenuScreen.LoadoutButtonName));
+            Assert.That(_screen.FocusIndex, Is.EqualTo(5), "the hidden party, join-by-code and server browser buttons are skipped on the way to the loadout");
+            Assert.That(MainMenuScreen.ButtonNames[5], Is.EqualTo(MainMenuScreen.LoadoutButtonName));
             _screen.MoveFocus(-1);
             Assert.That(_screen.FocusIndex, Is.EqualTo(1), "and on the way back to quick match");
             _screen.MoveFocus(-1);
@@ -340,16 +340,17 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_screen.PanelSlot.style.display.value, Is.EqualTo(DisplayStyle.None));
 
-            // プロフィール (5) の次は、隠れた 6 つ (6〜11) を飛ばして射撃場 (12)
+            // クイックマッチ (1) の次は隠れたパーティ・コード・サーバー一覧 (2〜4) を飛ばしてロードアウト (5)、
+            // プロフィール (6) の次は隠れた 6 つ (7〜12) を飛ばして射撃場 (13)
             _screen.MoveFocus(1);
             _screen.MoveFocus(1);
             _screen.MoveFocus(1);
             _screen.MoveFocus(1);
-            Assert.That(_screen.FocusIndex, Is.EqualTo(5));
-            Assert.That(MainMenuScreen.ButtonNames[5], Is.EqualTo(MainMenuScreen.ProfileButtonName));
+            Assert.That(_screen.FocusIndex, Is.EqualTo(6));
+            Assert.That(MainMenuScreen.ButtonNames[6], Is.EqualTo(MainMenuScreen.ProfileButtonName));
             _screen.MoveFocus(1);
-            Assert.That(_screen.FocusIndex, Is.EqualTo(12));
-            Assert.That(MainMenuScreen.ButtonNames[12], Is.EqualTo(MainMenuScreen.RangeButtonName));
+            Assert.That(_screen.FocusIndex, Is.EqualTo(13));
+            Assert.That(MainMenuScreen.ButtonNames[13], Is.EqualTo(MainMenuScreen.RangeButtonName));
 
             _screen.OpenPanel(MainMenuPanelKind.Stats);
 
@@ -370,7 +371,36 @@ namespace Shooter.Tests.EditMode
             {
                 "menu-stats", "menu-leaderboard", "menu-replays", "menu-cosmetics", "menu-stash", "menu-playlists",
             }));
-            Assert.That(MainMenuPanels.Kinds.Select(MainMenuScreen.PanelButtonName), Is.EqualTo(names.GetRange(profile + 1, 6)));
+            Assert.That(MainMenuPanels.Kinds.Take(6).Select(MainMenuScreen.PanelButtonName), Is.EqualTo(names.GetRange(profile + 1, 6)));
+        }
+
+        [Test]
+        public void TheServerBrowserSitsWithTheOtherWaysToJoinAMatch()
+        {
+            var names = MainMenuScreen.ButtonNames.ToList();
+
+            Assert.That(MainMenuScreen.PanelButtonName(MainMenuPanelKind.ServerBrowser), Is.EqualTo(MainMenuScreen.ServerBrowserButtonName));
+            Assert.That(names.IndexOf(MainMenuScreen.ServerBrowserButtonName), Is.EqualTo(names.IndexOf(MainMenuScreen.JoinByCodeButtonName) + 1));
+        }
+
+        [Test]
+        public void TheRegisteredServerBrowserOpensFromItsButtonAndBackReturnsToIt()
+        {
+            FakeMenuPanel opened = null;
+            MainMenuPanels.Register(MainMenuPanelKind.ServerBrowser, slot => opened = new FakeMenuPanel(slot));
+            _screen.Bind(_root);
+
+            Assert.That(_screen.IsButtonShown(MainMenuScreen.ServerBrowserButtonName), Is.True);
+
+            _screen.OpenPanel(MainMenuPanelKind.ServerBrowser);
+
+            Assert.That(_screen.OpenPanelKind, Is.EqualTo(MainMenuPanelKind.ServerBrowser));
+            Assert.That(opened, Is.Not.Null);
+
+            _screen.ClosePanel();
+
+            Assert.That(_screen.IsPanelOpen, Is.False);
+            Assert.That(MainMenuScreen.ButtonNames[_screen.FocusIndex], Is.EqualTo(MainMenuScreen.ServerBrowserButtonName));
         }
 
         [Test]
@@ -883,6 +913,103 @@ namespace Shooter.Tests.EditMode
             finally
             {
                 UnityEngine.Object.DestroyImmediate(catalog);
+            }
+        }
+
+        [Test]
+        public void LoadoutPresetsAreAddedUpToTheLimitSwitchedRenamedAndKept()
+        {
+            using (var assets = new LoadoutTestAssets())
+            {
+                _screen.Loadout = assets.Loadout;
+                _screen.Catalog = assets.Catalog;
+                _screen.Bind(_root);
+                var rifle = new[] { TestWeapons.RifleId, TestWeapons.HandgunId };
+                var smg = new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId };
+
+                _screen.OpenLoadout();
+                var panel = _screen.LoadoutPanel;
+                Assert.That(panel.HasPresets, Is.True);
+                Assert.That(panel.Presets.Count, Is.EqualTo(1), "the first open shows the current choice as the first preset");
+                Assert.That(panel.PresetTitle, Is.EqualTo("プリセット 1/1"));
+                Assert.That(panel.PresetName, Is.EqualTo("ロードアウト 1"));
+                Assert.That(panel.PresetPreviousButton.enabledSelf, Is.False, "one preset has nothing to switch to");
+                Assert.That(_store.Load(), Is.Null, "opening saves nothing");
+
+                panel.Select(0, 1);
+                panel.PresetNameField.value = "Close";
+                Assert.That(panel.SaveAsNewPreset(), Is.True);
+                Assert.That(panel.PresetTitle, Is.EqualTo("プリセット 2/2"));
+                Assert.That(panel.PresetName, Is.EqualTo("Close"));
+                Assert.That(panel.Status, Is.EqualTo(LoadoutFormat.PresetAdded("Close")));
+                Assert.That(panel.IsStatusError, Is.False);
+                Assert.That(_store.Load().WeaponIds, Is.EqualTo(smg), "the new preset is the one used");
+
+                panel.Select(0, 0);
+                panel.PresetNameField.value = "Third";
+                Assert.That(panel.SaveAsNewPreset(), Is.True);
+                Assert.That(panel.Presets.IsFull, Is.True);
+
+                Assert.That(panel.SaveAsNewPreset(), Is.False, "the store's spec keeps 3 presets");
+                Assert.That(panel.Status, Is.EqualTo(LoadoutFormat.PresetFull(3)));
+                Assert.That(panel.IsStatusError, Is.True);
+                Assert.That(panel.Presets.Count, Is.EqualTo(3));
+
+                Assert.That(panel.CyclePreset(-1), Is.True);
+                Assert.That(_screen.LoadoutPanel, Is.Not.SameAs(panel), "switching rebuilds the selection from the preset");
+                panel = _screen.LoadoutPanel;
+                Assert.That(panel.PresetName, Is.EqualTo("Close"));
+                Assert.That(panel.Selection.WeaponIds, Is.EqualTo(smg));
+                Assert.That(panel.FocusRow, Is.EqualTo(LoadoutSelectPanel.PresetRow));
+                Assert.That(panel.Status, Is.EqualTo(LoadoutFormat.PresetSwitched("Close")));
+                Assert.That(_store.Load().WeaponIds, Is.EqualTo(smg), "the switched preset is saved at once");
+
+                panel.PresetNameField.value = "  Rush  ";
+                Assert.That(panel.RenamePreset(), Is.True);
+                Assert.That(panel.PresetName, Is.EqualTo("Rush"));
+                Assert.That(panel.Status, Is.EqualTo(LoadoutFormat.PresetRenamed("Rush")));
+
+                Assert.That(panel.CyclePreset(-1), Is.True);
+                Assert.That(_screen.LoadoutPanel.Selection.WeaponIds, Is.EqualTo(rifle), "the first preset kept the choice shown on the first open");
+                Assert.That(_screen.LoadoutPanel.PresetName, Is.EqualTo("ロードアウト 1"));
+                _screen.CloseLoadout();
+
+                var reloaded = new LoadoutPreferenceStore(_store.Key, _store.Spec).LoadPresets();
+                Assert.That(reloaded.Count, Is.EqualTo(3));
+                Assert.That(reloaded.ActiveIndex, Is.EqualTo(0));
+                Assert.That(reloaded[0].HasName, Is.False);
+                Assert.That(reloaded[0].Choice.WeaponIds, Is.EqualTo(rifle));
+                Assert.That(reloaded[1].Name, Is.EqualTo("Rush"));
+                Assert.That(reloaded[1].Choice.WeaponIds, Is.EqualTo(smg));
+                Assert.That(reloaded[2].Name, Is.EqualTo("Third"));
+                Assert.That(reloaded[2].Choice.WeaponIds, Is.EqualTo(rifle));
+            }
+        }
+
+        [Test]
+        public void ConfirmSavesIntoTheActivePresetAndKeepsTheOthers()
+        {
+            using (var assets = new LoadoutTestAssets())
+            {
+                var presets = _store.LoadPresets();
+                presets.Add("A", new LoadoutChoice(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+                presets.Add("B", new LoadoutChoice(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+                presets.Select(1);
+                _store.SavePresets(presets);
+                _screen.Loadout = assets.Loadout;
+                _screen.Catalog = assets.Catalog;
+                _screen.Bind(_root);
+
+                _screen.OpenLoadout();
+                Assert.That(_screen.LoadoutPanel.PresetName, Is.EqualTo("B"));
+                _screen.LoadoutPanel.Select(0, 1);
+                Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
+
+                var reloaded = _store.LoadPresets();
+                Assert.That(reloaded.ActiveIndex, Is.EqualTo(1));
+                Assert.That(reloaded[1].Name, Is.EqualTo("B"));
+                Assert.That(reloaded[1].Choice.WeaponIds, Is.EqualTo(new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }));
+                Assert.That(reloaded[0].Choice.WeaponIds, Is.EqualTo(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
             }
         }
 

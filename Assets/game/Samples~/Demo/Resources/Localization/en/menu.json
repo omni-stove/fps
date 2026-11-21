@@ -2,6 +2,7 @@
   "menu.title": "FPS",
   "menu.campaign": "CAMPAIGN",
   "menu.quickMatch": "ONLINE - QUICK MATCH",
+  "menu.serverBrowser": "ONLINE - SERVER BROWSER",
   "menu.playlists": "PLAYLISTS",
   "menu.loadout": "ONLINE - LOADOUT",
   "menu.profile": "PROFILE",
@@ -54,5 +55,18 @@
   "loadout.abilityPrevious": "<",
   "loadout.abilityNext": ">",
   "loadout.rejected": "Not allowed",
-  "loadout.rejectedWithReason": "Not allowed: {0}"
+  "loadout.rejectedWithReason": "Not allowed: {0}",
+  "loadout.presetTitle": "Preset {0}/{1}",
+  "loadout.presetUnnamed": "Loadout {0}",
+  "loadout.presetPrevious": "<",
+  "loadout.presetNext": ">",
+  "loadout.presetNameLabel": "Name",
+  "loadout.presetRename": "Rename",
+  "loadout.presetSaveAsNew": "Save as new",
+  "loadout.presetAdded": "Saved as {0}",
+  "loadout.presetRenamed": "Renamed to {0}",
+  "loadout.presetSwitched": "Switched to {0}. You will spawn with it",
+  "loadout.presetFull": "You can keep up to {0} presets",
+  "loadout.presetNameInvalid": "This name cannot be used (up to {0} characters, no line breaks)",
+  "loadout.presetSaveFailed": "Could not save the presets"
 }

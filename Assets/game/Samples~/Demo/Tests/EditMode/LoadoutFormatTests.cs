@@ -40,6 +40,31 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void PresetTextsCountFromOneAndNameUnnamedPresetsByTheirNumber()
+        {
+            Assert.That(LoadoutFormat.PresetTitle(0, 3), Is.EqualTo("プリセット 1/3"));
+            Assert.That(LoadoutFormat.PresetTitle(2, 3), Is.EqualTo("プリセット 3/3"));
+            Assert.Throws<ArgumentOutOfRangeException>(() => LoadoutFormat.PresetTitle(3, 3));
+            Assert.Throws<ArgumentOutOfRangeException>(() => LoadoutFormat.PresetTitle(-1, 3));
+
+            var choice = new LoadoutChoice(new[] { "rifle" });
+            Assert.That(LoadoutFormat.PresetName(new LoadoutPreset(string.Empty, choice), 1), Is.EqualTo("ロードアウト 2"));
+            Assert.That(LoadoutFormat.PresetName(new LoadoutPreset("近距離", choice), 1), Is.EqualTo("近距離"));
+            Assert.Throws<ArgumentNullException>(() => LoadoutFormat.PresetName(null, 0));
+
+            Assert.That(LoadoutFormat.PresetFull(5), Is.EqualTo("プリセットは 5 個まで保存できます"));
+            Assert.That(LoadoutFormat.PresetAdded("近距離"), Is.EqualTo("近距離 として保存しました"));
+            Assert.That(LoadoutFormat.PresetRenamed("遠距離"), Is.EqualTo("名前を 遠距離 に変えました"));
+            Assert.That(LoadoutFormat.PresetSwitched("遠距離"), Is.EqualTo("遠距離 に切り替えました。次の出現から使います"));
+            Assert.That(LoadoutFormat.PresetNameInvalid(24), Is.EqualTo("この名前は使えません (24 文字まで、改行なし)"));
+            Assert.That(LoadoutFormat.SaveAsNewPreset, Is.EqualTo("新しく保存"));
+            Assert.That(LoadoutFormat.RenamePreset, Is.EqualTo("名前を変更"));
+            Assert.That(LoadoutFormat.PresetNameLabel, Is.EqualTo("名前"));
+            Assert.That(LoadoutFormat.PreviousPreset, Is.EqualTo("<"));
+            Assert.That(LoadoutFormat.NextPreset, Is.EqualTo(">"));
+        }
+
+        [Test]
         public void RejectedAddsTheReasonWhenThereIsOne()
         {
             Assert.That(LoadoutFormat.Rejected("slot 0 is empty"), Is.EqualTo("選べません: slot 0 is empty"));

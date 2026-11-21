@@ -20,6 +20,7 @@ namespace Shooter.Server
         private readonly ServerMovement _movement;
         private readonly ServerCombat _combat;
         private readonly ServerDeployables _deployables;
+        private readonly ServerMelee _melee;
         private readonly List<ServerDecoy> _decoys = new List<ServerDecoy>();
         private readonly SortedDictionary<int, ServerBotAgent> _agents = new SortedDictionary<int, ServerBotAgent>();
         private readonly List<int> _ids = new List<int>();
@@ -31,6 +32,7 @@ namespace Shooter.Server
         private ServerBodies _bodies;
         private NetBotSpec _spec;
         private ServerBotNavigation _navigation;
+        private ServerBotCoverProbe _coverProbe;
         private bool _hasNavMesh;
         private bool _laddersOn;
         private int _launchBots;
@@ -42,13 +44,15 @@ namespace Shooter.Server
         // null なら Bot は出現地点を巡っている
         private Vector3? _ralliedAt;
 
-        // deployables が null なら、囮に気を引かれない (置いた物の無いサーバー)
-        public ServerBots(MatchRulesModule rules, ServerMovement movement, ServerCombat combat, ServerDeployables deployables = null)
+        // deployables が null なら、囮に気を引かれない (置いた物の無いサーバー)。melee が null なら殴らない (近接の無いサーバー)
+        public ServerBots(
+            MatchRulesModule rules, ServerMovement movement, ServerCombat combat, ServerDeployables deployables = null, ServerMelee melee = null)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _movement = movement ?? throw new ArgumentNullException(nameof(movement));
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
             _deployables = deployables;
+            _melee = melee;
         }
 
         public string Name => "bots";
@@ -106,12 +110,19 @@ namespace Shooter.Server
                 _spec.NavSampleRadius,
                 _bodies.Geometry.Standing.Height * 0.5f,
                 _laddersOn);
-            if (_target == 0)
+            var geometry = _bodies.Geometry;
+            _coverProbe = new ServerBotCoverProbe(
+                PlaceCover,
+                IsWorldBlocked,
+                -geometry.Standing.BottomY,
+                geometry.Crouched.EyeY - geometry.Crouched.BottomY,
+                geometry.Standing.EyeY - geometry.Standing.BottomY);
+            _hasNavMesh = HasNavMeshNearPatrolPoints();
+            if (_target == 0 && !ObjectiveDrivesBots)
             {
                 return;
             }
 
-            _hasNavMesh = HasNavMeshNearPatrolPoints();
             if (!_hasNavMesh)
             {
                 _log.WriteLine(LogTag + " no NavMesh near the spawn points of " + map.Name
@@ -144,7 +155,7 @@ namespace Shooter.Server
 
         public void Tick(long tick, float deltaSeconds)
         {
-            if (_target > 0)
+            if (_target > 0 || ObjectiveDrivesBots)
             {
                 Reconcile();
             }
@@ -238,15 +249,27 @@ namespace Shooter.Server
             }
 
             var humans = _match.HumanCount;
-            var desired = BotRoster.DesiredBots(_launchBots, session.Spec.Rules.MinPlayers, humans);
+            var wanted = _rules.Objective?.BotsWanted;
+            var desired = wanted.HasValue ? Math.Max(0, wanted.Value) : BotRoster.DesiredBots(_launchBots, session.Spec.Rules.MinPlayers, humans);
             if (desired != _loggedDesired)
             {
                 _loggedDesired = desired;
-                _log.WriteLine(LogTag + " humans=" + Text(humans) + " bots=" + Text(_agents.Count) + " desired=" + Text(desired));
+                _log.WriteLine(LogTag + " humans=" + Text(humans) + " bots=" + Text(_agents.Count) + " desired=" + Text(desired)
+                    + (wanted.HasValue ? " by=objective" : string.Empty));
             }
 
             while (_agents.Count > desired)
             {
+                if (wanted.HasValue)
+                {
+                    if (!TrimForObjective())
+                    {
+                        break;
+                    }
+
+                    continue;
+                }
+
                 Team? preferred = _trimRequests.Count > 0 ? _trimRequests.Dequeue() : (Team?)null;
                 if (!Trim(preferred, humans > 0 ? "replaced" : "no-humans"))
                 {
@@ -309,6 +332,38 @@ namespace Shooter.Server
             return true;
         }
 
+        private bool ObjectiveDrivesBots => _rules.Objective?.BotsWanted.HasValue == true;
+
+        // チームの人数でなく目的の決める順で抜く。同じ順なら後から足した Bot (Id の大きい方) を抜く
+        private bool TrimForObjective()
+        {
+            var objective = _rules.Objective;
+            if (objective == null)
+            {
+                return false;
+            }
+
+            var victim = 0;
+            var lowest = int.MaxValue;
+            foreach (var playerId in _agents.Keys)
+            {
+                var order = objective.BotDropOrder(playerId);
+                if (order <= lowest)
+                {
+                    lowest = order;
+                    victim = playerId;
+                }
+            }
+
+            if (victim == 0)
+            {
+                return false;
+            }
+
+            Remove(victim, "objective");
+            return true;
+        }
+
         private void Add()
         {
             if (_nextBotId == int.MaxValue)
@@ -331,7 +386,9 @@ namespace Shooter.Server
 
         private ServerBotAgent NewAgent(int playerId)
         {
-            return new ServerBotAgent(playerId, _spec, _navigation, ShuffledPatrolRoute(playerId), new Random(playerId), _combat.SightBlockers);
+            var agent = new ServerBotAgent(playerId, _spec, _navigation, ShuffledPatrolRoute(playerId), new Random(playerId), _combat.SightBlockers);
+            agent.UseMelee(_melee?.SwingOf(playerId));
+            return agent;
         }
 
         private void Remove(int playerId, string reason)
@@ -514,7 +571,19 @@ namespace Shooter.Server
             var eye = body.EyePosition;
             var yaw = body.Yaw * ServerBotMath.DegreesPerRadian;
             var thinking = session.State != GameModeState.Ended && !session.IsDowned(playerId);
-            var decision = thinking ? agent.Brain.Tick(dt, Perceive(agent, body, session)) : EnemyDecision.None;
+            var perception = default(EnemyPerception);
+            var decision = EnemyDecision.None;
+            if (thinking)
+            {
+                perception = Perceive(agent, body, session);
+                agent.EnableMelee(_melee != null && _melee.IsOn);
+                if (agent.PrepareCover(perception, _coverProbe))
+                {
+                    _log.WriteLine(ServerBotLog.CoverFound(playerId, agent.CoverPointCount));
+                }
+
+                decision = agent.Brain.Tick(dt, perception);
+            }
 
             var step = BotRouteStep.None;
             var climb = 0f;
@@ -568,7 +637,8 @@ namespace Shooter.Server
                 buttons |= InputButtons.Sprint;
             }
 
-            if (plan.Crouch && !traversing)
+            // 判断が物陰でしゃがませる (隠れている) 時も、入力の計画 (構えた時にしゃがむか) と同じくしゃがむ
+            if ((plan.Crouch || decision.Crouch) && !traversing)
             {
                 buttons |= InputButtons.Crouch;
             }
@@ -586,6 +656,16 @@ namespace Shooter.Server
 
             if (!traversing && !after.Ladder.IsClimbing)
             {
+                // 振ったことは近接のモジュールが人と同じ行でログに出す
+                if (thinking && agent.WantsSwing)
+                {
+                    _melee.BotSwing(playerId);
+                }
+                else if (thinking)
+                {
+                    TryThrowGrenade(agent, body, perception, decision);
+                }
+
                 Shoot(agent, plan, decision.LookAt, (int)Math.Min(tick, int.MaxValue), dt);
             }
 
@@ -644,6 +724,85 @@ namespace Shooter.Server
             }
         }
 
+        // 狙うのは判断が向いている所 (最後に見た・聞いた相手の体の中心) の足元。爆風の届く所に味方がいれば投げない
+        private void TryThrowGrenade(ServerBotAgent agent, ServerBody body, in EnemyPerception perception, EnemyDecision decision)
+        {
+            // 隠れている間と、High の物陰で覗く間 (立った目より高い壁のすぐ後ろに立つ) は、弧が壁に当たって自分の足元で爆ぜるので投げない
+            if (!agent.CanThrowGrenade
+                || (agent.Brain.State == EnemyState.TakeCover
+                    && (agent.Brain.CoverPhase == EnemyCoverPhase.Hiding
+                        || agent.Brain.CurrentCoverPoint?.Height == CoverHeight.High))
+                || !ServerBotAgent.WantsGrenade(agent.Brain.State, perception.HasLineOfSight, body.Position, decision.LookAt, _spec.Tactics))
+            {
+                return;
+            }
+
+            var playerId = agent.PlayerId;
+            var spec = _combat.BotGrenade(playerId);
+            if (spec == null)
+            {
+                return;
+            }
+
+            var target = decision.LookAt.Value - new Vector3(0f, _coverProbe.CenterHeight, 0f);
+            if (AllyNear(playerId, target, spec.Impact.Explosion.Damage.Radius)
+                || !ServerBotAgent.TryAimGrenade(body.EyePosition, target, spec, ServerGrenadeFlight.Gravity, out var direction)
+                || !_combat.BotThrowGrenade(playerId, direction, spec))
+            {
+                return;
+            }
+
+            agent.NoteGrenadeThrown();
+            _log.WriteLine(ServerBotLog.GrenadeThrown(playerId, agent.Brain.State, target));
+        }
+
+        private bool AllyNear(int selfId, Vector3 point, float radius)
+        {
+            var session = _rules.Session;
+            foreach (var other in _bodies.All)
+            {
+                var id = other.PlayerId;
+                if (id == selfId || session == null || !session.HasPlayer(id) || !session.IsAlive(id) || _rules.AreHostile(selfId, id))
+                {
+                    continue;
+                }
+
+                if (Vector3.Distance(other.Position, point) <= radius + _coverProbe.CenterHeight)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // NavMesh があればその上へ寄せ、寄せて大きくずれた点 (壁の中から向こう側へ寄せたなど) は捨てる。
+        // NavMesh が無ければ Bot はまっすぐ歩くので、今の所から壁を通らずに着ける点だけにする
+        private Vector3? PlaceCover(Vector3 from, Vector3 candidate)
+        {
+            if (_hasNavMesh)
+            {
+                if (!_navigation.TrySample(candidate, out var onMesh))
+                {
+                    return null;
+                }
+
+                var drift = new Vector2(onMesh.X - candidate.X, onMesh.Z - candidate.Z).Length();
+                return drift <= _spec.Tactics.CoverSearchStep * 0.5f ? onMesh : (Vector3?)null;
+            }
+
+            var lift = new Vector3(0f, _coverProbe.CenterHeight, 0f);
+            return IsWorldBlocked(from + lift, candidate + lift) ? (Vector3?)null : candidate;
+        }
+
+        // 物陰は世界の物だけで決める。煙 (視線を遮る物) はすぐ消えるので数えない
+        private bool IsWorldBlocked(Vector3 from, Vector3 to)
+        {
+            var offset = to - from;
+            var distance = offset.Length();
+            return distance > 0f && _context.World.Raycast(from, offset / distance, distance, ServerHitboxes.RaycastLayers, out _);
+        }
+
         private EnemyPerception Perceive(ServerBotAgent agent, ServerBody self, TeamDeathmatchSession session)
         {
             var selfId = self.PlayerId;
@@ -684,14 +843,19 @@ namespace Shooter.Server
             var healthFraction = session.MaxHealth > 0 ? Math.Clamp((float)health / session.MaxHealth, 0f, 1f) : 1f;
             // 目がくらんでいる間は、撃たれても誰に撃たれたか分からないままにする
             var heard = !blind && seen == null && wasHit && nearest != null;
+            Vector3? hitSource = wasHit && !blind && nearest != null ? nearest.Position : (Vector3?)null;
+
+            // 物陰に隠れている間は相手が見えなくなるが、オフラインの敵 (EnemySenses) と同じく、見通さずに相手の居場所は知っている。
+            // 知らせないと、判断は隠れた途端に脅威を見失い、物陰を出てしまう
+            var hiding = seen == null && !blind && nearest != null && nearestDistance <= sight && agent.Brain.State == EnemyState.TakeCover;
             var perception = new EnemyPerception(
                 self.Position,
-                seen?.Position,
+                seen?.Position ?? (hiding ? nearest.Position : (Vector3?)null),
                 seen != null,
                 heard,
                 heard ? nearest.Position : (Vector3?)null,
-                false,
-                null,
+                wasHit,
+                hitSource,
                 healthFraction);
             if (_deployables == null)
             {

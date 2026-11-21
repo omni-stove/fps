@@ -192,6 +192,98 @@
     -unity-font-style: normal;
 }
 
+/* プリセット (保存した組) の行。武器の行と同じ枠線と強調を使い、組の名前を前後のボタンで挟む。 */
+.loadout-select__presets {
+    margin: 0 0 12px 0;
+    padding: 8px 12px;
+    border-left-width: 6px;
+    border-color: rgba(0, 0, 0, 0);
+    border-radius: 4px;
+}
+
+.loadout-select__presets--focused {
+    border-color: rgb(255, 196, 64);
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.loadout-select__preset-title {
+    margin: 0 0 6px 0;
+    padding: 0;
+    font-size: 20px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.loadout-select__preset-picker {
+    flex-direction: row;
+    align-items: center;
+}
+
+.loadout-select__preset-step {
+    width: 48px;
+    height: 48px;
+    margin: 0;
+    padding: 0;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgb(255, 255, 255);
+    font-size: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.loadout-select__preset-step:hover,
+.loadout-select__preset-action:hover {
+    background-color: rgba(255, 255, 255, 0.16);
+}
+
+.loadout-select__preset-step:focus,
+.loadout-select__preset-action:focus {
+    border-color: rgb(255, 255, 255);
+}
+
+.loadout-select__preset-step:disabled,
+.loadout-select__preset-action:disabled {
+    opacity: 0.4;
+}
+
+.loadout-select__preset-name {
+    min-width: 240px;
+    margin: 0 12px;
+    padding: 0;
+    font-size: 24px;
+    color: rgb(255, 196, 64);
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.loadout-select__preset-edit {
+    flex-direction: row;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 8px 0 0 0;
+}
+
+.loadout-select__preset-name-field {
+    min-width: 280px;
+    margin: 0 12px 0 0;
+    font-size: 20px;
+    color: rgb(255, 255, 255);
+}
+
+.loadout-select__preset-action {
+    height: 40px;
+    margin: 0 12px 0 0;
+    padding: 0 16px;
+    border-width: 2px;
+    border-color: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.08);
+    color: rgb(255, 255, 255);
+    font-size: 20px;
+}
+
 .loadout-select__confirm {
     height: 56px;
     margin: 8px 0 0 0;

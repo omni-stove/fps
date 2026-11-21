@@ -29,6 +29,7 @@ namespace Shooter.Server
         private readonly DeployCatalog _catalog;
         private readonly ServerAbilityChoices _abilities;
         private readonly string _catalogPath;
+        private readonly bool _flyDrones;
         private readonly SortedDictionary<int, Placed> _placed = new SortedDictionary<int, Placed>();
         private readonly Dictionary<(int Owner, string TypeId), DeployRoster<Placed>> _rosters =
             new Dictionary<(int Owner, string TypeId), DeployRoster<Placed>>();
@@ -49,12 +50,16 @@ namespace Shooter.Server
         private float _now;
         private float _nextRejectWarningTime = float.NegativeInfinity;
 
-        public ServerDeployables(MatchRulesModule rules, ServerCombat combat, DeployCatalog catalog = null, string catalogPath = null)
+        // flyDrones はドローンを置かせて飛ばすか。結線するまでは既定で断り、起動の口 (ServerModuleFactory) は今までどおり置かせない
+        public ServerDeployables(
+            MatchRulesModule rules, ServerCombat combat, DeployCatalog catalog = null, string catalogPath = null, bool flyDrones = false,
+            GrappleType grapple = null)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
             _catalog = catalog ?? DeployCatalog.Empty;
             _catalogPath = catalogPath;
+            _flyDrones = flyDrones;
 
             // 人の弾・爆発が置いた物に当たるよう、戦闘の当たり判定に置いた物を渡す (乗り物の ServerVehicles.Combat と同じつなぎ方)
             combat.Deployables = this;
@@ -62,14 +67,17 @@ namespace Shooter.Server
             // 倒されて戻る人をルールの RespawnAnchor の順でビーコンへ出せるよう、ルールにビーコンを渡す
             rules.Beacons = this;
 
-            // 要求の能力の検査 (ルール) と置くときの検査 (ここ) が同じ選択を見るよう、置ける物の一覧を持つ選択をルールに渡す
-            _abilities = new ServerAbilityChoices(_catalog);
+            // 要求の能力の検査 (ルール) と置くときの検査 (ここ) が同じ選択を見るよう、置ける物の一覧を持つ選択をルールに渡す。
+            // グラップルは置く物ではないが、同じ枠から選ぶので同じ選択に載せる (縄を掛けるのは ServerMovement)
+            _abilities = new ServerAbilityChoices(_catalog, AbilitySelection.DefaultSlotCount, grapple);
             rules.Abilities = _abilities;
         }
 
         public string Name => "deployables";
 
         public int Count => _placed.Count;
+
+        internal ServerAbilityChoices AbilityChoices => _abilities;
 
         public void Start(ServerContext context)
         {
@@ -118,6 +126,9 @@ namespace Shooter.Server
                     case DeployRole.Decoy:
                         TickDecoy(placed, deltaSeconds);
                         break;
+                    case DeployRole.Drone:
+                        TickDrone(placed, deltaSeconds);
+                        break;
                     case DeployRole.Mine:
                         TickMine(placed, deltaSeconds);
                         break;
@@ -140,6 +151,10 @@ namespace Shooter.Server
             if (message is DeployRequestMessage request && _match.TryGetPlayer(connection, out var player))
             {
                 Place(player.PlayerId, request.TypeId, request.Position, request.Yaw);
+            }
+            else if (message is DroneControlMessage control && _match.TryGetPlayer(connection, out var pilot))
+            {
+                Steer(pilot.PlayerId, control);
             }
             else if (message is DetonateRequestMessage detonate && _match.TryGetPlayer(connection, out var detonator))
             {
@@ -365,6 +380,10 @@ namespace Shooter.Server
             {
                 placed.Beacon = new BeaconState(type.Beacon);
             }
+            else if (type.Role == DeployRole.Drone)
+            {
+                placed.Drone = new DroneFlight(type.Drone, point);
+            }
             else if (type.Role == DeployRole.Mine)
             {
                 placed.Mine = new MineState(type.Mine);
@@ -392,6 +411,11 @@ namespace Shooter.Server
             if (placed.Beacon != null)
             {
                 _log.WriteLine(BeaconLog.Armed(owner, type.Id, placed.Id, placed.Beacon.Uses, Side.FromTeam(placed.Team)));
+            }
+
+            if (placed.Drone != null)
+            {
+                _log.WriteLine(DroneLog.Armed(owner, type.Id, placed.Id, type.Drone));
             }
 
             if (placed.Mine != null)
@@ -529,9 +553,8 @@ namespace Shooter.Server
                     + " bytes and cannot be sent";
             }
 
-            // ドローンはスナップショットで送る種類 (DeployableKind) が無く、操縦の入力を受ける口も無いので、置かせると使えない物が残るだけになる。
-            // 置く前に断る
-            if (type.Role == DeployRole.Drone)
+            // 結線するまではクライアントの操縦の部品が登録されておらず、置かせても操縦できない物が残るだけになるので、置く前に断る
+            if (type.Role == DeployRole.Drone && !_flyDrones)
             {
                 return DroneUnsupported;
             }
@@ -795,6 +818,8 @@ namespace Shooter.Server
                     return DeployableKind.Decoy;
                 case DeployRole.Beacon:
                     return DeployableKind.Beacon;
+                case DeployRole.Drone:
+                    return DeployableKind.Drone;
                 case DeployRole.Mine:
                     return DeployableKind.Mine;
                 case DeployRole.RemoteCharge:
@@ -827,9 +852,10 @@ namespace Shooter.Server
 
             public Team Team { get; }
 
-            public Vector3 Position { get; }
+            // ドローンは飛ぶので、置いた後も位置と向きが変わる
+            public Vector3 Position { get; set; }
 
-            public float Yaw { get; }
+            public float Yaw { get; set; }
 
             public int Health { get; set; }
 
@@ -850,6 +876,8 @@ namespace Shooter.Server
             public DecoyState Decoy { get; set; }
 
             public BeaconState Beacon { get; set; }
+
+            public DroneFlight Drone { get; set; }
 
             public MineState Mine { get; set; }
 

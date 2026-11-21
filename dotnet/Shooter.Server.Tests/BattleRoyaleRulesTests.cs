@@ -90,6 +90,10 @@ namespace Shooter.Server.Tests
             Assert.That(row.SquadId, Is.EqualTo(1));
             _rules.FillPlayer(5, ref row);
             Assert.That(row.SquadId, Is.Zero, "a row reused for a player outside the squads does not keep the last squad");
+            Assert.That(row.OutsideSquad, Is.True, "squad 0 and no squad send the same number, so the flag tells them apart");
+            _rules.FillPlayer(1, ref row);
+            Assert.That(row.SquadId, Is.Zero);
+            Assert.That(row.OutsideSquad, Is.False, "a row reused for a squad member does not keep the flag");
 
             Assert.That(_rules.AreHostile(1, Team.Alpha, 3, Team.Alpha), Is.False);
             Assert.That(_rules.AreHostile(1, Team.Alpha, 4, Team.Alpha), Is.True, "the same team in another squad");

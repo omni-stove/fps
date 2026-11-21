@@ -68,7 +68,7 @@ namespace Shooter.Runtime
         public LocalizedText Time(ModeStatus status)
         {
             return status.Detail is HordeStatus detail
-                ? ModeStatusFormat.Clock(detail.Horde.Session.ElapsedSeconds)
+                ? ModeStatusFormat.Clock(detail.ElapsedSeconds)
                 : ModeStatusFormat.Remaining(status);
         }
 
@@ -82,28 +82,25 @@ namespace Shooter.Runtime
                 return;
             }
 
-            var horde = detail.Horde;
-            var schedule = horde.Schedule;
-            lines.Add(Wave(schedule.WaveNumber, schedule.WaveCount));
-            if (schedule.Phase == WavePhase.Fighting)
+            lines.Add(Wave(detail.WaveNumber, detail.WaveCount));
+            if (detail.Phase == WavePhase.Fighting)
             {
-                lines.Add(RemainingEnemies(schedule.RemainingEnemies));
+                lines.Add(RemainingEnemies(detail.RemainingEnemies));
             }
-            else if (schedule.Phase == WavePhase.Resting)
+            else if (detail.Phase == WavePhase.Resting)
             {
-                lines.Add(NextWave(schedule.RestRemaining));
+                lines.Add(NextWave(detail.RestRemaining));
             }
 
-            lines.Add(Currency(horde.Currency));
+            lines.Add(Currency(detail.Currency));
 
-            var session = horde.Session;
-            if (session.State == GameModeState.Ended)
+            if (detail.IsEnded)
             {
-                lines.Add(horde.IsVictory ? Victory : Defeat);
+                lines.Add(detail.IsVictory ? Victory : Defeat);
                 return;
             }
 
-            if (detail.LocalPlayerId.HasValue && session.IsAwaitingRespawn(detail.LocalPlayerId.Value) && !horde.IsBetweenWaves)
+            if (detail.IsAwaitingReturn)
             {
                 lines.Add(ReturnsAfterWave);
                 return;

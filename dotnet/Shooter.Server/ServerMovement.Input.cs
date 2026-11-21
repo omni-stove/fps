@@ -69,25 +69,43 @@ namespace Shooter.Server
                     closeParachute: frame.Has(InputButtons.CloseParachute))
                 .WithRules(_settings.Rules.Actions);
             input = WithSlideInput(input, frame);
+            input = Restrain(mover, input);
 
             if (mover.Riding)
             {
+                mover.GrappleHeld = frame.Has(InputButtons.Grapple);
+                mover.JumpHeld = frame.Has(InputButtons.Jump);
                 mover.Yaw = input.Yaw;
                 mover.Aiming = input.Restrained().Aim;
                 mover.Sprinting = false;
                 mover.LastProcessedTick = frame.Tick;
+
+                // 座っている間は歩かないので、走っていない入力として時間だけ進め、スタミナを戻す
+                Stepped(mover, default, mover.State, mover.State);
                 Publish(mover);
                 return;
             }
 
             var previous = mover.State;
-            var mantled = TryMantle(mover, frame.Tick, input);
-            var current = mantled ? mover.State : mover.Simulation.Step(mover.State, input);
+            // 縄に掛かっている間は縄が体を動かすので、崖のぼりの道は捨てる
+            var grappled = TryStepGrapple(mover, frame, previous, out var current);
+            var mantled = false;
+            if (grappled)
+            {
+                CancelMantle(mover);
+            }
+            else
+            {
+                mantled = TryMantle(mover, frame.Tick, input);
+                current = mantled ? mover.State : mover.Simulation.Step(mover.State, input);
+            }
+
             mover.State = current;
             mover.Yaw = input.Yaw;
             mover.Aiming = input.Restrained().Aim;
             mover.Sprinting = input.Restrained().Sprint;
             mover.LastProcessedTick = frame.Tick;
+            Stepped(mover, input, previous, current);
             Publish(mover);
             Report(mover, frame.Tick, previous, current, mantled);
         }

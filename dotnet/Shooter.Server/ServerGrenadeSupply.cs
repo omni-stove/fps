@@ -94,6 +94,21 @@ namespace Shooter.Server
             return GrenadeThrowRejection.None;
         }
 
+        // 煙や閃光を敵の足元へ投げても倒せないので、Bot には爆発する種類だけを選ばせる
+        public GrenadeSpec FirstReadyExplosive(double nowSeconds)
+        {
+            for (var i = 0; i < _inventory.Count; i++)
+            {
+                var type = _inventory.TypeAt(i);
+                if (type.Impact.Explosion != null && Check(nowSeconds, type.Id, out _) == GrenadeThrowRejection.None)
+                {
+                    return type;
+                }
+            }
+
+            return null;
+        }
+
         public void Fill(GrenadePouchSync sync)
         {
             ArgumentNullException.ThrowIfNull(sync);

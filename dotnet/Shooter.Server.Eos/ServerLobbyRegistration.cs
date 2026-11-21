@@ -67,10 +67,21 @@ namespace Shooter.Server.Eos
 
         public void Tick(int players, int? skillAverage, bool draining)
         {
+            Tick(players, skillAverage, null, draining);
+        }
+
+        public void Tick(int players, int? skillAverage, string map, bool draining)
+        {
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (draining)
             {
                 BeginClose();
+            }
+
+            // 作るロビーに初めから載るよう、登録を始める前に地図を渡す。名前に使えない文字の地図は一覧に出さないだけにする
+            if (!_closing && NetLaunchOptions.IsMapName(map))
+            {
+                _registrar.SetMap(map);
             }
 
             if (!_closing && !_registrar.HasBegun)

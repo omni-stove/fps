@@ -111,6 +111,62 @@ namespace Shooter.Server.Eos.Tests
         }
 
         [Test]
+        public void TheMapSetBeforeRegisteringIsInTheCreatedLobby()
+        {
+            _registrar.SetMap("harbor");
+            Register();
+
+            Assert.That(ByKey(_backend.CreatedAttributes)[ServerLobby.MapKey].Text, Is.EqualTo("harbor"));
+            Assert.That(_registrar.PublishedMap, Is.EqualTo("harbor"));
+            Assert.That(_backend.Updates, Is.Empty, "the created lobby already carries the map");
+            Assert.That(Lines(), Has.Member("[Lobby] registered id=l1 server=" + _endpoint + " players=0 map=harbor"));
+        }
+
+        [Test]
+        public void AMapChangeUpdatesOnlyTheMapAttribute()
+        {
+            _registrar.SetMap("harbor");
+            Register();
+
+            _registrar.SetMap("quarry");
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1));
+            var update = ByKey(_backend.Updates[0]);
+            Assert.That(update.Keys, Is.EquivalentTo(new[] { ServerLobby.MapKey }));
+            Assert.That(update[ServerLobby.MapKey].Text, Is.EqualTo("quarry"));
+            Assert.That(_registrar.PublishedMap, Is.EqualTo("harbor"), "not published until the update is done");
+            _backend.CompleteUpdate();
+            Assert.That(_registrar.PublishedMap, Is.EqualTo("quarry"));
+            Assert.That(Lines(), Has.Member("[Lobby] map harbor -> quarry"));
+
+            _registrar.SetMap("quarry");
+            _registrar.SetMap(null);
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1), "the same map and no map send nothing");
+        }
+
+        [Test]
+        public void ARecreatedLobbyCarriesTheLatestMap()
+        {
+            _registrar.SetMap("harbor");
+            Register();
+            _registrar.SetMap("quarry");
+            _backend.CompleteUpdate();
+
+            _backend.RaiseRemoved("l1", "the lobby was closed");
+            _registrar.Tick(1f);
+
+            Assert.That(_backend.Creates, Is.EqualTo(2));
+            Assert.That(ByKey(_backend.CreatedAttributes)[ServerLobby.MapKey].Text, Is.EqualTo("quarry"));
+        }
+
+        [Test]
+        public void AMapNameWithOtherCharactersIsRejected()
+        {
+            Assert.Throws<ArgumentException>(() => _registrar.SetMap("harbor at night"));
+            Assert.That(_registrar.Map, Is.Null);
+        }
+
+        [Test]
         public void TheRegionIsSetOnlyBeforeBegin()
         {
             Assert.That(_registrar.Region, Is.Null);

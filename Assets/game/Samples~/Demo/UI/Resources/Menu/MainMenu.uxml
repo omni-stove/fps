@@ -13,6 +13,8 @@
             <ui:Button name="menu-party" text="#menu.party" class="menu__button" style="display: none;" />
             <!-- 試合を立てた人から聞いた参加コードで、非公開の試合に入る。 -->
             <ui:Button name="menu-join-by-code" text="#menu.joinByCode" class="menu__button" style="display: none;" />
+            <!-- -register-lobby で載った公開の専用サーバーを一覧にし、選んで入る。Shooter.Runtime.MainMenuPanels に画面が登録されているときだけ MainMenuScreen が出す。 -->
+            <ui:Button name="menu-server-browser" text="#menu.serverBrowser" class="menu__button" style="display: none;" />
             <ui:Button name="menu-loadout" text="#menu.loadout" class="menu__button" />
             <!-- 成長の記録 (レベル・XP・戦績・次のアンロック) を出す。 -->
             <ui:Button name="menu-profile" text="#menu.profile" class="menu__button" />

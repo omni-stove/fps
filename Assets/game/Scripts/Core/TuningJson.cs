@@ -87,6 +87,18 @@ namespace Shooter.Core
         public const string RallyRouteRadiusFractionItem = "rallyRouteRadiusFraction";
         public const string RallyRouteAngleStepDegreesItem = "rallyRouteAngleStepDegrees";
         public const string RallyMoveRadiusFractionItem = "rallyMoveRadiusFraction";
+        public const string ThrowGrenadesItem = "throwGrenades";
+        public const string GrenadeMinDistanceItem = "grenadeMinDistance";
+        public const string GrenadeMaxDistanceItem = "grenadeMaxDistance";
+        public const string GrenadeIntervalSecondsItem = "grenadeIntervalSeconds";
+        public const string MeleeAttacksItem = "meleeAttacks";
+        public const string TakeCoverItem = "takeCover";
+        public const string CoverSearchRadiusItem = "coverSearchRadius";
+        public const string CoverSearchStepItem = "coverSearchStep";
+        public const string CoverSearchDirectionsItem = "coverSearchDirections";
+        public const string CoverSearchSecondsItem = "coverSearchSeconds";
+        public const string CoverMaxAngleDegreesItem = "coverMaxAngleDegrees";
+        public const string CoverMinThreatDistanceItem = "coverMinThreatDistance";
 
         private const string _grenadeKind = "grenade JSON";
         private const string _pingKind = "ping JSON";
@@ -193,6 +205,18 @@ namespace Shooter.Core
             RallyRouteRadiusFractionItem,
             RallyRouteAngleStepDegreesItem,
             RallyMoveRadiusFractionItem,
+            ThrowGrenadesItem,
+            GrenadeMinDistanceItem,
+            GrenadeMaxDistanceItem,
+            GrenadeIntervalSecondsItem,
+            MeleeAttacksItem,
+            TakeCoverItem,
+            CoverSearchRadiusItem,
+            CoverSearchStepItem,
+            CoverSearchDirectionsItem,
+            CoverSearchSecondsItem,
+            CoverMaxAngleDegreesItem,
+            CoverMinThreatDistanceItem,
         };
 
         // GrenadeTypesItem も CarriedItem も無いオブジェクトは、種類が 1 つだった頃の形として、その 1 種類だけを持つ並びに読む。
@@ -361,6 +385,29 @@ namespace Shooter.Core
                 throw Rejected(source, _botsKind, BotItemNames, e);
             }
 
+            var tactics = defaults.Tactics;
+            BotTacticsSpec readTactics;
+            try
+            {
+                readTactics = new BotTacticsSpec(
+                    fields.ReadBool(ThrowGrenadesItem, tactics.ThrowGrenades),
+                    fields.ReadFloat(GrenadeMinDistanceItem, tactics.GrenadeMinDistance),
+                    fields.ReadFloat(GrenadeMaxDistanceItem, tactics.GrenadeMaxDistance),
+                    fields.ReadFloat(GrenadeIntervalSecondsItem, tactics.GrenadeIntervalSeconds),
+                    fields.ReadBool(MeleeAttacksItem, tactics.MeleeAttacks),
+                    fields.ReadBool(TakeCoverItem, tactics.TakeCover),
+                    fields.ReadFloat(CoverSearchRadiusItem, tactics.CoverSearchRadius),
+                    fields.ReadFloat(CoverSearchStepItem, tactics.CoverSearchStep),
+                    fields.ReadInt(CoverSearchDirectionsItem, tactics.CoverSearchDirections),
+                    fields.ReadFloat(CoverSearchSecondsItem, tactics.CoverSearchSeconds),
+                    fields.ReadFloat(CoverMaxAngleDegreesItem, tactics.CoverMaxAngleDegrees),
+                    fields.ReadFloat(CoverMinThreatDistanceItem, tactics.CoverMinThreatDistance));
+            }
+            catch (ArgumentException e)
+            {
+                throw Rejected(source, _botsKind, BotItemNames, e);
+            }
+
             try
             {
                 return new NetBotSpec(
@@ -381,7 +428,8 @@ namespace Shooter.Core
                     fields.ReadFloat(StuckProgressItem, defaults.StuckProgress),
                     fields.ReadFloat(RallyRouteRadiusFractionItem, defaults.RallyRouteRadiusFraction),
                     fields.ReadFloat(RallyRouteAngleStepDegreesItem, defaults.RallyRouteAngleStepDegrees),
-                    fields.ReadFloat(RallyMoveRadiusFractionItem, defaults.RallyMoveRadiusFraction));
+                    fields.ReadFloat(RallyMoveRadiusFractionItem, defaults.RallyMoveRadiusFraction),
+                    readTactics);
             }
             catch (ArgumentException e)
             {

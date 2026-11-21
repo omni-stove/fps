@@ -136,6 +136,11 @@ namespace Shooter.Runtime
             return ReconDrone.RecallAll(placed);
         }
 
+        public GameObject CreateLook()
+        {
+            return CreatePlaceholder(ToDeploySpec());
+        }
+
         public static float CollisionRadiusOf(DeploySpec spec)
         {
             if (spec == null)

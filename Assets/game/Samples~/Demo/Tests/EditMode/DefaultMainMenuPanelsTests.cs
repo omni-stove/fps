@@ -10,7 +10,7 @@ using UnityEngine.UIElements;
 
 namespace Shooter.Tests.EditMode
 {
-    // サンプルが登録する 6 つの画面を、本物のメニューのレイアウトでボタンから開いて戻る
+    // サンプルが登録する 7 つの画面を、本物のメニューのレイアウトでボタンから開いて戻る
     public sealed class DefaultMainMenuPanelsTests
     {
         private GameObject _owner;
@@ -65,6 +65,7 @@ namespace Shooter.Tests.EditMode
 
         [TestCase(MainMenuPanelKind.Leaderboard, typeof(LeaderboardPanel))]
         [TestCase(MainMenuPanelKind.Replays, typeof(ReplayPanel))]
+        [TestCase(MainMenuPanelKind.ServerBrowser, typeof(ServerBrowserPanel))]
         public void AScreenWithoutItsServiceStillOpensAndBackReturnsToItsButton(MainMenuPanelKind kind, Type expected)
         {
             _screen.Bind(_root);

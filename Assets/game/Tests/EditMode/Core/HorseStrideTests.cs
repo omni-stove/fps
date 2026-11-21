@@ -6,7 +6,7 @@ namespace Shooter.Core.Tests
     // Unity の EditMode テストと dotnet/Shooter.Core.Tests の両方でコンパイルする。どちらの NUnit でも通る書き方に留める
     public sealed class HorseStrideTests
     {
-        private const float Tolerance = 1e-4f;
+        private const float _tolerance = 1e-4f;
 
         private static readonly HorseSpec _spec = new HorseSpec(
             mass: 500f,
@@ -52,48 +52,48 @@ namespace Shooter.Core.Tests
         [Test]
         public void HalfThrottleTargetsTheWalkTopSpeed()
         {
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 0.5f), 0f), Is.EqualTo(2f).Within(Tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 0.5f), 0f), Is.EqualTo(2f).Within(_tolerance));
         }
 
         [Test]
         public void FullThrottleTargetsTheTrotTopSpeed()
         {
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f), 0f), Is.EqualTo(5f).Within(Tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f), 0f), Is.EqualTo(5f).Within(_tolerance));
         }
 
         [Test]
         public void ThrottleBetweenTheStepsBlendsTheTopSpeeds()
         {
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 0.25f), 0f), Is.EqualTo(1f).Within(Tolerance));
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 0.75f), 0f), Is.EqualTo(3.5f).Within(Tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 0.25f), 0f), Is.EqualTo(1f).Within(_tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 0.75f), 0f), Is.EqualTo(3.5f).Within(_tolerance));
         }
 
         [Test]
         public void AFullGallopTargetsTheCanterTopSpeed()
         {
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f, gallop: 1f), 0f), Is.EqualTo(10f).Within(Tolerance));
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 0.5f, gallop: 1f), 3f), Is.EqualTo(10f).Within(Tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f, gallop: 1f), 0f), Is.EqualTo(10f).Within(_tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 0.5f, gallop: 1f), 3f), Is.EqualTo(10f).Within(_tolerance));
         }
 
         [Test]
         public void AHalfGallopTargetsHalfwayToTheCanterTopSpeed()
         {
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f, gallop: 0.5f), 0f), Is.EqualTo(7.5f).Within(Tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f, gallop: 0.5f), 0f), Is.EqualTo(7.5f).Within(_tolerance));
         }
 
         [Test]
         public void GallopWithoutThrottleOrBelowZeroDoesNotSpeedUp()
         {
             Assert.That(HorseStride.TargetSpeed(_spec, Input(gallop: 1f), 0f), Is.EqualTo(0f));
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f, gallop: -1f), 0f), Is.EqualTo(5f).Within(Tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f, gallop: -1f), 0f), Is.EqualTo(5f).Within(_tolerance));
         }
 
         [Test]
         public void BackThrottleTargetsTheReverseSpeed()
         {
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: -1f), 0f), Is.EqualTo(-1f).Within(Tolerance));
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: -0.5f), 0f), Is.EqualTo(-0.5f).Within(Tolerance));
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: -1f, gallop: 1f), 0f), Is.EqualTo(-1f).Within(Tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: -1f), 0f), Is.EqualTo(-1f).Within(_tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: -0.5f), 0f), Is.EqualTo(-0.5f).Within(_tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: -1f, gallop: 1f), 0f), Is.EqualTo(-1f).Within(_tolerance));
         }
 
         [Test]
@@ -106,8 +106,8 @@ namespace Shooter.Core.Tests
         [Test]
         public void ThrottleAgainstASlowMotionTurnsAround()
         {
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: -1f), 0.4f), Is.EqualTo(-1f).Within(Tolerance));
-            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f), -0.4f), Is.EqualTo(5f).Within(Tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: -1f), 0.4f), Is.EqualTo(-1f).Within(_tolerance));
+            Assert.That(HorseStride.TargetSpeed(_spec, Input(throttle: 1f), -0.4f), Is.EqualTo(5f).Within(_tolerance));
         }
 
         [Test]
@@ -121,16 +121,16 @@ namespace Shooter.Core.Tests
         [Test]
         public void StepSpeedsUpByTheAcceleration()
         {
-            Assert.That(HorseStride.Step(_spec, 0f, 5f, 0.5f), Is.EqualTo(2f).Within(Tolerance));
-            Assert.That(HorseStride.Step(_spec, 0f, -1f, 0.1f), Is.EqualTo(-0.4f).Within(Tolerance));
+            Assert.That(HorseStride.Step(_spec, 0f, 5f, 0.5f), Is.EqualTo(2f).Within(_tolerance));
+            Assert.That(HorseStride.Step(_spec, 0f, -1f, 0.1f), Is.EqualTo(-0.4f).Within(_tolerance));
         }
 
         [Test]
         public void StepSlowsDownByTheDeceleration()
         {
-            Assert.That(HorseStride.Step(_spec, 5f, 0f, 0.25f), Is.EqualTo(3f).Within(Tolerance));
-            Assert.That(HorseStride.Step(_spec, 10f, 5f, 0.25f), Is.EqualTo(8f).Within(Tolerance));
-            Assert.That(HorseStride.Step(_spec, -1f, 0f, 0.1f), Is.EqualTo(-0.2f).Within(Tolerance));
+            Assert.That(HorseStride.Step(_spec, 5f, 0f, 0.25f), Is.EqualTo(3f).Within(_tolerance));
+            Assert.That(HorseStride.Step(_spec, 10f, 5f, 0.25f), Is.EqualTo(8f).Within(_tolerance));
+            Assert.That(HorseStride.Step(_spec, -1f, 0f, 0.1f), Is.EqualTo(-0.2f).Within(_tolerance));
         }
 
         [Test]
@@ -144,7 +144,7 @@ namespace Shooter.Core.Tests
         [Test]
         public void StepHaltsAtZeroBeforeTurningAround()
         {
-            Assert.That(HorseStride.Step(_spec, 3f, -1f, 0.25f), Is.EqualTo(1f).Within(Tolerance));
+            Assert.That(HorseStride.Step(_spec, 3f, -1f, 0.25f), Is.EqualTo(1f).Within(_tolerance));
             Assert.That(HorseStride.Step(_spec, 0.5f, -1f, 0.25f), Is.EqualTo(0f));
             Assert.That(HorseStride.Step(_spec, -0.5f, 5f, 0.25f), Is.EqualTo(0f));
         }
@@ -168,15 +168,15 @@ namespace Shooter.Core.Tests
         [Test]
         public void TurnRateIsFullAtRest()
         {
-            Assert.That(HorseStride.TurnRate(_spec, 0f), Is.EqualTo(100f).Within(Tolerance));
+            Assert.That(HorseStride.TurnRate(_spec, 0f), Is.EqualTo(100f).Within(_tolerance));
         }
 
         [Test]
         public void TurnRateNarrowsWithSpeed()
         {
-            Assert.That(HorseStride.TurnRate(_spec, 2f), Is.EqualTo(88f).Within(Tolerance));
-            Assert.That(HorseStride.TurnRate(_spec, 5f), Is.EqualTo(70f).Within(Tolerance));
-            Assert.That(HorseStride.TurnRate(_spec, 10f), Is.EqualTo(40f).Within(Tolerance));
+            Assert.That(HorseStride.TurnRate(_spec, 2f), Is.EqualTo(88f).Within(_tolerance));
+            Assert.That(HorseStride.TurnRate(_spec, 5f), Is.EqualTo(70f).Within(_tolerance));
+            Assert.That(HorseStride.TurnRate(_spec, 10f), Is.EqualTo(40f).Within(_tolerance));
         }
 
         [Test]
@@ -188,8 +188,8 @@ namespace Shooter.Core.Tests
         [Test]
         public void TurnRateStopsNarrowingPastTheCanterTopSpeedAndIgnoresDirection()
         {
-            Assert.That(HorseStride.TurnRate(_spec, 20f), Is.EqualTo(40f).Within(Tolerance));
-            Assert.That(HorseStride.TurnRate(_spec, -2f), Is.EqualTo(88f).Within(Tolerance));
+            Assert.That(HorseStride.TurnRate(_spec, 20f), Is.EqualTo(40f).Within(_tolerance));
+            Assert.That(HorseStride.TurnRate(_spec, -2f), Is.EqualTo(88f).Within(_tolerance));
         }
 
         [Test]

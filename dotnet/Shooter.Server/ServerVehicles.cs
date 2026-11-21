@@ -202,6 +202,7 @@ namespace Shooter.Server
                 row.Health = car.Health;
                 row.Stage = car.Stage;
                 row.Parts = car.Parts;
+                row.Flares = car.FlareSync;
             }
 
             var players = snapshot.Players;
@@ -641,6 +642,9 @@ namespace Shooter.Server
             // フレアを積んでいない乗り物は null。
             public CountermeasurePod Flares { get; private set; }
 
+            // 受け取る人ごとに作り直さないよう、フレアが動いた・撒いたときにだけ作る。
+            public VehicleFlareSync FlareSync { get; private set; } = VehicleFlareSync.None;
+
             public int LastSequence { get; set; }
 
             public int Generation { get; set; }
@@ -658,10 +662,16 @@ namespace Shooter.Server
                 LastAttacker = null;
                 Parts = VehiclePartDamageSync.None;
                 Flares = Map.Countermeasures == null ? null : new CountermeasurePod(Map.Countermeasures.Spec);
+                SyncFlares();
                 LastSequence = -1;
                 Durability = new VehicleDurability(Map.Spec.Durability);
                 Drive.Reset();
                 History.Clear();
+            }
+
+            public void SyncFlares()
+            {
+                FlareSync = Flares == null ? VehicleFlareSync.None : VehicleFlareSync.From(Flares.Flares);
             }
         }
     }

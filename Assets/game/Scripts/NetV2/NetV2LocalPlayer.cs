@@ -71,6 +71,8 @@ namespace Shooter.NetV2
         private InputAction _leanRight;
         [NonSerialized]
         private InputAction _melee;
+        [NonSerialized]
+        private InputAction _countermeasure;
         private SprintInput _sprintInput;
         private CrouchInput _crouchInput;
         private LeanInput _leanInput = new LeanInput();
@@ -97,6 +99,7 @@ namespace Shooter.NetV2
         private bool _leanLeftLatched;
         private bool _leanRightLatched;
         private bool _meleeLatched;
+        private bool _countermeasureLatched;
         private Func<float> _headingSource;
 
         public Camera Camera => _camera;
@@ -315,6 +318,9 @@ namespace Shooter.NetV2
 
         public bool TakePreviousSeat() => Take(ref _previousSeatLatched);
 
+        // 運転中にフレアを撒く押下 (オフラインの PlayerVehicleRider が VehicleSeatInput.CountermeasurePressed に載せるのと同じ Player/Countermeasure)
+        public bool TakeCountermeasure() => Take(ref _countermeasureLatched);
+
         public void ReadDrive(out Vector2 move, out bool boost, out float vertical)
         {
             var paused = IsInputBlocked;
@@ -372,6 +378,7 @@ namespace Shooter.NetV2
             _leanLeft = Find(actions, InputActionPaths.LeanLeft);
             _leanRight = Find(actions, InputActionPaths.LeanRight);
             _melee = Find(actions, InputActionPaths.Melee, false);
+            _countermeasure = Find(actions, InputActionPaths.Countermeasure, false);
         }
 
         private void OnEnable()
@@ -427,6 +434,7 @@ namespace Shooter.NetV2
             _leanLeftLatched |= Pressed(_leanLeft);
             _leanRightLatched |= Pressed(_leanRight);
             _meleeLatched |= Pressed(_melee);
+            _countermeasureLatched |= Pressed(_countermeasure);
 
             // activeControl は動かしている間しか取れないので、tick ではなくフレームごとに見て直前の機器を覚えておく
             _device = InputDeviceKinds.Of(_sprint, InputDeviceKinds.Of(_move, _device));

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Shooter.Core
 {
-    public sealed class ExecutionSession
+    public sealed class ExecutionSession : IExecutionView
     {
         public const int DefaultWinsToWin = 3;
         public const float DefaultPreparationSeconds = 3f;
@@ -69,6 +69,25 @@ namespace Shooter.Core
         public bool HasFinishedRound { get; private set; }
 
         public bool IsLive => _round.Phase == RoundPhase.Live && Mode.State == GameModeState.Playing;
+
+        // 同じ値は Round と Mode から読めるので、公開の名前を増やさないよう IExecutionView の口としてだけ出す
+        RoundPhase IExecutionView.Phase => _round.Phase;
+
+        int IExecutionView.RoundNumber => _round.RoundNumber;
+
+        int IExecutionView.WinsToWin => _round.WinsToWin;
+
+        float IExecutionView.PreparationRemaining => _round.PreparationRemaining;
+
+        float IExecutionView.RoundRemaining => Mode.RemainingSeconds;
+
+        Side? IExecutionView.Winner => _round.Phase == RoundPhase.Ended ? _round.Winner : null;
+
+        int IExecutionView.GetRoundWins(Side side) => _round.GetRoundWins(side);
+
+        bool IExecutionView.HasPlayer(int playerId) => Mode.HasPlayer(playerId);
+
+        Side IExecutionView.GetSide(int playerId) => Mode.GetSide(playerId);
 
         public void Start()
         {

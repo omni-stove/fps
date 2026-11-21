@@ -260,8 +260,12 @@ namespace Shooter.NetV2
             // オフラインの ParachuteMovement と同じく、空中で押したジャンプで開く。ジャンプも送るのは、開けなかった (低すぎる) ときに
             // オフラインと同じく空中ジャンプになるため。開けるか・もう開いているかはシミュレーションが状態とルールで決める
             var openParachute = jump && !grounded;
+
+            // オフラインの SlideMovement と同じく、走りながらしゃがむと滑り出す。立っていたか・走る速さ・ルールで使えるかはサーバーが状態で決める
+            var slide = sprint && crouch;
             buttons = SnapshotMotion.Buttons(
-                sprint, jump, crouch, cover, aim, dodge, prone, _leanInput.IsLeftActive, _leanInput.IsRightActive, melee, openParachute);
+                sprint, jump, crouch, cover, aim, dodge, prone, _leanInput.IsLeftActive, _leanInput.IsRightActive, melee, openParachute,
+                slide: slide);
         }
 
         public ControlHandoff Handoff { get; } = new ControlHandoff();

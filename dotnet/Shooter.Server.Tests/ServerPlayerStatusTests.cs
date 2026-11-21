@@ -234,7 +234,7 @@ namespace Shooter.Server.Tests
             Assert.That(LastOwner().Stamina.Value.Max, Is.EqualTo(40f));
         }
 
-        private ServerPlayerStatusTuning SmallStamina() => new ServerPlayerStatusTuning(stamina: _smallStamina);
+        private static ServerPlayerStatusTuning SmallStamina() => new ServerPlayerStatusTuning(stamina: _smallStamina);
 
         private static ActionRules On()
         {

@@ -10,7 +10,7 @@ using Shooter.Protocol;
 namespace Shooter.Server.Tests
 {
     // 移動・ルール・戦闘・近接を同じホストで動かし、InputButtons.Melee で振った近接が届く相手にだけ当たることを確かめる
-    public sealed class ServerMeleeTests
+    public sealed partial class ServerMeleeTests
     {
         private const float _tickSeconds = 1f / TickClock.DefaultTickRate;
         private const string _knifeId = "melee.knife";
@@ -375,7 +375,13 @@ namespace Shooter.Server.Tests
             Step(0.2f);
         }
 
-        private void Start(GameRules rules, MeleeSpec spec = null, string weaponId = null, bool wall = false)
+        private void Start(
+            GameRules rules,
+            MeleeSpec spec = null,
+            string weaponId = null,
+            bool wall = false,
+            NetMatchSettings settings = null,
+            Func<MatchObjective, NetMatchSettings, IMatchObjectiveHost, IMatchObjectiveRules> createObjective = null)
         {
             var colliders = new List<WorldCollider>
             {
@@ -389,7 +395,7 @@ namespace Shooter.Server.Tests
 
             var points = new NetMapPoints(new[] { new SpawnPoint(_alphaSpawn, Team.Alpha), new SpawnPoint(_bravoSpawn, Team.Bravo) }, Array.Empty<ControlPointArea>());
             var map = new ServerMapData("NetTest", new WorldMap(colliders), TestMaps.NavMesh(), "memory", points);
-            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules), PingSpec.Default, "memory", null);
+            var data = new ServerRulesData("TeamDeathmatch", TestRules.File(rules, settings), PingSpec.Default, "memory", null);
             _match = new ServerMatch(NetMatchSettings.DefaultRestartDelaySeconds, _log, new ServerEventWriter(true, _json, _log), () => _time);
             _context = new ServerContext(
                 new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort),
@@ -401,7 +407,7 @@ namespace Shooter.Server.Tests
                 new StubControl(),
                 data);
             _movement = new ServerMovement(ServerModules.MotorSettingsFrom(data));
-            _rules = new MatchRulesModule();
+            _rules = createObjective != null ? new MatchRulesModule(createObjective) : new MatchRulesModule();
             _combat = new ServerCombat(_rules, _movement);
             _melee = new ServerMelee(_combat, _movement, spec ?? _spec, weaponId);
             _host = new ServerHost();

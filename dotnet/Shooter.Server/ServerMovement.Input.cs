@@ -49,7 +49,6 @@ namespace Shooter.Server
 
         private void Apply(Mover mover, InputFrame frame)
         {
-
             var input = new CharacterMotorInput(
                     frame.Move,
                     frame.Yaw,
@@ -69,6 +68,7 @@ namespace Shooter.Server
                     openParachute: frame.Has(InputButtons.OpenParachute),
                     closeParachute: frame.Has(InputButtons.CloseParachute))
                 .WithRules(_settings.Rules.Actions);
+            input = WithSlideInput(input, frame);
             input = Restrain(mover, input);
 
             if (mover.Riding)
@@ -85,7 +85,8 @@ namespace Shooter.Server
             }
 
             var previous = mover.State;
-            var current = mover.Simulation.Step(previous, input);
+            var mantled = TryMantle(mover, frame.Tick, input);
+            var current = mantled ? mover.State : mover.Simulation.Step(mover.State, input);
             mover.State = current;
             mover.Yaw = input.Yaw;
             mover.Aiming = input.Restrained().Aim;
@@ -93,7 +94,7 @@ namespace Shooter.Server
             mover.LastProcessedTick = frame.Tick;
             Stepped(mover, input, previous, current);
             Publish(mover);
-            Report(mover, frame.Tick, previous, current);
+            Report(mover, frame.Tick, previous, current, mantled);
         }
 
         // 構えた盾の重さもここに掛けるのは、持ち主の予測がこの値をスナップショット (OwnerSnapshot.CarrySpeedMultiplier) で受け取るため

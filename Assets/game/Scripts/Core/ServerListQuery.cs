@@ -291,7 +291,7 @@ namespace Shooter.Core
             return reversed ? -order : order;
         }
 
-        private static IReadOnlyList<string> Distinct(IEnumerable<ServerListing> listings, Func<ServerListing, string> pick)
+        private static List<string> Distinct(IEnumerable<ServerListing> listings, Func<ServerListing, string> pick)
         {
             if (listings == null)
             {

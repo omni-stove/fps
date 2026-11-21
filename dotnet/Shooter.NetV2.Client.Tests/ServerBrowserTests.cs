@@ -34,6 +34,7 @@ namespace Shooter.NetV2.Tests
         public void TearDown()
         {
             _browser.Dispose();
+            _pinger.Dispose();
         }
 
         private FakeLobbyBackend Backend => _backends[_backends.Count - 1];

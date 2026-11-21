@@ -476,7 +476,9 @@ namespace Shooter.Runtime
             _rowButtons.Clear();
             _rowIds.Clear();
             _rowTexts.Clear();
-            var joinable = CanJoin;
+            // 読み直しの間は ServerBrowser.Join が失敗を返すので、行を押せないままにする。
+            var current = GameSignals.ServerBrowser.Value;
+            var joinable = CanJoin && !(current.HasValue && current.Value.Stage == ServerBrowserStage.Loading);
             foreach (var listing in listings)
             {
                 var id = listing.Id;

@@ -161,7 +161,7 @@ Editor のスクリプトが作るアセットとシーンの置き場 (出力�
 | ルールの重ね・巡り方 | `mutators.json`・`playlists.json` | `GameContent` の **Mutators Tuning**・**Playlists Tuning** |
 | プレイヤーの移動 | `MotorSettings` | `GameContent` の **Motor**、空なら `Resources/Movement/MotorSettings` |
 | 敵の性能と動き | `EnemyDefinition` | `GameContent` の **Enemies** (種類ごとに 1 つ) |
-| 乗り物 | `VehicleDefinition`・`HelicopterDefinition`・`BoatDefinition`・`AircraftDefinition` | 乗り物の部品 |
+| 乗り物 | `VehicleDefinition`・`HelicopterDefinition`・`BoatDefinition`・`AircraftDefinition`・`HorseDefinition` | 乗り物の部品 |
 | キャンペーン | `MissionDefinition`・`MissionCatalog`・`BossDefinition` | `GameContent` の **Missions** |
 | メニューから移るシーン | `MenuSceneSettings` | `GameContent` の **Menu Scenes** |
 | 見た目と音 | `PresentationCatalog`・`ViewmodelCatalog`・`WeaponExtrasCatalog`・`AttachmentModelCatalog`・`HitFeedbackCatalog`・`DamageFeedbackCatalog`・`SurfaceImpactCatalog`・`FootstepSurfaceCatalog`・`RagdollCatalog`・`SuppressionCatalog`・`CameraShakeSettings`・`DamageNumberCatalog`・`AimBlockCatalog`・`ItemIconCatalog`・`StreakIconCatalog`・`WaterCatalog`・`ReticleCatalog`・`StatusEffectVisualCatalog`・`FlashOverlayCatalog`・`CosmeticVisualCatalog`・`EmoteCatalog`・`VisionVisualCatalog`・`MusicCatalog` | `GameContent` の「見た目・音」の欄 |

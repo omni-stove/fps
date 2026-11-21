@@ -10,5 +10,9 @@ namespace Shooter.Core
         Beacon,
 
         Drone,
+
+        Mine,
+
+        RemoteCharge,
     }
 }

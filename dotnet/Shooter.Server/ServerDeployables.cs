@@ -17,6 +17,8 @@ namespace Shooter.Server
 
         internal const string DroneUnsupported = "a Drone is piloted only offline; the dedicated server does not fly drones or send them yet";
 
+        internal const string ExplosiveUnsupported = "a Mine or a RemoteCharge has no rules yet; the dedicated server does not place or detonate them";
+
         // 持ち主は手元の時計で回数と間隔を数えてから送るので、届くまでの揺れで少し早く着いた要求は断らない (ServerPlayerWeapons.ChargeArrivalToleranceSeconds と同じ考え)
         public const float UseArrivalToleranceSeconds = 0.2f;
 
@@ -525,6 +527,11 @@ namespace Shooter.Server
             if (type.Role == DeployRole.Drone)
             {
                 return DroneUnsupported;
+            }
+
+            if (type.Role == DeployRole.Mine || type.Role == DeployRole.RemoteCharge)
+            {
+                return ExplosiveUnsupported;
             }
 
             if (type.Role != DeployRole.Turret)

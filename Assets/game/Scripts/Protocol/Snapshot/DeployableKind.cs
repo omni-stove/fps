@@ -9,5 +9,11 @@ namespace Shooter.Protocol
         Decoy,
 
         Beacon,
+
+        Mine,
+
+        RemoteCharge,
+
+        Drone,
     }
 }

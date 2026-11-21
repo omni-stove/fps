@@ -353,7 +353,33 @@ namespace Shooter.NetV2.Tests
             Assert.That(_results[0].MatchLobby, Is.Null);
 
             _browser.Refresh();
-            Assert.That(Backend.Logins, Is.EqualTo(2), "logging out means logging in again");
+            Assert.That(_backends, Has.Count.EqualTo(2), "logging out means logging in again on a new service");
+            Assert.That(Backend.Logins, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GivingUpOnTheVoiceLobbyClosesTheServiceSoALateJoinLeavesIt()
+        {
+            _browser.JoinsMatchLobby = true;
+            Load(Server("one", "203.0.113.1:7777", 1));
+            var first = Backend;
+            _browser.Tick(1f);
+            _browser.Join("one", 1, _results.Add);
+
+            _browser.Tick(11f);
+
+            Assert.That(_results[0].Outcome, Is.EqualTo(ServerJoinOutcome.Joined));
+            Assert.That(_results[0].MatchLobby, Is.Null);
+            Assert.That(first.Disposed, Is.Zero, "not inside the tick that gave up");
+
+            _browser.Tick(12f);
+
+            Assert.That(first.Disposed, Is.EqualTo(1));
+            first.CompleteMatchLobbyJoin(Server("one", "203.0.113.1:7777", 1));
+            Assert.That(_results, Has.Count.EqualTo(1), "a late join is not handed out");
+
+            Assert.That(_browser.Refresh(), Is.True);
+            Assert.That(_backends, Has.Count.EqualTo(2), "the next list uses a new service");
         }
 
         [Test]

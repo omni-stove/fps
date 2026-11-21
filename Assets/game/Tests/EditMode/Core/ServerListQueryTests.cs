@@ -33,6 +33,22 @@ namespace Shooter.Core.Tests
             Server("e", 5, 45, "us-east", "ctf", "harbor"),
         };
 
+        private static readonly string[] _idsByPing = { "b", "e", "c", "a", "d" };
+        private static readonly string[] _idsByPingReversed = { "a", "e", "c", "b", "d" };
+        private static readonly string[] _idsByPlayers = { "b", "e", "d", "a", "c" };
+        private static readonly string[] _idsByPlayersReversed = { "c", "a", "e", "d", "b" };
+        private static readonly string[] _idsByRegion = { "b", "c", "a", "e", "d" };
+        private static readonly string[] _idsByRegionReversed = { "e", "c", "a", "b", "d" };
+        private static readonly string[] _idsByMode = { "e", "c", "b", "a", "d" };
+        private static readonly string[] _idsByMap = { "e", "a", "b", "c", "d" };
+        private static readonly string[] _idsXY = { "x", "y" };
+        private static readonly string[] _idsEurope = { "c", "a" };
+        private static readonly string[] _idsCtf = { "e", "c" };
+        private static readonly string[] _idsQuarry = { "b", "c" };
+        private static readonly string[] _idsEuropeCtfQuarry = { "c" };
+        private static readonly string[] _idsNotFull = { "e", "c", "a", "d" };
+        private static readonly string[] _idsNotEmpty = { "b", "e", "a", "d" };
+        private static readonly string[] _idsNotFullNorEmpty = { "e", "a", "d" };
         private static readonly string[] _idsUnder45Ping = { "b", "e", "c", "d" };
         private static readonly string[] _idsPingZero = { "d" };
         private static readonly string[] _regionChoices = { "asia", "europe", "us-east" };
@@ -46,7 +62,7 @@ namespace Shooter.Core.Tests
             var shown = ServerListQuery.Default.Apply(_servers);
 
             // c と e は同じ 45ms なので、人数の多い e が先
-            Assert.That(Ids(shown), Is.EqualTo(new[] { "b", "e", "c", "a", "d" }));
+            Assert.That(Ids(shown), Is.EqualTo(_idsByPing));
         }
 
         [Test]
@@ -54,7 +70,7 @@ namespace Shooter.Core.Tests
         {
             var shown = ServerListQuery.Default.WithSort(ServerListSort.Ping, true).Apply(_servers);
 
-            Assert.That(Ids(shown), Is.EqualTo(new[] { "a", "e", "c", "b", "d" }));
+            Assert.That(Ids(shown), Is.EqualTo(_idsByPingReversed));
         }
 
         [Test]
@@ -63,7 +79,7 @@ namespace Shooter.Core.Tests
             var shown = ServerListQuery.Default.WithSort(ServerListSort.Players, false).Apply(_servers);
 
             // d と e は同じ 5 人なので、ping の測れた e が先
-            Assert.That(Ids(shown), Is.EqualTo(new[] { "b", "e", "d", "a", "c" }));
+            Assert.That(Ids(shown), Is.EqualTo(_idsByPlayers));
         }
 
         [Test]
@@ -71,7 +87,7 @@ namespace Shooter.Core.Tests
         {
             var shown = ServerListQuery.Default.WithSort(ServerListSort.Players, true).Apply(_servers);
 
-            Assert.That(Ids(shown), Is.EqualTo(new[] { "c", "a", "e", "d", "b" }));
+            Assert.That(Ids(shown), Is.EqualTo(_idsByPlayersReversed));
         }
 
         [Test]
@@ -79,20 +95,20 @@ namespace Shooter.Core.Tests
         {
             var shown = ServerListQuery.Default.WithSort(ServerListSort.Region, false).Apply(_servers);
 
-            Assert.That(Ids(shown), Is.EqualTo(new[] { "b", "c", "a", "e", "d" }));
+            Assert.That(Ids(shown), Is.EqualTo(_idsByRegion));
 
             var reversed = ServerListQuery.Default.WithSort(ServerListSort.Region, true).Apply(_servers);
 
-            Assert.That(Ids(reversed), Is.EqualTo(new[] { "e", "c", "a", "b", "d" }));
+            Assert.That(Ids(reversed), Is.EqualTo(_idsByRegionReversed));
         }
 
         [Test]
         public void ModeAndMapSortByNameThenPing()
         {
             Assert.That(Ids(ServerListQuery.Default.WithSort(ServerListSort.Mode, false).Apply(_servers)),
-                Is.EqualTo(new[] { "e", "c", "b", "a", "d" }));
+                Is.EqualTo(_idsByMode));
             Assert.That(Ids(ServerListQuery.Default.WithSort(ServerListSort.Map, false).Apply(_servers)),
-                Is.EqualTo(new[] { "e", "a", "b", "c", "d" }));
+                Is.EqualTo(_idsByMap));
         }
 
         [Test]
@@ -101,18 +117,18 @@ namespace Shooter.Core.Tests
             var first = new[] { Server("y", 2, 30), Server("x", 2, 30) };
             var second = new[] { Server("x", 2, 30), Server("y", 2, 30) };
 
-            Assert.That(Ids(ServerListQuery.Default.Apply(first)), Is.EqualTo(new[] { "x", "y" }));
-            Assert.That(Ids(ServerListQuery.Default.Apply(second)), Is.EqualTo(new[] { "x", "y" }));
+            Assert.That(Ids(ServerListQuery.Default.Apply(first)), Is.EqualTo(_idsXY));
+            Assert.That(Ids(ServerListQuery.Default.Apply(second)), Is.EqualTo(_idsXY));
         }
 
         [Test]
         public void FiltersByRegionModeAndMap()
         {
-            Assert.That(Ids(ServerListQuery.Default.WithRegion("europe").Apply(_servers)), Is.EqualTo(new[] { "c", "a" }));
-            Assert.That(Ids(ServerListQuery.Default.WithMode("ctf").Apply(_servers)), Is.EqualTo(new[] { "e", "c" }));
-            Assert.That(Ids(ServerListQuery.Default.WithMap("quarry").Apply(_servers)), Is.EqualTo(new[] { "b", "c" }));
+            Assert.That(Ids(ServerListQuery.Default.WithRegion("europe").Apply(_servers)), Is.EqualTo(_idsEurope));
+            Assert.That(Ids(ServerListQuery.Default.WithMode("ctf").Apply(_servers)), Is.EqualTo(_idsCtf));
+            Assert.That(Ids(ServerListQuery.Default.WithMap("quarry").Apply(_servers)), Is.EqualTo(_idsQuarry));
             Assert.That(Ids(ServerListQuery.Default.WithRegion("europe").WithMode("ctf").WithMap("quarry").Apply(_servers)),
-                Is.EqualTo(new[] { "c" }));
+                Is.EqualTo(_idsEuropeCtfQuarry));
             Assert.That(ServerListQuery.Default.WithRegion("africa").Apply(_servers), Is.Empty);
         }
 
@@ -131,10 +147,10 @@ namespace Shooter.Core.Tests
         [Test]
         public void HidesFullAndEmptyServers()
         {
-            Assert.That(Ids(ServerListQuery.Default.WithHideFull(true).Apply(_servers)), Is.EqualTo(new[] { "e", "c", "a", "d" }));
-            Assert.That(Ids(ServerListQuery.Default.WithHideEmpty(true).Apply(_servers)), Is.EqualTo(new[] { "b", "e", "a", "d" }));
+            Assert.That(Ids(ServerListQuery.Default.WithHideFull(true).Apply(_servers)), Is.EqualTo(_idsNotFull));
+            Assert.That(Ids(ServerListQuery.Default.WithHideEmpty(true).Apply(_servers)), Is.EqualTo(_idsNotEmpty));
             Assert.That(Ids(ServerListQuery.Default.WithHideFull(true).WithHideEmpty(true).Apply(_servers)),
-                Is.EqualTo(new[] { "e", "a", "d" }));
+                Is.EqualTo(_idsNotFullNorEmpty));
         }
 
         [Test]

@@ -404,7 +404,8 @@ namespace Shooter.NetV2
             }
         }
 
-        // 入れた試合ロビーはこのサービスを閉じるので、結果と一緒に渡し、一覧はサービスを手放す
+        // 入れた試合ロビーはこのサービスを閉じるので、結果と一緒に渡し、一覧はサービスを手放す。
+        // 諦めたときもサービスを閉じる。MatchLobbyJoin.GiveUp は遅れて入れたロビーから出るのをサービスを閉じる側に任せるため。
         private void HandleLobbyJoined(
             int generation, ILobbyBackend backend, string serverId, NetLaunchOptions options, MatchLobby matchLobby, Action<ServerJoinResult> done)
         {
@@ -415,11 +416,18 @@ namespace Shooter.NetV2
             }
 
             _lobbyJoin = null;
-            if (matchLobby != null && ReferenceEquals(backend, _backend))
+            if (ReferenceEquals(backend, _backend))
             {
-                _backend.LoggedOut -= HandleLoggedOut;
-                _backend = null;
-                _loggedIn = false;
+                if (matchLobby != null)
+                {
+                    _backend.LoggedOut -= HandleLoggedOut;
+                    _backend = null;
+                    _loggedIn = false;
+                }
+                else
+                {
+                    RetireBackend();
+                }
             }
 
             _step = _backend != null ? Step.Ready : Step.Closed;

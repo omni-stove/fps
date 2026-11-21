@@ -541,6 +541,8 @@ namespace Shooter.Runtime
         {
             get => _loadoutPresetsTuning;
             set => _loadoutPresetsTuning = value;
+        }
+
         public TextAsset GraphicsTuning
         {
             get => _graphicsTuning;

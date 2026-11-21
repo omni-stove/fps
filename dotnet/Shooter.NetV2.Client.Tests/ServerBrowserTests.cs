@@ -41,7 +41,12 @@ namespace Shooter.NetV2.Tests
 
         private ServerBrowserStatus Last => _published[_published.Count - 1].Value;
 
-        private ILobbyBackend CreateBackend()
+        private static readonly string[] _idsOneTwoFull = { "one", "two", "full" };
+        private static readonly string[] _idsOne = { "one" };
+        private static readonly string[] _idsTwo = { "two" };
+        private static readonly string[] _askedAddresses = { "203.0.113.1", "203.0.113.2" };
+
+        private FakeLobbyBackend CreateBackend()
         {
             var backend = new FakeLobbyBackend();
             _backends.Add(backend);
@@ -98,7 +103,7 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(_browser.IsLoading, Is.False);
             Assert.That(Last.Stage, Is.EqualTo(ServerBrowserStage.Ready));
-            Assert.That(Ids(Last.Servers), Is.EqualTo(new[] { "one", "two", "full" }), "private and other-version servers cannot be joined");
+            Assert.That(Ids(Last.Servers), Is.EqualTo(_idsOneTwoFull), "private and other-version servers cannot be joined");
             var one = Last.Find("one");
             Assert.That(one.Region, Is.EqualTo("europe"));
             Assert.That(one.Mode, Is.EqualTo("tdm"));
@@ -118,7 +123,7 @@ namespace Shooter.NetV2.Tests
                 Server("two", "203.0.113.1:7778", 2),
                 Server("three", "203.0.113.2:7777", 3));
 
-            Assert.That(_pinger.Asked, Is.EqualTo(new[] { "203.0.113.1", "203.0.113.2" }));
+            Assert.That(_pinger.Asked, Is.EqualTo(_askedAddresses));
             Assert.That(Last.Find("one").PingMilliseconds, Is.Null);
 
             _pinger.Answer("203.0.113.1", 35);
@@ -141,7 +146,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_browser.Refresh(), Is.True);
 
             Assert.That(Last.Stage, Is.EqualTo(ServerBrowserStage.Loading));
-            Assert.That(Ids(Last.Servers), Is.EqualTo(new[] { "one" }));
+            Assert.That(Ids(Last.Servers), Is.EqualTo(_idsOne));
             Assert.That(Backend.Logins, Is.EqualTo(1));
             Assert.That(Backend.Searches, Is.EqualTo(2));
             Assert.That(_pinger.Cancels, Is.EqualTo(2), "pings of the old list are dropped");
@@ -149,7 +154,7 @@ namespace Shooter.NetV2.Tests
 
             Backend.CompleteSearch(new List<LobbyInfo> { Server("two", "203.0.113.2:7777", 0) });
 
-            Assert.That(Ids(Last.Servers), Is.EqualTo(new[] { "two" }));
+            Assert.That(Ids(Last.Servers), Is.EqualTo(_idsTwo));
             Assert.That(_backends, Has.Count.EqualTo(1));
         }
 
@@ -292,7 +297,7 @@ namespace Shooter.NetV2.Tests
             _browser.Join("one", 1, _results.Add);
 
             Assert.That(_browser.IsJoining, Is.True);
-            Assert.That(first.MatchLobbyJoins, Is.EqualTo(new[] { "one" }));
+            Assert.That(first.MatchLobbyJoins, Is.EqualTo(_idsOne));
             Assert.That(_results, Is.Empty);
             Assert.Throws<InvalidOperationException>(() => _browser.JoinsMatchLobby = false);
             Assert.That(_browser.Refresh(), Is.False, "no refresh while joining");

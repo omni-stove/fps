@@ -8,7 +8,7 @@ namespace Shooter.Core.Tests
     // 1 人だけ体力の上限を替える口 (感染者の体) が、今の体力・出直し・回復・次の試合・抜けた人をどう扱うかを確かめる
     public sealed class TeamDeathmatchSessionMaxHealthTests
     {
-        private static readonly int[] _onlyPlayer1 ={ 1 };
+        private static readonly int[] _onlyPlayer1 = { 1 };
 
         private Dictionary<int, Vector3> _positions;
 

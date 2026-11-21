@@ -78,6 +78,9 @@ namespace Shooter.NetV2
         // 箱・物資投下・倒れた人の箱・脱出地点の差し替えの見た目。null なら NetV2LootPart がコードで形を作る
         public NetV2LootVisuals LootVisuals { get; set; }
 
+        // 地面の拾い物と弾薬箱の差し替えの見た目。null なら NetV2PickupPart がコードで形を作る
+        public NetV2PickupVisuals PickupVisuals { get; set; }
+
         // null ならエリアの部品がシーンの ShrinkingZone を探して見た目を引き継ぐ
         public Func<ShrinkingZone> ZoneLook { get; set; }
     }
@@ -89,6 +92,10 @@ namespace Shooter.NetV2
         internal static readonly IReadOnlyList<Func<NetV2ClientPartsContext, INetV2ClientPart>> Registered =
             new Func<NetV2ClientPartsContext, INetV2ClientPart>[]
             {
+                NetV2PickupPart.Create,
+                NetV2EmotePart.Create,
+                NetV2DronePart.Create,
+                NetV2VisionPart.Create,
             };
 
         public static List<INetV2ClientPart> Create(NetV2ClientPartsContext context)

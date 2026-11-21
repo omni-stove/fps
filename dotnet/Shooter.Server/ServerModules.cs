@@ -99,6 +99,11 @@ namespace Shooter.Server
             var rules = new MatchRulesModule((objective, settings, host) => ServerObjectiveFactory.Create(objective, settings, host, parts));
             var vehicles = new ServerVehicles(rules, movement);
             var combat = new ServerCombat(rules, movement, vehicles, signals);
+
+            // スタミナ・よろけ・制圧は、移動が入力を体へ当てる前後と、戦闘の被弾・弾の通り道で数えるので、両方につないでから Start させる
+            var status = new ServerPlayerStatus(motorSettings.Rules, tuning.PlayerStatus, rules);
+            movement.InputGate = status;
+            combat.PlayerStatus = status;
             modules.Add(movement);
             modules.Add(rules);
             modules.Add(vehicles);
@@ -133,10 +138,18 @@ namespace Shooter.Server
             modules.Add(deployables);
             modules.Add(new ServerKillCam(rules, combat));
 
-            // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足すので、ルールの直後
+            // スタミナ・よろけ・制圧はこの tick の被弾と移動を数えた後に戻すので、戦闘・Bot・近接より後。
+            // 拾い物は拾った武器と持ち物を、持ち物を持たせ直した後 (ServerInventories) に入れる。
+            // エモートは移動・射撃・倒れたことで止めるので、それらを進めた後に見る
+            var pickups = new ServerPickups(rules, combat, inventories);
+            modules.Add(status);
+            modules.Add(pickups);
+            modules.Add(new ServerEmotes(rules, movement, signals, tuning.Emotes, tuning.EmotesPath));
+
+            // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足し、拾い物は箱の後の空きに足すので、ルール・箱・拾い物の順
             modules.Add(new ServerSnapshots(
                 motorSettings.Rules,
-                new ISnapshotContributor[] { movement, rules, loot, combat, vehicles, streaks, deployables, bots },
+                new ISnapshotContributor[] { movement, rules, loot, pickups, combat, vehicles, streaks, deployables, bots, status },
                 tuning.AntiCheat,
                 rules));
 

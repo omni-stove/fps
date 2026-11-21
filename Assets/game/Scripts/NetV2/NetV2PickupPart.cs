@@ -52,6 +52,24 @@ namespace Shooter.NetV2
 
         public ClientPickups Pickups => _pickups;
 
+        // NetV2ClientParts.Registered に並べる口。再生では拾う要求を受ける相手がいないので、箱 (NetV2LootPart) と同じく見せるだけにする
+        public static INetV2ClientPart Create(NetV2ClientPartsContext context)
+        {
+            if (context == null)
+            {
+                throw new ArgumentNullException(nameof(context));
+            }
+
+            var client = context.Client;
+            var localPlayer = context.LocalPlayer;
+            return new NetV2PickupPart(
+                context.Send,
+                () => !context.Replay && NetV2ClientParts.CanAct(client),
+                context.PickupVisuals,
+                localPlayer != null ? () => LocalPositionOf(localPlayer) : (Func<Vector3?>)null,
+                log: context.Log);
+        }
+
         public int ViewCount => _views.Count;
 
         public bool Handle(IMessage message)
@@ -273,7 +291,13 @@ namespace Shooter.NetV2
 
         private static Vector3? ReadLocalPosition()
         {
-            var local = NetV2Client.Current != null ? NetV2Client.Current.LocalPlayer : null;
+            return LocalPositionOf(() => NetV2Client.Current != null ? NetV2Client.Current.LocalPlayer : null);
+        }
+
+        // 破棄済みの Unity の参照も無いものとして扱うため、?. ではなく != null で確かめる
+        private static Vector3? LocalPositionOf(Func<NetV2LocalPlayer> localPlayer)
+        {
+            var local = localPlayer();
             return local != null ? local.transform.position : (Vector3?)null;
         }
 

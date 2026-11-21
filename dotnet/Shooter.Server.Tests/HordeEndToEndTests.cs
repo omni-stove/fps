@@ -8,7 +8,7 @@ using Shooter.Protocol;
 
 namespace Shooter.Server.Tests
 {
-    // ServerObjectiveFactory への登録は結線の issue で行うので、MatchRulesModule の選び方を差し替えて HordeRules を載せ、
+    // 作った HordeRules を手元に持って波と通貨を確かめるため、MatchRulesModule の選び方を包んで HordeRules を受け取り、
     // 移動・ルール・戦闘・Bot を MatchServer と同じ順で回す。敵は ServerBots の Bot として波ごとに入る
     public sealed class HordeEndToEndTests
     {
@@ -176,7 +176,8 @@ namespace Shooter.Server.Tests
         private void Start()
         {
             var actions = ActionRules.Default.WithDowned(Downed.Off).WithLadder(Ladder.Off);
-            var rules = GameRules.Default.WithActions(actions).WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
+            var rules = GameRules.Default.WithActions(actions).WithObjective(MatchObjective.Horde)
+                .WithSpawnProtectionSeconds(0f).WithIdleKickSeconds(0f).WithRegenPerSecond(0f);
             var settings = new NetMatchSettings(horde: _settings);
             var data = new ServerRulesData("Horde", TestRules.File(rules, settings, "Horde"), PingSpec.Default, "memory", null);
             var motor = ServerModules.MotorSettingsFrom(data);
@@ -186,7 +187,8 @@ namespace Shooter.Server.Tests
             var map = BotTestMaps.Flat(BotTestMaps.Points(new Vector3(-10f, 1.1f, -10f), new Vector3(10f, 1.1f, 10f)));
             _context = new ServerContext(options, "1.0.0", _log, map, _match, new ServerMessenger(_transport), _control, data);
             var movement = new ServerMovement(motor);
-            _rules = new MatchRulesModule((_, matchSettings, host) => _horde = new HordeRules(matchSettings, host));
+            _rules = new MatchRulesModule((objective, matchSettings, host) =>
+                _horde = (HordeRules)ServerObjectiveFactory.Create(objective, matchSettings, host));
             var combat = new ServerCombat(_rules, movement);
             _bots = new ServerBots(_rules, movement, combat);
             _host = new ServerHost();

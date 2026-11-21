@@ -14,7 +14,7 @@ namespace Shooter.Net.Tests
         // 本物の一覧 (BlockListStore.DefaultKey) を壊さないよう、テストだけのキーに保存する。
         private const string BlocksKey = "Shooter.Tests.NetV2ClientParts.Blocks";
 
-        private const int VoiceIndex = 19;
+        private const int VoiceIndex = 23;
 
         private readonly List<string> _logs = new List<string>();
         private readonly List<string> _decided = new List<string>();
@@ -59,6 +59,7 @@ namespace Shooter.Net.Tests
             GameSignals.Wallet.Clear();
             GameSignals.BuySender.Clear();
             GameSignals.NetStats.Clear();
+            GameSignals.Emotes.Clear();
         }
 
         [Test]
@@ -87,7 +88,47 @@ namespace Shooter.Net.Tests
                 typeof(NetV2BuyPart),
                 typeof(NetV2NetStatsPart),
                 typeof(NetV2MatchResultPart),
+                typeof(NetV2PickupPart),
+                typeof(NetV2EmotePart),
+                typeof(NetV2DronePart),
+                typeof(NetV2VisionPart),
             }));
+        }
+
+        [Test]
+        public void ThePartsMovedOnlineAreRegistered()
+        {
+            _parts = NetV2ClientParts.Registered.Select(create => create(Context(null))).ToList();
+
+            Assert.That(_parts.Select(p => p.GetType()), Is.EqualTo(new[]
+            {
+                typeof(NetV2PickupPart),
+                typeof(NetV2EmotePart),
+                typeof(NetV2DronePart),
+                typeof(NetV2VisionPart),
+            }));
+        }
+
+        [Test]
+        public void ThePickupAndEmoteRegistrationsRefuseANullContext()
+        {
+            Assert.Throws<ArgumentNullException>(() => NetV2PickupPart.Create(null));
+            Assert.Throws<ArgumentNullException>(() => NetV2EmotePart.Create(null));
+        }
+
+        // 再生では送る相手がいないので、輪を開かせない。相手のエモートは記録された知らせで見せる
+        [Test]
+        public void AReplayEmotePartNeverOpensTheWheel()
+        {
+            var context = Context(null);
+            context.Replay = true;
+            var part = (NetV2EmotePart)NetV2EmotePart.Create(context);
+            _parts = new List<INetV2ClientPart> { part };
+
+            part.Tick(0.1f);
+
+            Assert.That(part.IsWheelOpen, Is.False);
+            Assert.That(GameSignals.Emotes.HasValue, Is.False);
         }
 
         [Test]
@@ -118,6 +159,10 @@ namespace Shooter.Net.Tests
                 typeof(NetV2BuyPart),
                 typeof(NetV2NetStatsPart),
                 typeof(NetV2MatchResultPart),
+                typeof(NetV2PickupPart),
+                typeof(NetV2EmotePart),
+                typeof(NetV2DronePart),
+                typeof(NetV2VisionPart),
                 typeof(NetV2VoicePart),
             }));
             Assert.That(((NetV2VoicePart)_parts[VoiceIndex]).Voice, Is.Not.Null);
@@ -149,7 +194,11 @@ namespace Shooter.Net.Tests
                 typeof(NetV2ZonePart),
                 typeof(NetV2PlayerNamesPart),
                 typeof(NetV2ReplayViewPart),
+                typeof(NetV2PickupPart),
+                typeof(NetV2EmotePart),
             }));
+            Assert.That(_parts.OfType<NetV2DronePart>(), Is.Empty, "a replay has no drone to pilot");
+            Assert.That(_parts.OfType<NetV2VisionPart>(), Is.Empty, "a replay has no own body to put goggles on");
             Assert.That(_parts.OfType<NetV2ReportPart>(), Is.Empty, "a replay has no server to send a report to");
             Assert.That(_parts.OfType<NetV2VoteKickPart>(), Is.Empty, "a replay has no server to send a vote to");
             Assert.That(_parts.OfType<NetV2BuyPart>(), Is.Empty, "a replay has no server to buy from");
@@ -579,9 +628,9 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
-        public void NoPartIsRegisteredYetSoTheListIsTheBuiltInOne()
+        public void NoRegistrationIsNull()
         {
-            Assert.That(NetV2ClientParts.Registered, Is.Empty);
+            Assert.That(NetV2ClientParts.Registered, Has.None.Null);
         }
 
         [Test]
@@ -604,10 +653,10 @@ namespace Shooter.Net.Tests
             });
 
             Assert.That(seen, Is.SameAs(context));
-            Assert.That(_parts.Count, Is.EqualTo(21), "18 built-in parts, 2 registered parts and the voice part");
-            Assert.That(_parts[18], Is.SameAs(first));
-            Assert.That(_parts[19], Is.SameAs(second), "a registration that returns null adds no part");
-            Assert.That(_parts[20], Is.InstanceOf<NetV2VoicePart>());
+            Assert.That(_parts.Count, Is.EqualTo(22), "19 built-in parts, 2 registered parts and the voice part");
+            Assert.That(_parts[19], Is.SameAs(first));
+            Assert.That(_parts[20], Is.SameAs(second), "a registration that returns null adds no part");
+            Assert.That(_parts[21], Is.InstanceOf<NetV2VoicePart>());
         }
 
         [Test]

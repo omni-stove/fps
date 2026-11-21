@@ -110,6 +110,9 @@ namespace Shooter.NetV2
         // 部品を作る (つなぐ・再生する) 前に置く。null なら箱と脱出地点の形をコードで作る
         public NetV2LootVisuals LootVisuals { get; set; }
 
+        // 部品を作る前に置く。null なら地面の拾い物と弾薬箱の形をコードで作る
+        public NetV2PickupVisuals PickupVisuals { get; set; }
+
         public static NetV2Client Current { get; private set; }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -463,6 +466,7 @@ namespace Shooter.NetV2
                 Replay = replay,
                 ReplayFreeSpeed = () => KitTuning.Replay.FreeSpeed,
                 LootVisuals = LootVisuals,
+                PickupVisuals = PickupVisuals,
             }));
         }
 

@@ -52,7 +52,10 @@ docker compose -f docker/server/compose.yaml up -d
 - `NetBattleRoyale` の箱の表はキットの `loot.json` に無いので、ゲームが表を足すまで箱は空で開く。
 - 地面の拾い物 (`PickupSpawnPoint`) と弾薬箱 (`AmmoCrate`) は `make export-server-data` がマップごとの `<マップ>.pickups.json` に書き出す。書き出す前のマップでは拾い物が無いだけで動く。サーバーには防具が無いので、防具の拾い物は拾えない。
 - Bot は人が 1 人もいないと置かれない。試すときはクライアントを 1 人つなぐ。
-- ドローン・暗視とサーマルはオフラインだけで、サーバーでは効かない。
+- ルールの `actions` は、`stealth` のほかはオフラインと同じくサーバーでも効く。`stealth` を `On` にしたルールで起動すると、サーバーは `[Rules] warning: actions stealth ...` を出してそれを無視する。
+- スタミナの調整値は `server-data/tuning/stamina.json` を置いたときだけ読み、無ければ Core の `StaminaSpec` の既定で動く (Unity にも JSON は無い)。
+- ドローンはサーバーが飛ばすので、使うときは `deployables.json` に `Drone` の種類を足す。暗視とサーマルは手元の画面だけで決まり、サーバーは扱わない。
+- `Horde` の防衛物を直す・置く要求は、サーバーに防衛物の部品がまだ無いので、いつも断る。
 - プレイリストでは `match.*` と武器が最初の項目のルールのまま変わらないので、後の項目で使うモードの節も最初の項目に書く。
 - `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力・速さ・武器 (`infectedMaxHealth`・`infectedSpeedMultiplier`・`infectedWeaponId`) はまだサーバーでは変わらない。
 - `Execution` はラウンドの数と秒を `match.round*` に、とどめの秒数と距離を `match.execution` に書く。とどめは近接のボタンで刺すので、ルールの `melee` を `On` にする (`Off` ならダウン中の敵を撃って倒せる)。各チームの最後の 1 人はダウンせずにそのまま倒れる。

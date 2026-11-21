@@ -164,6 +164,10 @@ namespace Shooter.Server.Tests
         [TestCase(MatchObjective.KillConfirmed, typeof(KillConfirmedRules))]
         [TestCase(MatchObjective.GunGame, typeof(GunGameRules))]
         [TestCase(MatchObjective.Payload, typeof(PayloadRules))]
+        [TestCase(MatchObjective.Horde, typeof(HordeRules))]
+        [TestCase(MatchObjective.Infected, typeof(InfectedRules))]
+        [TestCase(MatchObjective.Guardian, typeof(GuardianRules))]
+        [TestCase(MatchObjective.Execution, typeof(ExecutionRules))]
         public void EveryOnlineModeHasServerRules(MatchObjective objective, Type expected)
         {
             var settings = new NetMatchSettings(gunGame: new GunGameSpec(600f, 2f, new[] { TestRules.RifleId }, Array.Empty<string>(), true));
@@ -195,34 +199,48 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void EveryObjectiveBeforeTheOnlineModesIsSupported()
+        public void EveryObjectiveIsSupported()
         {
-            var unsupported = new[] { MatchObjective.Horde, MatchObjective.Infected, MatchObjective.Guardian, MatchObjective.Execution };
-
             foreach (var objective in Enum.GetValues<MatchObjective>())
             {
-                Assert.That(ServerObjectiveFactory.Supports(objective), Is.EqualTo(Array.IndexOf(unsupported, objective) < 0), objective.ToString());
+                Assert.That(ServerObjectiveFactory.Supports(objective), Is.True, objective.ToString());
             }
 
-            Assert.That(ServerObjectiveFactory.Supported.Count, Is.EqualTo(12));
+            Assert.That(ServerObjectiveFactory.Supported.Count, Is.EqualTo(16));
             Assert.That(ServerObjectiveFactory.Supports((MatchObjective)99), Is.False);
         }
 
-        // 列挙にだけ先に足した目的は、未対応の目的と同じく作るときに断る
-        [TestCase(MatchObjective.Horde, "Horde")]
-        [TestCase(MatchObjective.Infected, "Infected")]
-        [TestCase(MatchObjective.Guardian, "Guardian")]
-        [TestCase(MatchObjective.Execution, "Execution")]
-        public void TheObjectivesWithoutServerRulesYetAreRefused(MatchObjective objective, string name)
+        // 部品をつながずに作る口 (MatchRulesModule の既定の選び方) でも、試合の場を使わない目的は作れる
+        [TestCase(MatchObjective.Horde)]
+        [TestCase(MatchObjective.Infected)]
+        [TestCase(MatchObjective.Guardian)]
+        [TestCase(MatchObjective.Execution)]
+        public void TheLaterOnlineModesNeedNoMatchParts(MatchObjective objective)
         {
             using var stashes = new TempDirectory();
 
-            var bare = Assert.Throws<InvalidOperationException>(() => ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host));
-            var withParts = Assert.Throws<InvalidOperationException>(
-                () => ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host, Parts(stashes.Path)));
+            var bare = ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host);
+            var withParts = ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host, Parts(stashes.Path));
 
-            Assert.That(bare.Message, Is.EqualTo("the dedicated server has no rules for the match objective " + name));
-            Assert.That(withParts.Message, Is.EqualTo(bare.Message));
+            Assert.That(bare.Objective, Is.EqualTo(objective));
+            Assert.That(withParts.GetType(), Is.EqualTo(bare.GetType()));
+            Assert.That(bare.UsesLoot, Is.False);
+        }
+
+        [Test]
+        public void HordePlaysWithoutKillOrTimeLimitsAndFixesThePlayersAgainstTheBots()
+        {
+            var settings = new NetMatchSettings(respawnSeconds: 3f);
+
+            var objective = ServerObjectiveFactory.Create(MatchObjective.Horde, settings, _host);
+
+            Assert.That(objective.FixedTeam(false), Is.EqualTo((Team?)Team.Alpha));
+            Assert.That(objective.FixedTeam(true), Is.EqualTo((Team?)Team.Bravo));
+            var spec = objective.CreateSessionSpec(GameRules.Default, settings);
+            Assert.That(spec.ScoreLimit, Is.EqualTo(int.MaxValue));
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(float.MaxValue));
+            Assert.That(spec.RespawnsByRound, Is.True);
+            Assert.That(((HordeRules)objective).Fortify(1), Is.EqualTo(HordePurchaseVerdict.NothingToDo), "no fortification module is wired");
         }
 
         [Test]

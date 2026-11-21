@@ -318,7 +318,6 @@ namespace Shooter.Editor
             }
         }
 
-        // ドローンは一覧にあってもサーバーが飛ばさない (ServerDeployables.DroneUnsupported) ので、置けるものに数えない
         public static bool IsPlaceableOnline(DeployCatalog deployables, string abilityId)
         {
             if (deployables == null)
@@ -326,9 +325,7 @@ namespace Shooter.Editor
                 throw new ArgumentNullException(nameof(deployables));
             }
 
-            return !string.IsNullOrEmpty(abilityId)
-                && deployables.TryGet(abilityId, out var type)
-                && type.Role != DeployRole.Drone;
+            return !string.IsNullOrEmpty(abilityId) && deployables.TryGet(abilityId, out _);
         }
 
         // サーバーは loadout.abilities を選べる候補として読み、選んでいない人には先頭から枠の数だけを持たせるので、

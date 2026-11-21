@@ -23,6 +23,10 @@ namespace Shooter.Server.Tests
         [TestCase("KillConfirmed", MatchObjective.KillConfirmed)]
         [TestCase("GunGame", MatchObjective.GunGame)]
         [TestCase("Payload", MatchObjective.Payload)]
+        [TestCase("Horde", MatchObjective.Horde)]
+        [TestCase("Infected", MatchObjective.Infected)]
+        [TestCase("Guardian", MatchObjective.Guardian)]
+        [TestCase("Execution", MatchObjective.Execution)]
         public void EachExampleRulesFileLoadsAndPicksItsObjective(string name, MatchObjective objective)
         {
             Assert.That(ServerRulesData.TryLoad(name, Roots(), out var data, out var error), Is.True, error);
@@ -72,6 +76,7 @@ namespace Shooter.Server.Tests
         [TestCase("KillConfirmed")]
         [TestCase("GunGame")]
         [TestCase("Payload")]
+        [TestCase("Horde")]
         public void TheExampleMapCanBePlayedWithTheExampleRules(string name)
         {
             Assert.That(ServerRulesData.TryLoad(name, Roots(), out var data, out var error), Is.True, error);
@@ -131,7 +136,6 @@ namespace Shooter.Server.Tests
             Assert.That(e.Message, Does.StartWith("cannot start the Payload match on map NetTest: it has no payload route"));
         }
 
-        // ServerObjectiveFactory への登録は結線で行うので、ここでは目的を直に作る
         [Test]
         public void TheGuardianExampleReadsItsRulesAndPlaysOnTheExampleMap()
         {
@@ -146,8 +150,8 @@ namespace Shooter.Server.Tests
             Assert.That(data.Rules.DeathCamera, Is.EqualTo(DeathCamera.KillCam));
             Assert.That(data.Settings.TimeLimitSeconds, Is.EqualTo(300f));
             Assert.That(data.Settings.RespawnSeconds, Is.EqualTo(3f));
-            var rules = new GuardianRules(data.Settings, new NoSessionHost(), 1);
-            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Guardian));
+            var rules = ServerObjectiveFactory.Create(data.Rules.Objective, data.Settings, new NoSessionHost());
+            Assert.That(rules, Is.TypeOf<GuardianRules>());
             var spec = rules.CreateSessionSpec(data.Rules, data.Settings);
             Assert.That(spec.TimeLimitSeconds, Is.EqualTo(300f));
             Assert.That(spec.RespawnSeconds, Is.EqualTo(3f));
@@ -254,13 +258,13 @@ namespace Shooter.Server.Tests
             Assert.That(spec.ScorePerSurvivedRound, Is.EqualTo(offline.ScorePerSurvivedRound));
             Assert.That(spec.InfectedWeaponId, Is.EqualTo(offline.InfectedWeaponId));
 
-            var rules = new InfectedRules(data.Settings, new NoSessionHost());
-            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Infected));
+            var rules = ServerObjectiveFactory.Create(data.Rules.Objective, data.Settings, new NoSessionHost());
+            Assert.That(rules, Is.TypeOf<InfectedRules>());
             Assert.That(rules.RemainingSeconds, Is.EqualTo(offline.RoundSeconds));
             Assert.DoesNotThrow(() => rules.CheckMap(map, map.Points));
         }
 
-        // ServerObjectiveFactory への登録は結線で行うので、ここでは目的を直に作る。ラウンドの値はオフラインの ExecutionSession の既定値にそろえる
+        // ラウンドの値はオフラインの ExecutionSession の既定値にそろえる
         [Test]
         public void TheExecutionExampleReadsItsRulesAndPlaysOnTheExampleMap()
         {
@@ -276,8 +280,7 @@ namespace Shooter.Server.Tests
             Assert.That(data.Settings.RoundPreparationSeconds, Is.EqualTo(ExecutionSession.DefaultPreparationSeconds));
             Assert.That(data.Settings.RoundTimeLimitSeconds, Is.EqualTo(ExecutionSession.DefaultRoundTimeLimitSeconds));
 
-            var rules = new ExecutionRules(data.Settings, new NoSessionHost());
-            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Execution));
+            var rules = (ExecutionRules)ServerObjectiveFactory.Create(data.Rules.Objective, data.Settings, new NoSessionHost());
             var spec = rules.CreateSessionSpec(data.Rules, data.Settings);
             Assert.That(spec.Rules.Actions.Downed, Is.EqualTo(Downed.Revive));
             Assert.That(rules.DownedFinisher, Is.Not.Null);

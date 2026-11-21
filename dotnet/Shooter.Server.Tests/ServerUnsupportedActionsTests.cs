@@ -10,28 +10,33 @@ namespace Shooter.Server.Tests
     {
         private static readonly DateTime _time = new DateTime(2026, 11, 21, 9, 0, 0, DateTimeKind.Utc);
 
-        private static readonly string[] _allKeys = { "slide", "mantle", "zipline", "stamina", "stagger", "suppression", "emote", "stealth" };
+        private static readonly string[] _stealthOnly = { "stealth" };
 
         private static readonly string[] _slideAndEmote = { "slide", "emote" };
 
-        private static IEnumerable<TestCaseData> OneActionOn()
+        private static IEnumerable<TestCaseData> MovedOnline()
         {
-            yield return new TestCaseData(ActionRules.Default.WithSlide(Slide.On), "slide").SetName("SlideOn");
-            yield return new TestCaseData(ActionRules.Default.WithMantle(Mantle.On), "mantle").SetName("MantleOn");
-            yield return new TestCaseData(ActionRules.Default.WithZipline(Zipline.On), "zipline").SetName("ZiplineOn");
-            yield return new TestCaseData(ActionRules.Default.WithStamina(Stamina.On), "stamina").SetName("StaminaOn");
-            yield return new TestCaseData(ActionRules.Default.WithStagger(Stagger.On), "stagger").SetName("StaggerOn");
-            yield return new TestCaseData(ActionRules.Default.WithSuppression(Suppression.On), "suppression").SetName("SuppressionOn");
-            yield return new TestCaseData(ActionRules.Default.WithEmote(Emote.On), "emote").SetName("EmoteOn");
-            yield return new TestCaseData(ActionRules.Default.WithStealth(Stealth.On), "stealth").SetName("StealthOn");
+            yield return new TestCaseData(ActionRules.Default.WithSlide(Slide.On)).SetName("SlideOn");
+            yield return new TestCaseData(ActionRules.Default.WithMantle(Mantle.On)).SetName("MantleOn");
+            yield return new TestCaseData(ActionRules.Default.WithZipline(Zipline.On)).SetName("ZiplineOn");
+            yield return new TestCaseData(ActionRules.Default.WithStamina(Stamina.On)).SetName("StaminaOn");
+            yield return new TestCaseData(ActionRules.Default.WithStagger(Stagger.On)).SetName("StaggerOn");
+            yield return new TestCaseData(ActionRules.Default.WithSuppression(Suppression.On)).SetName("SuppressionOn");
+            yield return new TestCaseData(ActionRules.Default.WithEmote(Emote.On)).SetName("EmoteOn");
         }
 
-        [TestCaseSource(nameof(OneActionOn))]
-        public void AnUnsupportedActionThatIsOnIsReturned(ActionRules actions, string key)
+        [Test]
+        public void StealthThatIsOnIsReturned()
         {
-            var enabled = ServerUnsupportedActions.EnabledIn(GameRules.Default.WithActions(actions));
+            var enabled = ServerUnsupportedActions.EnabledIn(GameRules.Default.WithActions(ActionRules.Default.WithStealth(Stealth.On)));
 
-            Assert.That(enabled, Is.EqualTo(new[] { key }));
+            Assert.That(enabled, Is.EqualTo(_stealthOnly));
+        }
+
+        [TestCaseSource(nameof(MovedOnline))]
+        public void AnActionTheServerNowHandlesIsNotReturned(ActionRules actions)
+        {
+            Assert.That(ServerUnsupportedActions.EnabledIn(GameRules.Default.WithActions(actions)), Is.Empty);
         }
 
         [Test]
@@ -43,7 +48,7 @@ namespace Shooter.Server.Tests
         [Test]
         public void TurningAnActionBackOffRemovesIt()
         {
-            var actions = ActionRules.Default.WithSlide(Slide.On).WithSlide(Slide.Off);
+            var actions = ActionRules.Default.WithStealth(Stealth.On).WithStealth(Stealth.Off);
 
             Assert.That(ServerUnsupportedActions.EnabledIn(GameRules.Default.WithActions(actions)), Is.Empty);
         }
@@ -61,7 +66,7 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void EveryUnsupportedActionIsReturnedInTheListOrder()
+        public void WithEveryActionOnOnlyStealthIsReturned()
         {
             var actions = ActionRules.Default
                 .WithStealth(Stealth.On)
@@ -75,7 +80,7 @@ namespace Shooter.Server.Tests
 
             var enabled = ServerUnsupportedActions.EnabledIn(GameRules.Default.WithActions(actions));
 
-            Assert.That(enabled, Is.EqualTo(_allKeys));
+            Assert.That(enabled, Is.EqualTo(_stealthOnly));
         }
 
         [Test]
@@ -102,9 +107,26 @@ namespace Shooter.Server.Tests
         [Test]
         public void TheStartLogWarnsOnceAboutAnActionThatIsOn()
         {
-            var log = StartLog(ActionRules.Default.WithSlide(Slide.On));
+            var log = StartLog(ActionRules.Default.WithStealth(Stealth.On));
 
-            Assert.That(log, Does.Contain("[Rules] warning: actions slide are on in rules "));
+            Assert.That(log, Does.Contain("[Rules] warning: actions stealth are on in rules "));
+            Assert.That(CountOf(log, "[Rules] warning:"), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void WithEveryActionOnTheStartLogWarnsOnlyAboutStealth()
+        {
+            var log = StartLog(ActionRules.Default
+                .WithSlide(Slide.On)
+                .WithMantle(Mantle.On)
+                .WithZipline(Zipline.On)
+                .WithStamina(Stamina.On)
+                .WithStagger(Stagger.On)
+                .WithSuppression(Suppression.On)
+                .WithEmote(Emote.On)
+                .WithStealth(Stealth.On));
+
+            Assert.That(log, Does.Contain("[Rules] warning: actions stealth are on in rules "));
             Assert.That(CountOf(log, "[Rules] warning:"), Is.EqualTo(1));
         }
 

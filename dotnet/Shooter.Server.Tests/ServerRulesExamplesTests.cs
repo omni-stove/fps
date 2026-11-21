@@ -131,6 +131,29 @@ namespace Shooter.Server.Tests
             Assert.That(e.Message, Does.StartWith("cannot start the Payload match on map NetTest: it has no payload route"));
         }
 
+        // ServerObjectiveFactory への登録は結線で行うので、ここでは目的を直に作る
+        [Test]
+        public void TheGuardianExampleReadsItsRulesAndPlaysOnTheExampleMap()
+        {
+            Assert.That(ServerRulesData.TryLoad("Guardian", Roots(), out var data, out var error), Is.True, error);
+            Assert.That(ServerMapData.TryLoad(_map, Roots(), out var map, out error), Is.True, error);
+
+            Assert.That(data.File.Name, Is.EqualTo("Guardian"));
+            Assert.That(data.Rules.Objective, Is.EqualTo(MatchObjective.Guardian));
+            Assert.That(data.Rules.RespawnMode, Is.EqualTo(RespawnMode.Individual));
+            Assert.That(data.Rules.Actions.Downed, Is.EqualTo(Downed.Off), "a leader falls on the first death, not after a bleed-out");
+            Assert.That(data.Rules.Actions.Melee, Is.EqualTo(Melee.On));
+            Assert.That(data.Rules.DeathCamera, Is.EqualTo(DeathCamera.KillCam));
+            Assert.That(data.Settings.TimeLimitSeconds, Is.EqualTo(300f));
+            Assert.That(data.Settings.RespawnSeconds, Is.EqualTo(3f));
+            var rules = new GuardianRules(data.Settings, new NoSessionHost(), 1);
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Guardian));
+            var spec = rules.CreateSessionSpec(data.Rules, data.Settings);
+            Assert.That(spec.TimeLimitSeconds, Is.EqualTo(300f));
+            Assert.That(spec.RespawnSeconds, Is.EqualTo(3f));
+            Assert.DoesNotThrow(() => rules.CheckMap(map, map.Points));
+        }
+
         // 目的の工場から作るには試合の場 (ServerObjectiveParts) が要るので、ルールの例と調整値から直に作る。例のマップはエリアを書き出していないので断る
         [Test]
         public void TheBattleRoyaleExampleReadsItsRulesAndRefusesAMapWithoutAZone()

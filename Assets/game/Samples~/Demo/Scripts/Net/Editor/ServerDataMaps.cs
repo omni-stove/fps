@@ -126,7 +126,10 @@ namespace Shooter.Editor
             // SaveNavMeshData は消して作り直すので .meta の GUID が変わる。既存のアセットへ上書きして GUID を残す
             if (existingData != null && freshData != existingData)
             {
+                // CopySerialized は m_Name も写し、アセット名がファイル名と食い違うので戻す
+                var existingName = existingData.name;
                 EditorUtility.CopySerialized(freshData, existingData);
+                existingData.name = existingName;
                 surface.navMeshData = existingData;
             }
 

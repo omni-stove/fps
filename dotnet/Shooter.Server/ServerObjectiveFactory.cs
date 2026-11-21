@@ -10,7 +10,7 @@ namespace Shooter.Server
     internal static class ServerObjectiveFactory
     {
         // 後から足す目的は Create を書き換えず、ここに 1 行ずつ並べる。ここに無い目的 (列挙にだけ先に足したもの) は Create が断る
-        private static readonly Dictionary<MatchObjective, ServerObjectiveCreator> Creators = Register(
+        private static readonly Dictionary<MatchObjective, ServerObjectiveCreator> _creators = Register(
             (MatchObjective.None, (settings, host, parts) => new TeamKillsRules()),
             (MatchObjective.Domination, (settings, host, parts) => new DominationRules(settings, host)),
             (MatchObjective.Elimination, (settings, host, parts) => new EliminationRules(settings, host)),
@@ -24,11 +24,11 @@ namespace Shooter.Server
             (MatchObjective.BattleRoyale, (settings, host, parts) => CreateBattleRoyale(host, RequireParts(MatchObjective.BattleRoyale, parts))),
             (MatchObjective.Extraction, (settings, host, parts) => CreateExtraction(host, RequireParts(MatchObjective.Extraction, parts))));
 
-        public static IReadOnlyCollection<MatchObjective> Supported => Creators.Keys;
+        public static IReadOnlyCollection<MatchObjective> Supported => _creators.Keys;
 
         public static bool Supports(MatchObjective objective)
         {
-            return Creators.ContainsKey(objective);
+            return _creators.ContainsKey(objective);
         }
 
         public static IMatchObjectiveRules Create(MatchObjective objective, NetMatchSettings settings, IMatchObjectiveHost host)
@@ -41,7 +41,7 @@ namespace Shooter.Server
         {
             ArgumentNullException.ThrowIfNull(settings);
             ArgumentNullException.ThrowIfNull(host);
-            if (!Creators.TryGetValue(objective, out var create))
+            if (!_creators.TryGetValue(objective, out var create))
             {
                 throw new InvalidOperationException("the dedicated server has no rules for the match objective " + objective);
             }

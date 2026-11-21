@@ -9,7 +9,7 @@ namespace Shooter.Protocol
     public sealed class MessageTable
     {
         // 後から足す種類の Id を、同じ番号を別々に選んでぶつからないよう先に押さえる。型を足して表に載せた後もここから消さなくてよい
-        private static readonly HashSet<ushort> Reserved = new HashSet<ushort>
+        private static readonly HashSet<ushort> _reserved = new HashSet<ushort>
         {
             MessageIds.EmoteRequest,
             MessageIds.PickupRequest,
@@ -47,7 +47,7 @@ namespace Shooter.Protocol
 
         public static bool IsReserved(ushort id)
         {
-            return Reserved.Contains(id);
+            return _reserved.Contains(id);
         }
 
         public bool TryGet(ushort id, out IMessage message)

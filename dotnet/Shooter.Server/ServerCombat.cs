@@ -29,6 +29,7 @@ namespace Shooter.Server
         private readonly ServerSpray _spray;
         private readonly ServerStatusEffects _statusEffects;
         private readonly ServerLockOn _lockOn;
+        private readonly ServerLockOnWarnings _lockOnWarnings;
         private readonly ServerAreaEffects _areaEffects;
         private readonly ServerFlash _flash;
         private readonly ServerVehicles _vehicles;
@@ -67,6 +68,7 @@ namespace Shooter.Server
             _spray = new ServerSpray(this);
             _statusEffects = new ServerStatusEffects(this);
             _lockOn = new ServerLockOn(this);
+            _lockOnWarnings = new ServerLockOnWarnings(this);
             _areaEffects = new ServerAreaEffects(this);
             _flash = new ServerFlash(this);
         }
@@ -131,6 +133,9 @@ namespace Shooter.Server
 
         internal ServerAreaEffects AreaEffects => _areaEffects;
 
+        // 乗り物を動かさないテストや設定では null。ロックオンとフレアは null なら人だけを相手にする
+        internal ServerVehicles Vehicles => _vehicles;
+
         internal ServerFlash Flash => _flash;
 
         internal TextWriter Log => _log;
@@ -191,6 +196,9 @@ namespace Shooter.Server
 
             // 飛ぶ弾は巻き戻さずに今の位置へ当てるので、この tick の位置を残してから進める
             _projectiles.Tick(deltaSeconds);
+
+            // 弾が進んで当たった・フレアに誘われた後の様子で、狙われている人に知らせる
+            _lockOnWarnings.Update(_projectiles);
         }
 
         public void OnConnected(ConnectionId connection)
@@ -263,7 +271,10 @@ namespace Shooter.Server
             _grenades.Clear();
             _projectiles.Clear();
             _statusEffects.Clear();
+            _lockOnWarnings.Clear();
         }
+
+        internal ServerLockOnWarnings LockOnWarnings => _lockOnWarnings;
 
         public void Contribute(SnapshotMessage snapshot, ServerPlayer receiver)
         {
@@ -306,6 +317,7 @@ namespace Shooter.Server
             _beams.Forget(player.PlayerId);
             _spray.Forget(player.PlayerId);
             _statusEffects.Forget(player.PlayerId);
+            _lockOnWarnings.Forget(player.PlayerId);
         }
 
         // 置き直した人の前の位置と新しい位置の間を補間して当てないよう、それまでの記録を捨てる

@@ -6,7 +6,7 @@ namespace Shooter.Protocol
     // 落ちてもよい届け方で送れるよう、まだサーバーが処理したと分からない直近の tick を続けて MaxFrames 個まで載せる。
     public sealed class InputMessage : IMessage
     {
-        public const byte CurrentVersion = 5;
+        public const byte CurrentVersion = 6;
 
         public const int MaxFrames = 16;
 
@@ -77,6 +77,7 @@ namespace Shooter.Protocol
             {
                 writer.WriteVector2(_frames[i].Move);
                 writer.WriteSingle(_frames[i].Yaw);
+                writer.WriteSingle(_frames[i].Pitch);
                 writer.WriteUInt16((ushort)_frames[i].Buttons);
             }
         }
@@ -101,6 +102,13 @@ namespace Shooter.Protocol
             {
                 var move = reader.ReadFiniteVector2("move input");
                 var yaw = reader.ReadFiniteSingle("yaw");
+                var pitch = reader.ReadFiniteSingle("pitch");
+                if (pitch < -InputFrame.MaxPitch || pitch > InputFrame.MaxPitch)
+                {
+                    throw new MessageReadException(
+                        "pitch " + pitch.ToString(CultureInfo.InvariantCulture) + " is beyond straight up or straight down");
+                }
+
                 var buttons = (InputButtons)reader.ReadUInt16();
                 if ((buttons & ~InputButtons.All) != 0)
                 {
@@ -108,7 +116,7 @@ namespace Shooter.Protocol
                         "input buttons " + ((int)buttons).ToString(CultureInfo.InvariantCulture) + " include an unknown button");
                 }
 
-                _frames[i] = new InputFrame(firstTick + i, move, yaw, buttons);
+                _frames[i] = new InputFrame(firstTick + i, move, yaw, buttons, pitch);
             }
 
             Count = count;

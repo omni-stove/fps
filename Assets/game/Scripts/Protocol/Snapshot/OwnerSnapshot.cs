@@ -6,6 +6,9 @@ namespace Shooter.Protocol
     {
         public const int MaxWeapons = byte.MaxValue;
 
+        // StaggerKind は末尾に足す約束 (StaggerKind のコメント) なので、最後の値の次までを読める種類にする
+        private const int _staggerKinds = (int)Shooter.Core.StaggerKind.Blast + 1;
+
         private readonly ContentIdList _equippedWeaponIds = new ContentIdList(MaxWeapons, "equipped weapon");
         private readonly GrenadePouchSync _grenades = new GrenadePouchSync();
 
@@ -39,6 +42,16 @@ namespace Shooter.Protocol
         // 脱出地点の物 (ObjectiveItemSnapshot.ItemId)
         public int ExtractionPointId { get; set; }
 
+        // ルールで Off なら null。ほかの人の残りは見せないので、人ごとの行 (PlayerSnapshot) に載せず持ち主にだけ送る。
+        public Shooter.Core.StaminaStatus? Stamina { get; set; }
+
+        public Shooter.Core.StaggerKind Stagger { get; set; }
+
+        // 0〜1。画面の演出に使う度合いと、制圧されているか (度合いの上がり下がりで境目が違うので別に送る)
+        public float SuppressionLevel { get; set; }
+
+        public bool Suppressed { get; set; }
+
         public GrenadePouchSync Grenades => _grenades;
 
         public ContentIdList EquippedWeaponIds => _equippedWeaponIds;
@@ -63,6 +76,10 @@ namespace Shooter.Protocol
             ExtractionProgress = other.ExtractionProgress;
             HasExtractionPoint = other.HasExtractionPoint;
             ExtractionPointId = other.ExtractionPointId;
+            Stamina = other.Stamina;
+            Stagger = other.Stagger;
+            SuppressionLevel = other.SuppressionLevel;
+            Suppressed = other.Suppressed;
             _grenades.CopyFrom(other._grenades);
             _equippedWeaponIds.CopyFrom(other._equippedWeaponIds);
             Present = other.Present;
@@ -116,6 +133,21 @@ namespace Shooter.Protocol
                 || (HasExtractionPoint && ExtractionPointId != baseline.ExtractionPointId))
             {
                 fields |= OwnerFields.Extraction;
+            }
+
+            if (!SameStamina(Stamina, baseline.Stamina))
+            {
+                fields |= OwnerFields.Stamina;
+            }
+
+            if (Stagger != baseline.Stagger)
+            {
+                fields |= OwnerFields.Stagger;
+            }
+
+            if (!Same.Bits(SuppressionLevel, baseline.SuppressionLevel) || Suppressed != baseline.Suppressed)
+            {
+                fields |= OwnerFields.Suppression;
             }
 
             return fields;
@@ -216,6 +248,47 @@ namespace Shooter.Protocol
                 writer.WriteSingle(ExtractionProgress);
                 writer.WriteInt32(HasExtractionPoint ? ExtractionPointId : PlayerIds.None);
             }
+
+            if ((fields & OwnerFields.Stamina) != 0)
+            {
+                var stamina = Stamina;
+                writer.WriteBool(stamina.HasValue);
+                if (stamina.HasValue)
+                {
+                    var status = stamina.Value;
+
+                    // default の StaminaStatus は Max が 0 で、読む側の StaminaStatus が作れないので書かない
+                    if (!(status.Max > 0f) || float.IsInfinity(status.Max) || !(status.Current >= 0f && status.Current <= status.Max))
+                    {
+                        throw new InvalidOperationException("stamina must be between 0 and a positive finite max");
+                    }
+
+                    writer.WriteSingle(status.Current);
+                    writer.WriteSingle(status.Max);
+                    writer.WriteBool(status.Depleted);
+                }
+            }
+
+            if ((fields & OwnerFields.Stagger) != 0)
+            {
+                if (!IsStaggerKind(Stagger))
+                {
+                    throw new InvalidOperationException("stagger " + Stagger + " is not a defined StaggerKind");
+                }
+
+                writer.WriteByte((byte)Stagger);
+            }
+
+            if ((fields & OwnerFields.Suppression) != 0)
+            {
+                if (!(SuppressionLevel >= 0f && SuppressionLevel <= 1f))
+                {
+                    throw new InvalidOperationException("suppression level must be within 0 to 1");
+                }
+
+                writer.WriteSingle(SuppressionLevel);
+                writer.WriteBool(Suppressed);
+            }
         }
 
         internal void Read(MessageReader reader, OwnerFields fields)
@@ -278,6 +351,22 @@ namespace Shooter.Protocol
                     throw new MessageReadException("extraction progress needs an extraction point being waited at");
                 }
             }
+
+            if ((fields & OwnerFields.Stamina) != 0)
+            {
+                Stamina = reader.ReadBool() ? ReadStamina(reader) : (Shooter.Core.StaminaStatus?)null;
+            }
+
+            if ((fields & OwnerFields.Stagger) != 0)
+            {
+                Stagger = (Shooter.Core.StaggerKind)reader.ReadByteBelow(_staggerKinds, "stagger");
+            }
+
+            if ((fields & OwnerFields.Suppression) != 0)
+            {
+                SuppressionLevel = reader.ReadFiniteSingleBetween(0f, 1f, "suppression level");
+                Suppressed = reader.ReadBool();
+            }
         }
 
         internal void FillFrom(OwnerSnapshot baseline)
@@ -331,7 +420,59 @@ namespace Shooter.Protocol
                 ExtractionPointId = baseline.ExtractionPointId;
             }
 
+            if ((missing & OwnerFields.Stamina) != 0)
+            {
+                Stamina = baseline.Stamina;
+            }
+
+            if ((missing & OwnerFields.Stagger) != 0)
+            {
+                Stagger = baseline.Stagger;
+            }
+
+            if ((missing & OwnerFields.Suppression) != 0)
+            {
+                SuppressionLevel = baseline.SuppressionLevel;
+                Suppressed = baseline.Suppressed;
+            }
+
             Present = OwnerFields.All;
+        }
+
+        // StaminaStatus の == (float の ==) で比べないのは、0 と -0 を同じと見て、読んだ側に書いたのと違う値を残さないため
+        private static bool SameStamina(Shooter.Core.StaminaStatus? a, Shooter.Core.StaminaStatus? b)
+        {
+            if (a.HasValue != b.HasValue)
+            {
+                return false;
+            }
+
+            if (!a.HasValue)
+            {
+                return true;
+            }
+
+            var x = a.Value;
+            var y = b.Value;
+            return Same.Bits(x.Current, y.Current) && Same.Bits(x.Max, y.Max) && x.Depleted == y.Depleted;
+        }
+
+        private static bool IsStaggerKind(Shooter.Core.StaggerKind kind)
+        {
+            return (int)kind >= 0 && (int)kind < _staggerKinds;
+        }
+
+        private static Shooter.Core.StaminaStatus ReadStamina(MessageReader reader)
+        {
+            var current = reader.ReadFiniteSingleBetween(0f, float.MaxValue, "stamina");
+            var max = reader.ReadFiniteSingleBetween(0f, float.MaxValue, "stamina max");
+            var depleted = reader.ReadBool();
+            if (!(max > 0f) || current > max)
+            {
+                throw new MessageReadException("stamina must be between 0 and a positive max");
+            }
+
+            return new Shooter.Core.StaminaStatus(current, max, depleted);
         }
     }
 }

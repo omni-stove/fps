@@ -43,6 +43,10 @@ namespace Shooter.Editor
         public const string ExtractionFileName = "extraction.json";
         public const string StashFileName = "stash.json";
 
+        // サーバーの ServerPlayerStatusTuning.StaggerFileName・SuppressionFileName と同じ名前にする
+        public const string StaggerFileName = "stagger.json";
+        public const string SuppressionFileName = "suppression.json";
+
         public const string SupplyDropsFileName = "supply-drops.json";
         public const string RedeployFileName = "redeploy.json";
 
@@ -563,6 +567,8 @@ namespace Shooter.Editor
                 ExportTuningFile(directory, StreaksFileName, c => c.StreaksTuning, StreakJson.ResourcePath, StreakJson.Parse),
                 ExportTuningFile(directory, ExtractionFileName, c => c.ExtractionTuning, ExtractionJson.ResourcePath, ExtractionJson.Parse),
                 ExportTuningFile(directory, StashFileName, c => c.StashTuning, StashJson.ResourcePath, StashJson.Parse),
+                ExportTuningFile(directory, StaggerFileName, c => c.StaggerTuning, StaggerActionInstaller.TuningResourcePath, StaggerJson.Parse),
+                ExportTuningFile(directory, SuppressionFileName, c => c.SuppressionTuning, KitTuning.SuppressionResourcePath, SuppressionJson.Parse),
             };
         }
 

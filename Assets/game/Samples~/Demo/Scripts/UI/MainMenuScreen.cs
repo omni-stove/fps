@@ -126,6 +126,7 @@ namespace Shooter.Runtime
         private VisualElement _settingsSlot;
         private VisualElement _loadoutSlot;
         private LoadoutSelectPanel _loadoutPanel;
+        private LoadoutPresetBook _loadoutPresets;
         private LoadoutPreferenceStore _loadoutStore = new LoadoutPreferenceStore();
         private PlayerNameStore _nameStore = new PlayerNameStore();
         private VisualElement _campaignSlot;
@@ -597,31 +598,18 @@ namespace Shooter.Runtime
                 return;
             }
 
-            var progression = Progression;
-            Func<string, bool> isAvailable = progression != null ? progression.IsUnlocked : (Func<string, bool>)null;
-            var saved = _loadoutStore.Load();
-            var loadout = EffectiveLoadout;
-            if (!LoadoutSelectionAssets.TryCreate(
-                    loadout, EffectiveCatalog, saved?.WeaponIds, null, out var selection, out var error, isAvailable))
+            var presets = _loadoutStore.LoadPresets();
+            if (!TryCreateLoadoutSelections(presets, out var selection, out var abilities, out var error))
             {
                 Debug.LogWarning(LoadoutPreferenceStore.LogTag + " cannot open the loadout screen: " + error, this);
                 ShowNotice(LoadoutUnavailableNotice(error));
                 return;
             }
 
-            // 能力の一覧が壊れていても武器は選べるよう、能力を選ばせずに開く
-            var abilityCatalog = EffectiveAbilityCatalog;
-            if (!LoadoutSelectionAssets.TryCreateAbilities(loadout, abilityCatalog, saved?.AbilityIds, out var abilities, out error))
-            {
-                Debug.LogWarning(LoadoutPreferenceStore.LogTag + " the loadout screen does not offer abilities: " + error, this);
-            }
-
             ShowNotice(null);
             SetDisplayed(_loadoutSlot, true);
             SetButtonsEnabled(false);
-            _loadoutPanel = new LoadoutSelectPanel(_loadoutSlot, selection, progression?.Ledger, abilities, abilityCatalog);
-            _loadoutPanel.Confirmed += SaveLoadout;
-            _loadoutPanel.Cancelled += CloseLoadout;
+            UseLoadoutPanel(CreateLoadoutPanel(presets, selection, abilities), presets);
         }
 
         public void CloseLoadout()
@@ -633,9 +621,191 @@ namespace Shooter.Runtime
 
             _loadoutPanel.Dispose();
             _loadoutPanel = null;
+            _loadoutPresets = null;
             SetDisplayed(_loadoutSlot, false);
             SetButtonsEnabled(true);
             FocusAt(IndexOf(LoadoutButtonName));
+        }
+
+        // 選んでいる組の中身で武器と能力の選択を作る。組を切り替えたときも、選択を作り直すためにここを通る
+        private bool TryCreateLoadoutSelections(
+            LoadoutPresetBook presets,
+            out LoadoutSelection selection,
+            out AbilitySelection abilities,
+            out string error)
+        {
+            abilities = null;
+            var progression = Progression;
+            Func<string, bool> isAvailable = progression != null ? progression.IsUnlocked : (Func<string, bool>)null;
+            var saved = presets.Active?.Choice;
+            var loadout = EffectiveLoadout;
+            if (!LoadoutSelectionAssets.TryCreate(
+                    loadout, EffectiveCatalog, saved?.WeaponIds, null, out selection, out error, isAvailable))
+            {
+                return false;
+            }
+
+            // 能力の一覧が壊れていても武器は選べるよう、能力を選ばせずに開く
+            if (!LoadoutSelectionAssets.TryCreateAbilities(loadout, EffectiveAbilityCatalog, saved?.AbilityIds, out abilities, out var abilityError))
+            {
+                Debug.LogWarning(LoadoutPreferenceStore.LogTag + " the loadout screen does not offer abilities: " + abilityError, this);
+            }
+
+            return true;
+        }
+
+        private LoadoutSelectPanel CreateLoadoutPanel(LoadoutPresetBook presets, LoadoutSelection selection, AbilitySelection abilities)
+        {
+            // 初めて開いたときは、今の選択を名前の無い最初の組として見せる。保存するのは決定・名前の変更・新しく保存を押したとき
+            if (presets.Count == 0 && selection.Validate() == null)
+            {
+                presets.Add(string.Empty, new LoadoutChoice(selection.WeaponIds, abilities?.AbilityIds));
+            }
+
+            return new LoadoutSelectPanel(_loadoutSlot, selection, Progression?.Ledger, abilities, EffectiveAbilityCatalog, presets);
+        }
+
+        private void UseLoadoutPanel(LoadoutSelectPanel panel, LoadoutPresetBook presets)
+        {
+            _loadoutPanel = panel;
+            _loadoutPresets = presets;
+            panel.Confirmed += SaveLoadout;
+            panel.Cancelled += CloseLoadout;
+            panel.PresetSelected += SwitchLoadoutPreset;
+            panel.PresetSaveAsNewRequested += AddLoadoutPreset;
+            panel.PresetRenameRequested += RenameLoadoutPreset;
+        }
+
+        // 切り替えた組は決定を押さなくても次の出現から使うので、その場で保存する
+        private void SwitchLoadoutPreset(int index)
+        {
+            var presets = _loadoutPresets;
+            if (presets == null)
+            {
+                return;
+            }
+
+            var previous = presets.ActiveIndex;
+            presets.Select(index);
+            if (!TrySaveLoadoutPresets(presets))
+            {
+                presets.Select(previous);
+                _loadoutPanel.RefreshPresets();
+                return;
+            }
+
+            Debug.Log(LoadoutPreferenceLog.PresetSwitched(index, presets.Count), this);
+            _loadoutPanel.Dispose();
+            _loadoutPanel = null;
+            if (!TryCreateLoadoutSelections(presets, out var selection, out var abilities, out var error))
+            {
+                // 開けた画面が切り替えで開けなくなるのは、開いている間に一覧が壊れたときだけ
+                Debug.LogWarning(LoadoutPreferenceStore.LogTag + " cannot open the loadout screen: " + error, this);
+                _loadoutPresets = null;
+                SetDisplayed(_loadoutSlot, false);
+                SetButtonsEnabled(true);
+                ShowNotice(LoadoutUnavailableNotice(error));
+                FocusAt(IndexOf(LoadoutButtonName));
+                return;
+            }
+
+            var panel = CreateLoadoutPanel(presets, selection, abilities);
+            UseLoadoutPanel(panel, presets);
+            panel.FocusPresets();
+            panel.ShowStatus(LoadoutFormat.PresetSwitched(LoadoutFormat.PresetName(presets.Active, presets.ActiveIndex)), false);
+        }
+
+        private void AddLoadoutPreset(string name, LoadoutChoice choice)
+        {
+            var presets = _loadoutPresets;
+            if (presets == null)
+            {
+                return;
+            }
+
+            // 能力の枠を出せなかったときは、SaveLoadout と同じく今の組の能力を引き継ぐ
+            var abilityIds = choice.AbilityIds ?? presets.Active?.Choice.AbilityIds;
+            int index;
+            try
+            {
+                index = presets.Add(name, new LoadoutChoice(choice.WeaponIds, abilityIds));
+            }
+            catch (InvalidOperationException)
+            {
+                _loadoutPanel.ShowStatus(LoadoutFormat.PresetFull(presets.MaxPresets), true);
+                return;
+            }
+            catch (ArgumentException)
+            {
+                _loadoutPanel.ShowStatus(LoadoutFormat.PresetNameInvalid(presets.Spec.MaxNameLength), true);
+                return;
+            }
+
+            var previous = presets.ActiveIndex;
+            presets.Select(index);
+            if (!TrySaveLoadoutPresets(presets))
+            {
+                presets.Select(previous);
+                presets.RemoveAt(index);
+                _loadoutPanel.RefreshPresets();
+                return;
+            }
+
+            Debug.Log(LoadoutPreferenceLog.PresetAdded(index, presets.Count, presets.MaxPresets), this);
+            _loadoutPanel.RefreshPresets();
+            _loadoutPanel.ShowStatus(LoadoutFormat.PresetAdded(LoadoutFormat.PresetName(presets.Active, index)), false);
+        }
+
+        private void RenameLoadoutPreset(string name)
+        {
+            var presets = _loadoutPresets;
+            var index = presets?.ActiveIndex ?? LoadoutPresetBook.NoPreset;
+            if (index == LoadoutPresetBook.NoPreset)
+            {
+                return;
+            }
+
+            var before = presets[index].Name;
+            try
+            {
+                presets.Rename(index, name);
+            }
+            catch (ArgumentException)
+            {
+                _loadoutPanel.ShowStatus(LoadoutFormat.PresetNameInvalid(presets.Spec.MaxNameLength), true);
+                return;
+            }
+
+            if (!TrySaveLoadoutPresets(presets))
+            {
+                presets.Rename(index, before);
+                _loadoutPanel.RefreshPresets();
+                return;
+            }
+
+            Debug.Log(LoadoutPreferenceLog.PresetRenamed(index), this);
+            _loadoutPanel.RefreshPresets();
+            _loadoutPanel.ShowStatus(LoadoutFormat.PresetRenamed(LoadoutFormat.PresetName(presets[index], index)), false);
+        }
+
+        private bool TrySaveLoadoutPresets(LoadoutPresetBook presets)
+        {
+            try
+            {
+                _loadoutStore.SavePresets(presets);
+                return true;
+            }
+            catch (PlayerPrefsException e)
+            {
+                Debug.LogError(LoadoutPreferenceLog.PresetsNotSaved(e.Message), this);
+            }
+            catch (ArgumentException e)
+            {
+                Debug.LogError(LoadoutPreferenceLog.PresetsNotSaved(e.Message), this);
+            }
+
+            _loadoutPanel?.ShowStatus(LoadoutFormat.PresetSaveFailed, true);
+            return false;
         }
 
         public void OpenProfile()
@@ -902,10 +1072,22 @@ namespace Shooter.Runtime
             var weaponIds = choice.WeaponIds;
 
             // 能力のカタログが壊れて能力の枠を出せなかったときに、前に選んだ能力まで既定に戻さないよう、保存してあるものを残す
-            var abilityIds = choice.AbilityIds ?? _loadoutStore.Load()?.AbilityIds;
+            var presets = _loadoutPresets ?? _loadoutStore.LoadPresets();
+            var abilityIds = choice.AbilityIds ?? presets.Active?.Choice.AbilityIds;
             try
             {
-                _loadoutStore.Save(new LoadoutChoice(weaponIds, abilityIds));
+                // 決定は選んでいる組の中身を替える。まだ組が無ければ (選択を作れずに仮の組を足さなかったとき) 最初の組にする
+                var next = new LoadoutChoice(weaponIds, abilityIds);
+                if (presets.ActiveIndex == LoadoutPresetBook.NoPreset)
+                {
+                    presets.Add(string.Empty, next);
+                }
+                else
+                {
+                    presets.Replace(presets.ActiveIndex, next);
+                }
+
+                _loadoutStore.SavePresets(presets);
             }
             catch (ArgumentException e)
             {

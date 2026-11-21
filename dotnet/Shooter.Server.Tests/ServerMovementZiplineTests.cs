@@ -244,6 +244,24 @@ namespace Shooter.Server.Tests
             Assert.That(_log.ToString(), Does.Not.Contain("[Net] zipline "));
         }
 
+        [Test]
+        public void FiringTheGrappleWhileRidingLetsGoOfTheLine()
+        {
+            var rules = _ziplineOn.WithActions(_ziplineOn.Actions.WithAbilities(Abilities.On));
+            var grapple = new GrappleType("grapple", GrappleSpec.Default, new AbilitySpec(2, 8f, 0f, 0f), GrappleType.DefaultGrabbableLayers);
+            Start(rules, OneLine(), grapple: grapple);
+            Send(InputButtons.Jump);
+            Send(InputButtons.None);
+            Assert.That(_movement.IsZiplining(1), Is.True);
+
+            // 吊られた体の斜め下の床を狙う
+            Send(InputButtons.Grapple, pitch: -0.6f);
+
+            Assert.That(_movement.IsGrappling(1), Is.True, "the rope, not the line, moves the body");
+            Assert.That(_movement.IsZiplining(1), Is.False);
+            Assert.That(_log.ToString(), Does.Contain(" release reason=interrupted"));
+        }
+
         private static NetMapZiplines OneLine()
         {
             return Line(_lineStart, _lineEnd);
@@ -281,7 +299,7 @@ namespace Shooter.Server.Tests
             return ticks;
         }
 
-        private void Start(GameRules rules, NetMapZiplines ziplines, ZiplineTuning zipline = null)
+        private void Start(GameRules rules, NetMapZiplines ziplines, ZiplineTuning zipline = null, GrappleType grapple = null)
         {
             _transport?.Dispose();
             _transport = new RecordingTransport();
@@ -301,6 +319,11 @@ namespace Shooter.Server.Tests
                 defaults.KillPlaneY,
                 _spawn);
             _movement = new ServerMovement(settings);
+            if (grapple != null)
+            {
+                _movement.UseGrapple(grapple, _ => true);
+            }
+
             _host = new ServerHost();
             _host.Register(_movement);
             var options = new NetLaunchOptions(NetLaunchMode.Server, NetLaunchOptions.AnyAddress, NetLaunchOptions.DefaultPort);
@@ -325,10 +348,10 @@ namespace Shooter.Server.Tests
         }
 
         // 1 tick ずつ送り、そのたびに 1 tick 進めて入力の予算を戻す (クライアントが tick の速さで送るのと同じ)
-        private void Send(InputButtons buttons, Vector2 move = default)
+        private void Send(InputButtons buttons, Vector2 move = default, float pitch = 0f)
         {
             var message = new InputMessage { AckedSnapshotTick = -1 };
-            message.Add(new InputFrame(_nextInputTick, move, 0f, buttons));
+            message.Add(new InputFrame(_nextInputTick, move, 0f, buttons, pitch));
             _movement.OnMessage(_connection, message);
             _nextInputTick++;
             _movement.Tick(_nextInputTick, _tickSeconds);

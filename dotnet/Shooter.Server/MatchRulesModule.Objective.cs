@@ -141,6 +141,12 @@ namespace Shooter.Server
             _objective.PlayerJoined(playerId);
         }
 
+        // ルールを次の試合で替えると目的も替わるので、ServerMatch には目的でなくこの口を渡す
+        private Team? FixedTeam(bool isBot)
+        {
+            return _objective?.FixedTeam(isBot);
+        }
+
         // 目的の側で勝者を決めない試合なら、Session がキル数で決めた値のまま
         private Team? DecideWinner(Team? winner)
         {

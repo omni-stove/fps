@@ -53,12 +53,13 @@ namespace Shooter.Editor
 
         public const string AllDefaultsJson = "{}\n";
 
-        // 試合の設定 (NetMatch) の並びに無くても、Demo のネットのマップ (NetBattleRoyale) で遊べるよう必ず書き出すモードのルール。
+        // 試合の設定 (NetMatch) の並びに無くても、Demo のネットのマップ (NetBattleRoyale・NetArena01) で遊べるよう必ず書き出すモードのルール。
         // サーバーはファイルの Objective で目的を選ぶので、アセットの Objective が違えば書き出さずに止める
         public static readonly IReadOnlyList<(string Name, MatchObjective Objective)> ModeRulesToExport = new[]
         {
             (GameRulesAssetBuilder.BattleRoyaleName, MatchObjective.BattleRoyale),
             (GameRulesAssetBuilder.ExtractionName, MatchObjective.Extraction),
+            (GameRulesAssetBuilder.HordeName, MatchObjective.Horde),
         };
 
         public static IReadOnlyList<GameRulesDefinition> RulesToExport(NetMatchDefinition match)

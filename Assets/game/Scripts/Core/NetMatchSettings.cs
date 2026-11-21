@@ -74,7 +74,8 @@ namespace Shooter.Core
             VoteKickSpec voteKick = null,
             PayloadSpec payload = null,
             EconomySpec economy = null,
-            int maxDisplayNameLength = DefaultMaxDisplayNameLength)
+            int maxDisplayNameLength = DefaultMaxDisplayNameLength,
+            HordeSettings horde = null)
         {
             RequirePositive(scoreLimit, nameof(scoreLimit));
             RequirePositive(timeLimitSeconds, nameof(timeLimitSeconds));
@@ -138,6 +139,7 @@ namespace Shooter.Core
             VoteKick = voteKick ?? VoteKickSpec.Default;
             Payload = payload ?? PayloadSpec.Default;
             Economy = economy ?? EconomySpec.Default;
+            Horde = horde ?? HordeSettings.Default;
             MapPool = CopyMapPool(mapPool);
             MapVoteSeconds = mapVoteSeconds;
             MaxTeamSizeDifference = maxTeamSizeDifference;
@@ -203,7 +205,8 @@ namespace Shooter.Core
                 voteKick: VoteKick,
                 payload: Payload,
                 economy: Economy,
-                maxDisplayNameLength: MaxDisplayNameLength);
+                maxDisplayNameLength: MaxDisplayNameLength,
+                horde: Horde);
         }
 
         public int ScoreLimit { get; }
@@ -278,6 +281,8 @@ namespace Shooter.Core
         public PayloadSpec Payload { get; }
 
         public EconomySpec Economy { get; }
+
+        public HordeSettings Horde { get; }
 
         private static string OptionalId(string id, string name)
         {

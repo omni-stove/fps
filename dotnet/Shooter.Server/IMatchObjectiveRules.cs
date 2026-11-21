@@ -100,6 +100,17 @@ namespace Shooter.Server
         // 先を少しずつ動かすと Bot の巡る路を毎回作り直すので、同じ先の間は同じ値を返す
         Vector3? BotGoal(int playerId) => null;
 
+        // 試合に居させる Bot の数を目的が決めるなら、その数。null なら ServerBots は起動の --bots と minPlayers から人の数で決める。
+        // 波で敵を出す目的 (Horde) は、人の数でなく波の残りで Bot を足し引きするため
+        int? BotsWanted => null;
+
+        // BotsWanted まで減らすときに先に抜く Bot ほど小さい値。同じ値なら ServerBots は後から足した Bot を抜く
+        int BotDropOrder(int playerId) => 0;
+
+        // 入る人のチームを目的が決めるなら、そのチーム。null なら ServerMatch がパーティと人数で決め、次の試合で人数をそろえる。
+        // 人を全員守る側に、Bot を全員敵にする目的 (Horde) のため
+        Team? FixedTeam(bool isBot) => null;
+
         void FillMatch(ref MatchSnapshot snapshot);
 
         void FillControlPoints(SnapshotList<ControlPointSnapshot> points);

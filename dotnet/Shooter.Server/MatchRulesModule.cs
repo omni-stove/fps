@@ -69,6 +69,7 @@ namespace Shooter.Server
             _loadout = _data.File.CreateLoadout();
             ListenToSession(_session);
             _match.ChooseTeam = ChooseTeam;
+            _match.FixedTeam = FixedTeam;
             _match.CheckNextRules = CheckNextRules;
             _match.PlayerJoined += HandlePlayerJoined;
             _match.PlayerLeft += HandlePlayerLeft;
@@ -222,6 +223,11 @@ namespace Shooter.Server
             if (_match.ChooseTeam == ChooseTeam)
             {
                 _match.ChooseTeam = null;
+            }
+
+            if (_match.FixedTeam == FixedTeam)
+            {
+                _match.FixedTeam = null;
             }
 
             if (_match.CheckNextRules == CheckNextRules)

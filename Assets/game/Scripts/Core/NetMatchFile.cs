@@ -101,6 +101,25 @@ namespace Shooter.Core
         public const string LossStreakBonusItem = "lossStreakBonus";
         public const string MaxLossRewardItem = "maxLossReward";
 
+        public const string HordeItem = "horde";
+        public const string StartingCurrencyItem = "startingCurrency";
+        public const string KillRewardPerWaveItem = "killRewardPerWave";
+        public const string PurchasesOnlyBetweenWavesItem = "purchasesOnlyBetweenWaves";
+        public const string KillScoreItem = "killScore";
+        public const string BuildCostItem = "buildCost";
+        public const string RepairCostPerPieceItem = "repairCostPerPiece";
+        public const string InteractRadiusItem = "interactRadius";
+        public const string CorpseSecondsItem = "corpseSeconds";
+        public const string AlertIntervalItem = "alertInterval";
+        public const string WaveCountItem = "waveCount";
+        public const string RestSecondsItem = "restSeconds";
+        public const string FirstEnemyCountItem = "firstEnemyCount";
+        public const string EnemiesPerWaveItem = "enemiesPerWave";
+        public const string FirstStrengthItem = "firstStrength";
+        public const string StrengthPerWaveItem = "strengthPerWave";
+        public const string MaxStrengthItem = "maxStrength";
+        public const string MaxAliveItem = "maxAlive";
+
         public const string MotorItem = "motor";
         public const string WalkSpeedItem = "walkSpeed";
         public const string SprintSpeedItem = "sprintSpeed";
@@ -214,7 +233,7 @@ namespace Shooter.Core
             ChatIntervalSecondsItem, MaxChatLengthItem, MaxDisplayNameLengthItem, RoundWinsToWinItem, RoundPreparationSecondsItem,
             RoundTimeLimitSecondsItem, WeatherIdItem, TimeOfDayIdItem,
             CaptureTheFlagItem, HardpointItem, SearchAndDestroyItem, FreeForAllItem, KillConfirmedItem, GunGameItem,
-            VoteKickItem, PayloadItem, EconomyItem,
+            VoteKickItem, PayloadItem, EconomyItem, HordeItem,
         };
 
         private static readonly string[] _captureTheFlagItems =
@@ -259,6 +278,14 @@ namespace Shooter.Core
         private static readonly string[] _economyItems =
         {
             StartMoneyItem, MaxMoneyItem, KillRewardItem, RoundWinRewardItem, RoundLossRewardItem, LossStreakBonusItem, MaxLossRewardItem,
+        };
+
+        // 防衛物の場所と出現地点はマップで決まるので項目に持たない
+        private static readonly string[] _hordeItems =
+        {
+            StartingCurrencyItem, KillRewardItem, KillRewardPerWaveItem, PurchasesOnlyBetweenWavesItem, KillScoreItem, BuildCostItem,
+            RepairCostPerPieceItem, InteractRadiusItem, CorpseSecondsItem, AlertIntervalItem, WaveCountItem, RestSecondsItem, FirstEnemyCountItem,
+            EnemiesPerWaveItem, FirstStrengthItem, StrengthPerWaveItem, MaxStrengthItem, MaxAliveItem,
         };
 
         public NetMatchFile(
@@ -522,6 +549,34 @@ namespace Shooter.Core
             writer.Int(LossStreakBonusItem, economy.LossStreakBonus);
             writer.Int(MaxLossRewardItem, economy.MaxLossReward);
             writer.EndObject();
+
+            // ほかの目的のファイルで既定値なら書かないのは、項目を足す前に書き出したルールのファイルを書き出し直さずにそのまま使えるようにするため。
+            // Horde のファイルにはいつも書き、調整できる値をファイルで見えるようにする
+            var horde = s.Horde;
+            if (file.Rules.Objective == MatchObjective.Horde || !horde.Equals(HordeSettings.Default))
+            {
+                writer.BeginObject(HordeItem);
+                writer.Int(StartingCurrencyItem, horde.StartingCurrency);
+                writer.Int(KillRewardItem, horde.KillReward);
+                writer.Int(KillRewardPerWaveItem, horde.KillRewardPerWave);
+                writer.Bool(PurchasesOnlyBetweenWavesItem, horde.PurchasesOnlyBetweenWaves);
+                writer.Int(KillScoreItem, horde.KillScore);
+                writer.Int(BuildCostItem, horde.BuildCost);
+                writer.Int(RepairCostPerPieceItem, horde.RepairCostPerPiece);
+                writer.Float(InteractRadiusItem, horde.InteractRadius);
+                writer.Float(CorpseSecondsItem, horde.CorpseSeconds);
+                writer.Float(AlertIntervalItem, horde.AlertInterval);
+                writer.Int(WaveCountItem, horde.WaveCount);
+                writer.Float(RestSecondsItem, horde.RestSeconds);
+                writer.Int(FirstEnemyCountItem, horde.FirstEnemyCount);
+                writer.Float(EnemiesPerWaveItem, horde.EnemiesPerWave);
+                writer.Float(FirstStrengthItem, horde.FirstStrength);
+                writer.Float(StrengthPerWaveItem, horde.StrengthPerWave);
+                writer.Float(MaxStrengthItem, horde.MaxStrength);
+                writer.Int(MaxAliveItem, horde.MaxAlive);
+                writer.EndObject();
+            }
+
             writer.EndObject();
 
             var motor = file.Motor.Motor;
@@ -679,6 +734,7 @@ namespace Shooter.Core
             var voteKick = ReadVoteKick(match.Object(VoteKickItem, _voteKickItems), d.VoteKick);
             var payload = ReadPayload(match.Object(PayloadItem, _payloadItems), d.Payload);
             var economy = ReadEconomy(match.Object(EconomyItem, _economyItems), d.Economy);
+            var horde = ReadHorde(match.Object(HordeItem, _hordeItems), d.Horde);
             try
             {
                 return new NetMatchSettings(
@@ -716,7 +772,8 @@ namespace Shooter.Core
                     voteKick,
                     payload,
                     economy,
-                    match.ReadInt(MaxDisplayNameLengthItem, d.MaxDisplayNameLength));
+                    match.ReadInt(MaxDisplayNameLengthItem, d.MaxDisplayNameLength),
+                    horde);
             }
             catch (ArgumentException e)
             {
@@ -948,6 +1005,41 @@ namespace Shooter.Core
                     fields.ReadInt(RoundLossRewardItem, fallback.RoundLossReward),
                     fields.ReadInt(LossStreakBonusItem, fallback.LossStreakBonus),
                     fields.ReadInt(MaxLossRewardItem, fallback.MaxLossReward));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static HordeSettings ReadHorde(ServerDataJson.Fields fields, HordeSettings fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new HordeSettings(
+                    fields.ReadInt(StartingCurrencyItem, fallback.StartingCurrency),
+                    fields.ReadInt(KillRewardItem, fallback.KillReward),
+                    fields.ReadInt(KillRewardPerWaveItem, fallback.KillRewardPerWave),
+                    fields.ReadBool(PurchasesOnlyBetweenWavesItem, fallback.PurchasesOnlyBetweenWaves),
+                    fields.ReadInt(KillScoreItem, fallback.KillScore),
+                    fields.ReadInt(BuildCostItem, fallback.BuildCost),
+                    fields.ReadInt(RepairCostPerPieceItem, fallback.RepairCostPerPiece),
+                    fields.ReadFloat(InteractRadiusItem, fallback.InteractRadius),
+                    fields.ReadFloat(CorpseSecondsItem, fallback.CorpseSeconds),
+                    fields.ReadFloat(AlertIntervalItem, fallback.AlertInterval),
+                    fields.ReadInt(WaveCountItem, fallback.WaveCount),
+                    fields.ReadFloat(RestSecondsItem, fallback.RestSeconds),
+                    fields.ReadInt(FirstEnemyCountItem, fallback.FirstEnemyCount),
+                    fields.ReadFloat(EnemiesPerWaveItem, fallback.EnemiesPerWave),
+                    fields.ReadFloat(FirstStrengthItem, fallback.FirstStrength),
+                    fields.ReadFloat(StrengthPerWaveItem, fallback.StrengthPerWave),
+                    fields.ReadFloat(MaxStrengthItem, fallback.MaxStrength),
+                    fields.ReadInt(MaxAliveItem, fallback.MaxAlive));
             }
             catch (ArgumentException e)
             {

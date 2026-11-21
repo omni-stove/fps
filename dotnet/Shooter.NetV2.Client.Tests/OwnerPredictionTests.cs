@@ -149,6 +149,20 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheSlideBitIsSentButNotPredicted()
+        {
+            var buttons = SnapshotMotion.Buttons(true, false, true, false, false, false, slide: true);
+            var frame = new InputFrame(1, Vector2.Zero, 0f, buttons);
+
+            var input = SnapshotMotion.ToInput(frame, false, new MatchRulesSync());
+
+            Assert.That(buttons, Is.EqualTo(InputButtons.Sprint | InputButtons.Crouch | InputButtons.Slide));
+            Assert.That(input.Slide, Is.True);
+            Assert.That(input.SlideAllowed, Is.False, "the slide rule and state do not reach the client yet, so the prediction leaves it to the server");
+            Assert.That(SnapshotMotion.Buttons(true, false, true, false, false, false), Is.EqualTo(InputButtons.Sprint | InputButtons.Crouch));
+        }
+
+        [Test]
         public void TheSimulationTakesTheParachuteTuning()
         {
             var defaults = NetMotorSettings.Default;

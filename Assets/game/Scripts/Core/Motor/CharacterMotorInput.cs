@@ -41,7 +41,9 @@ namespace Shooter.Core
             PlatformMotion platform = default,
             bool openParachute = false,
             bool closeParachute = false,
-            bool parachuteAllowed = false)
+            bool parachuteAllowed = false,
+            bool slide = false,
+            bool slideAllowed = false)
         {
             if (!(carrySpeedMultiplier >= 0f) || float.IsInfinity(carrySpeedMultiplier))
             {
@@ -74,6 +76,8 @@ namespace Shooter.Core
             OpenParachute = openParachute;
             CloseParachute = closeParachute;
             ParachuteAllowed = parachuteAllowed;
+            Slide = slide;
+            SlideAllowed = slideAllowed;
         }
 
         public Vector2 Move { get; }
@@ -115,6 +119,11 @@ namespace Shooter.Core
         public bool CloseParachute { get; }
 
         public bool ParachuteAllowed { get; }
+
+        // 滑り出したいか。始められるか (走っている速さ・立っているか・接地) はシミュレーションが状態で決める
+        public bool Slide { get; }
+
+        public bool SlideAllowed { get; }
 
         // 開いているパラシュートを許すかは残す。倒れただけで閉じると、空中で倒れた人がそのまま落ちて死ぬため。
         public CharacterMotorInput Restrained()
@@ -170,13 +179,14 @@ namespace Shooter.Core
                 proneAllowed: rules.Prone == Shooter.Core.Prone.On,
                 ladderAllowed: rules.Ladder == Shooter.Core.Ladder.On,
                 jumpAllowed: rules.Jump == Shooter.Core.Jump.On,
-                parachuteAllowed: rules.Parachute == Shooter.Core.Parachute.On);
+                parachuteAllowed: rules.Parachute == Shooter.Core.Parachute.On,
+                slideAllowed: rules.Slide == Shooter.Core.Slide.On);
         }
 
         public CharacterMotorInput With(
             bool? cover = null, bool? dodge = null, bool? vaultAllowed = null, bool? prone = null, bool? proneAllowed = null, bool? ladderAllowed = null,
             float? carrySpeedMultiplier = null, bool? jumpAllowed = null, int? lean = null, PlatformMotion? platform = null,
-            bool? openParachute = null, bool? closeParachute = null, bool? parachuteAllowed = null)
+            bool? openParachute = null, bool? closeParachute = null, bool? parachuteAllowed = null, bool? slide = null, bool? slideAllowed = null)
         {
             return new CharacterMotorInput(
                 Move,
@@ -198,7 +208,9 @@ namespace Shooter.Core
                 platform ?? Platform,
                 openParachute ?? OpenParachute,
                 closeParachute ?? CloseParachute,
-                parachuteAllowed ?? ParachuteAllowed);
+                parachuteAllowed ?? ParachuteAllowed,
+                slide ?? Slide,
+                slideAllowed ?? SlideAllowed);
         }
 
         public static bool IsValid(Vector2 move, float yaw)

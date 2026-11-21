@@ -10,7 +10,7 @@ using Shooter.Protocol;
 namespace Shooter.Server.Tests
 {
     // 移動・ルール・戦闘・近接を同じホストで動かし、InputButtons.Melee で振った近接が届く相手にだけ当たることを確かめる
-    public sealed class ServerMeleeTests
+    public sealed partial class ServerMeleeTests
     {
         private const float _tickSeconds = 1f / TickClock.DefaultTickRate;
         private const string _knifeId = "melee.knife";

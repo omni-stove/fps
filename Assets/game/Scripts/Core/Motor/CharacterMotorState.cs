@@ -148,6 +148,45 @@ namespace Shooter.Core
             int airJumpsUsed,
             float jumpGraceLeft,
             CharacterParachuteState parachute)
+            : this(
+                position,
+                velocity,
+                isGrounded,
+                stance,
+                cover,
+                dodge,
+                vault,
+                prone,
+                ladder,
+                knockback,
+                lean,
+                swim,
+                wallRun,
+                airJumpsUsed,
+                jumpGraceLeft,
+                parachute,
+                CharacterSlideState.None)
+        {
+        }
+
+        public CharacterMotorState(
+            Vector3 position,
+            Vector3 velocity,
+            bool isGrounded,
+            PlayerStance stance,
+            CharacterCoverState cover,
+            DodgeSnapshot dodge,
+            CharacterVaultState vault,
+            CharacterProneState prone,
+            CharacterLadderState ladder,
+            CharacterKnockbackState knockback,
+            CharacterLeanState lean,
+            CharacterSwimState swim,
+            CharacterWallRunState wallRun,
+            int airJumpsUsed,
+            float jumpGraceLeft,
+            CharacterParachuteState parachute,
+            CharacterSlideState slide)
         {
             Position = position;
             Velocity = velocity;
@@ -165,6 +204,7 @@ namespace Shooter.Core
             AirJumpsUsed = airJumpsUsed;
             JumpGraceLeft = jumpGraceLeft;
             Parachute = parachute;
+            Slide = slide;
         }
 
         public Vector3 Position { get; }
@@ -205,6 +245,10 @@ namespace Shooter.Core
 
         public bool IsParachuting => Parachute.IsOpen;
 
+        public CharacterSlideState Slide { get; }
+
+        public bool IsSliding => Slide.IsSliding;
+
         public bool IsInJumpGrace => JumpGraceStep.IsOpen(IsGrounded, JumpGraceLeft);
 
         public bool IsSwimming => Swim.IsSwimming;
@@ -227,7 +271,7 @@ namespace Shooter.Core
         public bool IsFinite => IsFiniteVector(Position) && IsFiniteVector(Velocity) && Cover.IsValid && Dodge.IsValid && Vault.IsValid
             && Prone.IsValid && Ladder.IsValid && Knockback.IsValid && Stance >= PlayerStance.Standing && Stance <= PlayerStance.Prone
             && Lean.IsValid && Swim.IsValid && WallRun.IsValid && AirJumpsUsed >= 0
-            && JumpGraceLeft >= 0f && !float.IsInfinity(JumpGraceLeft) && Parachute.IsValid;
+            && JumpGraceLeft >= 0f && !float.IsInfinity(JumpGraceLeft) && Parachute.IsValid && Slide.IsValid;
 
         // 位置が一致していても姿勢が違えばカプセルの高さが違い、以降の移動も目の高さも変わるので、位置の許容値に埋もれさせず必ず巻き戻す。
         // 待ち時間の食い違いだけでは巻き戻さない (次に始められるかが変われば、そのとき転がっているかが食い違う)。
@@ -250,6 +294,7 @@ namespace Shooter.Core
                 || predicted.IsDiving != authoritative.IsDiving
                 || predicted.IsKnockedBack != authoritative.IsKnockedBack
                 || predicted.IsParachuting != authoritative.IsParachuting
+                || predicted.IsSliding != authoritative.IsSliding
                 || predicted.Ladder.IsClimbing != authoritative.Ladder.IsClimbing
                 || (predicted.Ladder.IsClimbing && predicted.Ladder.Index != authoritative.Ladder.Index))
             {
@@ -272,14 +317,21 @@ namespace Shooter.Core
         {
             return new CharacterMotorState(
                 Position, Velocity, IsGrounded, Stance, Cover, Dodge, Vault, Prone, Ladder, knockback, Lean, Swim, WallRun, AirJumpsUsed, JumpGraceLeft,
-                Parachute);
+                Parachute, Slide);
         }
 
         public CharacterMotorState WithParachute(CharacterParachuteState parachute)
         {
             return new CharacterMotorState(
                 Position, Velocity, IsGrounded, Stance, Cover, Dodge, Vault, Prone, Ladder, Knockback, Lean, Swim, WallRun, AirJumpsUsed, JumpGraceLeft,
-                parachute);
+                parachute, Slide);
+        }
+
+        public CharacterMotorState WithSlide(CharacterSlideState slide)
+        {
+            return new CharacterMotorState(
+                Position, Velocity, IsGrounded, Stance, Cover, Dodge, Vault, Prone, Ladder, Knockback, Lean, Swim, WallRun, AirJumpsUsed, JumpGraceLeft,
+                Parachute, slide);
         }
 
         public bool Equals(CharacterMotorState other)
@@ -299,7 +351,8 @@ namespace Shooter.Core
                 && WallRun.Equals(other.WallRun)
                 && AirJumpsUsed == other.AirJumpsUsed
                 && JumpGraceLeft.Equals(other.JumpGraceLeft)
-                && Parachute.Equals(other.Parachute);
+                && Parachute.Equals(other.Parachute)
+                && Slide.Equals(other.Slide);
         }
 
         public override bool Equals(object obj)
@@ -324,7 +377,7 @@ namespace Shooter.Core
                 return (Position.GetHashCode() * 397) ^ Velocity.GetHashCode() ^ (IsGrounded ? 1 : 0) ^ ((int)Stance << 1)
                     ^ Cover.GetHashCode() ^ Dodge.GetHashCode() ^ Vault.GetHashCode() ^ Prone.GetHashCode() ^ Ladder.GetHashCode()
                     ^ Knockback.GetHashCode() ^ Lean.GetHashCode() ^ Swim.GetHashCode() ^ WallRun.GetHashCode() ^ (AirJumpsUsed << 4)
-                    ^ JumpGraceLeft.GetHashCode() ^ (Parachute.GetHashCode() << 2);
+                    ^ JumpGraceLeft.GetHashCode() ^ (Parachute.GetHashCode() << 2) ^ (Slide.GetHashCode() << 3);
             }
         }
 

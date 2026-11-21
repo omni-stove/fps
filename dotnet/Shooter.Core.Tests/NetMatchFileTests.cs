@@ -220,6 +220,41 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheSlideTuningReadsBackAndDefaultsWhenLeftOut()
+        {
+            var defaults = NetMotorSettings.Default;
+            var motor = new NetMotorSettings(
+                defaults.Motor, defaults.Stance, defaults.Mover, defaults.Prone, defaults.Swim, defaults.WallRun, defaults.Parachute,
+                new SlideTuning(13f, 6f, 2f, 0.3f, 2.5f, 15f));
+            var original = new NetMatchFile(
+                "TeamDeathmatch", GameRules.Default, NetMatchSettings.Default, "DefaultLoadout",
+                new LoadoutRule(new[] { new[] { WeaponCategory.AssaultRifle }, new[] { WeaponCategory.Handgun } }),
+                new[] { Rifle(), Handgun() }, 0.4f, null, null, motor);
+
+            var text = NetMatchFile.Write(original);
+            var read = NetMatchFile.Parse(text, "slide.json").Motor.Slide;
+
+            Assert.That(read.StartSpeed, Is.EqualTo(13f));
+            Assert.That(read.Deceleration, Is.EqualTo(6f));
+            Assert.That(read.EndSpeed, Is.EqualTo(2f));
+            Assert.That(read.MinSeconds, Is.EqualTo(0.3f));
+            Assert.That(read.MaxSeconds, Is.EqualTo(2.5f));
+            Assert.That(read.SlopeAcceleration, Is.EqualTo(15f));
+            Assert.That(text, Does.Contain("\"slideStartSpeed\": 13"));
+
+            var bareText = "{\"loadout\": {\"slots\": [[\"Handgun\"]], \"weapons\": [\"" + _handgunId + "\"]}, \"weapons\": [" + _handgunJson + "]";
+            var partial = NetMatchFile.Parse(bareText + ", \"motor\": {\"slideStartSpeed\": 12.5}}", "partial.json").Motor.Slide;
+
+            Assert.That(partial.StartSpeed, Is.EqualTo(12.5f));
+            Assert.That(partial.Deceleration, Is.EqualTo(SlideMotion.DefaultDeceleration));
+            Assert.That(partial.EndSpeed, Is.EqualTo(SlideMotion.DefaultEndSpeed));
+            Assert.That(partial.MinSeconds, Is.EqualTo(SlideMotion.DefaultMinSeconds));
+            Assert.That(partial.MaxSeconds, Is.EqualTo(SlideMotion.DefaultMaxSeconds));
+            Assert.That(partial.SlopeAcceleration, Is.EqualTo(SlideMotion.DefaultSlopeAcceleration));
+            Assert.That(NetMotorSettings.Default.Slide, Is.SameAs(SlideTuning.Default));
+        }
+
+        [Test]
         public void CarryLoadReadsBackAndDefaultsWhenLeftOut()
         {
             var carry = new CarryLoadSpec(CarrySource.Carried, CarrySource.None, 5f, 0.04f, 0.6f, CarryGaits.Walk | CarryGaits.Sprint);
@@ -299,6 +334,12 @@ namespace Shooter.Core.Tests
         [TestCase("{\"motor\": {\"parachuteDescentSpeed\": -1}}", "motor.parachuteDescentSpeed")]
         [TestCase("{\"motor\": {\"parachuteHorizontalSpeed\": -1}}", "motor.parachuteHorizontalSpeed")]
         [TestCase("{\"motor\": {\"parachuteSteerAcceleration\": 0}}", "motor.parachuteSteerAcceleration")]
+        [TestCase("{\"motor\": {\"slideStartSpeed\": 3}}", "motor.slideStartSpeed")]
+        [TestCase("{\"motor\": {\"slideDeceleration\": -1}}", "motor.slideDeceleration")]
+        [TestCase("{\"motor\": {\"slideEndSpeed\": -1}}", "motor.slideEndSpeed")]
+        [TestCase("{\"motor\": {\"slideMinSeconds\": 4}}", "motor.slideMinSeconds")]
+        [TestCase("{\"motor\": {\"slideMaxSeconds\": 0}}", "motor.slideMaxSeconds")]
+        [TestCase("{\"motor\": {\"slideSlopeAcceleration\": -1}}", "motor.slideSlopeAcceleration")]
         public void BadMotorValuesNameTheItem(string text, string item)
         {
             var e = Assert.Throws<ServerDataJsonException>(() => NetMatchFile.Parse(text, "bad.json"));

@@ -53,6 +53,7 @@ docker compose -f docker/server/compose.yaml up -d
 - Bot は人が 1 人もいないと置かれない。試すときはクライアントを 1 人つなぐ。
 - ドローン・暗視とサーマルはオフラインだけで、サーバーでは効かない。
 - プレイリストでは `match.*` と武器が最初の項目のルールのまま変わらないので、後の項目で使うモードの節も最初の項目に書く。
+- `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力・速さ・武器 (`infectedMaxHealth`・`infectedSpeedMultiplier`・`infectedWeaponId`) はまだサーバーでは変わらない。
 
 ## CI のテンプレート
 

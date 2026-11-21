@@ -12,7 +12,8 @@ namespace Shooter.Server
         private readonly List<Vector3> _candidatePoints = new List<Vector3>();
         private readonly List<int> _order = new List<int>();
 
-        private void Strike(int attackerId, MeleeSpec spec)
+        // weaponId が null なら、ふつうの近接として StrikeWeaponId で数える
+        private void Strike(int attackerId, MeleeSpec spec, string weaponId)
         {
             if (!_context.Bodies.TryGet(attackerId, out var attacker))
             {
@@ -30,7 +31,7 @@ namespace Shooter.Server
 
             var distance = Vector3.Distance(origin, point);
             _log.WriteLine(MeleeLog.Hit(Text(attackerId), Text(target), spec.Damage, distance));
-            _combat.DealDamage(attackerId, target, spec.Damage, StrikeWeaponId(attacker), HitZone.Body, attacker.Position);
+            _combat.DealDamage(attackerId, target, spec.Damage, weaponId ?? StrikeWeaponId(attacker), HitZone.Body, attacker.Position);
         }
 
         // 並びは Id の小さい順にそろえ、同じ距離の相手を毎回同じに選ぶ (MeleeStrike.TryFind と同じ)。壁越しの相手は外す

@@ -21,6 +21,7 @@ namespace Shooter.Server
                 return false;
             }
 
+            CancelMantle(mover);
             mover.Simulation.SpawnPosition = position;
             mover.State = new CharacterMotorState(position, Vector3.Zero, false, false);
             mover.Simulation.Place(mover.State);
@@ -43,6 +44,7 @@ namespace Shooter.Server
                 return false;
             }
 
+            CancelMantle(mover);
             var simulation = mover.Simulation;
             mover.State = simulation.Deploy(
                 new CharacterMotorState(position, Vector3.Zero, false, false), _settings.Rules.Actions.Parachute == Parachute.On);
@@ -88,6 +90,7 @@ namespace Shooter.Server
                 return false;
             }
 
+            CancelMantle(mover);
             mover.Riding = true;
             mover.State = new CharacterMotorState(position, velocity, true, crouched);
             mover.Simulation.Place(mover.State);

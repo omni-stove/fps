@@ -293,7 +293,7 @@ namespace Shooter.Core.Tests
         public void EveryObjectiveHasItsOwnModeName()
         {
             var names = new HashSet<string>();
-            foreach (MatchObjective objective in Enum.GetValues(typeof(MatchObjective)))
+            foreach (MatchObjective objective in Enum.GetValues<MatchObjective>())
             {
                 Assert.That(names.Add(ServerLobby.ModeName(objective)), Is.True, objective.ToString());
             }

@@ -269,7 +269,14 @@ namespace Shooter.Editor
                 keepClear.Add(("payload route point " + i, PayloadRoutePoints[i], PayloadRouteClearance));
             }
 
-            return NetMapFeatureBuilder.Problems(features, HalfExtent, Obstacles(), keepClear);
+            // 点だけを避けると点と点の間の道筋に足場が建つので、隣り合う点を結ぶ線分で避ける。
+            var route = new List<(string Name, Vector3 From, Vector3 To, float Radius)>();
+            for (var i = 0; i + 1 < PayloadRoutePoints.Count; i++)
+            {
+                route.Add(("payload route segment " + i, PayloadRoutePoints[i], PayloadRoutePoints[i + 1], PayloadRouteClearance));
+            }
+
+            return NetMapFeatureBuilder.Problems(features, HalfExtent, Obstacles(), keepClear, route);
         }
 
         public static void RequireNavigable(NetMapFeatureLayout features)

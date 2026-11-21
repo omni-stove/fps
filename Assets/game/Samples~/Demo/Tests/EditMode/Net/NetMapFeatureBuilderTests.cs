@@ -294,6 +294,21 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void ATowerBetweenTwoPayloadRoutePointsIsRefused()
+        {
+            var points = ArenaSceneBuilder.PayloadRoutePoints;
+            var middle = (points[0] + points[1]) * 0.5f;
+            var layout = new NetMapFeatureLayout(
+                new[] { new NetMapLadderTower("Blocker", new Vector3(middle.x, GroundY, middle.z), new Vector3(2f, 3f, 2f), NetMapFeatureLayout.East, 0.8f) },
+                Array.Empty<NetMapWaterPool>(),
+                Array.Empty<NetMapVehicleSpot>());
+
+            var problems = ArenaSceneBuilder.FeatureProblems(layout, CaptureTheFlagSpecRadius());
+
+            Assert.That(problems, Has.Member("Blocker covers payload route segment 0"));
+        }
+
+        [Test]
         public void TheLadderFootIsInFrontOfTheLadder()
         {
             var points = NetSceneBuilder.LadderApproachPoints(Layout);

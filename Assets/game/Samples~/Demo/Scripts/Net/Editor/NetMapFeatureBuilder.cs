@@ -116,7 +116,8 @@ namespace Shooter.Editor
             NetMapFeatureLayout layout,
             float halfExtent,
             IEnumerable<(string Name, Vector3 Center, Vector3 Size)> obstacles,
-            IEnumerable<(string Name, Vector3 Position, float Radius)> keepClear)
+            IEnumerable<(string Name, Vector3 Position, float Radius)> keepClear,
+            IEnumerable<(string Name, Vector3 From, Vector3 To, float Radius)> keepClearSegments = null)
         {
             if (layout == null)
             {
@@ -159,6 +160,7 @@ namespace Shooter.Editor
             var inside = halfExtent - FloorMargin;
             var obstacleList = obstacles?.ToList() ?? new List<(string, Vector3, Vector3)>();
             var keepClearList = keepClear?.ToList() ?? new List<(string, Vector3, float)>();
+            var segmentList = keepClearSegments?.ToList() ?? new List<(string, Vector3, Vector3, float)>();
             for (var i = 0; i < footprints.Count; i++)
             {
                 var (name, bounds) = footprints[i];
@@ -180,6 +182,14 @@ namespace Shooter.Editor
                     if (HorizontalDistance(position, bounds) < radius)
                     {
                         problems.Add(name + " covers " + pointName);
+                    }
+                }
+
+                foreach (var (segmentName, from, to, radius) in segmentList)
+                {
+                    if (HorizontalDistance(from, to, bounds) < radius)
+                    {
+                        problems.Add(name + " covers " + segmentName);
                     }
                 }
 
@@ -339,6 +349,50 @@ namespace Shooter.Editor
             var dx = Mathf.Max(0f, bounds.min.x - point.x, point.x - bounds.max.x);
             var dz = Mathf.Max(0f, bounds.min.z - point.z, point.z - bounds.max.z);
             return new Vector2(dx, dz).magnitude;
+        }
+
+        // 線分が長方形を貫くときは端点も角も遠いことがあるので、先に交差を見て、交わらなければ端点と角からの最短を取る。
+        private static float HorizontalDistance(Vector3 from, Vector3 to, Bounds bounds)
+        {
+            var a = new Vector2(from.x, from.z);
+            var b = new Vector2(to.x, to.z);
+            var min = new Vector2(bounds.min.x, bounds.min.z);
+            var max = new Vector2(bounds.max.x, bounds.max.z);
+            var d = b - a;
+            var t0 = 0f;
+            var t1 = 1f;
+            for (var axis = 0; axis < 2; axis++)
+            {
+                if (Mathf.Abs(d[axis]) < 1e-6f)
+                {
+                    if (a[axis] < min[axis] || a[axis] > max[axis])
+                    {
+                        t0 = 2f;
+                    }
+
+                    continue;
+                }
+
+                var ta = (min[axis] - a[axis]) / d[axis];
+                var tb = (max[axis] - a[axis]) / d[axis];
+                t0 = Mathf.Max(t0, Mathf.Min(ta, tb));
+                t1 = Mathf.Min(t1, Mathf.Max(ta, tb));
+            }
+
+            if (t0 <= t1)
+            {
+                return 0f;
+            }
+
+            var best = Mathf.Min(HorizontalDistance(from, bounds), HorizontalDistance(to, bounds));
+            var corners = new[] { min, new Vector2(min.x, max.y), max, new Vector2(max.x, min.y) };
+            foreach (var corner in corners)
+            {
+                var t = d.sqrMagnitude < 1e-12f ? 0f : Mathf.Clamp01(Vector2.Dot(corner - a, d) / d.sqrMagnitude);
+                best = Mathf.Min(best, (corner - (a + d * t)).magnitude);
+            }
+
+            return best;
         }
 
         private static string FullPath(string assetPath)

@@ -21,10 +21,11 @@ namespace Shooter.Runtime
             RegisterMainMenuPanels();
         }
 
-        // 口 (GameSignals) がまだ出ていなくても登録する。リーダーボードとリプレイは出ていなければ「使えない」を出し、
+        // 口 (GameSignals) がまだ出ていなくても登録する。サーバー一覧・リーダーボード・リプレイは出ていなければ「使えない」を出し、
         // 統計と見た目は記録係が無ければ開くときの例外をメインメニューが知らせに出す。
         public static void RegisterMainMenuPanels()
         {
+            MainMenuPanels.UseDefault(MainMenuPanelKind.ServerBrowser, slot => new ServerBrowserPanel(slot));
             MainMenuPanels.UseDefault(MainMenuPanelKind.Stats, StatsPanel.Open);
             MainMenuPanels.UseDefault(MainMenuPanelKind.Leaderboard, slot => new LeaderboardPanel(slot));
             MainMenuPanels.UseDefault(MainMenuPanelKind.Replays, slot => new ReplayPanel(slot));

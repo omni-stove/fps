@@ -82,6 +82,11 @@ namespace Shooter.Runtime
 
         public static GameSignal<IJoinByCode> JoinByCode { get; } = new GameSignal<IJoinByCode>(nameof(JoinByCode));
 
+        public static GameSignal<ServerBrowserStatus?> ServerBrowser { get; } = new GameSignal<ServerBrowserStatus?>(nameof(ServerBrowser));
+
+        public static GameSignal<IServerBrowserControl> ServerBrowserControl { get; } =
+            new GameSignal<IServerBrowserControl>(nameof(ServerBrowserControl));
+
         public static GameSignal<IReportSender> ReportSender { get; } = new GameSignal<IReportSender>(nameof(ReportSender));
 
         public static GameSignal<IBlockControl> BlockControl { get; } = new GameSignal<IBlockControl>(nameof(BlockControl));
@@ -172,6 +177,8 @@ namespace Shooter.Runtime
             Party.Reset();
             PartyControl.Reset();
             JoinByCode.Reset();
+            ServerBrowser.Reset();
+            ServerBrowserControl.Reset();
             ReportSender.Reset();
             BlockControl.Reset();
             Leaderboard.Reset();

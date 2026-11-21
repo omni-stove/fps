@@ -54,6 +54,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameSignals.Party.Value, Is.Null);
             Assert.That(GameSignals.PartyControl.Value, Is.Null);
             Assert.That(GameSignals.JoinByCode.Value, Is.Null);
+            Assert.That(GameSignals.ServerBrowser.Value, Is.Null);
+            Assert.That(GameSignals.ServerBrowserControl.Value, Is.Null);
             Assert.That(GameSignals.ReportSender.Value, Is.Null);
             Assert.That(GameSignals.BlockControl.Value, Is.Null);
             Assert.That(GameSignals.Leaderboard.Value, Is.Null);
@@ -185,6 +187,8 @@ namespace Shooter.Tests.EditMode
             GameSignals.Party.Publish(new PartyStatus(PartyStage.InParty, new[] { new PartyMember("Ann", true) }, "lobby-1", true));
             GameSignals.PartyControl.Publish(new FakePartyControl());
             GameSignals.JoinByCode.Publish(new FakeJoinByCode());
+            GameSignals.ServerBrowser.Publish(new ServerBrowserStatus(ServerBrowserStage.Loading, null));
+            GameSignals.ServerBrowserControl.Publish(new FakeServerBrowserControl());
             GameSignals.ReportSender.Publish(new FakeReportSender());
             GameSignals.BlockControl.Publish(new FakeBlockControl());
             GameSignals.Leaderboard.Publish(new LeaderboardStatus("kills", LeaderboardStage.Loading, null));
@@ -684,6 +688,23 @@ namespace Shooter.Tests.EditMode
             public void Join(string code, Action<JoinCodeOutcome> done)
             {
                 done(JoinCodeOutcome.NotFound);
+            }
+        }
+
+        private sealed class FakeServerBrowserControl : IServerBrowserControl
+        {
+            public bool Refresh()
+            {
+                return true;
+            }
+
+            public void Join(string serverId, Action<ServerJoinOutcome> done)
+            {
+                done(ServerJoinOutcome.NotFound);
+            }
+
+            public void Close()
+            {
             }
         }
 

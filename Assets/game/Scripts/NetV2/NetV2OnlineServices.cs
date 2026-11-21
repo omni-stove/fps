@@ -13,6 +13,7 @@ namespace Shooter.NetV2
 
         private NetV2PartyControl _party;
         private NetV2JoinByCode _joinByCode;
+        private NetV2ServerBrowser _serverBrowser;
         private NetV2Leaderboard _leaderboard;
 
         public static NetV2OnlineServices Current { get; private set; }
@@ -20,6 +21,9 @@ namespace Shooter.NetV2
         public NetV2PartyControl Party => _party;
 
         public NetV2JoinByCode JoinByCode => _joinByCode;
+
+        // メインメニューのサーバー一覧が開く口 (GameSignals.ServerBrowserControl)
+        public NetV2ServerBrowser ServerBrowser => _serverBrowser;
 
         // メインメニューのリーダーボードの画面が開く口 (GameSignals.LeaderboardControl)。EOS のリーダーボードを作れなければ null
         public NetV2Leaderboard Leaderboard => _leaderboard;
@@ -75,6 +79,13 @@ namespace Shooter.NetV2
                 () => services._party != null ? services._party.MatchPlayers : 1,
                 NetV2Client.ConnectByJoinCode,
                 log);
+            services._serverBrowser = new NetV2ServerBrowser(
+                () => factory.CreateLobbyBackend(credentials),
+                new NetV2ServerPinger(),
+                version,
+                () => services._party != null ? services._party.MatchPlayers : 1,
+                NetV2Client.ConnectToServer,
+                log);
 
             // ボードの並びはサーバーの送る統計 (server-data/tuning/leaderboards.json) と同じ調整値から読む
             services._leaderboard = NetV2Leaderboard.Create(KitTuning.Leaderboards, log);
@@ -92,6 +103,7 @@ namespace Shooter.NetV2
             var now = Time.unscaledTime;
             _party?.Tick(now);
             _joinByCode?.Tick(now);
+            _serverBrowser?.Tick(now);
             _leaderboard?.Tick(Time.unscaledDeltaTime);
         }
 
@@ -104,6 +116,8 @@ namespace Shooter.NetV2
 
             _leaderboard?.Dispose();
             _leaderboard = null;
+            _serverBrowser?.Dispose();
+            _serverBrowser = null;
             _joinByCode?.Dispose();
             _joinByCode = null;
             _party?.Dispose();

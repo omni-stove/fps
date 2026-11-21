@@ -263,13 +263,19 @@ namespace Shooter.Server
         public bool BotFire(int playerId, Vector3 origin, Vector3 direction, int tick)
         {
             // 盾の武器を持った Bot は撃てないので、断られる要求を作って違反の数と警告を増やさない
-            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null
-                || fighter.Weapons.CurrentSpec.IsShield || !fighter.Weapons.IsChargedForBot())
+            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter))
             {
                 return false;
             }
 
-            _botFire.WeaponId = fighter.Weapons.CurrentSpec.Id;
+            // 座席の武器を撃つ座席 (固定銃座) では、人と同じく持っている武器ではなく座席の武器で撃つ
+            var weapons = ActiveWeapons(fighter);
+            if (weapons.CurrentSpec == null || weapons.CurrentSpec.IsShield || !weapons.IsChargedForBot())
+            {
+                return false;
+            }
+
+            _botFire.WeaponId = weapons.CurrentSpec.Id;
             _botFire.Origin = origin;
             _botFire.Direction = direction;
             _botFire.ClientTick = tick;
@@ -277,7 +283,7 @@ namespace Shooter.Server
             _botFire.ShotIndex = fighter.Shots.NextIndex;
             _botFire.ShotGeneration = fighter.Shots.Generation;
             _botFire.ChargeFraction = 1f;
-            _botFire.AmmoTypeIndex = fighter.Weapons.AmmoTypeIndex;
+            _botFire.AmmoTypeIndex = weapons.AmmoTypeIndex;
             _botFire.HasLockTarget = false;
             _botFire.LockTargetId = 0;
             _botFire.LockTargetKind = LockTargetKind.Player;
@@ -383,7 +389,29 @@ namespace Shooter.Server
 
         public bool BotReload(int playerId)
         {
-            return BotRoster.IsBotId(playerId) && _fighters.TryGetValue(playerId, out var fighter) && !IsReloadHeldOff(fighter) && fighter.Weapons.TryReload();
+            return BotRoster.IsBotId(playerId) && _fighters.TryGetValue(playerId, out var fighter) && !IsReloadHeldOff(fighter)
+                && ActiveWeapons(fighter).TryReload();
+        }
+
+        // Bot が今撃つ武器。座席の武器を撃つ座席に乗っていればその武器 (TryGetWeapon は持っている武器だけを見る)
+        public bool TryGetBotWeapon(int playerId, out WeaponSpec spec, out WeaponSync state)
+        {
+            spec = null;
+            state = default;
+            if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter))
+            {
+                return false;
+            }
+
+            var weapons = ActiveWeapons(fighter);
+            spec = weapons.CurrentSpec;
+            if (spec == null)
+            {
+                return false;
+            }
+
+            state = weapons.Sync();
+            return true;
         }
 
         // 散らばりは持ち主の予測と同じ計算になるよう、武器の値と、サーバーの知る覗き込みと移動の速さで決める。

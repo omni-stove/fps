@@ -21,6 +21,7 @@ namespace Shooter.Server
             _random = random ?? throw new ArgumentNullException(nameof(random));
             Brain = new EnemyBrain(spec.Brain);
             AddArchetypeBehaviors();
+            AddMountedGunBehavior();
             SetRoute(route);
             Driver = new BotDriver(spec.Input, random);
             Route = new ServerBotRoute(navigation, spec);
@@ -92,6 +93,7 @@ namespace Shooter.Server
             _nextCoverSearch = Clock;
             _nextGrenadeAt = Clock;
             ResetArchetype();
+            ResetMountedGun();
         }
     }
 }

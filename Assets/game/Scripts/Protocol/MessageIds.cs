@@ -40,6 +40,7 @@ namespace Shooter.Protocol
         public const ushort DroneControl = 38;
 
         public const ushort DetonateRequest = 39;
+        public const ushort HordeFortifyRequest = 40;
 
         public const ushort Snapshot = 48;
         public const ushort StructureState = 49;

@@ -92,6 +92,7 @@ namespace Shooter.Protocol
             _owner.Stagger = Shooter.Core.StaggerKind.None;
             _owner.SuppressionLevel = 0f;
             _owner.Suppressed = false;
+            _owner.HordeOffer = null;
             _owner.Grenades.Clear();
             _owner.EquippedWeaponIds.Clear();
             _owner.Present = OwnerFields.All;

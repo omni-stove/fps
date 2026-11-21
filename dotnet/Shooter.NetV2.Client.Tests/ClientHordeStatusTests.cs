@@ -149,6 +149,99 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void TheOfferSentToTheOwnerIsShownWithTheKey()
+        {
+            _status.InteractKeyLabel = "F";
+            var snapshot = Snapshot(wave: 1, waves: 5, remaining: 0, nextWave: 4);
+            snapshot.HasOwner = true;
+            snapshot.Owner.HordeOffer = new HordeOfferSync(2, HordeFortificationAction.Build, "Gate", 40, HordePurchaseVerdict.Ok);
+
+            Assert.That(_status.Apply(snapshot), Is.True);
+
+            var offer = _status.Horde.Offer;
+            Assert.That(offer.HasValue, Is.True);
+            Assert.That(offer.Value.Action, Is.EqualTo(HordeFortificationAction.Build));
+            Assert.That(offer.Value.StructureName, Is.EqualTo("Gate"));
+            Assert.That(offer.Value.Cost, Is.EqualTo(40));
+            Assert.That(offer.Value.Verdict, Is.EqualTo(HordePurchaseVerdict.Ok));
+            Assert.That(offer.Value.KeyLabel, Is.EqualTo("F"));
+            Assert.That(_status.OffersFortify, Is.True);
+        }
+
+        [Test]
+        public void AChangedOfferOrKeyMakesANewStatus()
+        {
+            var snapshot = Snapshot(wave: 1, waves: 5, remaining: 0, nextWave: 4);
+            snapshot.HasOwner = true;
+            snapshot.Owner.HordeOffer = new HordeOfferSync(2, HordeFortificationAction.Repair, "Wall", 8, HordePurchaseVerdict.Ok);
+            _status.Apply(snapshot);
+            var shown = _status.Status;
+
+            Assert.That(_status.Apply(snapshot), Is.False, "the same offer keeps the status");
+
+            snapshot.Owner.HordeOffer = new HordeOfferSync(2, HordeFortificationAction.Repair, "Wall", 4, HordePurchaseVerdict.Ok);
+            Assert.That(_status.Apply(snapshot), Is.True, "a cheaper repair");
+            Assert.That(((HordeStatus)shown.Detail).Offer.Value.Cost, Is.EqualTo(8));
+
+            _status.InteractKeyLabel = "E";
+            Assert.That(_status.Apply(snapshot), Is.True, "a rebound key");
+            Assert.That(_status.Horde.Offer.Value.KeyLabel, Is.EqualTo("E"));
+
+            snapshot.Owner.HordeOffer = null;
+            Assert.That(_status.Apply(snapshot), Is.True, "walked away");
+            Assert.That(_status.Horde.Offer, Is.Null);
+            Assert.That(_status.OffersFortify, Is.False);
+        }
+
+        [Test]
+        public void NoOfferIsShownAfterTheEndOrToASpectator()
+        {
+            var ended = Snapshot(wave: 5, waves: 5, remaining: 0, state: GameModeState.Ended, winner: Team.Alpha);
+            ended.HasOwner = true;
+            ended.Owner.HordeOffer = new HordeOfferSync(2, HordeFortificationAction.Repair, "Wall", 8, HordePurchaseVerdict.NotPlaying);
+            var watching = Snapshot(wave: 1, waves: 5, remaining: 0, selfInMatch: false);
+            watching.HasOwner = true;
+            watching.Owner.HordeOffer = new HordeOfferSync(2, HordeFortificationAction.Repair, "Wall", 8, HordePurchaseVerdict.Ok);
+
+            _status.Apply(ended);
+            Assert.That(_status.Horde.Offer, Is.Null);
+
+            _status.Apply(watching);
+            Assert.That(_status.Horde.Offer, Is.Null);
+        }
+
+        [Test]
+        public void TheRequestIsSentOnlyWhenTheOfferCanBePaid()
+        {
+            var sent = 0;
+            IMessage last = null;
+            var status = new ClientHordeStatus(_self, message =>
+            {
+                sent++;
+                last = message;
+                return true;
+            });
+            var snapshot = Snapshot(wave: 1, waves: 5, remaining: 2);
+            snapshot.HasOwner = true;
+
+            Assert.That(status.RequestFortify(), Is.False, "nothing has arrived yet");
+
+            snapshot.Owner.HordeOffer = new HordeOfferSync(2, HordeFortificationAction.Repair, "Wall", 8, HordePurchaseVerdict.WaveInProgress);
+            status.Apply(snapshot);
+            Assert.That(status.RequestFortify(), Is.False, "the wave is still fighting");
+            Assert.That(sent, Is.Zero);
+
+            snapshot.Owner.HordeOffer = new HordeOfferSync(2, HordeFortificationAction.Repair, "Wall", 8, HordePurchaseVerdict.Ok);
+            status.Apply(snapshot);
+            Assert.That(status.RequestFortify(), Is.True);
+            Assert.That(sent, Is.EqualTo(1));
+            Assert.That(last, Is.InstanceOf<HordeFortifyRequestMessage>());
+
+            _status.Apply(snapshot);
+            Assert.That(_status.RequestFortify(), Is.False, "a status without a sender only shows the offer");
+        }
+
+        [Test]
         public void BadArgumentsAreRejected()
         {
             Assert.Throws<ArgumentNullException>(() => _status.Apply(null));

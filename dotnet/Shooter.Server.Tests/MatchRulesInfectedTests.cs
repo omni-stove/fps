@@ -10,6 +10,7 @@ namespace Shooter.Server.Tests
     public sealed class MatchRulesInfectedTests
     {
         private const float _tickSeconds = 1f / 60f;
+        private static readonly int[] _firstInfected = { 1 };
         private static readonly DateTime _time = new DateTime(2026, 11, 21, 9, 0, 0, DateTimeKind.Utc);
 
         private StringWriter _log;
@@ -66,8 +67,8 @@ namespace Shooter.Server.Tests
             Advance(1.1f);
 
             Assert.That(rules.Infected.HasBrokenOut, Is.True);
-            Assert.That(rules.Infected.FirstInfectedIds, Is.EqualTo(new[] { 1 }));
-            Assert.That(_log.ToString(), Does.Contain(InfectedLog.Outbreak(new[] { 1 })));
+            Assert.That(rules.Infected.FirstInfectedIds, Is.EqualTo(_firstInfected));
+            Assert.That(_log.ToString(), Does.Contain(InfectedLog.Outbreak(_firstInfected)));
             snapshot = Match();
             Assert.That(snapshot.AlphaPoints, Is.EqualTo(2));
             Assert.That(snapshot.BravoPoints, Is.EqualTo(1));

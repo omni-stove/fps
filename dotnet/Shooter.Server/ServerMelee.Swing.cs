@@ -54,6 +54,11 @@ namespace Shooter.Server
                 return;
             }
 
+            Begin(swinger);
+        }
+
+        private void Begin(Swinger swinger)
+        {
             swinger.Swing.TryStart();
             _log.WriteLine(MeleeLog.Swing(Text(swinger.PlayerId)));
             _combat.InterruptReload(swinger.PlayerId, ReloadInterrupt.Melee);

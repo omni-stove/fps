@@ -5,5 +5,6 @@ namespace Shooter.Protocol
         Board = 0,
         Leave = 1,
         SwitchSeat = 2,
+        Countermeasure = 3,
     }
 }

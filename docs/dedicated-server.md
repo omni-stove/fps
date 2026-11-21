@@ -22,6 +22,7 @@ make export-server-rules    # ルールと調整値 → server-data/rules/、ser
 | `economy.json` | `server-data` | 手で書く。オンラインのルールの武器の一覧 (`catalog`) にある武器だけを、買える品と値段として置く。財布の額は試合の設定 (`match.economy`) から読む |
 | `chat-words.json` | `server-data` | 手で書く。チャットはオンラインだけなので、伏せる語はサーバーの分を置く |
 | `anticheat`・`deployables`・`battle-royale` (`.json`) | `server-data` | 手で書く。クライアントに同じ名前のファイルは無い |
+| `pickup-drops.json` | `server-data` | 手で書く (無ければ Core の `PickupDropSpec` の既定)。倒れた人が落とす武器・予備弾・消えるまでの秒数。オフラインではプレイヤーの `DropOnDeath` に置く値 |
 | `mutators.json` | `Assets/game/Resources/Tuning/` | 使うときだけ写す。無ければオンラインの変則ルールは無し |
 
 `server-data/tuning/` と `Resources/Tuning/` の両方にある同じ名前のファイルは、`economy.json`・`chat-words.json` を除き、中身が同じでないと `scripts/lint.sh` (CI の lint) が落ちる (`scripts/server-tuning.sh`)。サーバー用に別の中身を持たせるファイルを増やすときは、そのスクリプトの `server_owned` とこの表に足す。
@@ -48,9 +49,12 @@ docker compose -f docker/server/compose.yaml up -d
 
 - `Payload` の道筋は `NetArena01` に、`BattleRoyale`・`Extraction` のエリアと脱出地点は `NetBattleRoyale` にだけある。
 - `NetBattleRoyale` の箱の表はキットの `loot.json` に無いので、ゲームが表を足すまで箱は空で開く。
+- 地面の拾い物 (`PickupSpawnPoint`) と弾薬箱 (`AmmoCrate`) は `make export-server-data` がマップごとの `<マップ>.pickups.json` に書き出す。書き出す前のマップでは拾い物が無いだけで動く。サーバーには防具が無いので、防具の拾い物は拾えない。
 - Bot は人が 1 人もいないと置かれない。試すときはクライアントを 1 人つなぐ。
-- ドローン・盾・暗視とサーマルはオフラインだけで、サーバーでは効かない。盾の武器はルールと `economy.json` に入れない。
+- ドローン・暗視とサーマルはオフラインだけで、サーバーでは効かない。
 - プレイリストでは `match.*` と武器が最初の項目のルールのまま変わらないので、後の項目で使うモードの節も最初の項目に書く。
+- `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力・速さ・武器 (`infectedMaxHealth`・`infectedSpeedMultiplier`・`infectedWeaponId`) はまだサーバーでは変わらない。
+- `Execution` はラウンドの数と秒を `match.round*` に、とどめの秒数と距離を `match.execution` に書く。とどめは近接のボタンで刺すので、ルールの `melee` を `On` にする (`Off` ならダウン中の敵を撃って倒せる)。各チームの最後の 1 人はダウンせずにそのまま倒れる。
 
 ## CI のテンプレート
 

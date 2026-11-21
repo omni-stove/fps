@@ -101,6 +101,12 @@ namespace Shooter.Core
         public const string LossStreakBonusItem = "lossStreakBonus";
         public const string MaxLossRewardItem = "maxLossReward";
 
+        // 節の中の項目名は、オフラインの調整値 (Resources/Tuning/infected.json) と同じ InfectedJson の名前にする
+        public const string InfectedItem = "infected";
+
+        // 節の中の項目名は ExecutionSpec.ItemNames。ラウンドの勝ち数・待ち・制限時間は Elimination と同じ round* を使う
+        public const string ExecutionItem = "execution";
+
         public const string MotorItem = "motor";
         public const string WalkSpeedItem = "walkSpeed";
         public const string SprintSpeedItem = "sprintSpeed";
@@ -178,6 +184,12 @@ namespace Shooter.Core
         public const string ParachuteDescentSpeedItem = "parachuteDescentSpeed";
         public const string ParachuteHorizontalSpeedItem = "parachuteHorizontalSpeed";
         public const string ParachuteSteerAccelerationItem = "parachuteSteerAcceleration";
+        public const string SlideStartSpeedItem = "slideStartSpeed";
+        public const string SlideDecelerationItem = "slideDeceleration";
+        public const string SlideEndSpeedItem = "slideEndSpeed";
+        public const string SlideMinSecondsItem = "slideMinSeconds";
+        public const string SlideMaxSecondsItem = "slideMaxSeconds";
+        public const string SlideSlopeAccelerationItem = "slideSlopeAcceleration";
 
         private const string _kind = "match rules JSON";
 
@@ -202,6 +214,7 @@ namespace Shooter.Core
             SwimSpeedItem, SwimBuoyancyItem, SwimBreathSecondsItem,
             WallRunEnabledItem, WallRunMaxSecondsItem, WallRunMinSpeedItem, WallRunGravityScaleItem, WallRunJumpOffSpeedItem,
             ParachuteMinOpenHeightItem, ParachuteDescentSpeedItem, ParachuteHorizontalSpeedItem, ParachuteSteerAccelerationItem,
+            SlideStartSpeedItem, SlideDecelerationItem, SlideEndSpeedItem, SlideMinSecondsItem, SlideMaxSecondsItem, SlideSlopeAccelerationItem,
         };
         private static readonly string[] _loadoutItems = { NameItem, SwitchSecondsItem, SlotsItem, WeaponsItem, AbilitiesItem };
         private static readonly string[] _catalogItems = { NameItem, WeaponsItem };
@@ -214,7 +227,7 @@ namespace Shooter.Core
             ChatIntervalSecondsItem, MaxChatLengthItem, MaxDisplayNameLengthItem, RoundWinsToWinItem, RoundPreparationSecondsItem,
             RoundTimeLimitSecondsItem, WeatherIdItem, TimeOfDayIdItem,
             CaptureTheFlagItem, HardpointItem, SearchAndDestroyItem, FreeForAllItem, KillConfirmedItem, GunGameItem,
-            VoteKickItem, PayloadItem, EconomyItem,
+            VoteKickItem, PayloadItem, EconomyItem, InfectedItem, ExecutionItem,
         };
 
         private static readonly string[] _captureTheFlagItems =
@@ -522,6 +535,34 @@ namespace Shooter.Core
             writer.Int(LossStreakBonusItem, economy.LossStreakBonus);
             writer.Int(MaxLossRewardItem, economy.MaxLossReward);
             writer.EndObject();
+
+            // Infected でないルールに既定値のままなら書かないのは、節を足す前に書き出したルールのファイルを書き出し直さずにそのまま使えるようにするため
+            var infected = s.Infected;
+            if (file.Rules.Objective == MatchObjective.Infected || !IsDefault(infected))
+            {
+                writer.BeginObject(InfectedItem);
+                writer.Int(InfectedJson.InitialInfectedItem, infected.InitialInfected);
+                writer.Float(InfectedJson.StartDelaySecondsItem, infected.StartDelaySeconds);
+                writer.Float(InfectedJson.RoundSecondsItem, infected.RoundSeconds);
+                writer.Int(InfectedJson.InfectedMaxHealthItem, infected.InfectedMaxHealth);
+                writer.Float(InfectedJson.InfectedSpeedMultiplierItem, infected.InfectedSpeedMultiplier);
+                writer.Float(InfectedJson.InfectedRespawnSecondsItem, infected.InfectedRespawnSeconds);
+                writer.Int(InfectedJson.ScorePerInfectionItem, infected.ScorePerInfection);
+                writer.Int(InfectedJson.ScorePerSurvivedRoundItem, infected.ScorePerSurvivedRound);
+                writer.String(InfectedJson.InfectedWeaponIdItem, infected.InfectedWeaponId);
+                writer.EndObject();
+            }
+
+            // Infected の節と同じく、節を足す前に書き出したルールのファイルをそのまま使えるよう、Execution でなく既定値のままなら書かない
+            var execution = s.Execution;
+            if (file.Rules.Objective == MatchObjective.Execution || !execution.SameAs(ExecutionSpec.Default))
+            {
+                writer.BeginObject(ExecutionItem);
+                writer.Float(ExecutionSpec.ExecuteSecondsItem, execution.ExecuteSeconds);
+                writer.Float(ExecutionSpec.ExecuteRangeItem, execution.ExecuteRange);
+                writer.EndObject();
+            }
+
             writer.EndObject();
 
             var motor = file.Motor.Motor;
@@ -608,6 +649,13 @@ namespace Shooter.Core
             writer.Float(ParachuteDescentSpeedItem, parachute.DescentSpeed);
             writer.Float(ParachuteHorizontalSpeedItem, parachute.HorizontalSpeed);
             writer.Float(ParachuteSteerAccelerationItem, parachute.SteerAcceleration);
+            var slide = file.Motor.Slide;
+            writer.Float(SlideStartSpeedItem, slide.StartSpeed);
+            writer.Float(SlideDecelerationItem, slide.Deceleration);
+            writer.Float(SlideEndSpeedItem, slide.EndSpeed);
+            writer.Float(SlideMinSecondsItem, slide.MinSeconds);
+            writer.Float(SlideMaxSecondsItem, slide.MaxSeconds);
+            writer.Float(SlideSlopeAccelerationItem, slide.SlopeAcceleration);
             writer.EndObject();
 
             writer.BeginObject(LoadoutItem);
@@ -679,6 +727,8 @@ namespace Shooter.Core
             var voteKick = ReadVoteKick(match.Object(VoteKickItem, _voteKickItems), d.VoteKick);
             var payload = ReadPayload(match.Object(PayloadItem, _payloadItems), d.Payload);
             var economy = ReadEconomy(match.Object(EconomyItem, _economyItems), d.Economy);
+            var infected = ReadInfected(match.Object(InfectedItem, InfectedJson.ItemNames), d.Infected);
+            var execution = ReadExecution(match.Object(ExecutionItem, ExecutionSpec.ItemNames), d.Execution);
             try
             {
                 return new NetMatchSettings(
@@ -716,7 +766,9 @@ namespace Shooter.Core
                     voteKick,
                     payload,
                     economy,
-                    match.ReadInt(MaxDisplayNameLengthItem, d.MaxDisplayNameLength));
+                    match.ReadInt(MaxDisplayNameLengthItem, d.MaxDisplayNameLength),
+                    infected,
+                    execution);
             }
             catch (ArgumentException e)
             {
@@ -955,6 +1007,65 @@ namespace Shooter.Core
             }
         }
 
+        private static InfectedSpec ReadInfected(ServerDataJson.Fields fields, InfectedSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new InfectedSpec(
+                    fields.ReadInt(InfectedJson.InitialInfectedItem, fallback.InitialInfected),
+                    fields.ReadFloat(InfectedJson.StartDelaySecondsItem, fallback.StartDelaySeconds),
+                    fields.ReadFloat(InfectedJson.RoundSecondsItem, fallback.RoundSeconds),
+                    fields.ReadInt(InfectedJson.InfectedMaxHealthItem, fallback.InfectedMaxHealth),
+                    fields.ReadFloat(InfectedJson.InfectedSpeedMultiplierItem, fallback.InfectedSpeedMultiplier),
+                    fields.ReadFloat(InfectedJson.InfectedRespawnSecondsItem, fallback.InfectedRespawnSeconds),
+                    fields.ReadInt(InfectedJson.ScorePerInfectionItem, fallback.ScorePerInfection),
+                    fields.ReadInt(InfectedJson.ScorePerSurvivedRoundItem, fallback.ScorePerSurvivedRound),
+                    fields.ReadString(InfectedJson.InfectedWeaponIdItem, fallback.InfectedWeaponId));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static ExecutionSpec ReadExecution(ServerDataJson.Fields fields, ExecutionSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new ExecutionSpec(
+                    fields.ReadFloat(ExecutionSpec.ExecuteSecondsItem, fallback.ExecuteSeconds),
+                    fields.ReadFloat(ExecutionSpec.ExecuteRangeItem, fallback.ExecuteRange));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static bool IsDefault(InfectedSpec spec)
+        {
+            var d = InfectedSpec.Default;
+            return spec.InitialInfected == d.InitialInfected
+                && spec.StartDelaySeconds == d.StartDelaySeconds
+                && spec.RoundSeconds == d.RoundSeconds
+                && spec.InfectedMaxHealth == d.InfectedMaxHealth
+                && spec.InfectedSpeedMultiplier == d.InfectedSpeedMultiplier
+                && spec.InfectedRespawnSeconds == d.InfectedRespawnSeconds
+                && spec.ScorePerInfection == d.ScorePerInfection
+                && spec.ScorePerSurvivedRound == d.ScorePerSurvivedRound
+                && spec.InfectedWeaponId == d.InfectedWeaponId;
+        }
+
         private static List<string> ReadIds(ServerDataJson.Fields fields, string item)
         {
             var nodes = fields.Array(item);
@@ -1011,6 +1122,7 @@ namespace Shooter.Core
                 var swim = ReadSwim(fields, d.Swim);
                 var wallRun = ReadWallRun(fields, d.WallRun);
                 var parachute = ReadParachute(fields, d.Parachute);
+                var slide = ReadSlide(fields, d.Slide);
                 var walkDirection = ReadDirection(fields, WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, dm.WalkDirection);
                 var sprintDirection = ReadDirection(
                     fields, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem, dm.SprintDirection);
@@ -1072,7 +1184,8 @@ namespace Shooter.Core
                     prone,
                     swim,
                     wallRun,
-                    parachute);
+                    parachute,
+                    slide);
             }
             catch (ArgumentException e)
             {
@@ -1198,6 +1311,32 @@ namespace Shooter.Core
                     : e.ParamName == "minSpeed" ? WallRunMinSpeedItem
                     : e.ParamName == "gravityScale" ? WallRunGravityScaleItem
                     : e.ParamName == "jumpOffSpeed" ? WallRunJumpOffSpeedItem
+                    : null;
+                throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
+            }
+        }
+
+        private static SlideTuning ReadSlide(ServerDataJson.Fields fields, SlideTuning fallback)
+        {
+            try
+            {
+                return new SlideTuning(
+                    fields.ReadFloat(SlideStartSpeedItem, fallback.StartSpeed),
+                    fields.ReadFloat(SlideDecelerationItem, fallback.Deceleration),
+                    fields.ReadFloat(SlideEndSpeedItem, fallback.EndSpeed),
+                    fields.ReadFloat(SlideMinSecondsItem, fallback.MinSeconds),
+                    fields.ReadFloat(SlideMaxSecondsItem, fallback.MaxSeconds),
+                    fields.ReadFloat(SlideSlopeAccelerationItem, fallback.SlopeAcceleration));
+            }
+            catch (ArgumentException e)
+            {
+                // SlideTuning の引数名には項目名の頭の slide が付いていないので、ここで項目名に直す
+                var item = e.ParamName == "startSpeed" ? SlideStartSpeedItem
+                    : e.ParamName == "deceleration" ? SlideDecelerationItem
+                    : e.ParamName == "endSpeed" ? SlideEndSpeedItem
+                    : e.ParamName == "minSeconds" ? SlideMinSecondsItem
+                    : e.ParamName == "maxSeconds" ? SlideMaxSecondsItem
+                    : e.ParamName == "slopeAcceleration" ? SlideSlopeAccelerationItem
                     : null;
                 throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
             }

@@ -47,6 +47,30 @@
                 <ui:SliderInt name="settings-effects-volume" class="settings__slider" />
                 <ui:Label name="settings-effects-volume-value" text="" class="settings__value" />
             </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.value.musicVolume" class="settings__caption" />
+                <ui:SliderInt name="settings-music-volume" class="settings__slider" />
+                <ui:Label name="settings-music-volume-value" text="" class="settings__value" />
+            </ui:VisualElement>
+
+            <ui:Label text="#settings.section.graphics" class="settings__section" />
+            <!-- 押すたびに次の値へ巡る。解像度は画面が持つ大きさ、画質はプロジェクト設定 (Quality) の段階、fps の上限は Resources/Tuning/graphics の一覧から SettingsView が選ぶ。 -->
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.graphics.resolution" class="settings__caption" />
+                <ui:Button name="settings-graphics-resolution" text="" class="settings__button settings__palette" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.graphics.quality" class="settings__caption" />
+                <ui:Button name="settings-graphics-quality" text="" class="settings__button settings__palette" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.graphics.vSync" class="settings__caption" />
+                <ui:Button name="settings-graphics-vsync" text="" class="settings__button settings__mode" />
+            </ui:VisualElement>
+            <ui:VisualElement class="settings__row">
+                <ui:Label text="#settings.graphics.frameRate" class="settings__caption" />
+                <ui:Button name="settings-graphics-frame-rate" text="" class="settings__button settings__palette" />
+            </ui:VisualElement>
 
             <ui:Label text="#settings.section.gamepad" class="settings__section" />
             <ui:VisualElement class="settings__row">

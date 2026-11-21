@@ -7,9 +7,9 @@ namespace Shooter.Runtime
 {
     public sealed class ExecutionHudFormatter : IModeHudFormatter
     {
-        public LocalizedText Time(ModeStatus status) => ModeHudText.Time(DetailOf(status).Session.Mode);
+        public LocalizedText Time(ModeStatus status) => ExecutionHudText.Time(DetailOf(status).View);
 
-        public IReadOnlyList<ModeHudScoreLine> Scores(ModeStatus status) => ExecutionHudText.RoundWins(DetailOf(status).Session, status.OwnSide);
+        public IReadOnlyList<ModeHudScoreLine> Scores(ModeStatus status) => ExecutionHudText.RoundWins(DetailOf(status).View, status.OwnSide);
 
         public void AppendLines(ModeStatus status, List<LocalizedText> lines)
         {
@@ -19,10 +19,10 @@ namespace Shooter.Runtime
             }
 
             var detail = DetailOf(status);
-            lines.AddRange(ExecutionHudText.Lines(detail.Session, detail.LocalPlayerId, detail.InteractTargetId));
+            lines.AddRange(ExecutionHudText.Lines(detail.View, detail.LocalPlayerId, detail.InteractTargetId));
         }
 
-        public LocalizedText Result(ModeStatus status) => ExecutionHudText.Result(DetailOf(status).Session);
+        public LocalizedText Result(ModeStatus status) => ExecutionHudText.Result(DetailOf(status).View);
 
         private static ExecutionStatus DetailOf(ModeStatus status)
         {

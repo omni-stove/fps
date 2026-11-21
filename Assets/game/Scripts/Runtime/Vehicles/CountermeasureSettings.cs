@@ -7,8 +7,8 @@ namespace Shooter.Runtime
     [Serializable]
     public sealed class CountermeasureSettings
     {
-        public static readonly Vector3 DefaultEjectLocalOffset = new Vector3(0f, -0.5f, -2f);
-        public static readonly Vector3 DefaultEjectLocalDirection = new Vector3(0f, -1f, -1f);
+        public static readonly Vector3 DefaultEjectLocalOffset = MapVehicleCountermeasures.DefaultEjectOffset.ToUnity();
+        public static readonly Vector3 DefaultEjectLocalDirection = MapVehicleCountermeasures.DefaultEjectDirection.ToUnity();
 
         [SerializeField, Min(0), Tooltip("乗った時に持っているフレアの数")]
         private int _count = CountermeasureSpec.DefaultCount;

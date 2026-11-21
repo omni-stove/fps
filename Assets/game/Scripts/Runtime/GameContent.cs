@@ -147,6 +147,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("味方・敵・目的の物などの色の組 (標準・色覚向け) の JSON。空なら Resources/Tuning/palettes")]
         private TextAsset _palettesTuning;
 
+        [SerializeField, Tooltip("グラフィック設定の初期値 (画質・VSync・fps 上限) と選べる fps 上限の JSON。空なら Resources/Tuning/graphics")]
+        private TextAsset _graphicsTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -275,6 +278,9 @@ namespace Shooter.Runtime
 
         [SerializeField, Tooltip("暗視と熱源視の覆いと音。空なら Resources/Presentation/VisionVisualsCatalog、それも無ければ既定の色だけで覆う")]
         private VisionVisualCatalog _visionVisuals;
+
+        [SerializeField, Tooltip("場面ごとの BGM (メニュー・試合中・勝ち・負け・試合の終わり)。空なら Resources/Presentation/MusicCatalog、それも無ければ BGM を流さない")]
+        private MusicCatalog _music;
 
         // ドメインの再読み込みを切っているので、Play の開始時に ResetOnPlay で戻す。
         private static GameContent _override;
@@ -529,6 +535,12 @@ namespace Shooter.Runtime
             set => _palettesTuning = value;
         }
 
+        public TextAsset GraphicsTuning
+        {
+            get => _graphicsTuning;
+            set => _graphicsTuning = value;
+        }
+
         public WeaponCatalogAsset WeaponCatalog
         {
             get => _weaponCatalog;
@@ -773,6 +785,12 @@ namespace Shooter.Runtime
         {
             get => _visionVisuals;
             set => _visionVisuals = value;
+        }
+
+        public MusicCatalog Music
+        {
+            get => _music;
+            set => _music = value;
         }
 
         public static GameContent Current

@@ -58,6 +58,7 @@ namespace Shooter.Editor
             new Slot("StreakIcons", typeof(StreakIconCatalog), c => c.StreakIcons, (c, v) => c.StreakIcons = (StreakIconCatalog)v),
             new Slot("EmoteAnimations", typeof(EmoteCatalog), c => c.EmoteAnimations, (c, v) => c.EmoteAnimations = (EmoteCatalog)v),
             new Slot("VisionVisuals", typeof(VisionVisualCatalog), c => c.VisionVisuals, (c, v) => c.VisionVisuals = (VisionVisualCatalog)v),
+            new Slot("Music", typeof(MusicCatalog), c => c.Music, (c, v) => c.Music = (MusicCatalog)v),
         };
 
         // 調整値の JSON は型が TextAsset で見分けられないので、キットが Resources から読むときのファイル名で選ぶ。
@@ -102,6 +103,7 @@ namespace Shooter.Editor
             new TuningSlot("KeySharingTuning", KitTuning.KeySharingResourcePath, c => c.KeySharingTuning, (c, v) => c.KeySharingTuning = v),
             new TuningSlot("NameplatesTuning", KitTuning.NameplatesResourcePath, c => c.NameplatesTuning, (c, v) => c.NameplatesTuning = v),
             new TuningSlot("PalettesTuning", KitTuning.PalettesResourcePath, c => c.PalettesTuning, (c, v) => c.PalettesTuning = v),
+            new TuningSlot("GraphicsTuning", KitTuning.GraphicsResourcePath, c => c.GraphicsTuning, (c, v) => c.GraphicsTuning = v),
         };
 
         public static string DefaultPath => ShooterKitRoot.OutputPath("Resources/" + GameContent.ResourceFolder + "/" + FileName);

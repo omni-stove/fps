@@ -15,7 +15,9 @@ namespace Shooter.Core
             DecoySpec decoy = null,
             BeaconSpec beacon = null,
             DroneSpec drone = null,
-            AbilitySpec ability = null)
+            AbilitySpec ability = null,
+            MineSpec mine = null,
+            RemoteChargeSpec remoteCharge = null)
         {
             if (string.IsNullOrEmpty(id))
             {
@@ -80,6 +82,30 @@ namespace Shooter.Core
                 throw new ArgumentException("only a Drone has a drone spec", nameof(drone));
             }
 
+            if (role == DeployRole.Mine)
+            {
+                if (mine == null)
+                {
+                    throw new ArgumentException("a Mine needs a mine spec", nameof(mine));
+                }
+            }
+            else if (mine != null)
+            {
+                throw new ArgumentException("only a Mine has a mine spec", nameof(mine));
+            }
+
+            if (role == DeployRole.RemoteCharge)
+            {
+                if (remoteCharge == null)
+                {
+                    throw new ArgumentException("a RemoteCharge needs a remote charge spec", nameof(remoteCharge));
+                }
+            }
+            else if (remoteCharge != null)
+            {
+                throw new ArgumentException("only a RemoteCharge has a remote charge spec", nameof(remoteCharge));
+            }
+
             Id = id;
             Role = role;
             Deploy = deploy ?? throw new ArgumentNullException(nameof(deploy));
@@ -89,6 +115,8 @@ namespace Shooter.Core
             Beacon = beacon;
             Drone = drone;
             Ability = ability ?? AbilitySpec.Default;
+            Mine = mine;
+            RemoteCharge = remoteCharge;
         }
 
         public string Id { get; }
@@ -109,7 +137,11 @@ namespace Shooter.Core
 
         public AbilitySpec Ability { get; }
 
-        // DeploySpec.Default は盾の形と数なので、タレット・囮・ビーコン・ドローンは各 Spec の既定の形と数に置き換える (DeployAbilityDefinition の派生と同じ)。
+        public MineSpec Mine { get; }
+
+        public RemoteChargeSpec RemoteCharge { get; }
+
+        // DeploySpec.Default は盾の形と数なので、盾のほかは各 Spec の既定の形と数に置き換える (DeployAbilityDefinition の派生と同じ)。
         public static DeploySpec DefaultDeploy(DeployRole role)
         {
             switch (role)
@@ -124,6 +156,20 @@ namespace Shooter.Core
                 case DeployRole.Drone:
                     return Shaped(
                         DroneSpec.DefaultMaxActive, DroneSpec.DefaultMaxHealth, DroneSpec.DefaultWidth, DroneSpec.DefaultHeight, DroneSpec.DefaultDepth);
+                case DeployRole.Mine:
+                    return Shaped(MineSpec.DefaultMaxActive, MineSpec.DefaultMaxHealth, MineSpec.DefaultWidth, MineSpec.DefaultHeight, MineSpec.DefaultDepth);
+                case DeployRole.RemoteCharge:
+                    // C4 だけは置ける数を超えたときの扱いと届く距離も盾と違う (RemoteChargeDeployDefinition のコンストラクターと同じ)
+                    return new DeploySpec(
+                        RemoteChargeSpec.DefaultMaxActive,
+                        RemoteChargeSpec.DefaultOverflow,
+                        RemoteChargeSpec.DefaultMaxHealth,
+                        RemoteChargeSpec.DefaultMaxRange,
+                        DeploySpec.DefaultMaxSlopeDegrees,
+                        DeploySpec.DefaultMaxStepHeight,
+                        RemoteChargeSpec.DefaultWidth,
+                        RemoteChargeSpec.DefaultHeight,
+                        RemoteChargeSpec.DefaultDepth);
                 case DeployRole.Shield:
                     return DeploySpec.Default;
                 default:

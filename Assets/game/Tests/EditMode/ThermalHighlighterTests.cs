@@ -193,6 +193,79 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void BodiesWithoutADamageableAreLitWhileTheSourceReturnsThem()
+        {
+            var bodies = new List<GameObject>();
+            _highlighter.Bodies = () => bodies;
+            var remote = PlainBody("Remote", out var renderer);
+            bodies.Add(remote);
+
+            _controller.SetGoggles(VisionMode.Thermal);
+
+            Assert.That(_highlighter.IsHighlighted(remote), Is.True);
+            Assert.That(renderer.sharedMaterial, Is.SameAs(_highlighter.CodeMaterial));
+            Assert.That(_highlighter.HighlightedCount, Is.EqualTo(1));
+
+            bodies.Clear();
+
+            Assert.That(_highlighter.Rescan(), Is.Zero, "a body the source stops returning (now an ally or dead) cools down");
+            Assert.That(_highlighter.IsHighlighted(remote), Is.False);
+            Assert.That(renderer.sharedMaterial, Is.SameAs(_original));
+        }
+
+        [Test]
+        public void AHiddenBodyIsPutBackAndLitAgainWhenItShowsUp()
+        {
+            var remote = PlainBody("Remote", out var renderer);
+            _highlighter.Bodies = () => new[] { remote };
+            _controller.SetGoggles(VisionMode.Thermal);
+
+            remote.SetActive(false);
+            Assert.That(_highlighter.Rescan(), Is.Zero);
+            Assert.That(renderer.sharedMaterial, Is.SameAs(_original));
+
+            remote.SetActive(true);
+            Assert.That(_highlighter.Rescan(), Is.EqualTo(1));
+            Assert.That(renderer.sharedMaterial, Is.SameAs(_highlighter.CodeMaterial));
+        }
+
+        [Test]
+        public void TakingThermalOffPutsBackBothKindsOfBodies()
+        {
+            Body("Enemy", 1, out var enemyRenderer);
+            var remote = PlainBody("Remote", out var remoteRenderer);
+            _highlighter.Bodies = () => new[] { remote };
+
+            _controller.SetGoggles(VisionMode.Thermal);
+            Assert.That(_highlighter.HighlightedCount, Is.EqualTo(2));
+
+            _controller.SetGoggles(VisionMode.None);
+
+            Assert.That(_highlighter.HighlightedCount, Is.Zero);
+            Assert.That(enemyRenderer.sharedMaterial, Is.SameAs(_original));
+            Assert.That(remoteRenderer.sharedMaterial, Is.SameAs(_original));
+        }
+
+        [Test]
+        public void ADestroyedBodyAndTheWearersOwnChildrenAreSkipped()
+        {
+            var remote = PlainBody("Remote", out _);
+            var own = new GameObject("OwnChild");
+            own.transform.SetParent(_player.transform, false);
+            var ownRenderer = AddRenderer(own.transform, "OwnMesh");
+            _highlighter.Bodies = () => new[] { remote, own, null };
+
+            _controller.SetGoggles(VisionMode.Thermal);
+            Assert.That(_highlighter.IsHighlighted(own), Is.False);
+            Assert.That(ownRenderer.sharedMaterial, Is.SameAs(_original));
+
+            Object.DestroyImmediate(remote);
+            Assert.That(_highlighter.Rescan(), Is.Zero);
+            _controller.SetGoggles(VisionMode.None);
+            Assert.That(_highlighter.HighlightedCount, Is.Zero);
+        }
+
+        [Test]
         public void TheCatalogDefaultsCoverTheHighlight()
         {
             var catalog = ScriptableObject.CreateInstance<VisionVisualCatalog>();
@@ -221,6 +294,14 @@ namespace Shooter.Tests.EditMode
             renderer = AddRenderer(body.transform, name + "Mesh");
             _bodies.Add(damageable);
             return damageable;
+        }
+
+        private GameObject PlainBody(string name, out MeshRenderer renderer)
+        {
+            var body = new GameObject(name);
+            _created.Add(body);
+            renderer = AddRenderer(body.transform, name + "Mesh");
+            return body;
         }
 
         private MeshRenderer AddRenderer(Transform parent, string name)

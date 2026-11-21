@@ -7,7 +7,7 @@ namespace Shooter.Runtime
     // 盾の武器 (WeaponSpec.Shield) を持っている間は持ち主の前に盾を出し、撃てなくする。攻撃のボタンは殴る合図 (ShieldBashRequested) にする。
     public sealed partial class WeaponController
     {
-        public const string SprintLowerCause = "sprint";
+        public const string SprintLowerCause = RiotShieldLog.SprintCause;
 
         private HeldRiotShield _heldShield;
         private PlayerController _holderMover;

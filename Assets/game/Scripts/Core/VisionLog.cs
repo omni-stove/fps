@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace Shooter.Core
@@ -21,6 +22,45 @@ namespace Shooter.Core
         public static string GogglesOffOnDeath(string ownerId)
         {
             return $"{Tag} goggles owner={Name(ownerId)} off reason=died";
+        }
+
+        public static string GogglesOffAbilitiesOff(string ownerId)
+        {
+            return $"{Tag} goggles owner={Name(ownerId)} off reason=abilities-off";
+        }
+
+        // 能力の枠の順で、ゴーグルでない枠と空の枠は -
+        public static string NetSlots(IReadOnlyList<string> gogglesIds)
+        {
+            if (gogglesIds == null)
+            {
+                throw new ArgumentNullException(nameof(gogglesIds));
+            }
+
+            var names = new string[gogglesIds.Count];
+            for (var i = 0; i < names.Length; i++)
+            {
+                names[i] = Name(gogglesIds[i]);
+            }
+
+            return $"{Tag} net goggles slots={string.Join(",", names)}";
+        }
+
+        public static string NetSlotsEmptied(string reason)
+        {
+            return $"{Tag} net goggles slots emptied: {reason}";
+        }
+
+        // slot は 0 から数えた枠で、ログには入力と同じ 1 から数えた番号で出す
+        public static string NetSlotInvalid(int slot, string reason)
+        {
+            RequireCount(slot, nameof(slot));
+            return string.Format(CultureInfo.InvariantCulture, "{0} net goggles slot={1} not equipped: {2}", Tag, slot + 1, reason);
+        }
+
+        public static string NetAttached(string ownerId)
+        {
+            return $"{Tag} net vision attached owner={Name(ownerId)}";
         }
 
         public static string Highlighted(int added, int total, bool codeMaterial)

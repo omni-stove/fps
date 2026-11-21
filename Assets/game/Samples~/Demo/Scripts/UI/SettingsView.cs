@@ -80,6 +80,16 @@ namespace Shooter.Runtime
 
         public const string VoiceVolumeValueName = VoiceVolumeSliderName + "-value";
 
+        public const string GraphicsResolutionButtonName = "settings-graphics-resolution";
+
+        public const string GraphicsQualityButtonName = "settings-graphics-quality";
+
+        public const string GraphicsVSyncButtonName = "settings-graphics-vsync";
+
+        public const string GraphicsFrameRateButtonName = "settings-graphics-frame-rate";
+
+        public const string QualityTextKeyPrefix = "settings.graphics.quality.";
+
         public static string OnText => Localizer.Get("settings.on");
 
         public static string OffText => Localizer.Get("settings.off");
@@ -146,6 +156,18 @@ namespace Shooter.Runtime
         private readonly VoiceSettingsStore _voiceStore;
         private VoiceSettings _voiceEditing;
         private VoiceSettings _voiceSaved;
+        private readonly GraphicsSettingsStore _graphicsStore;
+        private readonly IGraphicsSettingsSink _graphicsSink;
+        private readonly IReadOnlyList<ScreenResolution> _resolutionsGiven;
+        private readonly IReadOnlyList<string> _qualityNamesGiven;
+        private readonly IReadOnlyList<int> _frameRateChoicesGiven;
+        private IReadOnlyList<ScreenResolution> _resolutions;
+        private GraphicsSettings _graphicsEditing;
+        private GraphicsSettings _graphicsSaved;
+        private Button _graphicsResolutionButton;
+        private Button _graphicsQualityButton;
+        private Button _graphicsVSyncButton;
+        private Button _graphicsFrameRateButton;
         private Button _languageButton;
         private IReadOnlyList<GameLanguage> _languages = Array.Empty<GameLanguage>();
         private readonly Dictionary<GameLanguage, string> _languageNames = new Dictionary<GameLanguage, string>();
@@ -158,7 +180,12 @@ namespace Shooter.Runtime
             LanguagePreferenceStore languageStore = null,
             VoiceSettingsStore voiceStore = null,
             IReadOnlyList<string> regions = null,
-            Func<bool> gyroAvailable = null)
+            Func<bool> gyroAvailable = null,
+            GraphicsSettingsStore graphicsStore = null,
+            IGraphicsSettingsSink graphicsSink = null,
+            IReadOnlyList<ScreenResolution> resolutions = null,
+            IReadOnlyList<string> qualityLevelNames = null,
+            IReadOnlyList<int> frameRateChoices = null)
         {
             List<string> offered = null;
             if (regions != null)
@@ -183,6 +210,11 @@ namespace Shooter.Runtime
             _voiceStore = voiceStore ?? new VoiceSettingsStore();
             _regionsGiven = offered?.AsReadOnly();
             _gyroAvailable = gyroAvailable ?? HasGyroDevice;
+            _graphicsStore = graphicsStore ?? new GraphicsSettingsStore();
+            _graphicsSink = graphicsSink ?? AppliedGraphicsSettings.Sink;
+            _resolutionsGiven = resolutions != null ? CheckedResolutions(resolutions) : null;
+            _qualityNamesGiven = qualityLevelNames != null ? new List<string>(qualityLevelNames).AsReadOnly() : null;
+            _frameRateChoicesGiven = frameRateChoices != null ? new GraphicsSpec(frameRateChoices: frameRateChoices).FrameRateChoices : null;
         }
 
         public event Action BackRequested;
@@ -194,6 +226,18 @@ namespace Shooter.Runtime
         public VoiceSettingsStore VoiceStore => _voiceStore;
 
         public VoiceSettings Voice => _voiceEditing;
+
+        public GraphicsSettingsStore GraphicsStore => _graphicsStore;
+
+        public GraphicsSettings Graphics => _graphicsEditing;
+
+        // Refresh は押すたびに走るので、画面の解像度の一覧は最初に要るときに 1 度だけ引く。
+        public IReadOnlyList<ScreenResolution> Resolutions => _resolutions ??= _resolutionsGiven ?? AvailableResolutions();
+
+        // 段階の名前はプロジェクト設定 (Quality) が持つので、渡されなければ今の QualitySettings から引く。
+        public IReadOnlyList<string> QualityLevelNames => _qualityNamesGiven ?? QualitySettings.names;
+
+        public IReadOnlyList<int> FrameRateChoices => _frameRateChoicesGiven ?? KitTuning.Graphics.FrameRateChoices;
 
         public bool IsOpen => _root != null;
 
@@ -215,7 +259,8 @@ namespace Shooter.Runtime
         public bool GyroAvailable => _gyroAvailable();
 
         public bool HasUnsavedChanges =>
-            _editing != null && (!_editing.Equals(_saved) || _bindingsDirty || !_voiceEditing.Equals(_voiceSaved));
+            _editing != null
+            && (!_editing.Equals(_saved) || _bindingsDirty || !_voiceEditing.Equals(_voiceSaved) || !_graphicsEditing.Equals(_graphicsSaved));
 
         public static string RebindButtonName(RebindSlot slot)
         {
@@ -392,6 +437,139 @@ namespace Shooter.Runtime
             return all[0].Kind;
         }
 
+        public static string FormatResolution(ScreenResolution resolution)
+        {
+            return resolution.IsNative
+                ? Localizer.Get("settings.graphics.resolution.native")
+                : Localizer.Format(
+                    "settings.graphics.resolution.size",
+                    resolution.Width.ToString(CultureInfo.InvariantCulture),
+                    resolution.Height.ToString(CultureInfo.InvariantCulture));
+        }
+
+        // 段階の名前はプロジェクト設定の名前なので、文字列表に訳が無ければその名前をそのまま出す。
+        public static string FormatQualityLevel(int level, IReadOnlyList<string> names)
+        {
+            if (names == null)
+            {
+                throw new ArgumentNullException(nameof(names));
+            }
+
+            if (level == GraphicsSettings.ProjectQualityLevel)
+            {
+                return Localizer.Get("settings.graphics.quality.project");
+            }
+
+            if (names.Count == 0)
+            {
+                return (level + 1).ToString(CultureInfo.InvariantCulture);
+            }
+
+            // 段階の数より大きい番号は AppliedGraphicsSettings が最も高い段階に下げて入れるので、その名前を出す。
+            var name = names[Math.Min(level, names.Count - 1)];
+            return Localizer.TryGet(QualityTextKeyPrefix + name, out var text) ? text : name;
+        }
+
+        public static string FormatFrameRateLimit(int limit)
+        {
+            return limit == GraphicsSettings.NoFrameRateLimit
+                ? Localizer.Get("settings.graphics.frameRate.unlimited")
+                : Localizer.Format("settings.graphics.frameRate.value", limit.ToString(CultureInfo.InvariantCulture));
+        }
+
+        // 画面の解像度 → 一覧の小さい順 → 画面の解像度、と巡る。一覧に無い解像度を保存していても押せば一覧へ移れるよう、見つからなければ先頭にする。
+        public static ScreenResolution NextResolution(ScreenResolution current, IReadOnlyList<ScreenResolution> available)
+        {
+            if (available == null)
+            {
+                throw new ArgumentNullException(nameof(available));
+            }
+
+            if (current.IsNative)
+            {
+                return available.Count > 0 ? available[0] : ScreenResolution.Native;
+            }
+
+            for (var i = 0; i < available.Count; i++)
+            {
+                if (available[i] == current)
+                {
+                    return i + 1 < available.Count ? available[i + 1] : ScreenResolution.Native;
+                }
+            }
+
+            return available.Count > 0 ? available[0] : ScreenResolution.Native;
+        }
+
+        // プロジェクトの既定 → 0 → … → 最後の段階 → プロジェクトの既定、と巡る。
+        public static int NextQualityLevel(int current, int levelCount)
+        {
+            if (levelCount <= 0)
+            {
+                return GraphicsSettings.ProjectQualityLevel;
+            }
+
+            var next = current + 1;
+            return next < Math.Min(levelCount, GraphicsSettings.MaxQualityLevel + 1) ? next : GraphicsSettings.ProjectQualityLevel;
+        }
+
+        // 無制限 → 選べる上限の小さい順 → 無制限、と巡る。一覧に無い上限を保存していても、それより大きい次の上限へ移れるようにする。
+        public static int NextFrameRateLimit(int current, IReadOnlyList<int> choices)
+        {
+            if (choices == null)
+            {
+                throw new ArgumentNullException(nameof(choices));
+            }
+
+            foreach (var choice in choices)
+            {
+                if (choice > current)
+                {
+                    return choice;
+                }
+            }
+
+            return GraphicsSettings.NoFrameRateLimit;
+        }
+
+        // 同じ大きさがリフレッシュレート違いで並ぶので、大きさだけで重なりを除き、小さい順にする。
+        public static IReadOnlyList<ScreenResolution> AvailableResolutions()
+        {
+            var sizes = new List<ScreenResolution>();
+            foreach (var resolution in Screen.resolutions)
+            {
+                if (!ScreenResolution.IsValid(resolution.width, resolution.height) || (resolution.width == 0 && resolution.height == 0))
+                {
+                    continue;
+                }
+
+                var size = new ScreenResolution(resolution.width, resolution.height);
+                if (!sizes.Contains(size))
+                {
+                    sizes.Add(size);
+                }
+            }
+
+            sizes.Sort((a, b) => a.Width != b.Width ? a.Width.CompareTo(b.Width) : a.Height.CompareTo(b.Height));
+            return sizes.AsReadOnly();
+        }
+
+        private static IReadOnlyList<ScreenResolution> CheckedResolutions(IReadOnlyList<ScreenResolution> resolutions)
+        {
+            var offered = new List<ScreenResolution>();
+            foreach (var resolution in resolutions)
+            {
+                if (resolution.IsNative || offered.Contains(resolution))
+                {
+                    throw new ArgumentException($"'{resolution}' is not a resolution that can be offered", nameof(resolutions));
+                }
+
+                offered.Add(resolution);
+            }
+
+            return offered.AsReadOnly();
+        }
+
         public void Open(VisualElement container)
         {
             if (container == null)
@@ -413,6 +591,8 @@ namespace Shooter.Runtime
             _saved = _editing;
             _voiceEditing = _voiceStore.Load();
             _voiceSaved = _voiceEditing;
+            _graphicsEditing = _graphicsSink.Current;
+            _graphicsSaved = _graphicsEditing;
             _bindings = CreateBindings();
             _bindingsDirty = false;
             _pendingConflict = null;
@@ -458,6 +638,8 @@ namespace Shooter.Runtime
             _saved = null;
             _voiceEditing = null;
             _voiceSaved = null;
+            _graphicsEditing = null;
+            _graphicsSaved = null;
             _bindings?.Dispose();
             _bindings = null;
             _bindingsDirty = false;
@@ -503,6 +685,10 @@ namespace Shooter.Runtime
             _voiceMicrophoneButton = null;
             _voiceVolumeSlider = null;
             _voiceVolumeLabel = null;
+            _graphicsResolutionButton = null;
+            _graphicsQualityButton = null;
+            _graphicsVSyncButton = null;
+            _graphicsFrameRateButton = null;
             _languageButton = null;
             _languages = Array.Empty<GameLanguage>();
             _languageNames.Clear();
@@ -572,6 +758,22 @@ namespace Shooter.Runtime
                 catch (Exception e)
                 {
                     Debug.LogError($"{LogTag} could not save the voice settings to '{_voiceStore.Key}': {e.Message}");
+                    Debug.LogException(e);
+                    failed = true;
+                }
+            }
+
+            if (!_graphicsEditing.Equals(_graphicsSaved))
+            {
+                try
+                {
+                    _graphicsStore.Save(_graphicsEditing);
+                    _graphicsSaved = _graphicsEditing;
+                    Debug.Log($"{LogTag} saved the graphics settings {_graphicsEditing.ToJson()}");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError(GraphicsSettingsLog.SaveFailed(_graphicsStore.Key, e.Message));
                     Debug.LogException(e);
                     failed = true;
                 }
@@ -692,6 +894,30 @@ namespace Shooter.Runtime
             EditVoice(new VoiceSettings(_voiceEditing.MicrophoneEnabled, percent));
         }
 
+        public void SetResolution(ScreenResolution resolution)
+        {
+            EnsureOpen();
+            EditGraphics(_graphicsEditing.WithResolution(resolution));
+        }
+
+        public void SetQualityLevel(int level)
+        {
+            EnsureOpen();
+            EditGraphics(_graphicsEditing.WithQualityLevel(level));
+        }
+
+        public void SetVSync(bool vSync)
+        {
+            EnsureOpen();
+            EditGraphics(_graphicsEditing.WithVSync(vSync));
+        }
+
+        public void SetFrameRateLimit(int limit)
+        {
+            EnsureOpen();
+            EditGraphics(_graphicsEditing.WithFrameRateLimit(limit));
+        }
+
         public void SetLanguage(GameLanguage language)
         {
             EnsureOpen();
@@ -726,6 +952,7 @@ namespace Shooter.Runtime
         {
             EnsureOpen();
             EditVoice(VoiceSettings.Default);
+            EditGraphics(_graphicsStore.Defaults);
             Edit(ControlSettings.Default);
         }
 
@@ -903,6 +1130,29 @@ namespace Shooter.Runtime
             RefreshVoice();
         }
 
+        // 画質や fps は見て決めるものなので、ControlSettings と同じく押したらすぐ効かせ、保存だけを閉じるときにまとめる。
+        private void EditGraphics(GraphicsSettings settings)
+        {
+            if (settings.Equals(_graphicsEditing))
+            {
+                return;
+            }
+
+            _graphicsEditing = settings;
+            try
+            {
+                _graphicsSink.Apply(settings);
+            }
+            catch (Exception e)
+            {
+                // 入らなかった値も選んだ値として残し、閉じたときに保存して次の起動で入れ直す。
+                Debug.LogError(GraphicsSettingsLog.ApplyFailed("graphics settings " + settings, e.Message));
+                Debug.LogException(e);
+            }
+
+            RefreshGraphics();
+        }
+
         // 根は差し込み口へ移すので、UXML から作った TemplateContainer ではなく、その中の根を返す。
         private VisualElement Build()
         {
@@ -939,6 +1189,7 @@ namespace Shooter.Runtime
                 root, RegionButtonName, () => SetQuickMatchRegion(NextRegion(_editing.QuickMatchRegion, Regions)));
             _telemetryButton = BindButton(root, TelemetryButtonName, () => SetTelemetryConsent(!_editing.TelemetryConsent));
             BindVoice(root);
+            BindGraphics(root);
 
             _languages = Localizer.AvailableLanguages();
             _languageButton = BindButton(root, LanguageButtonName, () => SetLanguage(NextLanguage(Localizer.Language, _languages)));
@@ -1179,6 +1430,39 @@ namespace Shooter.Runtime
             }
         }
 
+        private void BindGraphics(VisualElement root)
+        {
+            _graphicsResolutionButton = BindButton(
+                root, GraphicsResolutionButtonName, () => SetResolution(NextResolution(_graphicsEditing.Resolution, Resolutions)));
+            _graphicsQualityButton = BindButton(
+                root, GraphicsQualityButtonName, () => SetQualityLevel(NextQualityLevel(_graphicsEditing.QualityLevel, QualityLevelNames.Count)));
+            _graphicsVSyncButton = BindButton(root, GraphicsVSyncButtonName, () => SetVSync(!_graphicsEditing.VSync));
+            _graphicsFrameRateButton = BindButton(
+                root, GraphicsFrameRateButtonName, () => SetFrameRateLimit(NextFrameRateLimit(_graphicsEditing.FrameRateLimit, FrameRateChoices)));
+        }
+
+        private void RefreshGraphics()
+        {
+            if (_graphicsEditing == null || _graphicsResolutionButton == null)
+            {
+                return;
+            }
+
+            var resolution = _graphicsEditing.Resolution;
+            _graphicsResolutionButton.text = FormatResolution(resolution);
+            _graphicsResolutionButton.SetEnabled(NextResolution(resolution, Resolutions) != resolution);
+
+            var names = QualityLevelNames;
+            _graphicsQualityButton.text = FormatQualityLevel(_graphicsEditing.QualityLevel, names);
+            _graphicsQualityButton.SetEnabled(names.Count > 0);
+
+            _graphicsVSyncButton.text = FormatOnOff(_graphicsEditing.VSync);
+
+            var limit = _graphicsEditing.FrameRateLimit;
+            _graphicsFrameRateButton.text = FormatFrameRateLimit(limit);
+            _graphicsFrameRateButton.SetEnabled(NextFrameRateLimit(limit, FrameRateChoices) != limit);
+        }
+
         // Refresh はスライダーを動かすたびに走るので、言語の表を読んで引いた名前は画面を組み直すまで持つ。
         private string LanguageNameOf(GameLanguage language)
         {
@@ -1255,6 +1539,7 @@ namespace Shooter.Runtime
             }
 
             RefreshVoice();
+            RefreshGraphics();
 
             if (_languageButton != null)
             {
@@ -1451,6 +1736,8 @@ namespace Shooter.Runtime
                     return "rumble-strength";
                 case ControlValue.UiScale:
                     return "ui-scale";
+                case ControlValue.MusicVolume:
+                    return "music-volume";
                 default:
                     throw new ArgumentOutOfRangeException(nameof(value), value, "unknown control value");
             }

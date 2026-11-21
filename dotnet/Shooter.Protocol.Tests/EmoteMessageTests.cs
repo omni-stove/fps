@@ -13,8 +13,8 @@ namespace Shooter.Protocol.Tests
         public void TheEmoteMessagesHaveTheirIds()
         {
             Assert.That(new EmoteRequestMessage().Id, Is.EqualTo(36));
-            Assert.That(new EmoteStateMessage().Id, Is.EqualTo(90));
-            Assert.That(MessageIds.EmoteState, Is.EqualTo(90));
+            Assert.That(new EmoteStateMessage().Id, Is.EqualTo(91));
+            Assert.That(MessageIds.EmoteState, Is.EqualTo(91));
             Assert.That(EmoteRequestMessage.CurrentVersion, Is.EqualTo(1));
             Assert.That(EmoteStateMessage.CurrentVersion, Is.EqualTo(1));
         }

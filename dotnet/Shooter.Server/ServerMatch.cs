@@ -238,6 +238,12 @@ namespace Shooter.Server
             Team team;
             if (fixedTeam.HasValue)
             {
+                // チームは目的が決めるが、入り直しかどうかはログに残すため ChooseTeam にも尋ねる
+                if (ChooseTeam != null)
+                {
+                    ChooseTeam(rejoinKey, out rejoined);
+                }
+
                 team = fixedTeam.Value;
             }
             else

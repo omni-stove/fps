@@ -150,6 +150,7 @@ namespace Shooter.Server
                 ReleaseGrapple(mover, GrappleEnd.Lost);
                 var position = mover.State.Position;
                 CancelMantle(mover);
+                CancelZipline(mover);
                 mover.Simulation = CreateSimulation(position);
                 mover.Riding = false;
                 mover.State = new CharacterMotorState(position, Vector3.Zero, false, false);
@@ -243,6 +244,12 @@ namespace Shooter.Server
             public VaultPath MantlePath { get; set; }
 
             public float MantleElapsed { get; set; }
+
+            public ZiplineMotion Zipline { get; set; }
+
+            public int ZiplineIndex { get; set; } = -1;
+
+            public float ZiplineRegrabRemaining { get; set; }
 
             public float NextWarning { get; set; }
 

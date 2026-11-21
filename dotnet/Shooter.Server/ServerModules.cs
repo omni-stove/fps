@@ -47,6 +47,7 @@ namespace Shooter.Server
                 motor.WallRun,
                 motor.Parachute,
                 motor.Slide,
+                motor.Zipline,
                 rules.Rules,
                 defaults.KillPlaneY,
                 defaults.SpawnPosition);

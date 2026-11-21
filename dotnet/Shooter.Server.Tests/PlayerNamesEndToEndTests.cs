@@ -154,11 +154,9 @@ namespace Shooter.Server.Tests
             _server.Start();
         }
 
-        // 1 tick ごとに眠ると時間がかかるので、通信を回すのは数 tick おきにする
         private void Pump(Func<bool> until)
         {
             var watch = Stopwatch.StartNew();
-            var ticks = 0;
             do
             {
                 _now += _tickSeconds;
@@ -170,10 +168,8 @@ namespace Shooter.Server.Tests
                     return;
                 }
 
-                if (++ticks % 8 == 0)
-                {
-                    Thread.Sleep(1);
-                }
+                // 眠らずに回すと、Bot の撃ち合いで出る確実配送のメッセージが送りの待ちに溜まり、負荷が高いと名簿がその後ろで届かない
+                Thread.Sleep(1);
             }
             while (watch.Elapsed < _timeout);
 

@@ -209,6 +209,9 @@ namespace Shooter.Core
         public const string SlideMinSecondsItem = "slideMinSeconds";
         public const string SlideMaxSecondsItem = "slideMaxSeconds";
         public const string SlideSlopeAccelerationItem = "slideSlopeAcceleration";
+        public const string ZiplineGrabRadiusItem = "ziplineGrabRadius";
+        public const string ZiplineHangOffsetItem = "ziplineHangOffset";
+        public const string ZiplineRegrabSecondsItem = "ziplineRegrabSeconds";
 
         private const string _kind = "match rules JSON";
 
@@ -234,6 +237,7 @@ namespace Shooter.Core
             WallRunEnabledItem, WallRunMaxSecondsItem, WallRunMinSpeedItem, WallRunGravityScaleItem, WallRunJumpOffSpeedItem,
             ParachuteMinOpenHeightItem, ParachuteDescentSpeedItem, ParachuteHorizontalSpeedItem, ParachuteSteerAccelerationItem,
             SlideStartSpeedItem, SlideDecelerationItem, SlideEndSpeedItem, SlideMinSecondsItem, SlideMaxSecondsItem, SlideSlopeAccelerationItem,
+            ZiplineGrabRadiusItem, ZiplineHangOffsetItem, ZiplineRegrabSecondsItem,
         };
         private static readonly string[] _loadoutItems = { NameItem, SwitchSecondsItem, SlotsItem, WeaponsItem, AbilitiesItem };
         private static readonly string[] _catalogItems = { NameItem, WeaponsItem };
@@ -710,6 +714,10 @@ namespace Shooter.Core
             writer.Float(SlideMinSecondsItem, slide.MinSeconds);
             writer.Float(SlideMaxSecondsItem, slide.MaxSeconds);
             writer.Float(SlideSlopeAccelerationItem, slide.SlopeAcceleration);
+            var zipline = file.Motor.Zipline;
+            writer.Float(ZiplineGrabRadiusItem, zipline.GrabRadius);
+            writer.Float(ZiplineHangOffsetItem, zipline.HangOffset);
+            writer.Float(ZiplineRegrabSecondsItem, zipline.RegrabSeconds);
             writer.EndObject();
 
             writer.BeginObject(LoadoutItem);
@@ -1214,6 +1222,7 @@ namespace Shooter.Core
                 var wallRun = ReadWallRun(fields, d.WallRun);
                 var parachute = ReadParachute(fields, d.Parachute);
                 var slide = ReadSlide(fields, d.Slide);
+                var zipline = ReadZipline(fields, d.Zipline);
                 var walkDirection = ReadDirection(fields, WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, dm.WalkDirection);
                 var sprintDirection = ReadDirection(
                     fields, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem, dm.SprintDirection);
@@ -1276,7 +1285,8 @@ namespace Shooter.Core
                     swim,
                     wallRun,
                     parachute,
-                    slide);
+                    slide,
+                    zipline);
             }
             catch (ArgumentException e)
             {
@@ -1450,6 +1460,28 @@ namespace Shooter.Core
                     : e.ParamName == "descentSpeed" ? ParachuteDescentSpeedItem
                     : e.ParamName == "horizontalSpeed" ? ParachuteHorizontalSpeedItem
                     : e.ParamName == "steerAcceleration" ? ParachuteSteerAccelerationItem
+                    : null;
+                throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
+            }
+        }
+
+        // 射撃のばらつきの割合は書かない。サーバーの撃つ判定は掴まっている間も体の速さ (滑る速さ) でばらつきを決め、この割合を読む所が無いため
+        private static ZiplineTuning ReadZipline(ServerDataJson.Fields fields, ZiplineTuning fallback)
+        {
+            try
+            {
+                return new ZiplineTuning(
+                    fields.ReadFloat(ZiplineGrabRadiusItem, fallback.GrabRadius),
+                    fields.ReadFloat(ZiplineHangOffsetItem, fallback.HangOffset),
+                    fields.ReadFloat(ZiplineRegrabSecondsItem, fallback.RegrabSeconds),
+                    fallback.SpreadMoveFraction);
+            }
+            catch (ArgumentException e)
+            {
+                // ZiplineTuning の引数名には項目名の頭の zipline が付いていないので、ここで項目名に直す
+                var item = e.ParamName == "grabRadius" ? ZiplineGrabRadiusItem
+                    : e.ParamName == "hangOffset" ? ZiplineHangOffsetItem
+                    : e.ParamName == "regrabSeconds" ? ZiplineRegrabSecondsItem
                     : null;
                 throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
             }

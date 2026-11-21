@@ -191,6 +191,27 @@ namespace Shooter.Tests.EditMode
             Assert.That(error.Message, Does.Contain("MapCollisionExporterTests/Terrain (TerrainCollider)"));
         }
 
+        // 登録は消せず、通った登録はこの後の書き出しにも載ってしまうので、断られる登録だけを確かめる
+        [TestCase(null)]
+        [TestCase("")]
+        [TestCase("ziplines.json")]
+        [TestCase(".bad/name.json")]
+        [TestCase(MapCollisionExporter.FileExtension)]
+        [TestCase(NetMapLadders.Extension)]
+        [TestCase(NetMapVehicles.Extension)]
+        public void SceneDataNeedsANewFileExtension(string extension)
+        {
+            Assert.Throws<ArgumentException>(() => MapCollisionExporter.UseSceneData(extension, roots => string.Empty));
+            Assert.That(MapCollisionExporter.SceneDataExtensions, Does.Not.Contain(extension));
+        }
+
+        [Test]
+        public void SceneDataNeedsAWriter()
+        {
+            Assert.Throws<ArgumentNullException>(() => MapCollisionExporter.UseSceneData(".never-written.json", null));
+            Assert.That(MapCollisionExporter.SceneDataExtensions, Does.Not.Contain(".never-written.json"));
+        }
+
         [Test]
         public void WritesAFileThatReadsBackTheSameMapAndRemovesStaleOnes()
         {

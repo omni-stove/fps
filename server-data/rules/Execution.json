@@ -251,7 +251,10 @@
     "slideEndSpeed": 3,
     "slideMinSeconds": 0.4,
     "slideMaxSeconds": 3,
-    "slideSlopeAcceleration": 20
+    "slideSlopeAcceleration": 20,
+    "ziplineGrabRadius": 1.5,
+    "ziplineHangOffset": 1.3,
+    "ziplineRegrabSeconds": 0.5
   },
   "loadout": {
     "name": "DefaultLoadout",

@@ -80,7 +80,7 @@ namespace Shooter.Server
             }
 
             var previous = mover.State;
-            var current = mover.Simulation.Step(previous, input);
+            var current = TryMantle(mover, frame.Tick, input) ? mover.State : mover.Simulation.Step(mover.State, input);
             mover.State = current;
             mover.Yaw = input.Yaw;
             mover.Aiming = input.Restrained().Aim;

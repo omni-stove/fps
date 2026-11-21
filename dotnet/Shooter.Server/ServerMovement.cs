@@ -144,6 +144,7 @@ namespace Shooter.Server
             foreach (var mover in _byPlayer.Values)
             {
                 var position = mover.State.Position;
+                CancelMantle(mover);
                 mover.Simulation = CreateSimulation(position);
                 mover.Riding = false;
                 mover.State = new CharacterMotorState(position, Vector3.Zero, false, false);
@@ -231,6 +232,10 @@ namespace Shooter.Server
             public bool Downed { get; set; }
 
             public bool Riding { get; set; }
+
+            public VaultPath MantlePath { get; set; }
+
+            public float MantleElapsed { get; set; }
 
             public float NextWarning { get; set; }
         }

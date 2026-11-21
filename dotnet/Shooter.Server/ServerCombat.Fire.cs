@@ -55,6 +55,14 @@ namespace Shooter.Server
             }
 
             var spec = weapons.CurrentSpec;
+
+            // 連射の枠を使わないよう、ServerLoadout.TryFire より先に断る
+            if (spec != null && spec.IsShield)
+            {
+                WarnRejected(shooterId, ShotRejection.ShieldWeapon);
+                return false;
+            }
+
             var weaponCheck = weapons == shooter.Weapons
                 ? _rules.Loadout.TryFire(shooterId, spec, request.WeaponId, _now)
                 : CheckMountFire(weapons, spec, request.WeaponId);
@@ -251,8 +259,9 @@ namespace Shooter.Server
         // 発射番号はサーバーが次に受け入れる番号を添え、訂正を起こさない。
         public bool BotFire(int playerId, Vector3 origin, Vector3 direction, int tick)
         {
+            // 盾の武器を持った Bot は撃てないので、断られる要求を作って違反の数と警告を増やさない
             if (!BotRoster.IsBotId(playerId) || !_fighters.TryGetValue(playerId, out var fighter) || fighter.Weapons.CurrentSpec == null
-                || !fighter.Weapons.IsChargedForBot())
+                || fighter.Weapons.CurrentSpec.IsShield || !fighter.Weapons.IsChargedForBot())
             {
                 return false;
             }

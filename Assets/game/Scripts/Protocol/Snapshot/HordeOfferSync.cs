@@ -71,7 +71,7 @@ namespace Shooter.Protocol
             }
 
             var length = nameKey.Length;
-            while (length > 0 && Encoding.UTF8.GetByteCount(nameKey.Substring(0, length)) > MatchProtocol.MaxContentIdBytes)
+            while (length > 0 && Encoding.UTF8.GetByteCount(nameKey.AsSpan(0, length)) > MatchProtocol.MaxContentIdBytes)
             {
                 length--;
             }

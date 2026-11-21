@@ -10,6 +10,8 @@ namespace Shooter.NetV2.Tests
 {
     public sealed class ClientPickupsTests
     {
+        private static readonly int[] KeptIds = { 1, 2, 3 };
+        private static readonly int[] RequestedIds = { 3 };
         private readonly List<int> _sent = new List<int>();
         private readonly List<string> _log = new List<string>();
         private bool _connected;
@@ -47,7 +49,7 @@ namespace Shooter.NetV2.Tests
 
             Assert.That(_pickups.Apply(snapshot), Is.True);
 
-            Assert.That(_pickups.Items.Select(i => i.Id), Is.EqualTo(new[] { 1, 2, 3 }));
+            Assert.That(_pickups.Items.Select(i => i.Id), Is.EqualTo(KeptIds));
             Assert.That(_pickups.Items[0].OwnerId, Is.EqualTo(7));
             Assert.That(_pickups.Items[0].TryGetPickupKind(out var kind), Is.True);
             Assert.That(kind, Is.EqualTo(PickupKind.Weapon));
@@ -70,7 +72,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_pickups.CollectNearest(Vector3.Zero), Is.True);
             Assert.That(_pickups.CollectNearest(Vector3.Zero), Is.False, "the answer is awaited before asking again");
 
-            Assert.That(_sent, Is.EqualTo(new[] { 3 }), "a taken pickup and a crate a floor up are skipped");
+            Assert.That(_sent, Is.EqualTo(RequestedIds), "a taken pickup and a crate a floor up are skipped");
             Assert.That(_pickups.PendingItemId, Is.EqualTo(3));
             Assert.That(_log.Last(), Does.Contain("[Pickup] net collect request item=3 kind=WeaponPickup distance=0.50 sent=True"));
         }

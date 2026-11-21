@@ -666,12 +666,12 @@ namespace Shooter.Protocol.Tests
         [TestCase(ObjectiveItemKind.SupplyCrate, 5, true, 2f)]
         [TestCase(ObjectiveItemKind.DeathBox, 6, true, 1.25f)]
         [TestCase(ObjectiveItemKind.ExtractionPoint, 7, true, 8f)]
-        [TestCase(ObjectiveItemKind.WeaponPickup, 8, false, 1f)]
-        [TestCase(ObjectiveItemKind.AmmoPickup, 9, true, 1f)]
-        [TestCase(ObjectiveItemKind.HealthPickup, 10, false, 1.5f)]
-        [TestCase(ObjectiveItemKind.ArmorPickup, 11, true, 1f)]
-        [TestCase(ObjectiveItemKind.ItemPickup, 12, false, 0.5f)]
-        [TestCase(ObjectiveItemKind.AmmoCrate, 13, true, 1.6f)]
+        [TestCase(ObjectiveItemKind.WeaponPickup, 9, false, 1f)]
+        [TestCase(ObjectiveItemKind.AmmoPickup, 10, true, 1f)]
+        [TestCase(ObjectiveItemKind.HealthPickup, 11, false, 1.5f)]
+        [TestCase(ObjectiveItemKind.ArmorPickup, 12, true, 1f)]
+        [TestCase(ObjectiveItemKind.ItemPickup, 13, false, 0.5f)]
+        [TestCase(ObjectiveItemKind.AmmoCrate, 14, true, 1.6f)]
         public void ABoxOrAnExtractionPointRoundTrips(ObjectiveItemKind kind, int value, bool opened, float radius)
         {
             var sent = Build(100);

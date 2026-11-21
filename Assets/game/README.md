@@ -15,6 +15,7 @@
 | アセット・コンポーネントの欄 | 各型の Inspector の Tooltip |
 | UI へ出る状態 | `Scripts/Runtime/GameSignals.cs` のプロパティと、その型 |
 | EOS の設定の名前 | `Scripts/Core/EosCredentials.cs` |
+| 新しいゲームに入れて差し替える手順・データで変えられる場所 | `docs/getting-started.md` |
 | 専用サーバー | `docs/dedicated-server.md` |
 
 ## 導入

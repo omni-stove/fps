@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 
 namespace Shooter.Core
@@ -170,6 +171,17 @@ namespace Shooter.Core
         public static string MissingMotor(string vehicle)
         {
             return $"{Tag} '{vehicle}' has no IVehicleMotor; the driver's input moves nothing";
+        }
+
+        public static string MissingAnimatorParameters(string vehicle, string controller, IReadOnlyList<string> parameters)
+        {
+            if (parameters == null)
+            {
+                throw new ArgumentNullException(nameof(parameters));
+            }
+
+            var names = parameters.Count > 0 ? string.Join(", ", parameters) : "-";
+            return $"{Tag} '{vehicle}' animator controller '{controller}' has no parameter {names}; the gait animator does not set them";
         }
 
         public static string BotDriverMissingVehicle(string driver)

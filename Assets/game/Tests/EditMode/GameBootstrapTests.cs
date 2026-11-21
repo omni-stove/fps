@@ -414,6 +414,8 @@ namespace Shooter.Tests.EditMode
             var host = new GameObject("Bootstrap-Loadout");
             var loadout = ScriptableObject.CreateInstance<LoadoutDefinition>();
             loadout.SwitchSeconds = 0.25f;
+            var attack = new InputAction("Attack", InputActionType.Button);
+            var reload = new InputAction("Reload", InputActionType.Button);
             BootstrapWorld world = null;
             try
             {
@@ -428,6 +430,9 @@ namespace Shooter.Tests.EditMode
                 world = bootstrap.Build();
 
                 Assert.That(world.Weapon.SwitchSeconds, Is.EqualTo(0.25f));
+
+                // Edit Mode では WeaponController の Awake が走らず武器ができないので、Play 中の Awake の代わりに組む
+                world.Weapon.Initialize(world.Weapon.transform, attack, reload, null, null, new[] { _rifle, _handgun });
                 Assert.That(world.Weapon.IsSwitching, Is.False, "the player starts with the first weapon ready");
                 Assert.That(world.Weapon.SelectNext(), Is.True);
                 Assert.That(world.Weapon.IsSwitching, Is.True);
@@ -440,6 +445,8 @@ namespace Shooter.Tests.EditMode
                 DestroyWorld(world);
                 Object.DestroyImmediate(host);
                 Object.DestroyImmediate(loadout);
+                attack.Dispose();
+                reload.Dispose();
             }
         }
 

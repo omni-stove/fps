@@ -5,8 +5,15 @@ namespace Shooter.Core
     // 4 つの仕組みの値を 1 つのファイル (anticheat.json) にまとめるのは、運営がサーバー側の対策を 1 か所で見て切り替えられるようにするため。
     public sealed class AntiCheatTuning
     {
-        public static readonly AntiCheatTuning Default = new AntiCheatTuning(
-            ConcealSettings.Default, ViolationSettings.Default, StatsSettings.Default, EvidenceSettings.Default);
+        // static readonly のフィールドにすると、各 Settings の ctor が RequirePositive を呼んだときにこの型の静的初期化が走り、
+        // まだ作り終えていない Settings.Default (null) を読んで落ちるので、別の型に置いて初めて使うときに作る。
+        public static AntiCheatTuning Default => Defaults.Value;
+
+        private static class Defaults
+        {
+            public static readonly AntiCheatTuning Value = new AntiCheatTuning(
+                ConcealSettings.Default, ViolationSettings.Default, StatsSettings.Default, EvidenceSettings.Default);
+        }
 
         public AntiCheatTuning(ConcealSettings conceal, ViolationSettings violations, StatsSettings stats, EvidenceSettings evidence)
         {

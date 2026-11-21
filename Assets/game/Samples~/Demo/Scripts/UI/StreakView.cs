@@ -56,9 +56,13 @@ namespace Shooter.Runtime
         private string _shownSwitchKeyLabel = string.Empty;
         private string _shownConfirmLabel = string.Empty;
         private string _shownCancelLabel = string.Empty;
+        [NonSerialized]
         private InputAction _action;
+        [NonSerialized]
         private InputAction _switchAction;
+        [NonSerialized]
         private InputAction _confirmAction;
+        [NonSerialized]
         private InputAction _cancelAction;
         private bool _actionResolved;
         private bool _switchActionResolved;

@@ -77,6 +77,9 @@ namespace Shooter.Runtime
                 crate._groundHeight = groundHeight;
                 crate._fallSpeed = fallSpeed;
                 go.SetActive(true);
+
+                // Edit Mode では Awake が走らず見た目ができないので、ここでも組む (組み済みなら作り直さない)。
+                container.Build();
                 return crate;
             }
             catch

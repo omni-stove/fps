@@ -13,14 +13,12 @@ namespace Shooter.Net.Tests
 {
     public sealed class NetSceneBuilderTests
     {
-        private const string BaseScenePath = "Temp/ShooterTestBase.unity";
-
         private Scene _scene;
 
         [SetUp]
         public void SetUp()
         {
-            _scene = NewAdditiveScene();
+            _scene = NetTestScenes.NewAdditive();
         }
 
         [TearDown]
@@ -52,9 +50,9 @@ namespace Shooter.Net.Tests
             Assert.That(NetSceneBuilder.BattleRoyaleLootContainers.Select(c => c.Id), Is.Unique);
             Assert.That(NetSceneBuilder.BattleRoyaleExtractionPoints.Select(p => p.Id), Is.Unique);
             Assert.That(NetSceneBuilder.BattleRoyaleSpawnPoints.Select(p => p.Name), Is.Unique);
-            Assert.That(NetSceneBuilder.BattleRoyaleLootContainers, Has.Count.EqualTo(12));
-            Assert.That(NetSceneBuilder.BattleRoyaleExtractionPoints, Has.Count.EqualTo(4));
-            Assert.That(NetSceneBuilder.BattleRoyaleSpawnPoints, Has.Count.EqualTo(8));
+            Assert.That(NetSceneBuilder.BattleRoyaleLootContainers.Count(), Is.EqualTo(12));
+            Assert.That(NetSceneBuilder.BattleRoyaleExtractionPoints.Count(), Is.EqualTo(4));
+            Assert.That(NetSceneBuilder.BattleRoyaleSpawnPoints.Count(), Is.EqualTo(8));
             foreach (var (id, position, _) in NetSceneBuilder.BattleRoyaleLootContainers)
             {
                 Assert.That(position.y, Is.EqualTo(NetSceneBuilder.GroundY), id + " stands on the floor");
@@ -193,26 +191,5 @@ namespace Shooter.Net.Tests
             return found;
         }
 
-        private static Scene NewAdditiveScene()
-        {
-            for (var i = 0; i < SceneManager.sceneCount; i++)
-            {
-                if (string.IsNullOrEmpty(SceneManager.GetSceneAt(i).path))
-                {
-                    if (File.Exists(BaseScenePath))
-                    {
-                        EditorSceneManager.OpenScene(BaseScenePath, OpenSceneMode.Single);
-                    }
-                    else
-                    {
-                        EditorSceneManager.SaveScene(EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single), BaseScenePath);
-                    }
-
-                    break;
-                }
-            }
-
-            return EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-        }
     }
 }

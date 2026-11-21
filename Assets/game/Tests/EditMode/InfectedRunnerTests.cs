@@ -402,6 +402,9 @@ namespace Shooter.Tests.EditMode
         {
             var go = Track(new GameObject(name, typeof(CapsuleCollider)));
             go.transform.position = new Vector3(side * 5f, 0f, 10f);
+
+            // 戻す位置は Collider の範囲から足元を測るので、物理を動かさない Edit Mode では移した位置を物理へ渡しておく
+            Physics.SyncTransforms();
             go.AddComponent<Damageable>().Initialize(name, Damageable.DefaultMaxHealth);
             var member = go.AddComponent<SideMember>();
             member.Side = new Side(side);

@@ -132,7 +132,8 @@ namespace Shooter.Runtime
             SwayYawDegrees = yawDegrees;
             var still = pitchUpDegrees == 0f && yawDegrees == 0f;
             // 揺れの乗った向きを別の部品が保存して書き戻すことがあるので、自分が掛けたかの記録ではなく実際の向きで判断する。
-            if (still && _camera.transform.localRotation == _cameraRestRotation)
+            // Quaternion の == は 0.1 度ほどの差を同じと見なし、止めたときに小さな揺れを残すので、Equals で成分ごとに比べる。
+            if (still && _camera.transform.localRotation.Equals(_cameraRestRotation))
             {
                 return;
             }

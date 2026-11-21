@@ -26,6 +26,7 @@ MonoBehaviour:
   _downedBleedoutSeconds: 15
   _downedHealthFraction: 0.3
   _reviveSeconds: 3
+  _reviveRange: 1.5
   _cover: 0
   _blindFire: 0
   _activeReload: 1
@@ -46,10 +47,28 @@ MonoBehaviour:
   _ping: 0
   _abilities: 0
   _slowMotion: 0
+  _aimToFire: 0
+  _jump: 1
+  _emote: 0
+  _stamina: 0
+  _reloadInterruptedBy: 0000000001000000i
+  _aimWhileReloading: 0
+  _playerMaxHealth: 100
+  _headDamageMultiplier: 2
+  _bodyDamageMultiplier: 1
+  _limbDamageMultiplier: 0.75
   _spawnProtectionSeconds: 2
+  _respawnAnchors: 00000000i
   _fallDamage: 0
   _hudDensity: 0
   _objective: 0
   _minPlayers: 0
   _idleKickSeconds: 120
+  _idleWarningSeconds: 15
   _maxWeapons: 2
+  _reloadMode: 0
+  _viewMode: 0
+  _adsEyeView: 0
+  _streaks: 1
+  _textChat: 1
+  _spectating: 1

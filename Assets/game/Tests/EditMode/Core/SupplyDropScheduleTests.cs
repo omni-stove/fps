@@ -40,6 +40,18 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void StepsThatAddUpToTheDelayDropOnTheLastStep()
+        {
+            var schedule = new SupplyDropSchedule(new SupplyDropSpec(new[] { new SupplyDropStage(2, 1f, 3f) }));
+            schedule.BeginStage(0);
+
+            Assert.That(schedule.Tick(0.9f), Is.EqualTo(0));
+            Assert.That(schedule.Tick(0.1f), Is.EqualTo(1), "0.9 + 0.1 reaches the 1 second delay despite the float error");
+            Assert.That(schedule.Tick(2.9f), Is.EqualTo(0));
+            Assert.That(schedule.Tick(0.1f), Is.EqualTo(1));
+        }
+
+        [Test]
         public void TheFirstCrateWaitsForTheDelayAndTheRestFollowAtTheInterval()
         {
             var schedule = new SupplyDropSchedule(new SupplyDropSpec(new[] { new SupplyDropStage(3, 5f, 10f) }));

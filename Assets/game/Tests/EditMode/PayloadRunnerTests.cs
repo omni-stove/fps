@@ -22,6 +22,7 @@ namespace Shooter.Tests.EditMode
         // 乗る体のテストは PlayerControllerPlatformTests と同じ板と体の大きさにする。
         private const float _rideTick = 0.02f;
         private const float _halfThickness = 0.25f;
+        private const float _skinWidth = 0.08f;
 
         private static readonly Vector3 _nearStart = new Vector3(0f, 0f, 1f);
         private static readonly Vector3 _far = new Vector3(0f, 0f, 30f);
@@ -451,11 +452,14 @@ namespace Shooter.Tests.EditMode
         private (GameObject body, PlayerController player) NewPlayer(Vector3 position)
         {
             var body = Track(new GameObject("Rider"));
-            body.transform.position = position;
+            // CharacterController は床から skinWidth だけ浮いて立つので、置く高さを始めからそこにする。
+            // 床に接して置くと、最初に横や上へ運ばれた Move で skin の分だけ持ち上がり、運ばれた量に混ざる
+            body.transform.position = position + (Vector3.up * _skinWidth);
             var controller = body.AddComponent<CharacterController>();
             controller.height = 2f;
             controller.radius = 0.5f;
             controller.center = Vector3.zero;
+            controller.skinWidth = _skinWidth;
 
             var eye = new GameObject(GameBootstrap.EyeName).transform;
             eye.SetParent(body.transform, false);

@@ -104,17 +104,22 @@ namespace Shooter.Tests.EditMode
         public void CreatingNeedsALoadedSceneAndAName()
         {
             var scene = TestScenes.NewAdditive();
+
+            // NewAdditive が Single でシーンを開き直すと SetUp で作った _definition が捨てられるので、シーンの後に作る。
+            var definition = ScriptableObject.CreateInstance<AircraftDefinition>();
+            definition.name = "Aircraft";
             try
             {
                 Assert.Throws<ArgumentException>(() => AircraftFixtureBuilder.Create(default, null, "Aircraft", Vector3.zero, Quaternion.identity));
                 Assert.Throws<ArgumentException>(() => AircraftFixtureBuilder.Create(scene, null, " ", Vector3.zero, Quaternion.identity));
 
-                _definition.MaxThrust = -1f;
-                Assert.Throws<ArgumentException>(() => AircraftFixtureBuilder.Create(scene, null, "Aircraft", Vector3.zero, Quaternion.identity, _definition));
+                definition.MaxThrust = -1f;
+                Assert.Throws<ArgumentException>(() => AircraftFixtureBuilder.Create(scene, null, "Aircraft", Vector3.zero, Quaternion.identity, definition));
                 Assert.That(scene.rootCount, Is.Zero, "an invalid asset places nothing");
             }
             finally
             {
+                Object.DestroyImmediate(definition);
                 UnityEditor.SceneManagement.EditorSceneManager.CloseScene(scene, true);
             }
         }

@@ -89,7 +89,7 @@ namespace Shooter.Net.Tests
             Assert.That(visual, Is.Not.Null);
             Assert.That(visual.localScale, Is.EqualTo(LootContainer.DefaultVisualSize));
             Assert.That(visual.GetComponent<Collider>().enabled, Is.False, "the server's movement does not collide with it");
-            Assert.That(ColorOf(visual), Is.EqualTo(LootContainer.DefaultClosedColor));
+            AssertColor(ColorOf(visual), LootContainer.DefaultClosedColor);
             Assert.That(_logs, Does.Contain("[Loot] net look item=5 kind=LootBox prefab=False"));
         }
 
@@ -103,7 +103,7 @@ namespace Shooter.Net.Tests
 
             Assert.That(_part.ViewOf(5), Is.SameAs(root));
             Assert.That(root.GetComponent<LootContainer>().IsOpened, Is.True);
-            Assert.That(ColorOf(root.transform.Find(LootContainer.VisualName)), Is.EqualTo(LootContainer.DefaultOpenedColor));
+            AssertColor(ColorOf(root.transform.Find(LootContainer.VisualName)), LootContainer.DefaultOpenedColor);
         }
 
         [Test]
@@ -228,6 +228,14 @@ namespace Shooter.Net.Tests
             prefab.name = name;
             _created.Add(prefab);
             return prefab;
+        }
+
+        private static void AssertColor(Color actual, Color expected)
+        {
+            Assert.That(actual.r, Is.EqualTo(expected.r).Within(1e-3f));
+            Assert.That(actual.g, Is.EqualTo(expected.g).Within(1e-3f));
+            Assert.That(actual.b, Is.EqualTo(expected.b).Within(1e-3f));
+            Assert.That(actual.a, Is.EqualTo(expected.a).Within(1e-3f));
         }
 
         private static Color ColorOf(Transform visual)

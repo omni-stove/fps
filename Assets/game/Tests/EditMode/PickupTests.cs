@@ -104,6 +104,7 @@ namespace Shooter.Tests.EditMode
         {
             var bot = NewCollector("Bot");
             LogAssert.Expect(LogType.Log, "[Combat] target died id=Bot");
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] Killed killer=-?\d+ victim=-?\d+ weapon= headshot=False friendly=False$"));
             bot.Kill();
             var pickup = Pickup.Create(PickupContents.ForHealth(25), Vector3.zero);
 

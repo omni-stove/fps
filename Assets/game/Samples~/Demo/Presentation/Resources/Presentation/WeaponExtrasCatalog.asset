@@ -33,11 +33,21 @@ MonoBehaviour:
     _shellLandSound: {fileID: 8300000, guid: 6bb5cc0cf36d04d39b79c8f11fcdd9bf, type: 3}
     _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
     _pickupModel: {fileID: 4332218011447617919, guid: 2db777748e4a84a1b80b6d4b6bb1b7fb, type: 3}
+  - _weaponId: 79d598f9-4151-4934-b953-2d4cf52118db
+    _shellPrefab: {fileID: 0}
+    _shellLandSound: {fileID: 0}
+    _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
+    _pickupModel: {fileID: 981802142848608644, guid: 06249b126f49741dba4d321b7b057d99, type: 3}
   - _weaponId: 7639c28b-90a0-40e4-9def-64cbfaa472b1
     _shellPrefab: {fileID: 0}
     _shellLandSound: {fileID: 0}
     _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
     _pickupModel: {fileID: 640304000191921861, guid: 7614ceac189424d93abbfb5d295585ed, type: 3}
+  - _weaponId: 2b92ec24-9e3b-4b5a-bf0a-ebaf3b48b544
+    _shellPrefab: {fileID: 0}
+    _shellLandSound: {fileID: 0}
+    _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
+    _pickupModel: {fileID: 1353058919774851519, guid: ea607739172834f5a81bdca27eeb1762, type: 3}
   - _weaponId: 8e9139d0-8779-4ec7-af73-198c0289f616
     _shellPrefab: {fileID: 5607472273078574921, guid: 1701fd5433dcb43a09b53ff4ae881fc8, type: 3}
     _shellLandSound: {fileID: 8300000, guid: 6bb5cc0cf36d04d39b79c8f11fcdd9bf, type: 3}
@@ -83,6 +93,11 @@ MonoBehaviour:
     _shellLandSound: {fileID: 8300000, guid: 719478fa8683e4d648fc6b83f1592ed6, type: 3}
     _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
     _pickupModel: {fileID: 1213040939487375886, guid: 31477ddead5ff4669865d7e5b733e936, type: 3}
+  - _weaponId: e1920316-c182-4151-9273-26f94c3adaf9
+    _shellPrefab: {fileID: 0}
+    _shellLandSound: {fileID: 0}
+    _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
+    _pickupModel: {fileID: 4451947363358372666, guid: cdc95311a27e348d5ba7684fc01bb99a, type: 3}
   - _weaponId: 4d8e2a6f-1b3c-4e5d-9f7a-8c0b2d4e6f13
     _shellPrefab: {fileID: 5607472273078574921, guid: 1701fd5433dcb43a09b53ff4ae881fc8, type: 3}
     _shellLandSound: {fileID: 8300000, guid: 6bb5cc0cf36d04d39b79c8f11fcdd9bf, type: 3}
@@ -98,6 +113,11 @@ MonoBehaviour:
     _shellLandSound: {fileID: 8300000, guid: 6bb5cc0cf36d04d39b79c8f11fcdd9bf, type: 3}
     _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
     _pickupModel: {fileID: 5109545998324423918, guid: 01b0334ed3e8148e98e741ca221b9a92, type: 3}
+  - _weaponId: 3e7b9c41-5a2d-4f86-b1c3-9d4e7a2f6b18
+    _shellPrefab: {fileID: 485804492503540877, guid: e03567717969c4a3b84fcc740b2ac6a4, type: 3}
+    _shellLandSound: {fileID: 8300000, guid: 6bb5cc0cf36d04d39b79c8f11fcdd9bf, type: 3}
+    _dryFireSound: {fileID: 8300000, guid: d3c9d5307e09c483aba816d532da4b68, type: 3}
+    _pickupModel: {fileID: 4719621829725637621, guid: 7bb49774e38e34c49bc1dfe2936fe817, type: 3}
   - _weaponId: ffe5619d-2694-4ce3-a388-c0d2b026c2a4
     _shellPrefab: {fileID: 0}
     _shellLandSound: {fileID: 0}

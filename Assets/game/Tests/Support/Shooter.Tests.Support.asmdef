@@ -2,6 +2,7 @@
     "name": "Shooter.Tests.Support",
     "rootNamespace": "Shooter.Tests.EditMode",
     "references": [
+        "Shooter.Tests.Components",
         "Shooter.Core",
         "Shooter.Runtime",
         "Shooter.Services",

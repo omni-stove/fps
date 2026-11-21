@@ -160,6 +160,12 @@ namespace Shooter.Core
 
         public void BindNotice(IHudNoticeSource notice)
         {
+            // With no source bound before or after, the notice was set directly (a respawn countdown) and is not the source's to clear.
+            if (notice == null && _notice == null)
+            {
+                return;
+            }
+
             if (_notice != null)
             {
                 _notice.Changed -= SetNotice;

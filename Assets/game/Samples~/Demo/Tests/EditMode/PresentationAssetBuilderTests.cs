@@ -244,7 +244,7 @@ namespace Shooter.Tests.EditMode
 
             foreach (var (name, spec) in WeaponAssetBuilder.AllWeaponSources())
             {
-                var silent = spec.IsShield || spec.Round.Delivery == Shooter.Core.RoundDelivery.Beam || spec.Round.Delivery == Shooter.Core.RoundDelivery.Spray;
+                var silent = spec.IsShield || spec.IsMelee || spec.Round.Delivery == Shooter.Core.RoundDelivery.Beam || spec.Round.Delivery == Shooter.Core.RoundDelivery.Spray;
                 Assert.That(ids.Contains(spec.Id), Is.EqualTo(!silent), name);
             }
 

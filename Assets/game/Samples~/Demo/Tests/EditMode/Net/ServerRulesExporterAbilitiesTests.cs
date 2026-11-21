@@ -228,8 +228,9 @@ namespace Shooter.Net.Tests
         {
             var match = NetSceneBuilder.LoadOrBuildMatch();
             var loadout = NetMatchDefinition.PickLoadout(match);
-            Assert.That(LoadoutSelectionAssets.DefaultAbilityIds(loadout)[AbilityAssetBuilder.BeaconLoadoutSlot], Is.EqualTo(AbilityAssetBuilder.BeaconAbilityId),
-                $"run {AbilityAssetBuilder.MenuPath}");
+            var defaults = LoadoutSelectionAssets.DefaultAbilityIds(loadout);
+            Assert.That(defaults.Count, Is.GreaterThan(AbilityAssetBuilder.BeaconLoadoutSlot), $"run {AbilityAssetBuilder.MenuPath}");
+            Assert.That(defaults[AbilityAssetBuilder.BeaconLoadoutSlot], Is.EqualTo(AbilityAssetBuilder.BeaconAbilityId), $"run {AbilityAssetBuilder.MenuPath}");
 
             var written = ServerRulesExporter.WriteRules(_directory, match, new[] { Rules("TeamDeathmatch") }, _deployables);
 

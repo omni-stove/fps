@@ -56,7 +56,7 @@ namespace Shooter.Tests.EditMode
         {
             var entries = AttachmentModelCatalogAssetStep.Entries();
 
-            Assert.That(entries, Has.Count.EqualTo(8));
+            Assert.That(entries.Count(), Is.EqualTo(8));
             Assert.That(entries.Select(e => e.ItemId), Is.Unique);
             foreach (var entry in entries)
             {

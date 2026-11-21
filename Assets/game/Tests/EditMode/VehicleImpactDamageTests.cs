@@ -158,10 +158,12 @@ namespace Shooter.Tests.EditMode
         [Test]
         public void TheCarItselfItsRidersAndTheDeadAreNotHit()
         {
-            var ownDamageable = _vehicle.gameObject.AddComponent<Damageable>();
-            ownDamageable.Initialize("Car", 500);
+            // 乗り物は耐久の Damageable を自分で付けるので、足さずにそれを見る
+            var ownDamageable = _vehicle.GetComponent<Damageable>();
+            Assert.That(ownDamageable, Is.Not.Null);
+            var ownHealth = ownDamageable.Health.Current;
             Assert.That(_impact.TryHit(_vehicle.transform.Find("Body").GetComponent<Collider>(), 20f, 0f), Is.EqualTo(0));
-            Assert.That(ownDamageable.Health.Current, Is.EqualTo(500));
+            Assert.That(ownDamageable.Health.Current, Is.EqualTo(ownHealth));
 
             var passenger = TestCars.Board(_vehicle, "Passenger", 1, _created);
             var passengerBody = passenger.gameObject.AddComponent<CapsuleCollider>();

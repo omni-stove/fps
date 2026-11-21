@@ -224,7 +224,7 @@ namespace Shooter.Core.Tests
             Assert.That(read.Round.Projectile.VisualId, Is.EqualTo("fx.bolt"));
             Assert.That(read.Round.Homing.TurnDegreesPerSecond, Is.EqualTo(90f));
             Assert.That(read.Round.Penetration.MaxPenetrations, Is.EqualTo(2));
-            Assert.That(read.Round.Penetration.Materials, Has.Count.EqualTo(2));
+            Assert.That(read.Round.Penetration.Materials.Count, Is.EqualTo(2));
             Assert.That(read.Round.Penetration.PenetrabilityOf("metal"), Is.EqualTo(0f));
             Assert.That(read.Round.Penetration.PenetrabilityOf("wood"), Is.EqualTo(2f));
             Assert.That(read.Round.Ricochet.MaxGrazingAngleDegrees, Is.EqualTo(20f));

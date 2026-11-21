@@ -1203,7 +1203,9 @@ namespace Shooter.Core
         private readonly struct GyroFields : IEquatable<GyroFields>
         {
             // 傾けただけで視点が動くと驚くので、初期は切っておく。
-            public static readonly GyroFields Default = new GyroFields(false, GyroSensitivityRange.Default, false, false);
+            // static readonly のフィールドにすると、Mono がこの型の静的初期化を ControlSettings の静的初期化より先に走らせ、
+            // まだ入っていない GyroSensitivityRange (感度 0) で作ってしまうので、読むたびに作る。
+            public static GyroFields Default => new GyroFields(false, GyroSensitivityRange.Default, false, false);
 
             public GyroFields(bool enabled, int sensitivityPercent, bool aimOnly, bool invertY)
             {

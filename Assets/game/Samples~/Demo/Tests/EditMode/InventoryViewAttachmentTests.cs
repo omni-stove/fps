@@ -78,6 +78,8 @@ namespace Shooter.Tests.EditMode
         public void AnAttachmentAboveTheLevelShowsTheLockedTextAndCannotBeAttached()
         {
             var source = new FakeControl(Catalog(InventoryRule.Default));
+            source.Inventory.Add(_suppressorId, 1);
+            source.Inventory.Add(_compensatorId, 1);
             var view = CreateBoundView(source);
             view.SetOpen(true);
             var ledger = new ProgressionLedger(new ProgressionSpec(
@@ -100,6 +102,8 @@ namespace Shooter.Tests.EditMode
         public void ReachingTheLevelOrDroppingTheLedgerLetsTheAttachmentBeAttached()
         {
             var source = new FakeControl(Catalog(InventoryRule.Default));
+            source.Inventory.Add(_suppressorId, 1);
+            source.Inventory.Add(_compensatorId, 1);
             var view = CreateBoundView(source);
             view.SetOpen(true);
             var ledger = new ProgressionLedger(new ProgressionSpec(

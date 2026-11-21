@@ -129,10 +129,13 @@ namespace Shooter.Tests.EditMode
             KitTuning.Reload();
             try
             {
+                var text = KitTuning.FindText(c => c.CosmeticsTuning, CosmeticJson.ResourcePath, out var source);
+                var expected = text == null ? CosmeticCatalog.Default : CosmeticJson.Parse(text, source);
+
                 var loaded = CosmeticLooks.LoadCatalog();
 
                 Assert.That(loaded, Is.Not.Null);
-                Assert.That(loaded.Items, Is.Not.Empty, "the bundled file or the default catalog");
+                Assert.That(ItemIds(loaded), Is.EqualTo(ItemIds(expected)), "the bundled file or the default catalog");
                 Assert.That(CosmeticLooks.Catalog, Is.SameAs(loaded), "the kit reads the file once and keeps it");
             }
             finally
@@ -173,5 +176,17 @@ namespace Shooter.Tests.EditMode
             Assert.That(added.GetComponent<Renderer>().sharedMaterial, Is.SameAs(addedOriginal));
             Assert.That(CamoPaint.Apply(null, _tigerPaint), Is.Null);
         }
+
+        private static List<string> ItemIds(CosmeticCatalog catalog)
+        {
+            var ids = new List<string>();
+            foreach (var item in catalog.Items)
+            {
+                ids.Add(item.Id);
+            }
+
+            return ids;
+        }
     }
 }
+

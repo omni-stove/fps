@@ -166,7 +166,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_melee.IsSwinging, Is.True);
             Assert.That(_melee.IsMeleeWeaponSwinging, Is.True);
-            Assert.That(_melee.Swing.CurrentSpec, Is.SameAs(Light));
+            AssertSwingValues(_melee.Swing.CurrentSpec, Light);
             Assert.That(_melee.Spec, Is.SameAs(normal), "the tuned melee values are kept for the next bare-handed swing");
 
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Melee\] hit id=holder target=Dummy dmg=30 "));
@@ -205,7 +205,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Melee] weapon-swing id=holder weapon=" + CrowbarId + " charge=1.00");
             _weapon.PullTrigger(false, false);
 
-            Assert.That(_melee.Swing.CurrentSpec, Is.SameAs(Heavy));
+            AssertSwingValues(_melee.Swing.CurrentSpec, Heavy);
             Assert.That(_weapon.ChargeFraction, Is.Zero, "the charge starts over after the swing");
 
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Melee\] hit id=holder target=Dummy dmg=80 "));
@@ -235,7 +235,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Melee] weapon-swing id=holder weapon=" + CrowbarId + " charge=0.00");
             Assert.That(_melee.TrySwing(), Is.True);
 
-            Assert.That(_melee.Swing.CurrentSpec, Is.SameAs(Light));
+            AssertSwingValues(_melee.Swing.CurrentSpec, Light);
         }
 
         [Test]
@@ -418,6 +418,18 @@ namespace Shooter.Tests.EditMode
         {
             _dummy = TargetDummy.Create("Dummy", Origin + feet, Quaternion.identity);
             Physics.SyncTransforms();
+        }
+
+        private static void AssertSwingValues(MeleeSpec actual, MeleeSpec expected)
+        {
+            Assert.That(actual, Is.Not.Null);
+            Assert.That(actual.Damage, Is.EqualTo(expected.Damage));
+            Assert.That(actual.Reach, Is.EqualTo(expected.Reach));
+            Assert.That(actual.ArcDegrees, Is.EqualTo(expected.ArcDegrees));
+            Assert.That(actual.SwingSeconds, Is.EqualTo(expected.SwingSeconds));
+            Assert.That(actual.CooldownSeconds, Is.EqualTo(expected.CooldownSeconds));
+            Assert.That(actual.ImpactSeconds, Is.EqualTo(expected.ImpactSeconds));
+            Assert.That(actual.LungeDistance, Is.EqualTo(expected.LungeDistance));
         }
     }
 }

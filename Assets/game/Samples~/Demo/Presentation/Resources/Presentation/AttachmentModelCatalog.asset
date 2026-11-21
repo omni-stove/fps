@@ -25,6 +25,10 @@ MonoBehaviour:
     _prefab: {fileID: 3891054957522882483, guid: 38a8304819fb040f08e21c752ff4c830, type: 3}
     _anchor: 0
     _placeholderSize: {x: 0.04, y: 0.045, z: 0.18}
+  - _itemId: c8e4f2a1-7b3d-4e95-a6c0-1d2f3b4a5e67
+    _prefab: {fileID: 1682098481834643244, guid: 5bdfbe66db6694743b3d14b4637f74cb, type: 3}
+    _anchor: 0
+    _placeholderSize: {x: 0.05, y: 0.06, z: 0.16}
   - _itemId: 8d8c8546-59d4-4b4c-ba71-890664e5c260
     _prefab: {fileID: 7962545644395573816, guid: 85a671a934b344fedac1bd2dc4272bdf, type: 3}
     _anchor: 1

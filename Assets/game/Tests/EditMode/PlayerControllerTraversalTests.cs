@@ -53,6 +53,9 @@ namespace Shooter.Tests.EditMode
             eye.SetParent(_body.transform, false);
             eye.localPosition = new Vector3(0f, 0.6f, 0f);
 
+            // PlayerController は目を名前でなく ViewRig か子のカメラで探すので、カメラが無いと目の高さを 0 と測り、胸が本体の中心に来る
+            eye.gameObject.AddComponent<Camera>();
+
             _player = _body.AddComponent<PlayerController>();
             _damageable = _body.AddComponent<Damageable>();
             _damageable.Initialize("Swimmer", _maxHealth);

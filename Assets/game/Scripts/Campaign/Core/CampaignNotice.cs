@@ -4,6 +4,9 @@ namespace Shooter.Core
 {
     public sealed class CampaignNotice : IHudNoticeSource
     {
+        // 残りを float で引いていくので、足すと秒数ちょうどになる刻み (1 秒を 0.9 + 0.1) でも誤差でわずかに残り、1 フレーム長く出る
+        private const float _snap = 1e-6f;
+
         private float _savedRemaining;
         private bool _countingDown;
 
@@ -54,7 +57,7 @@ namespace Shooter.Core
             }
 
             _savedRemaining -= deltaSeconds;
-            if (_savedRemaining > 0f)
+            if (_savedRemaining > _snap)
             {
                 return;
             }

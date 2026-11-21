@@ -200,7 +200,7 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(_melee.IsSwinging, Is.True);
             Assert.That(_melee.IsShieldBashing, Is.True);
-            Assert.That(_melee.Swing.CurrentSpec, Is.SameAs(RiotShieldSpec.DefaultBash));
+            AssertSwingValues(_melee.Swing.CurrentSpec, RiotShieldSpec.DefaultBash);
             Assert.That(_melee.Spec, Is.SameAs(normal), "the tuned melee values are kept for the next normal swing");
 
             LogAssert.Expect(LogType.Log, new Regex(@"^\[Melee\] hit id=holder target=Dummy dmg=40 "));
@@ -232,7 +232,7 @@ namespace Shooter.Tests.EditMode
             LogAssert.Expect(LogType.Log, "[Melee] shield-bash id=holder weapon=" + ShieldId);
             Assert.That(_melee.TrySwing(), Is.True);
 
-            Assert.That(_melee.Swing.CurrentSpec, Is.SameAs(RiotShieldSpec.DefaultBash));
+            AssertSwingValues(_melee.Swing.CurrentSpec, RiotShieldSpec.DefaultBash);
         }
 
         [Test]
@@ -299,6 +299,18 @@ namespace Shooter.Tests.EditMode
         {
             _dummy = TargetDummy.Create("Dummy", Origin + feet, Quaternion.identity);
             Physics.SyncTransforms();
+        }
+
+        private static void AssertSwingValues(MeleeSpec actual, MeleeSpec expected)
+        {
+            Assert.That(actual, Is.Not.Null);
+            Assert.That(actual.Damage, Is.EqualTo(expected.Damage));
+            Assert.That(actual.Reach, Is.EqualTo(expected.Reach));
+            Assert.That(actual.ArcDegrees, Is.EqualTo(expected.ArcDegrees));
+            Assert.That(actual.SwingSeconds, Is.EqualTo(expected.SwingSeconds));
+            Assert.That(actual.CooldownSeconds, Is.EqualTo(expected.CooldownSeconds));
+            Assert.That(actual.ImpactSeconds, Is.EqualTo(expected.ImpactSeconds));
+            Assert.That(actual.LungeDistance, Is.EqualTo(expected.LungeDistance));
         }
     }
 }

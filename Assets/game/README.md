@@ -60,7 +60,7 @@ private void OnDisable()
 }
 ```
 
-モードの状態は `GameSignals.ModeStatus` の `Detail` に届き、ネット対戦にあるモードもオフラインと同じ型で届く。画面は `Detail` の型を見て何を出すかを決める (Demo は型ごとの書式役を `ModeHudFormatters` に登録している)。
+モードの状態は `GameSignals.ModeStatus` の `Detail` に届き、ネット対戦にあるモードもオフラインと同じ型で届く。画面は `Detail` の型を見て何を出すかを決める (Demo は型ごとに書式役を登録して文字にしている)。
 
 | モード | `Detail` の型 |
 | --- | --- |

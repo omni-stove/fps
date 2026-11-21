@@ -13,9 +13,10 @@ MonoBehaviour:
   m_Name: DefaultLoadout
   m_EditorClassIdentifier: Shooter.Runtime::Shooter.Runtime.LoadoutDefinition
   _slots:
-  - _allowedCategories: 00000000010000000200000003000000040000000500000007000000i
+  - _allowedCategories: 0000000001000000020000000300000004000000050000000700000008000000i
     _weapon: {fileID: 11400000, guid: 21c1a05afcc5c46a087ddec7d9027b93, type: 2}
   - _allowedCategories: 06000000i
     _weapon: {fileID: 11400000, guid: d96f9ac9ccfb14f6b9303123108fd62a, type: 2}
   _switchSeconds: 0.4
-  _abilities: []
+  _abilities:
+  - {fileID: 11400000, guid: 644ab937ca14a44dcb94b13ae0475b43, type: 2}

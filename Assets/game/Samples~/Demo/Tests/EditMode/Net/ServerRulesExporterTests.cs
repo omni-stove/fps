@@ -124,7 +124,7 @@ namespace Shooter.Net.Tests
         [Test]
         public void TheLootOfGameContentIsWrittenInsteadOfResources()
         {
-            const string loot = "{ \"tables\": [ { \"id\": \"crates\", \"rolls\": 1, \"entries\": [] } ] }";
+            const string loot = "{ \"tables\": [ { \"id\": \"crates\", \"rolls\": 1, \"entries\": [ { \"itemId\": \"3f2b8c1e-0a4d-4c6e-9b1a-7d2e5f8c0b13\", \"weight\": 1 } ] } ] }";
             const string redeploy = "{ \"charges\": 3 }";
             var content = Create<GameContent>("Game");
             content.LootTuning = Text("GameLoot", loot);

@@ -28,7 +28,7 @@ namespace Shooter.Net.Tests
         [SetUp]
         public void SetUp()
         {
-            _scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
+            _scene = NetTestScenes.NewAdditive();
             _client = new ClientVehicles(LocalPlayerId);
             _vehicles = new NetV2Vehicles(null);
             _tick = 0;

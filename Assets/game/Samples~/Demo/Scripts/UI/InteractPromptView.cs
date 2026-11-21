@@ -1,3 +1,4 @@
+using System;
 using Shooter.Core;
 using UnityEngine.InputSystem;
 using UnityEngine.UIElements;
@@ -18,6 +19,7 @@ namespace Shooter.Runtime
         private InteractHint? _hint;
         private string _hintKeyLabel;
         private string _actionPath;
+        [NonSerialized]
         private InputAction _action;
 
         public override string ElementName => UxmlName;

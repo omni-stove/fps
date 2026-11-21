@@ -86,10 +86,15 @@ namespace Shooter.Editor
         public const string HookName = "Hook";
         public const string HeadName = "Head";
         public const string BladeName = "Blade";
+        public const string ShieldPanelName = "ShieldPanel";
+        public const string ViewportName = "Viewport";
 
         // 扇がこれ以上広い近接武器は払って斬る刃に、振りがこれ以上遅いものは重い頭の棍棒に見せる。どちらでもなければ細い金属の棒。
         public const float BladeMinArcDegrees = 100f;
         public const float ClubMinSwingSeconds = 0.6f;
+
+        // 盾の幅と高さそのままで手元に出すと一人称の画面がほぼ塞がるので、形の比だけ残して縮める。
+        public const float ShieldLookScale = 0.5f;
 
         public const float ScopeMaxFieldOfView = 40f;
 
@@ -208,6 +213,11 @@ namespace Shooter.Editor
             if (spec == null)
             {
                 throw new ArgumentNullException(nameof(spec));
+            }
+
+            if (spec.IsShield)
+            {
+                return ShieldFor(spec.Shield);
             }
 
             if (spec.IsMelee)
@@ -507,6 +517,39 @@ namespace Shooter.Editor
                 new Vector3(0f, 0f, length),
                 new Vector3(0f, 0f, length * 0.5f),
                 new Vector3(0f, handleWidth, handle),
+                new Vector3(0f, 0f, handle * 0.5f),
+                null);
+        }
+
+        public static WeaponLook ShieldFor(RiotShieldSpec shield)
+        {
+            if (shield == null)
+            {
+                throw new ArgumentNullException(nameof(shield));
+            }
+
+            const float handle = 0.12f;
+            const float handleWidth = 0.03f;
+            const float thickness = 0.03f;
+            var width = shield.Width * ShieldLookScale;
+            var height = shield.Height * ShieldLookScale;
+            var panelZ = handle + (thickness * 0.5f);
+            var viewportY = height * 0.3f;
+            var parts = new List<WeaponPart>
+            {
+                new WeaponPart(GripName, WeaponPartShape.Cylinder, new Vector3(0f, 0f, handle * 0.5f), new Vector3(handleWidth, handleWidth, handle), WeaponPaint.Furniture),
+                new WeaponPart(ShieldPanelName, WeaponPartShape.Box, new Vector3(0f, 0f, panelZ), new Vector3(width, height, thickness), WeaponPaint.Body),
+                new WeaponPart(ViewportName, WeaponPartShape.Box, new Vector3(0f, viewportY, panelZ), new Vector3(width * 0.6f, height * 0.12f, thickness * 1.1f), WeaponPaint.Glass),
+            };
+
+            return new WeaponLook(
+                parts,
+                OliveColor,
+                PolymerColor,
+                null,
+                new Vector3(0f, 0f, panelZ + (thickness * 0.55f)),
+                new Vector3(0f, 0f, panelZ),
+                new Vector3(0f, viewportY, 0f),
                 new Vector3(0f, 0f, handle * 0.5f),
                 null);
         }

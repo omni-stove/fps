@@ -15,15 +15,13 @@ namespace Shooter.Net.Tests
     public sealed class ArenaSceneBuilderTests
     {
         private const float Epsilon = 1e-4f;
-        private const string BaseScenePath = "Temp/ShooterTestBase.unity";
-
         private Scene _scene;
         private readonly List<GameObject> _created = new List<GameObject>();
 
         [SetUp]
         public void SetUp()
         {
-            _scene = NewAdditiveScene();
+            _scene = NetTestScenes.NewAdditive();
         }
 
         [TearDown]
@@ -579,27 +577,5 @@ namespace Shooter.Net.Tests
             return go;
         }
 
-        // 保存されていない Untitled があると Additive の NewScene は例外を投げるので、Shooter.Tests.EditMode の TestScenes.NewAdditive と同じく避ける。
-        private static Scene NewAdditiveScene()
-        {
-            for (var i = 0; i < SceneManager.sceneCount; i++)
-            {
-                if (string.IsNullOrEmpty(SceneManager.GetSceneAt(i).path))
-                {
-                    if (File.Exists(BaseScenePath))
-                    {
-                        EditorSceneManager.OpenScene(BaseScenePath, OpenSceneMode.Single);
-                    }
-                    else
-                    {
-                        EditorSceneManager.SaveScene(EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single), BaseScenePath);
-                    }
-
-                    break;
-                }
-            }
-
-            return EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Additive);
-        }
     }
 }

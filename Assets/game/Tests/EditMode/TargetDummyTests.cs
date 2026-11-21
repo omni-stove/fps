@@ -1,4 +1,5 @@
 using System;
+using System.Text.RegularExpressions;
 using Shooter.Core;
 using Shooter.Runtime;
 using NUnit.Framework;
@@ -112,6 +113,7 @@ namespace Shooter.Tests.EditMode
         public void RespawnsAtHomeWithFullHealthAfterThreeSeconds()
         {
             LogAssert.Expect(LogType.Log, "[Combat] target died id=dummy");
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] Killed killer=-?\d+ victim=-?\d+ weapon= headshot=False friendly=False$"));
             _dummy.Damageable.Kill();
             _dummy.transform.SetPositionAndRotation(new Vector3(-5f, 2f, 1f), Quaternion.identity);
 
@@ -170,6 +172,7 @@ namespace Shooter.Tests.EditMode
             _dummy.Initialize(_dummy.Damageable, 1f);
 
             LogAssert.Expect(LogType.Log, "[Combat] target died id=dummy");
+            LogAssert.Expect(LogType.Log, new Regex(@"^\[Combat\] Killed killer=-?\d+ victim=-?\d+ weapon= headshot=False friendly=False$"));
             _dummy.Damageable.Kill();
             LogAssert.Expect(LogType.Log, TargetDummy.FormatRespawnedLog("dummy"));
 

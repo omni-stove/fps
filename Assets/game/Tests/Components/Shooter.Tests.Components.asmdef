@@ -1,0 +1,19 @@
+{
+    "name": "Shooter.Tests.Components",
+    "rootNamespace": "Shooter.Tests.EditMode",
+    "references": [
+        "Shooter.Core",
+        "Shooter.Runtime"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

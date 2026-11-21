@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Shooter.Core;
 using Shooter.Runtime;
 using NUnit.Framework;
@@ -208,7 +209,7 @@ namespace Shooter.Tests.EditMode
 
             var entries = GameSignals.Scoreboard.Value;
             Assert.That(entries, Is.SameAs(_runner.PublishedScoreboard));
-            Assert.That(entries, Has.Count.EqualTo(2));
+            Assert.That(entries.Count(), Is.EqualTo(2));
             Assert.That(entries[0].Name == ScoreboardName.LocalPlayer, Is.True);
             Assert.That(entries[0].Team, Is.EqualTo(Team.Alpha));
             Assert.That(entries[0].IsLocal, Is.True);

@@ -1072,6 +1072,19 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void BindingNoSourceKeepsANoticeSetDirectly()
+        {
+            var model = new HudModel();
+            model.SetRespawnNotice(RespawnMode.Individual, 4);
+            var changes = Record(model);
+
+            model.BindNotice(null);
+
+            Assert.That(model.Notice, Is.EqualTo(HudNotice.Respawn(4)));
+            Assert.That(changes, Is.Empty);
+        }
+
+        [Test]
         public void ANoticeSourceOtherThanTheCampaignIsShownAndLetGo()
         {
             var model = new HudModel();

@@ -468,9 +468,17 @@ namespace Shooter.Tests.EditMode
             Assert.That(marker.name, Is.EqualTo(FlagBase.MarkerName));
             Assert.That(marker.GetComponentsInChildren<Collider>(true), Is.Empty);
             Assert.That(marker.transform.lossyScale.x, Is.EqualTo(6f).Within(0.001f), "the disc spans the radius both ways");
-            Assert.That(marker.GetComponent<Renderer>().sharedMaterial.color, Is.EqualTo(FlagBase.ColorOf(Side.Bravo)));
+            AssertColor(marker.GetComponent<Renderer>().sharedMaterial.color, FlagBase.ColorOf(Side.Bravo));
             Assert.That(_bravoBase.Contains(BravoBase + new Vector3(2.9f, 0f, 0f)), Is.True);
             Assert.That(_bravoBase.Contains(BravoBase + new Vector3(3.1f, 0f, 0f)), Is.False);
+        }
+
+        private static void AssertColor(Color actual, Color expected)
+        {
+            Assert.That(actual.r, Is.EqualTo(expected.r).Within(1e-3f));
+            Assert.That(actual.g, Is.EqualTo(expected.g).Within(1e-3f));
+            Assert.That(actual.b, Is.EqualTo(expected.b).Within(1e-3f));
+            Assert.That(actual.a, Is.EqualTo(expected.a).Within(1e-3f));
         }
 
         private void AssertErrand(SideMember bot, Vector3 destination, bool overridesCombat)

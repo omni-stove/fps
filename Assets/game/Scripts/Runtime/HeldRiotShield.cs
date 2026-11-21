@@ -10,10 +10,9 @@ namespace Shooter.Runtime
     {
         public const string PlaceholderName = "RiotShield";
 
-        // 持ち主の原点 (体の中心) から前へ出す距離。プレイヤーの体の半径 (0.5m) より前に出し、体と重ねない。
-        public const float PlaceholderForward = 0.6f;
+        public const float PlaceholderForward = RiotShieldSpec.HeldForward;
 
-        public const float PlaceholderThickness = 0.05f;
+        public const float PlaceholderThickness = RiotShieldSpec.HeldThickness;
 
         private BulletShield _plate;
         private Collider[] _holderColliders = Array.Empty<Collider>();

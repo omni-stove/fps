@@ -75,6 +75,7 @@ namespace Shooter.Server
             {
                 mover.Yaw = input.Yaw;
                 mover.Aiming = input.Restrained().Aim;
+                mover.Sprinting = false;
                 mover.LastProcessedTick = frame.Tick;
 
                 // 座っている間は歩かないので、走っていない入力として時間だけ進め、スタミナを戻す
@@ -88,17 +89,24 @@ namespace Shooter.Server
             mover.State = current;
             mover.Yaw = input.Yaw;
             mover.Aiming = input.Restrained().Aim;
+            mover.Sprinting = input.Restrained().Sprint;
             mover.LastProcessedTick = frame.Tick;
             Stepped(mover, input, previous, current);
             Publish(mover);
             Report(mover, frame.Tick, previous, current);
         }
 
+        // 構えた盾の重さもここに掛けるのは、持ち主の予測がこの値をスナップショット (OwnerSnapshot.CarrySpeedMultiplier) で受け取るため
+        // (オフラインの WeaponController も持ち運びの倍率に盾の倍率を掛ける)
         private float CarrySpeedMultiplier(Mover mover)
         {
-            return _context.Bodies.TryGet(mover.Player.PlayerId, out var body)
-                ? _settings.Motor.CarryLoad.SpeedMultiplier(body.HeldWeapon, body.CarriedWeapons, body.CarriedItemWeight)
-                : 1f;
+            if (!_context.Bodies.TryGet(mover.Player.PlayerId, out var body))
+            {
+                return 1f;
+            }
+
+            var shield = body.RaisedShield?.MoveSpeedMultiplier ?? 1f;
+            return _settings.Motor.CarryLoad.SpeedMultiplier(body.HeldWeapon, body.CarriedWeapons, body.CarriedItemWeight) * shield;
         }
 
         private void Warn(Mover mover, string text)

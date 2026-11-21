@@ -576,6 +576,20 @@ namespace Shooter.Server
             return session != null && session.HasPlayer(playerId) && session.IsAlive(playerId);
         }
 
+        // 戦闘の外で建物の部品を変えた (Horde の防衛物を直した・外した) とき、全員へ今の建物を送る
+        internal void SendStructure(int structure)
+        {
+            if (_context == null || structure < 0 || structure >= _structures.Count)
+            {
+                return;
+            }
+
+            foreach (var player in _match.Players)
+            {
+                _structures.Send(_context.Messenger, player.Connection, structure);
+            }
+        }
+
         private void SendStructureChanges()
         {
             foreach (var structure in _changedStructures)

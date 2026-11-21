@@ -6,6 +6,12 @@ namespace Shooter.Server
     // Horde の防衛物 (壊れる建物) に触れる口。いくら払うか・払えるかは HordeRules が決め、部品を戻して全員へ送るのはこの実装が持つ
     internal interface IHordeFortifications
     {
+        // 防衛物を試合の始まりの姿にするよう頼む (置く場所の防衛物は部品を全部外す)。試合を始めるときと、次の試合へ移るときに呼ぶ
+        void Prepare();
+
+        // 毎 tick 呼ぶ。頼まれていたか、マップが替わって建物が作り直されていたら、ここで始まりの姿にする
+        void Tick();
+
         // 水平の距離が radius 以内で、直す・置くものがある防衛物のうち、いちばん近いもの。無ければ null
         HordeFortificationTarget? FindInReach(Vector3 position, float radius);
 

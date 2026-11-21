@@ -245,7 +245,7 @@ namespace Shooter.Server
             }
 
             var session = _rules.Session;
-            var outcome = ItemUseJudge.Judge(item, new PickupCollector(null, session.GetHealth(playerId), session.MaxHealth));
+            var outcome = ItemUseJudge.Judge(item, new PickupCollector(null, session.GetHealth(playerId), session.GetMaxHealth(playerId)));
             if (!outcome.IsUsed)
             {
                 RefuseUse(playerId, handle, outcome.Rejection.ToString());

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Shooter.Core;
 using Shooter.Protocol;
 
@@ -7,11 +8,17 @@ namespace Shooter.Server
     // GameRules.Objective が Infected のとき、最初の感染者の選び方・倒された生存者が感染者に移ること・時間切れで生存者が勝つことを
     // オフラインと同じ Core の Infected に任せ、ここは試合の出来事を渡すだけにする。
     // Session (TeamDeathmatchSession) は試合の途中でチームを替えられないので、生存者 (Alpha) と感染者 (Bravo) の陣営は Infected が持ち、
-    // 敵味方・スナップショットのチーム・勝った人はその陣営で決める。Session は体力・出現だけを受け持ち、キル数でも時間でも先に終わらないよう上限を届かない値にする
+    // 敵味方・スナップショットのチーム・勝った人はその陣営で決める。Session は体力・出現だけを受け持ち、キル数でも時間でも先に終わらないよう上限を届かない値にする。
+    // 感染者の体 (体力の上限・移動の速さ) は感染したときに Session と体に書く。武器は目的から一覧を引けないので、持ち替える人を Rearming で
+    // 試合の側 (MatchRulesModule) に知らせ、そちらが一覧から引いた武器を配る (Gun Game の段の武器と同じ分け方)
     internal sealed class InfectedRules : IMatchObjectiveRules
     {
         private readonly IMatchObjectiveHost _host;
         private readonly Infected _infected;
+
+        // 体を感染者のものにした人。試合の頭と目的を止めるときに生存者の体へ戻す
+        private readonly HashSet<int> _infectedBodies = new HashSet<int>();
+        private readonly List<int> _restoring = new List<int>();
         private bool _started;
         private bool _loggedOutbreak;
         private int _sentSurvivorScore;
@@ -29,6 +36,9 @@ namespace Shooter.Server
             _host = host ?? throw new ArgumentNullException(nameof(host));
             _infected = new Infected(settings.Infected, pickIndex);
         }
+
+        // 感染者の武器に持ち替えさせる人。倒れている人も来るので、受け手は立っている人だけを持ち替えさせる (倒れている人は出直すときに持つ)
+        public event Action<int> Rearming;
 
         public MatchObjective Objective => MatchObjective.Infected;
 
@@ -68,7 +78,7 @@ namespace Shooter.Server
             _started = true;
             _infected.Turned += HandleTurned;
             _host.Log.WriteLine(InfectedRulesLog.Started(_infected.Spec));
-            _host.Log.WriteLine(InfectedRulesLog.NotApplied(_infected.Spec));
+            _host.Log.WriteLine(InfectedRulesLog.Body(_infected.Spec));
         }
 
         public void Stop()
@@ -80,6 +90,9 @@ namespace Shooter.Server
 
             _started = false;
             _infected.Turned -= HandleTurned;
+
+            // ルールを替えて次の目的に移っても体は同じ人のまま残るので、感染者の速さを持ち越させない
+            RestoreBodies();
         }
 
         public bool Tick(bool matchPlaying, float deltaSeconds)
@@ -119,6 +132,13 @@ namespace Shooter.Server
             var side = _infected.HasBrokenOut ? Infected.InfectedSide : Infected.SurvivorSide;
             mode.AddPlayer(playerId, side);
             _host.Log.WriteLine(InfectedRulesLog.Joined(playerId, side));
+
+            // Session は入ったときに出現させて武器を配り終えているので、感染者として入った人の体と武器はここで替える
+            if (side == Infected.InfectedSide)
+            {
+                TurnBody(playerId);
+                Rearming?.Invoke(playerId);
+            }
         }
 
         public void PlayerLeft(int playerId)
@@ -128,6 +148,9 @@ namespace Shooter.Server
             {
                 mode.RemovePlayer(playerId);
             }
+
+            // Session は抜けた人の上限を戻し、体は抜けると捨てられるので、戻さずに忘れる
+            _infectedBodies.Remove(playerId);
         }
 
         // キルを先に Infected の Session へ渡すのは、感染させた点を倒した時点の陣営で数えるため (InfectedRunner と同じ順)。
@@ -154,8 +177,10 @@ namespace Shooter.Server
             SendScores();
         }
 
+        // Session は Restart で体力の上限を戻した後にここを呼ぶ。続く出現で配る武器は、Reset で全員が生存者に戻った後の陣営で決まる
         public void MatchRestarted()
         {
+            RestoreBodies();
             _infected.Reset();
             _loggedOutbreak = false;
             _sentSurvivorScore = 0;
@@ -245,6 +270,12 @@ namespace Shooter.Server
             }
         }
 
+        // 目的に入っていない人 (入る前・抜けた後) は感染者でない
+        public bool IsInfected(int playerId)
+        {
+            return _infected.Session.HasPlayer(playerId) && _infected.IsInfected(playerId);
+        }
+
         private void HandleTurned(InfectedTurn turn)
         {
             // 最初の感染者は Outbreak の行にまとめて出すので、1 人ずつは書かない
@@ -252,6 +283,61 @@ namespace Shooter.Server
             {
                 _host.Log.WriteLine(InfectedLog.Turn(turn));
             }
+
+            TurnBody(turn.PlayerId);
+            Rearming?.Invoke(turn.PlayerId);
+        }
+
+        // 立っている人は新しい上限まで満たす。オフラインの InfectedRunner は最初の感染者を出直させ、倒された生存者は出直すときに
+        // 新しい上限で出るので、どちらも満タンの感染者として動き出すのに合わせる。倒れている人には Heal が効かず、出直すときに満タンになる
+        private void TurnBody(int playerId)
+        {
+            var spec = _infected.Spec;
+            var session = _host.Session;
+            if (session != null && session.HasPlayer(playerId))
+            {
+                session.SetMaxHealth(playerId, spec.InfectedMaxHealth);
+                session.Heal(playerId, spec.InfectedMaxHealth);
+            }
+
+            var bodies = _host.Bodies;
+            if (bodies != null && bodies.TryGet(playerId, out var body))
+            {
+                body.MoveSpeedMultiplier = spec.InfectedSpeedMultiplier;
+            }
+
+            _infectedBodies.Add(playerId);
+            _host.Log.WriteLine(InfectedRulesLog.Turned(playerId, spec));
+        }
+
+        private void RestoreBodies()
+        {
+            if (_infectedBodies.Count == 0)
+            {
+                return;
+            }
+
+            _restoring.Clear();
+            _restoring.AddRange(_infectedBodies);
+            _infectedBodies.Clear();
+            _restoring.Sort();
+            var session = _host.Session;
+            var bodies = _host.Bodies;
+            foreach (var playerId in _restoring)
+            {
+                if (session != null && session.HasPlayer(playerId))
+                {
+                    session.SetMaxHealth(playerId, session.MaxHealth);
+                }
+
+                if (bodies != null && bodies.TryGet(playerId, out var body))
+                {
+                    body.MoveSpeedMultiplier = 1f;
+                }
+            }
+
+            _host.Log.WriteLine(InfectedRulesLog.Restored(_restoring));
+            _restoring.Clear();
         }
 
         private void LogOutbreak()

@@ -399,6 +399,7 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.InteractRequest)]
         [TestCase(MessageIds.PickupRequest)]
         [TestCase(MessageIds.DetonateRequest)]
+        [TestCase(MessageIds.HordeFortifyRequest)]
         public void TheNewRequestsAreOnlyReadByTheServer(ushort id)
         {
             Assert.That(MatchMessages.CreateServerTable().TryGet(id, out _), Is.True);

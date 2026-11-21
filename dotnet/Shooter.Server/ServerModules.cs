@@ -111,7 +111,8 @@ namespace Shooter.Server
             // 箱は開けた人の武器と持ち物に中身を入れるので、持ち物を持たせ直した後
             var loot = new ServerLoot(rules, combat, inventories);
             modules.Add(loot);
-            parts = new ServerObjectiveParts(rules, loot, new ServerBattleRoyaleWorld(movement, combat, inventories, loot), stashes);
+            parts = new ServerObjectiveParts(
+                rules, loot, new ServerBattleRoyaleWorld(movement, combat, inventories, loot), stashes, fortifications: ServerHordeFortifications.For(combat));
 
             // 設置物は戦闘が当たり判定を作る (Start) より前につなぐ必要があるので、登録より先に作る。Bot は囮を見るので同じものを渡す
             var deployables = new ServerDeployables(rules, combat, tuning.Deployables, tuning.DeployablesPath);
@@ -173,7 +174,7 @@ namespace Shooter.Server
                 return false;
             }
 
-            modules.Add(new ServerLobbyModule(createBackend, launch.Options.RegisterLobbyEndpoint) { Region = launch.Region });
+            modules.Add(new ServerLobbyModule(createBackend, launch.Options.RegisterLobbyEndpoint) { Region = launch.Region, CurrentRules = () => rules.Rules });
             return true;
         }
 

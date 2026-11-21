@@ -914,7 +914,8 @@ namespace Shooter.Server
             var health = session.GetHealth(selfId);
             var wasHit = agent.LastHealth != int.MaxValue && health < agent.LastHealth;
             agent.LastHealth = health;
-            var healthFraction = session.MaxHealth > 0 ? Math.Clamp((float)health / session.MaxHealth, 0f, 1f) : 1f;
+            var maxHealth = session.GetMaxHealth(selfId);
+            var healthFraction = maxHealth > 0 ? Math.Clamp((float)health / maxHealth, 0f, 1f) : 1f;
             // 目がくらんでいる間は、撃たれても誰に撃たれたか分からないままにする
             var heard = !blind && seen == null && wasHit && nearest != null;
             Vector3? hitSource = wasHit && !blind && nearest != null ? nearest.Position : (Vector3?)null;

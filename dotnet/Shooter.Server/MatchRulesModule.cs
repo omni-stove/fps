@@ -63,6 +63,7 @@ namespace Shooter.Server
                 ?? throw new InvalidOperationException("no rules were created for the match objective " + rules.Objective);
             CheckOtherMaps();
             PrepareGunGame();
+            PrepareInfected();
             _objective.UseMap(context.Map, points);
             _session = CreateSession(context.Map, points);
 
@@ -120,6 +121,7 @@ namespace Shooter.Server
             _session.Tick(deltaSeconds);
             TickObjective(deltaSeconds);
             TickGunGame();
+            TickInfected();
             TickRound();
             TickIdle(deltaSeconds);
             TickPings();
@@ -176,6 +178,11 @@ namespace Shooter.Server
                     break;
                 case BuyRequestMessage buy:
                     OnBuyRequest(player, buy);
+                    break;
+                case HordeFortifyRequestMessage _:
+                    // 払えたかは次のスナップショットの通貨と案内で知らせるので、答えは送らない
+                    TouchIdle(player.PlayerId);
+                    _objective?.Fortify(player.PlayerId);
                     break;
             }
         }
@@ -237,6 +244,7 @@ namespace Shooter.Server
 
             StopEconomy();
             StopObjective();
+            ForgetInfected();
             StopMapVote();
             StopVoteKick();
             StopNames();
@@ -329,7 +337,9 @@ namespace Shooter.Server
 
         public IReadOnlyList<WeaponSpec> WeaponsFor(int playerId)
         {
-            var weapons = TryGunGameWeapons(playerId, out var gunGame) ? gunGame : LoadoutFor(playerId);
+            var weapons = TryGunGameWeapons(playerId, out var gunGame) ? gunGame
+                : TryInfectedWeapons(playerId, out var infected) ? infected
+                : LoadoutFor(playerId);
             return _objective != null ? _objective.FilterWeapons(playerId, weapons) : weapons;
         }
 

@@ -88,6 +88,12 @@ namespace Shooter.Server
             return InteractVerdict.Refused(InteractRefusal.NotInteractable);
         }
 
+        // 防衛物を直す・置く要求 (HordeFortifyRequestMessage)。防衛物を持たない目的は断る
+        HordePurchaseVerdict Fortify(int playerId)
+        {
+            return HordePurchaseVerdict.NothingToDo;
+        }
+
         // 出現した直後、武器と持ち物を配る (MatchRulesModule.PlayerSpawned) 前に呼ぶ。出撃の始まりのように、配る物を目的が決める目的のため
         void PlayerSpawning(int playerId)
         {

@@ -20,6 +20,7 @@ namespace Shooter.Server
         private ServerLobbyRegistration _registration;
         private int? _skillAverage;
         private string _region;
+        private Func<GameRules> _currentRules;
 
         public ServerLobbyModule(Func<TextWriter, IServerLobbyBackend> createBackend, string endpoint)
             : this(createBackend, endpoint, StopwatchClock(), Thread.Sleep)
@@ -40,7 +41,7 @@ namespace Shooter.Server
 
         public int? SkillAverage => _skillAverage;
 
-        // 作ったロビーの属性は人数と平均しか書き直さないので、登録を始めた後に替えても載らない。Start より前だけ受ける。
+        // 作ったロビーの属性は人数・平均・地図・モードしか書き直さないので、登録を始めた後に替えても載らない。Start より前だけ受ける。
         public string Region
         {
             get => _region;
@@ -57,6 +58,32 @@ namespace Shooter.Server
                 }
 
                 _region = value;
+            }
+        }
+
+        // 今の試合のルール。ServerContext.Rules は起動時のルールのままで、次の試合のルール (ServerMatch.RequestNextRules) を映さないので、
+        // ルールのモジュールから引く。null なら起動時のルールを使う。
+        public Func<GameRules> CurrentRules
+        {
+            get => _currentRules;
+            set
+            {
+                if (_context != null)
+                {
+                    throw new InvalidOperationException("set CurrentRules before the lobby module starts");
+                }
+
+                _currentRules = value;
+            }
+        }
+
+        // ルールが無いサーバーは目的を持たないので、目的を載せる前と同じ TeamDeathmatchMode のままにする。
+        public string Mode
+        {
+            get
+            {
+                var rules = _currentRules?.Invoke() ?? _context?.Rules?.Rules;
+                return ServerLobby.ModeName(rules?.Objective ?? MatchObjective.None);
             }
         }
 
@@ -82,7 +109,7 @@ namespace Shooter.Server
 
         public void Tick(long tick, float deltaSeconds)
         {
-            _registration.Tick(_context.Match.HumanCount, _skillAverage, _context.Match.Map?.Name, _context.Control.IsDraining);
+            _registration.Tick(_context.Match.HumanCount, _skillAverage, _context.Match.Map?.Name, Mode, _context.Control.IsDraining);
         }
 
         public void OnConnected(ConnectionId connection)

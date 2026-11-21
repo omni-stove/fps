@@ -192,8 +192,8 @@ namespace Shooter.Server
                 return ServerGrappleRefusal.RuleOff;
             }
 
-            // オフラインの GrappleMovement は吹き飛ばし・パラシュート・はしごに譲る。縄の状態の作り直しでそれらが消えるので、撃たせない
-            if (mover.Downed || mover.Riding || previous.IsKnockedBack || previous.IsParachuting || previous.IsClimbing)
+            // オフラインの GrappleMovement は吹き飛ばし・パラシュート・はしご・泳ぎに譲る。縄の状態の作り直しでそれらが消え、泳ぎが消えると息 (溺れ) が戻るので、撃たせない
+            if (mover.Downed || mover.Riding || previous.IsKnockedBack || previous.IsParachuting || previous.IsClimbing || previous.IsSwimming)
             {
                 return ServerGrappleRefusal.CannotAct;
             }

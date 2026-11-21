@@ -25,7 +25,10 @@ namespace Shooter.Core
 
         public const string MapKey = "map";
 
+        // 目的の無いチームの倒し合い (MatchObjective.None) のキー。目的を載せる前からこの値だったので、古いクライアントの一覧でも同じに見える。
         public const string TeamDeathmatchMode = "tdm";
+
+        public const int MaxModeLength = 32;
 
         // 同じ EOS のサンドボックスを使う別のゲームのロビーと混ざらないよう、接頭辞を付ける。
         public const string BucketPrefix = "shooter-server:";
@@ -68,6 +71,18 @@ namespace Shooter.Core
         public static IReadOnlyList<LobbyAttribute> Attributes(
             string endpoint, string version, int players, NetMatchSettings match, int? skillAverage, string region, string map)
         {
+            return Attributes(endpoint, version, players, match, skillAverage, region, map, null);
+        }
+
+        // null を拒まず TeamDeathmatchMode にするのは、mode を渡さない呼び出しが目的を載せる前と同じロビーを作るようにするため。
+        public static IReadOnlyList<LobbyAttribute> Attributes(
+            string endpoint, string version, int players, NetMatchSettings match, int? skillAverage, string region, string map, string mode)
+        {
+            if (mode != null && !IsModeName(mode))
+            {
+                throw new ArgumentException("'" + mode + "' is not a server mode (" + ModeRule + ")", nameof(mode));
+            }
+
             if (region != null && !IsRegionName(region))
             {
                 throw new ArgumentException("'" + region + "' is not a server region (" + RegionRule + ")", nameof(region));
@@ -91,7 +106,7 @@ namespace Shooter.Core
             var attributes = new List<LobbyAttribute>
             {
                 LobbyAttribute.OfText(ServerKey, endpoint),
-                LobbyAttribute.OfText(ModeKey, TeamDeathmatchMode),
+                LobbyAttribute.OfText(ModeKey, mode ?? TeamDeathmatchMode),
                 LobbyAttribute.OfText(VersionKey, LobbyLaunchOptions.BucketVersion(version)),
                 PlayersAttribute(players),
                 // サーバーのロビーはいつも RTC 部屋を開いて作るので 1。
@@ -135,6 +150,80 @@ namespace Shooter.Core
             }
 
             return LobbyAttribute.OfText(MapKey, map);
+        }
+
+        // 目的は次の試合のルールで替わるので、地図と同じく作った後も書き直す (ServerLobbyRegistrar.SetMode)。
+        public static LobbyAttribute ModeAttribute(string mode)
+        {
+            if (!IsModeName(mode))
+            {
+                throw new ArgumentException("'" + mode + "' is not a server mode (" + ModeRule + ")", nameof(mode));
+            }
+
+            return LobbyAttribute.OfText(ModeKey, mode);
+        }
+
+        // キーを列挙の名前から作らないのは、列挙の名前を替えても一覧の絞り込みと表示の鍵 (serverBrowser.mode.<key>) が変わらないようにするため。
+        public static string ModeName(MatchObjective objective)
+        {
+            switch (objective)
+            {
+                case MatchObjective.None:
+                    return TeamDeathmatchMode;
+                case MatchObjective.Domination:
+                    return "domination";
+                case MatchObjective.Elimination:
+                    return "elimination";
+                case MatchObjective.CaptureTheFlag:
+                    return "capture-the-flag";
+                case MatchObjective.Hardpoint:
+                    return "hardpoint";
+                case MatchObjective.SearchAndDestroy:
+                    return "search-and-destroy";
+                case MatchObjective.FreeForAll:
+                    return "free-for-all";
+                case MatchObjective.KillConfirmed:
+                    return "kill-confirmed";
+                case MatchObjective.GunGame:
+                    return "gun-game";
+                case MatchObjective.Payload:
+                    return "payload";
+                case MatchObjective.BattleRoyale:
+                    return "battle-royale";
+                case MatchObjective.Extraction:
+                    return "extraction";
+                case MatchObjective.Horde:
+                    return "horde";
+                case MatchObjective.Infected:
+                    return "infected";
+                case MatchObjective.Guardian:
+                    return "guardian";
+                case MatchObjective.Execution:
+                    return "execution";
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(objective), objective, "objective is not a defined MatchObjective");
+            }
+        }
+
+        public static string ModeRule => "a-z, 0-9 and '-' inside, up to " + MaxModeLength + " characters";
+
+        // 表示の鍵とログの行にそのまま使うので、空白や記号の入ったキーは載せない。
+        public static bool IsModeName(string mode)
+        {
+            if (string.IsNullOrEmpty(mode) || mode.Length > MaxModeLength || mode[0] == '-' || mode[mode.Length - 1] == '-')
+            {
+                return false;
+            }
+
+            foreach (var c in mode)
+            {
+                if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '-'))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         public static string RegionRule =>

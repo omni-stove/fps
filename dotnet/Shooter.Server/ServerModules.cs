@@ -173,7 +173,7 @@ namespace Shooter.Server
                 return false;
             }
 
-            modules.Add(new ServerLobbyModule(createBackend, launch.Options.RegisterLobbyEndpoint) { Region = launch.Region });
+            modules.Add(new ServerLobbyModule(createBackend, launch.Options.RegisterLobbyEndpoint) { Region = launch.Region, CurrentRules = () => rules.Rules });
             return true;
         }
 

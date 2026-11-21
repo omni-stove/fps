@@ -266,5 +266,78 @@ namespace Shooter.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => ServerLobby.MaxMembers(65));
             Assert.Throws<ArgumentNullException>(() => ServerLobby.PlayerSlots(null));
         }
+
+        [TestCase(MatchObjective.None, "tdm")]
+        [TestCase(MatchObjective.Domination, "domination")]
+        [TestCase(MatchObjective.Elimination, "elimination")]
+        [TestCase(MatchObjective.CaptureTheFlag, "capture-the-flag")]
+        [TestCase(MatchObjective.Hardpoint, "hardpoint")]
+        [TestCase(MatchObjective.SearchAndDestroy, "search-and-destroy")]
+        [TestCase(MatchObjective.FreeForAll, "free-for-all")]
+        [TestCase(MatchObjective.KillConfirmed, "kill-confirmed")]
+        [TestCase(MatchObjective.GunGame, "gun-game")]
+        [TestCase(MatchObjective.Payload, "payload")]
+        [TestCase(MatchObjective.BattleRoyale, "battle-royale")]
+        [TestCase(MatchObjective.Extraction, "extraction")]
+        [TestCase(MatchObjective.Horde, "horde")]
+        [TestCase(MatchObjective.Infected, "infected")]
+        [TestCase(MatchObjective.Guardian, "guardian")]
+        [TestCase(MatchObjective.Execution, "execution")]
+        public void ModeNameGivesEachObjectiveItsLobbyKey(MatchObjective objective, string expected)
+        {
+            Assert.That(ServerLobby.ModeName(objective), Is.EqualTo(expected));
+            Assert.That(ServerLobby.IsModeName(expected), Is.True);
+        }
+
+        [Test]
+        public void EveryObjectiveHasItsOwnModeName()
+        {
+            var names = new HashSet<string>();
+            foreach (MatchObjective objective in Enum.GetValues(typeof(MatchObjective)))
+            {
+                Assert.That(names.Add(ServerLobby.ModeName(objective)), Is.True, objective.ToString());
+            }
+
+            Assert.That(ServerLobby.ModeName(MatchObjective.None), Is.EqualTo(ServerLobby.TeamDeathmatchMode));
+            Assert.Throws<ArgumentOutOfRangeException>(() => ServerLobby.ModeName((MatchObjective)999));
+        }
+
+        [Test]
+        public void TheModeGoesIntoTheAttributesAndReadsBack()
+        {
+            var attributes = ServerLobby.Attributes("203.0.113.10:7777", "0.3.0", 2, NetMatchSettings.Default, null, null, null, "gun-game");
+            var lobby = new LobbyInfo("lobby-1", _ownerId, ServerLobby.MaxMembers(8), new[] { _ownerId }, attributes);
+
+            Assert.That(ByKey(attributes)[ServerLobby.ModeKey].Text, Is.EqualTo("gun-game"));
+            Assert.That(lobby.Mode, Is.EqualTo("gun-game"));
+            Assert.That(
+                ByKey(ServerLobby.Attributes("203.0.113.10:7777", "0.3.0", 2, NetMatchSettings.Default, null, null, null, null))[ServerLobby.ModeKey].Text,
+                Is.EqualTo("tdm"),
+                "without a mode the lobby carries the mode it always did");
+            Assert.That(ServerLobby.ModeAttribute("horde").Key, Is.EqualTo(ServerLobby.ModeKey));
+            Assert.That(ServerLobby.ModeAttribute("horde").Text, Is.EqualTo("horde"));
+        }
+
+        [TestCase("")]
+        [TestCase("-tdm")]
+        [TestCase("tdm-")]
+        [TestCase("Team Deathmatch")]
+        [TestCase("TDM")]
+        [TestCase("gun_game")]
+        [TestCase("abcdefghijklmnopqrstuvwxyz0123456")]
+        public void RejectsModeKeysOutsideTheRule(string mode)
+        {
+            Assert.That(ServerLobby.IsModeName(mode), Is.False);
+            Assert.Throws<ArgumentException>(() => ServerLobby.ModeAttribute(mode));
+            Assert.Throws<ArgumentException>(
+                () => ServerLobby.Attributes("203.0.113.10:7777", "0.3.0", 0, NetMatchSettings.Default, null, null, null, mode));
+        }
+
+        [Test]
+        public void AcceptsAModeKeyAtTheLengthLimit()
+        {
+            Assert.That(ServerLobby.IsModeName(new string('a', ServerLobby.MaxModeLength)), Is.True);
+            Assert.That(ServerLobby.IsModeName(null), Is.False);
+        }
     }
 }

@@ -15,6 +15,7 @@ namespace Shooter.Server
         private readonly List<int> _takedownIds = new List<int>();
         private MeleeSpec _takedownSource;
         private MeleeSpec _takedownSearch;
+        private ContextMeleeMove _objectiveMove;
         private double _nextNoMoveLogTime = double.NegativeInfinity;
 
         // 相手が気づいていないかを Id で答える口。答えの無い相手 (人) は、オフラインと同じく常にこちらを見ている前提にする。
@@ -73,8 +74,35 @@ namespace Shooter.Server
 
             _selector.Register(ContextMeleeMove.Takedown(_spec));
             _takedownSource = _spec;
+            UpdateTakedownSearch();
+        }
 
-            // 相手はふつうの近接と同じ扇で探し、届く距離だけを登録した技のいちばん遠いものにする (ContextMeleeAction.SearchSpec と同じ)
+        // 目的のとどめの技 (Execution) は、目的がルールの替わり目で作り直されるので、技を試すたびに今の目的のものに合わせる
+        private void SyncObjectiveMove()
+        {
+            var move = _combat.Rules.Objective?.DownedFinisher;
+            if (ReferenceEquals(move, _objectiveMove))
+            {
+                return;
+            }
+
+            if (_objectiveMove != null)
+            {
+                _selector.Unregister(_objectiveMove.Id);
+            }
+
+            if (move != null)
+            {
+                _selector.Register(move);
+            }
+
+            _objectiveMove = move;
+            UpdateTakedownSearch();
+        }
+
+        // 相手はふつうの近接と同じ扇で探し、届く距離だけを登録した技のいちばん遠いものにする (ContextMeleeAction.SearchSpec と同じ)
+        private void UpdateTakedownSearch()
+        {
             _takedownSearch = new MeleeSpec(
                 _spec.Damage, _selector.MaxReach(), _spec.ArcDegrees, _spec.SwingSeconds, _spec.CooldownSeconds, _spec.ImpactSeconds, _spec.LungeDistance);
         }
@@ -86,6 +114,8 @@ namespace Shooter.Server
             {
                 return false;
             }
+
+            SyncObjectiveMove();
 
             var origin = attacker.Center;
             var targetId = FindTarget(attackerId, origin, Forward(attacker.Yaw), _takedownSearch, out var point);
@@ -181,7 +211,9 @@ namespace Shooter.Server
                     continue;
                 }
 
-                if (!_combat.IsHittable(takedown.TargetId) || !_context.Bodies.TryGet(takedown.TargetId, out _))
+                // ダウン中の相手への技は、起こされた相手を倒さないよう、起き上がった時点で止める (ExecutionSession が蘇生でとどめの累計を捨てるのと同じ)
+                if (!_combat.IsHittable(takedown.TargetId) || !_context.Bodies.TryGet(takedown.TargetId, out _)
+                    || (NeedsDowned(takedown.Run.Move) && !IsDowned(takedown.TargetId)))
                 {
                     StopTakedown(attackerId, ContextMeleeInterruption.TargetLost);
                     continue;
@@ -215,7 +247,8 @@ namespace Shooter.Server
             }
 
             var damage = move.Outcome == ContextMeleeOutcome.Kill ? Health(targetId) : move.Damage;
-            var outcome = _combat.DealDamage(attackerId, targetId, damage, StrikeWeaponId(attacker), HitZone.Body, attacker.Position);
+            var outcome = _combat.DealDamage(
+                attackerId, targetId, damage, StrikeWeaponId(attacker), HitZone.Body, attacker.Position, finishesDowned: NeedsDowned(move));
             _log.WriteLine(ContextMeleeLog.Resolved(Text(attackerId), Text(targetId), move.Id, move.Outcome, damage, outcome == DamageOutcome.Killed));
         }
 
@@ -252,6 +285,17 @@ namespace Shooter.Server
             {
                 StopTakedown(attackerId, ContextMeleeInterruption.Cancelled);
             }
+        }
+
+        private static bool NeedsDowned(ContextMeleeMove move)
+        {
+            return (move.Required & ContextMeleeConditions.TargetDowned) != 0;
+        }
+
+        private bool IsDowned(int playerId)
+        {
+            var session = _combat.Rules.Session;
+            return session != null && session.HasPlayer(playerId) && session.IsDowned(playerId);
         }
 
         private int Health(int playerId)

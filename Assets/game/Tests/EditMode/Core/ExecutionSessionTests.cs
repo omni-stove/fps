@@ -383,10 +383,43 @@ namespace Shooter.Core.Tests
             var status = new ExecutionStatus(execution, _alphaOne, _bravoOne);
 
             Assert.That(status.Session, Is.SameAs(execution));
+            Assert.That(status.View, Is.SameAs(execution), "the HUD reads the offline session through the same view as the network one");
             Assert.That(status.LocalPlayerId, Is.EqualTo(_alphaOne));
             Assert.That(status.InteractTargetId, Is.EqualTo(_bravoOne));
             Assert.That(new ExecutionStatus(execution, null, null).LocalPlayerId, Is.Null);
             Assert.Throws<ArgumentNullException>(() => new ExecutionStatus(null, _alphaOne, null));
+        }
+
+        [Test]
+        public void TheViewReadsTheRoundAndTheMode()
+        {
+            var execution = Create(winsToWin: 2, preparationSeconds: 3f);
+            IExecutionView view = execution;
+
+            execution.Start();
+
+            Assert.That(view.Phase, Is.EqualTo(RoundPhase.Preparing));
+            Assert.That(view.RoundNumber, Is.EqualTo(1));
+            Assert.That(view.WinsToWin, Is.EqualTo(2));
+            Assert.That(view.PreparationRemaining, Is.EqualTo(3f));
+            Assert.That(view.RoundRemaining, Is.EqualTo(execution.Mode.RemainingSeconds));
+            Assert.That(view.Winner, Is.Null);
+            Assert.That(view.HasPlayer(_bravoOne), Is.True);
+            Assert.That(view.HasPlayer(99), Is.False);
+            Assert.That(view.GetSide(_bravoOne), Is.EqualTo(Side.Bravo));
+            Assert.That(view.GetRoundWins(Side.Alpha), Is.Zero);
+
+            execution.Tick(3f);
+            foreach (var bravo in new[] { _bravoOne, _bravoTwo })
+            {
+                execution.ReportLethal(bravo, _alphaOne);
+                execution.Interact(_alphaOne, bravo, _executeSeconds);
+            }
+
+            execution.Tick(0f);
+
+            Assert.That(view.GetRoundWins(Side.Alpha), Is.EqualTo(1));
+            Assert.That(view.Winner, Is.Null, "one round is not the match");
         }
 
         private static ExecutionSession Create(

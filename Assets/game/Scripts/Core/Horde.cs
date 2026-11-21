@@ -6,19 +6,20 @@ namespace Shooter.Core
     public sealed class Horde
     {
         private readonly HordeRespawn _respawn;
+        private readonly HordeEconomy _economy;
 
         public Horde(WaveSchedule schedule, HordeSpec spec)
         {
             Schedule = schedule ?? throw new ArgumentNullException(nameof(schedule));
             Spec = spec ?? throw new ArgumentNullException(nameof(spec));
             _respawn = new HordeRespawn(schedule);
+            _economy = new HordeEconomy(schedule, spec);
             Session = new ModeSession(
                 new SingleTeam(spec.Defenders),
                 float.PositiveInfinity,
                 Array.Empty<IScoreRule>(),
                 _respawn,
                 new IWinCondition[] { new HordeWin(schedule, spec.Defenders, spec.Attackers) });
-            Currency = spec.StartingCurrency;
         }
 
         public WaveSchedule Schedule { get; }
@@ -29,9 +30,9 @@ namespace Shooter.Core
 
         public HordeRespawn Respawn => _respawn;
 
-        public int Currency { get; private set; }
+        public int Currency => _economy.Currency;
 
-        public int EnemiesKilled { get; private set; }
+        public int EnemiesKilled => _economy.EnemiesKilled;
 
         public bool IsBetweenWaves => _respawn.IsBetweenWaves;
 
@@ -39,47 +40,23 @@ namespace Shooter.Core
 
         public int ReportEnemyKilled()
         {
-            if (Session.State != GameModeState.Playing || Schedule.WaveNumber < 1)
+            if (Session.State != GameModeState.Playing || !_economy.TryEarn(out var reward))
             {
                 return 0;
             }
 
-            var reward = Spec.KillRewardAt(Schedule.WaveNumber);
-            Currency = (int)Math.Min(int.MaxValue, (long)Currency + reward);
-            EnemiesKilled++;
             Session.AddScore(Spec.Defenders, Spec.KillScore);
             return reward;
         }
 
         public HordePurchaseVerdict CheckPurchase(int cost)
         {
-            if (cost < 0)
-            {
-                throw new ArgumentOutOfRangeException(nameof(cost), cost, "cost must not be negative");
-            }
-
-            if (Session.State != GameModeState.Playing)
-            {
-                return HordePurchaseVerdict.NotPlaying;
-            }
-
-            if (Spec.PurchasesOnlyBetweenWaves && !IsBetweenWaves)
-            {
-                return HordePurchaseVerdict.WaveInProgress;
-            }
-
-            return cost > Currency ? HordePurchaseVerdict.NotEnoughCurrency : HordePurchaseVerdict.Ok;
+            return _economy.Check(Session.State == GameModeState.Playing, cost);
         }
 
         public HordePurchaseVerdict TryPurchase(int cost)
         {
-            var verdict = CheckPurchase(cost);
-            if (verdict == HordePurchaseVerdict.Ok)
-            {
-                Currency -= cost;
-            }
-
-            return verdict;
+            return _economy.TryPay(Session.State == GameModeState.Playing, cost);
         }
     }
 }

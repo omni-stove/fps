@@ -91,6 +91,23 @@ namespace Shooter.Tests.EditMode
             Assert.That(Resolve(Lines(Status(detail, false))), Has.Length.EqualTo(3));
         }
 
+        // オンライン (ClientHordeStatus) はスナップショットの値で HordeStatus を作るので、Horde が無くても同じ行になる
+        [Test]
+        public void AStatusFromTheServerReadsTheSameLines()
+        {
+            var fighting = new HordeStatus(1, 2, WavePhase.Fighting, 2, 0f, 20, false, false, 3.4d, 0, false);
+            var awaiting = new HordeStatus(1, 2, WavePhase.Fighting, 2, 0f, 20, false, false, 3.4d, 0, true);
+            var resting = new HordeStatus(1, 2, WavePhase.Resting, 0, 4.2f, 40, false, false, 30d, 0, false);
+            var won = new HordeStatus(2, 2, WavePhase.Completed, 0, 0f, 60, true, true, 90d, 0, false);
+            var formatter = new HordeHudFormatter();
+
+            Assert.That(Resolve(Lines(Status(fighting, false))), Is.EqualTo(new[] { "WAVE 1/2", "残りの敵 2", "通貨 20" }));
+            Assert.That(Localizer.Resolve(formatter.Time(Status(fighting, false))), Is.EqualTo("00:04"));
+            Assert.That(Resolve(Lines(Status(awaiting, false))), Is.EqualTo(_awaitingLines));
+            Assert.That(Resolve(Lines(Status(resting, false))), Is.EqualTo(new[] { "WAVE 1/2", "次の波まで 5 秒", "通貨 40" }));
+            Assert.That(Resolve(Lines(Status(won, true))), Is.EqualTo(new[] { "WAVE 2/2", "通貨 60", "防衛成功" }));
+        }
+
         private static HordeFortificationOffer Offer(HordeFortificationAction action, string name, int cost, HordePurchaseVerdict verdict, string key)
         {
             return new HordeFortificationOffer(action, name, cost, verdict, key);

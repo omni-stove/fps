@@ -29,6 +29,9 @@ namespace Shooter.Server.Tests
             new EmoteSpec(_standId, "emote.stand", durationSeconds: 5f, stopsOnMove: false),
         };
 
+        private static readonly bool[] _bothPlaying = { true, true };
+        private static readonly string[] _waveAndDanceIds = { "wave", "dance" };
+
         private StringWriter _log;
         private StringWriter _json;
         private RecordingTransport _transport;
@@ -202,7 +205,7 @@ namespace Shooter.Server.Tests
             Request(1, _waveId);
 
             var states = States(2);
-            Assert.That(states.Select(s => s.Playing), Is.EqualTo(new[] { true, true }));
+            Assert.That(states.Select(s => s.Playing), Is.EqualTo(_bothPlaying));
             Assert.That(states[1].EmoteId, Is.EqualTo(_waveId));
             Assert.That(_log.ToString(), Does.Contain("[Emote] server stopped player=1 id=dance reason=Replaced"));
         }
@@ -359,7 +362,7 @@ namespace Shooter.Server.Tests
             Assert.That(ServerEmotes.TryLoadEmotes(new[] { root.Path }, out var emotes, out var path, out var error), Is.True, error);
 
             Assert.That(path, Is.EqualTo(Path.GetFullPath(Path.Combine(tuning, "emotes.json"))));
-            Assert.That(emotes.Select(e => e.Id), Is.EqualTo(new[] { "wave", "dance" }));
+            Assert.That(emotes.Select(e => e.Id), Is.EqualTo(_waveAndDanceIds));
             Assert.That(emotes[0].DurationSeconds, Is.EqualTo(2f));
             Assert.That(emotes[1].Loops, Is.True);
         }

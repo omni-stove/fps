@@ -33,6 +33,28 @@ namespace Shooter.Server.Tests
             _shotgunId, "weapon.shotgun", WeaponCategory.Shotgun, FireMode.Semi, 6, 24, 0.8f, 3f, 12, 25f, DamageFalloff.None);
 
         [Test]
+        public void AShieldWeaponDoesNotFireReloadOrSwitchAmmo()
+        {
+            var shield = new WeaponSpec(
+                _shotgunId, "weapon.riotShield", WeaponCategory.Handgun, ammo: new AmmoSpec(1, 5, 1f), shield: RiotShieldSpec.Default);
+            _weapons.Equip(new[] { shield, TestRules.Rifle() }, _switchSeconds, GameRules.Default);
+
+            Assert.That(_weapons.IsSwitching, Is.False);
+            Assert.That(_weapons.TryFire(), Is.EqualTo(ShotRejection.ShieldWeapon));
+            Assert.That(_weapons.Items[0].AmmoInMagazine, Is.EqualTo(1), "no round is used");
+            Assert.That(_weapons.TryReload(), Is.False);
+            Assert.That(_weapons.TryActiveReload(), Is.False);
+            Assert.That(_weapons.TrySwitchAmmoType(), Is.False);
+
+            Assert.That(_weapons.TrySwitch(TestRules.RifleId), Is.True);
+            Assert.That(_weapons.IsSwitching, Is.True);
+            Assert.That(_weapons.TryFire(), Is.EqualTo(ShotRejection.Switching));
+            _weapons.Tick(1f);
+            Assert.That(_weapons.IsSwitching, Is.False);
+            Assert.That(_weapons.TryFire(), Is.EqualTo(ShotRejection.None));
+        }
+
+        [Test]
         public void GivingToAnEmptyHandHoldsTheWeapon()
         {
             Assert.That(_weapons.Give(Shotgun(), _switchSeconds, GameRules.Default), Is.True);

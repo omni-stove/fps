@@ -80,6 +80,52 @@
         "uses": 3,
         "spawnDistance": 1
       }
+    },
+    {
+      "id": "deploy-mine",
+      "role": "Mine",
+      "maxActive": 3,
+      "overflow": "ReplaceOldest",
+      "maxHealth": 30,
+      "maxRange": 4,
+      "maxSlopeDegrees": 30,
+      "maxStepHeight": 0.25,
+      "width": 0.35,
+      "height": 0.1,
+      "depth": 0.35,
+      "maxCharges": 2,
+      "rechargeSeconds": 20,
+      "cooldownSeconds": 1,
+      "mine": {
+        "armSeconds": 1.5,
+        "triggerRadius": 1,
+        "maxDamage": 150,
+        "damageRadius": 4,
+        "fullDamageRadius": 1.5,
+        "structureDamageAtCenter": 100
+      }
+    },
+    {
+      "id": "deploy-remote-charge",
+      "role": "RemoteCharge",
+      "maxActive": 2,
+      "overflow": "Refuse",
+      "maxHealth": 30,
+      "maxRange": 2.5,
+      "maxSlopeDegrees": 30,
+      "maxStepHeight": 0.25,
+      "width": 0.25,
+      "height": 0.08,
+      "depth": 0.18,
+      "maxCharges": 2,
+      "rechargeSeconds": 20,
+      "cooldownSeconds": 0.5,
+      "remoteCharge": {
+        "maxDamage": 150,
+        "damageRadius": 4.5,
+        "fullDamageRadius": 1.5,
+        "structureDamageAtCenter": 150
+      }
     }
   ]
 }

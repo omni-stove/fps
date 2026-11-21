@@ -117,7 +117,10 @@ namespace Shooter.Server
 
             // Bot は戦闘がこの tick の当たり判定を記録した後の位置へ撃ち、スナップショットには動いた後の位置を載せる。
             // Bot の振りは近接のモジュールが同じ tick のうちに進めるので、近接は Bot より後に登録し、作るのは Bot に渡すため先にする
-            var melee = new ServerMelee(combat, movement, tuning.Melee, meleeWeaponId);
+            var melee = new ServerMelee(combat, movement, tuning.Melee, meleeWeaponId)
+            {
+                WeaponsDropped = playerId => inventories.HoldWeapons(playerId),
+            };
             modules.Add(new ServerBots(rules, movement, combat, deployables, melee));
 
             // 近接・ストリーク・設置物は戦闘の DealDamage・Explode でダメージを与え、キルカムは戦闘が出すキルでクリップを送るので、戦闘より後。

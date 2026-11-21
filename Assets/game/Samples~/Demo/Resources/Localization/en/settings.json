@@ -19,6 +19,7 @@
   "settings.value.fieldOfView": "Field of view",
   "settings.value.masterVolume": "Master volume",
   "settings.value.effectsVolume": "Effects volume",
+  "settings.value.musicVolume": "Music volume",
   "settings.value.cameraShake": "Screen shake",
   "settings.value.viewmodelMotion": "Weapon sway",
   "settings.value.stickDeadzone": "Stick deadzone",

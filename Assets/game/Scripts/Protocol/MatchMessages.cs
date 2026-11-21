@@ -31,6 +31,8 @@ namespace Shooter.Protocol
                 new VoteKickRequestMessage(),
                 new BuyRequestMessage(),
                 new InteractRequestMessage(),
+                new PickupRequestMessage(),
+                new DetonateRequestMessage(),
             };
         }
 

@@ -9,15 +9,13 @@ using Shooter.Protocol;
 namespace Shooter.Server
 {
     // 種類ごとの値はデータ (server-data/tuning/deployables.json) から読み、置けるか (DeployPlacement)・タレットの狙い (TurretTargeting)・
-    // 弾と時間 (TurretState)・囮の呼び声 (DecoyState)・ビーコンの回数 (BeaconState) はオフラインと同じ Core で決める。人へのダメージは
-    // ServerCombat.DealDamage を通し、味方撃ち・出現直後の無敵・キルの数え方を撃った弾とそろえる。
+    // 弾と時間 (TurretState)・囮の呼び声 (DecoyState)・ビーコンの回数 (BeaconState)・地雷の起動 (MineState) はオフラインと同じ Core で決める。
+    // 人へのダメージは ServerCombat.DealDamage と ServerCombat.Explode を通し、味方撃ち・出現直後の無敵・キルの数え方を撃った弾とそろえる。
     internal sealed partial class ServerDeployables : IServerModule, ISnapshotContributor, IServerRespawnBeacons
     {
         public const string CatalogFileName = "deployables.json";
 
         internal const string DroneUnsupported = "a Drone is piloted only offline; the dedicated server does not fly drones or send them yet";
-
-        internal const string ExplosiveUnsupported = "a Mine or a RemoteCharge has no rules yet; the dedicated server does not place or detonate them";
 
         // 持ち主は手元の時計で回数と間隔を数えてから送るので、届くまでの揺れで少し早く着いた要求は断らない (ServerPlayerWeapons.ChargeArrivalToleranceSeconds と同じ考え)
         public const float UseArrivalToleranceSeconds = 0.2f;
@@ -120,6 +118,9 @@ namespace Shooter.Server
                     case DeployRole.Decoy:
                         TickDecoy(placed, deltaSeconds);
                         break;
+                    case DeployRole.Mine:
+                        TickMine(placed, deltaSeconds);
+                        break;
                 }
             }
 
@@ -139,6 +140,10 @@ namespace Shooter.Server
             if (message is DeployRequestMessage request && _match.TryGetPlayer(connection, out var player))
             {
                 Place(player.PlayerId, request.TypeId, request.Position, request.Yaw);
+            }
+            else if (message is DetonateRequestMessage detonate && _match.TryGetPlayer(connection, out var detonator))
+            {
+                Detonate(detonator.PlayerId, detonate.TypeId);
             }
         }
 
@@ -308,17 +313,8 @@ namespace Shooter.Server
                 return Refuse(playerId, type.Id, ServerDeployRefusal.NoGround);
             }
 
-            // 持ち主の画面の位置はサーバーより遅れているので、届く距離には撃った弾の始点と同じだけのずれを許す
             var spec = type.Deploy;
-            var offset = position - body.Position;
-            var horizontal = MathF.Sqrt((offset.X * offset.X) + (offset.Z * offset.Z));
-            if (horizontal > spec.MaxRange + _data.Settings.MaxShotOriginOffset)
-            {
-                return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
-            }
-
-            // 真上の屋根や壁の向こうの床を送られても置けないよう、上下のずれに上限を置き、持ち主の体から置く地点まで壁が無いかも見る
-            if (MathF.Abs(offset.Y) > MaxVerticalReach)
+            if (!InReach(type, body, position))
             {
                 return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
             }
@@ -335,19 +331,15 @@ namespace Shooter.Server
             }
 
             var facing = NormalizeYaw(yaw);
-            var verdict = Survey(spec, position, facing, out var point);
-            if (verdict != DeployVerdict.Ok)
+            Vector3 point;
+            Vector3 surfaceNormal;
+            int surfaceId;
+            var where = type.Role == DeployRole.RemoteCharge
+                ? Attach(body, position, out point, out surfaceNormal, out surfaceId)
+                : Stand(body, spec, position, facing, out point, out surfaceNormal, out surfaceId);
+            if (where != ServerDeployRefusal.None)
             {
-                return Refuse(playerId, type.Id, RefusalOf(verdict));
-            }
-
-            // 置く地点の物 (梁など) は足場の判定が Blocked で断るので、射線はその後に見る
-            var sight = position + new Vector3(0f, SightLift, 0f) - body.Center;
-            var sightDistance = sight.Length();
-            if (sightDistance > 1e-4f
-                && _context.World.Raycast(body.Center, sight / sightDistance, sightDistance, ServerHitboxes.RaycastLayers, out _))
-            {
-                return Refuse(playerId, type.Id, ServerDeployRefusal.OutOfReach);
+                return Refuse(playerId, type.Id, where);
             }
 
             // サーバーにある物は必ずスナップショットに載せるため、全員分の合計が送れる数に達したら置かせない。
@@ -359,7 +351,7 @@ namespace Shooter.Server
             }
 
             Spend(slot);
-            var placed = new Placed(NextId(), type, playerId, _rules.Session.GetTeam(playerId), point, facing, spec.MaxHealth);
+            var placed = new Placed(NextId(), type, playerId, _rules.Session.GetTeam(playerId), point, facing, spec.MaxHealth, surfaceNormal);
             if (type.Role == DeployRole.Turret)
             {
                 var weapon = _turretWeapons[type.Id];
@@ -372,6 +364,10 @@ namespace Shooter.Server
             else if (type.Role == DeployRole.Beacon)
             {
                 placed.Beacon = new BeaconState(type.Beacon);
+            }
+            else if (type.Role == DeployRole.Mine)
+            {
+                placed.Mine = new MineState(type.Mine);
             }
 
             foreach (var evicted in roster.Add(placed))
@@ -396,6 +392,17 @@ namespace Shooter.Server
             if (placed.Beacon != null)
             {
                 _log.WriteLine(BeaconLog.Armed(owner, type.Id, placed.Id, placed.Beacon.Uses, Side.FromTeam(placed.Team)));
+            }
+
+            if (placed.Mine != null)
+            {
+                var damage = type.Mine.Explosion.Damage;
+                _log.WriteLine(MineLog.Arming(owner, type.Id, placed.Id, type.Mine.ArmSeconds, type.Mine.TriggerRadius, damage.MaxDamage, damage.Radius));
+            }
+
+            if (type.Role == DeployRole.RemoteCharge)
+            {
+                _log.WriteLine(RemoteChargeLog.Attached(owner, type.Id, placed.Id, ServerDeployableLog.Surface(surfaceId)));
             }
 
             return ServerDeployRefusal.None;
@@ -527,11 +534,6 @@ namespace Shooter.Server
             if (type.Role == DeployRole.Drone)
             {
                 return DroneUnsupported;
-            }
-
-            if (type.Role == DeployRole.Mine || type.Role == DeployRole.RemoteCharge)
-            {
-                return ExplosiveUnsupported;
             }
 
             if (type.Role != DeployRole.Turret)
@@ -793,6 +795,10 @@ namespace Shooter.Server
                     return DeployableKind.Decoy;
                 case DeployRole.Beacon:
                     return DeployableKind.Beacon;
+                case DeployRole.Mine:
+                    return DeployableKind.Mine;
+                case DeployRole.RemoteCharge:
+                    return DeployableKind.RemoteCharge;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(role), role, "role is not a defined DeployRole");
             }
@@ -800,7 +806,7 @@ namespace Shooter.Server
 
         private sealed class Placed
         {
-            public Placed(int id, DeployType type, int ownerId, Team team, Vector3 position, float yaw, int health)
+            public Placed(int id, DeployType type, int ownerId, Team team, Vector3 position, float yaw, int health, Vector3 surfaceNormal)
             {
                 Id = id;
                 Type = type;
@@ -810,6 +816,7 @@ namespace Shooter.Server
                 Yaw = yaw;
                 HeadYaw = yaw;
                 Health = health;
+                SurfaceNormal = surfaceNormal;
             }
 
             public int Id { get; }
@@ -843,6 +850,11 @@ namespace Shooter.Server
             public DecoyState Decoy { get; set; }
 
             public BeaconState Beacon { get; set; }
+
+            public MineState Mine { get; set; }
+
+            // 置いた面の向き。床に立てる物は真上、C4 は貼った面から手前へ向き、爆発の中心を面から離す向きに使う
+            public Vector3 SurfaceNormal { get; }
 
             public void Arm(TurretState turret, WeaponSpec weapon)
             {

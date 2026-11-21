@@ -75,7 +75,8 @@ namespace Shooter.Core
             PayloadSpec payload = null,
             EconomySpec economy = null,
             int maxDisplayNameLength = DefaultMaxDisplayNameLength,
-            InfectedSpec infected = null)
+            InfectedSpec infected = null,
+            ExecutionSpec execution = null)
         {
             RequirePositive(scoreLimit, nameof(scoreLimit));
             RequirePositive(timeLimitSeconds, nameof(timeLimitSeconds));
@@ -140,6 +141,7 @@ namespace Shooter.Core
             Payload = payload ?? PayloadSpec.Default;
             Economy = economy ?? EconomySpec.Default;
             Infected = infected ?? InfectedSpec.Default;
+            Execution = execution ?? ExecutionSpec.Default;
             MapPool = CopyMapPool(mapPool);
             MapVoteSeconds = mapVoteSeconds;
             MaxTeamSizeDifference = maxTeamSizeDifference;
@@ -206,7 +208,8 @@ namespace Shooter.Core
                 payload: Payload,
                 economy: Economy,
                 maxDisplayNameLength: MaxDisplayNameLength,
-                infected: Infected);
+                infected: Infected,
+                execution: Execution);
         }
 
         public int ScoreLimit { get; }
@@ -283,6 +286,8 @@ namespace Shooter.Core
         public EconomySpec Economy { get; }
 
         public InfectedSpec Infected { get; }
+
+        public ExecutionSpec Execution { get; }
 
         private static string OptionalId(string id, string name)
         {

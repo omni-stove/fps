@@ -12,6 +12,11 @@ namespace Shooter.Core
         // 怯んだ相手は撃たれて気づいた後なので、背後からでも報酬のある処刑技を先にする。
         public const int TakedownPriority = 50;
 
+        public const string ExecuteId = "execute";
+
+        // ダウン中の敵は Execution ではこの技でしか倒せないので、怯みや背後の条件が重なっても先に選ぶ。
+        public const int ExecutePriority = 200;
+
         public ContextMeleeMove(
             string id,
             int priority,
@@ -178,6 +183,31 @@ namespace Shooter.Core
                 0,
                 spec.TakedownInterruptible,
                 spec.TakedownWitnessAwareness);
+        }
+
+        // オフラインの ExecutionSession と同じく、とどめの間に撃たれても止めず、報酬も付けない。
+        // 足元どうしでなく中心から体の表面までで測るのは、テイクダウンと同じ探し方 (近接の扇) で相手を選ぶため。
+        public static ContextMeleeMove Execute(ExecutionSpec spec)
+        {
+            if (spec == null)
+            {
+                throw new ArgumentNullException(nameof(spec));
+            }
+
+            return new ContextMeleeMove(
+                ExecuteId,
+                ExecutePriority,
+                ContextMeleeConditions.TargetDowned,
+                ContextMeleeConditions.None,
+                spec.ExecuteRange,
+                0f,
+                0f,
+                spec.ExecuteSeconds,
+                ContextMeleeOutcome.Kill,
+                0,
+                0,
+                0,
+                false);
         }
 
         private static bool HasWhiteSpace(string value)

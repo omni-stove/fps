@@ -260,6 +260,32 @@ namespace Shooter.Server.Tests
             Assert.DoesNotThrow(() => rules.CheckMap(map, map.Points));
         }
 
+        // ServerObjectiveFactory への登録は結線で行うので、ここでは目的を直に作る。ラウンドの値はオフラインの ExecutionSession の既定値にそろえる
+        [Test]
+        public void TheExecutionExampleReadsItsRulesAndPlaysOnTheExampleMap()
+        {
+            Assert.That(ServerRulesData.TryLoad("Execution", Roots(), out var data, out var error), Is.True, error);
+            Assert.That(ServerMapData.TryLoad(_map, Roots(), out var map, out error), Is.True, error);
+
+            Assert.That(data.File.Name, Is.EqualTo("Execution"));
+            Assert.That(data.Rules.Objective, Is.EqualTo(MatchObjective.Execution));
+            Assert.That(data.Rules.Actions.Downed, Is.EqualTo(Downed.Revive));
+            Assert.That(data.Rules.Actions.Melee, Is.EqualTo(Melee.On), "executions are melee moves");
+            Assert.That(data.Rules.RespawnMode, Is.EqualTo(RespawnMode.None));
+            Assert.That(data.Settings.RoundWinsToWin, Is.EqualTo(ExecutionSession.DefaultWinsToWin));
+            Assert.That(data.Settings.RoundPreparationSeconds, Is.EqualTo(ExecutionSession.DefaultPreparationSeconds));
+            Assert.That(data.Settings.RoundTimeLimitSeconds, Is.EqualTo(ExecutionSession.DefaultRoundTimeLimitSeconds));
+
+            var rules = new ExecutionRules(data.Settings, new NoSessionHost());
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Execution));
+            var spec = rules.CreateSessionSpec(data.Rules, data.Settings);
+            Assert.That(spec.Rules.Actions.Downed, Is.EqualTo(Downed.Revive));
+            Assert.That(rules.DownedFinisher, Is.Not.Null);
+            Assert.That(rules.DownedFinisher.PerformSeconds, Is.EqualTo(ExecutionSpec.DefaultExecuteSeconds));
+            Assert.That(rules.DownedFinisher.Reach, Is.EqualTo(ExecutionSpec.DefaultExecuteRange));
+            Assert.DoesNotThrow(() => rules.CheckMap(map, map.Points));
+        }
+
         private static string RequireExported(string relativePath)
         {
             var path = Path.Combine(Roots()[0], ServerMapData.DataDirectoryName, relativePath);

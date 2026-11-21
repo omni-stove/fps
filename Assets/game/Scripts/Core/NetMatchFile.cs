@@ -104,6 +104,9 @@ namespace Shooter.Core
         // 節の中の項目名は、オフラインの調整値 (Resources/Tuning/infected.json) と同じ InfectedJson の名前にする
         public const string InfectedItem = "infected";
 
+        // 節の中の項目名は ExecutionSpec.ItemNames。ラウンドの勝ち数・待ち・制限時間は Elimination と同じ round* を使う
+        public const string ExecutionItem = "execution";
+
         public const string MotorItem = "motor";
         public const string WalkSpeedItem = "walkSpeed";
         public const string SprintSpeedItem = "sprintSpeed";
@@ -224,7 +227,7 @@ namespace Shooter.Core
             ChatIntervalSecondsItem, MaxChatLengthItem, MaxDisplayNameLengthItem, RoundWinsToWinItem, RoundPreparationSecondsItem,
             RoundTimeLimitSecondsItem, WeatherIdItem, TimeOfDayIdItem,
             CaptureTheFlagItem, HardpointItem, SearchAndDestroyItem, FreeForAllItem, KillConfirmedItem, GunGameItem,
-            VoteKickItem, PayloadItem, EconomyItem, InfectedItem,
+            VoteKickItem, PayloadItem, EconomyItem, InfectedItem, ExecutionItem,
         };
 
         private static readonly string[] _captureTheFlagItems =
@@ -550,6 +553,16 @@ namespace Shooter.Core
                 writer.EndObject();
             }
 
+            // Infected の節と同じく、節を足す前に書き出したルールのファイルをそのまま使えるよう、Execution でなく既定値のままなら書かない
+            var execution = s.Execution;
+            if (file.Rules.Objective == MatchObjective.Execution || !execution.SameAs(ExecutionSpec.Default))
+            {
+                writer.BeginObject(ExecutionItem);
+                writer.Float(ExecutionSpec.ExecuteSecondsItem, execution.ExecuteSeconds);
+                writer.Float(ExecutionSpec.ExecuteRangeItem, execution.ExecuteRange);
+                writer.EndObject();
+            }
+
             writer.EndObject();
 
             var motor = file.Motor.Motor;
@@ -715,6 +728,7 @@ namespace Shooter.Core
             var payload = ReadPayload(match.Object(PayloadItem, _payloadItems), d.Payload);
             var economy = ReadEconomy(match.Object(EconomyItem, _economyItems), d.Economy);
             var infected = ReadInfected(match.Object(InfectedItem, InfectedJson.ItemNames), d.Infected);
+            var execution = ReadExecution(match.Object(ExecutionItem, ExecutionSpec.ItemNames), d.Execution);
             try
             {
                 return new NetMatchSettings(
@@ -753,7 +767,8 @@ namespace Shooter.Core
                     payload,
                     economy,
                     match.ReadInt(MaxDisplayNameLengthItem, d.MaxDisplayNameLength),
-                    infected);
+                    infected,
+                    execution);
             }
             catch (ArgumentException e)
             {
@@ -1011,6 +1026,25 @@ namespace Shooter.Core
                     fields.ReadInt(InfectedJson.ScorePerInfectionItem, fallback.ScorePerInfection),
                     fields.ReadInt(InfectedJson.ScorePerSurvivedRoundItem, fallback.ScorePerSurvivedRound),
                     fields.ReadString(InfectedJson.InfectedWeaponIdItem, fallback.InfectedWeaponId));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static ExecutionSpec ReadExecution(ServerDataJson.Fields fields, ExecutionSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new ExecutionSpec(
+                    fields.ReadFloat(ExecutionSpec.ExecuteSecondsItem, fallback.ExecuteSeconds),
+                    fields.ReadFloat(ExecutionSpec.ExecuteRangeItem, fallback.ExecuteRange));
             }
             catch (ArgumentException e)
             {

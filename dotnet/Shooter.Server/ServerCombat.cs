@@ -434,7 +434,7 @@ namespace Shooter.Server
 
         // 近接・ストリーク・設置物が与えるダメージの口。撃った弾と同じく MatchRulesModule.ApplyDamage を通すので、味方撃ち・出現直後の無敵・
         // ダウン・キルの数え方とキルフィードは撃った弾と同じになる。攻撃者が抜けていれば、爆発と同じく攻撃者のいないダメージ (倒れたら自滅) にする
-        internal DamageOutcome DealDamage(int? attackerId, int victimId, int amount, string weaponId, HitZone zone, Vector3? source)
+        internal DamageOutcome DealDamage(int? attackerId, int victimId, int amount, string weaponId, HitZone zone, Vector3? source, bool finishesDowned = false)
         {
             ArgumentNullException.ThrowIfNull(weaponId);
             if (amount < 0)
@@ -448,7 +448,7 @@ namespace Shooter.Server
             }
 
             var attacker = attackerId.HasValue && _match.TryGetPlayer(attackerId.Value, out _) ? attackerId : null;
-            var outcome = _rules.ApplyDamage(attacker, victimId, amount, new KillShot(attacker ?? victimId, victimId, weaponId, zone));
+            var outcome = _rules.ApplyDamage(attacker, victimId, amount, new KillShot(attacker ?? victimId, victimId, weaponId, zone), finishesDowned);
             if (outcome == DamageOutcome.Ignored)
             {
                 return outcome;

@@ -60,6 +60,12 @@ namespace Shooter.Server
             return Refused(playerId, typeId, reason) + " charges=" + Text(charges) + "/" + Text(maxCharges) + " wait=" + wait;
         }
 
+        // サーバーの当たりには名前が無いので、貼った先はマップのコライダーの番号で書く
+        public static string Surface(int colliderId)
+        {
+            return "collider:" + Text(colliderId);
+        }
+
         public static string Owner(int playerId)
         {
             return Text(playerId);

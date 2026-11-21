@@ -22,8 +22,10 @@ namespace Shooter.Server
             NetMapStructures structures = null,
             NetMapLadders ladders = null,
             NetMapVehicles vehicles = null,
-            NetMapWater water = null)
+            NetMapWater water = null,
+            NetMapPickups pickups = null)
         {
+            Pickups = pickups ?? NetMapPickups.None;
             Vehicles = vehicles ?? NetMapVehicles.None;
             Water = water ?? NetMapWater.None;
             Points = points;
@@ -68,6 +70,9 @@ namespace Shooter.Server
 
         // はしごと同じく、書き出す前のマップでも泳げないだけで動けるよう、ファイルが無ければ空にする。
         public NetMapWater Water { get; }
+
+        // はしごと同じく、書き出す前のマップでも拾い物が無いだけで動けるよう、ファイルが無ければ空にする。
+        public NetMapPickups Pickups { get; }
 
         public string LogLine => ServerProgram.LogTag + " map " + Name
             + " colliders=" + ColliderCount.ToString(CultureInfo.InvariantCulture)
@@ -284,9 +289,24 @@ namespace Shooter.Server
                 }
             }
 
+            NetMapPickups pickups = null;
+            var pickupsPath = Path.Combine(directory, map + NetMapPickups.Extension);
+            if (File.Exists(pickupsPath))
+            {
+                try
+                {
+                    pickups = NetMapPickups.Parse(File.ReadAllText(pickupsPath), pickupsPath);
+                }
+                catch (Exception e) when (e is IOException || e is UnauthorizedAccessException || e is ServerDataJsonException)
+                {
+                    error = "cannot read " + pickupsPath + ": " + e.Message;
+                    return false;
+                }
+            }
+
             try
             {
-                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles, water);
+                data = new ServerMapData(map, world, navMesh, directory, points, structures, ladders, vehicles, water, pickups);
             }
             catch (ArgumentException e)
             {

@@ -23,5 +23,7 @@ namespace Shooter.Core
         RumbleStrength,
 
         UiScale,
+
+        MusicVolume,
     }
 }

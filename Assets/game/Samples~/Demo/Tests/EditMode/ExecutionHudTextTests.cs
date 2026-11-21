@@ -35,6 +35,11 @@ namespace Shooter.Tests.EditMode
             "ラウンド 2 (2 本先取)", "前のラウンド: ALPHA の勝ち", "開始まで 3 秒", "ALPHA 残り 1", "BRAVO 残り 2",
         };
 
+        private static readonly string[] _expectedFromView =
+        {
+            "ラウンド 2 (2 本先取)", "BRAVO 残り 2 (ダウン 1)", "ALPHA 残り 1",
+        };
+
         private GameObject _owner;
 
         [SetUp]
@@ -218,6 +223,44 @@ namespace Shooter.Tests.EditMode
             Assert.That(view.ResultText, Is.Empty);
         }
 
+        // ネット対戦のクライアント (ClientExecutionStatus) は ExecutionSession を持たず、スナップショットから作った IExecutionView を渡す
+        [Test]
+        public void TheFormatterReadsAViewWithoutASession()
+        {
+            var view = new FixedView();
+            var status = new ModeStatus(null, null, Side.Bravo, null, false, null, ExecutionStatus.FromView(view, _bravoTwo, null));
+            var formatter = new ExecutionHudFormatter();
+
+            Assert.That(ModeHudFormatters.For(status), Is.InstanceOf<ExecutionHudFormatter>());
+            Assert.That(formatter.Time(status), Is.EqualTo(LocalizedText.Literal("00:42")));
+            var scores = formatter.Scores(status);
+            Assert.That(scores.Select(score => GameText.Resolve(score.Text)).ToArray(), Is.EqualTo(new[] { "BRAVO 0", "ALPHA 1" }));
+            var lines = new List<LocalizedText>();
+            formatter.AppendLines(status, lines);
+            Assert.That(Resolved(lines), Is.EqualTo(_expectedFromView));
+            Assert.That(formatter.Result(status).IsEmpty, Is.True);
+
+            view.MatchWinner = Side.Alpha;
+            Assert.That(GameText.Resolve(formatter.Result(status)), Is.EqualTo("ALPHA の勝ち"));
+        }
+
+        [Test]
+        public void TheStatusFromAViewHasNoSession()
+        {
+            var view = new FixedView();
+            var status = ExecutionStatus.FromView(view, _bravoTwo, _bravoOne);
+
+            Assert.That(status.View, Is.SameAs(view));
+            Assert.That(status.Session, Is.Null);
+            Assert.That(status.LocalPlayerId, Is.EqualTo(_bravoTwo));
+            Assert.That(status.InteractTargetId, Is.EqualTo(_bravoOne));
+            Assert.Throws<ArgumentNullException>(() => ExecutionStatus.FromView(null, null, null));
+
+            var execution = Create();
+            Assert.That(ExecutionStatus.FromView(execution, null, null).Session, Is.SameAs(execution));
+            Assert.That(new ExecutionStatus(execution, null, null).View, Is.SameAs(execution));
+        }
+
         [Test]
         public void TheFormatterRejectsAnotherDetail()
         {
@@ -261,6 +304,46 @@ namespace Shooter.Tests.EditMode
             execution.Mode.AddPlayer(_bravoOne, Side.Bravo);
             execution.Mode.AddPlayer(_bravoTwo, Side.Bravo);
             return execution;
+        }
+
+        // ラウンド 2 の Live で 42 秒残り。Alpha が 1 勝、Bravo の 1 がダウン中
+        private sealed class FixedView : IExecutionView
+        {
+            public Side? MatchWinner { get; set; }
+
+            public RoundPhase Phase => RoundPhase.Live;
+
+            public int RoundNumber => 2;
+
+            public int WinsToWin => 2;
+
+            public float PreparationRemaining => 0f;
+
+            public float RoundRemaining => 42f;
+
+            public bool HasFinishedRound => true;
+
+            public Side? LastRoundWinner => Side.Alpha;
+
+            public Side? Winner => MatchWinner;
+
+            public int GetRoundWins(Side side) => side == Side.Alpha ? 1 : 0;
+
+            public bool HasPlayer(int playerId) => playerId == _alphaOne || playerId == _bravoOne || playerId == _bravoTwo;
+
+            public Side GetSide(int playerId) => playerId == _alphaOne ? Side.Alpha : Side.Bravo;
+
+            public int CountRemaining(Side side) => side == Side.Alpha ? 1 : 2;
+
+            public int CountDowned(Side side) => side == Side.Bravo ? 1 : 0;
+
+            public bool IsDowned(int playerId) => playerId == _bravoOne;
+
+            public float? GetBleedoutRemaining(int playerId) => playerId == _bravoOne ? 10f : (float?)null;
+
+            public float GetReviveProgress(int playerId) => 0f;
+
+            public float GetExecuteProgress(int playerId) => 0f;
         }
 
         private static void WinRoundForAlpha(ExecutionSession execution)

@@ -191,7 +191,34 @@ namespace Shooter.Core.Tests
             Assert.That((int)MatchObjective.Payload, Is.EqualTo(9));
             Assert.That((int)MatchObjective.BattleRoyale, Is.EqualTo(10));
             Assert.That((int)MatchObjective.Extraction, Is.EqualTo(11));
-            Assert.That(Enum.GetValues<MatchObjective>().Length, Is.EqualTo(12));
+            Assert.That((int)MatchObjective.Horde, Is.EqualTo(12));
+            Assert.That((int)MatchObjective.Infected, Is.EqualTo(13));
+            Assert.That((int)MatchObjective.Guardian, Is.EqualTo(14));
+            Assert.That((int)MatchObjective.Execution, Is.EqualTo(15));
+            Assert.That(Enum.GetValues<MatchObjective>().Length, Is.EqualTo(16));
+        }
+
+        [TestCase(MatchObjective.Horde)]
+        [TestCase(MatchObjective.Infected)]
+        [TestCase(MatchObjective.Guardian)]
+        [TestCase(MatchObjective.Execution)]
+        public void KeepsTheObjectivesAddedForTheOnlineModes(MatchObjective objective)
+        {
+            Assert.That(Rules(objective: objective).Objective, Is.EqualTo(objective));
+            Assert.That(Enum.Parse<MatchObjective>(objective.ToString()), Is.EqualTo(objective));
+        }
+
+        [Test]
+        public void DeployRoleKeepsTheOrderTheValuesWereAddedIn()
+        {
+            Assert.That((int)DeployRole.Turret, Is.EqualTo(0));
+            Assert.That((int)DeployRole.Shield, Is.EqualTo(1));
+            Assert.That((int)DeployRole.Decoy, Is.EqualTo(2));
+            Assert.That((int)DeployRole.Beacon, Is.EqualTo(3));
+            Assert.That((int)DeployRole.Drone, Is.EqualTo(4));
+            Assert.That((int)DeployRole.Mine, Is.EqualTo(5));
+            Assert.That((int)DeployRole.RemoteCharge, Is.EqualTo(6));
+            Assert.That(Enum.GetValues<DeployRole>().Length, Is.EqualTo(7));
         }
 
         [TestCase(MatchObjective.BattleRoyale)]

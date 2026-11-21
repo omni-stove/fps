@@ -182,7 +182,7 @@ namespace Shooter.Server.Tests
             using var stashes = new TempDirectory();
             var parts = Parts(stashes.Path);
 
-            foreach (var objective in Enum.GetValues<MatchObjective>())
+            foreach (var objective in ServerObjectiveFactory.Supported)
             {
                 var rules = ServerObjectiveFactory.Create(objective, settings, _host, parts);
 
@@ -192,6 +192,53 @@ namespace Shooter.Server.Tests
                     Is.EqualTo(objective == MatchObjective.BattleRoyale || objective == MatchObjective.Extraction),
                     objective + ": only the modes that open boxes get the map boxes");
             }
+        }
+
+        [Test]
+        public void EveryObjectiveBeforeTheOnlineModesIsSupported()
+        {
+            var unsupported = new[] { MatchObjective.Horde, MatchObjective.Infected, MatchObjective.Guardian, MatchObjective.Execution };
+
+            foreach (var objective in Enum.GetValues<MatchObjective>())
+            {
+                Assert.That(ServerObjectiveFactory.Supports(objective), Is.EqualTo(Array.IndexOf(unsupported, objective) < 0), objective.ToString());
+            }
+
+            Assert.That(ServerObjectiveFactory.Supported.Count, Is.EqualTo(12));
+            Assert.That(ServerObjectiveFactory.Supports((MatchObjective)99), Is.False);
+        }
+
+        // 列挙にだけ先に足した目的は、未対応の目的と同じく作るときに断る
+        [TestCase(MatchObjective.Horde, "Horde")]
+        [TestCase(MatchObjective.Infected, "Infected")]
+        [TestCase(MatchObjective.Guardian, "Guardian")]
+        [TestCase(MatchObjective.Execution, "Execution")]
+        public void TheObjectivesWithoutServerRulesYetAreRefused(MatchObjective objective, string name)
+        {
+            using var stashes = new TempDirectory();
+
+            var bare = Assert.Throws<InvalidOperationException>(() => ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host));
+            var withParts = Assert.Throws<InvalidOperationException>(
+                () => ServerObjectiveFactory.Create(objective, new NetMatchSettings(), _host, Parts(stashes.Path)));
+
+            Assert.That(bare.Message, Is.EqualTo("the dedicated server has no rules for the match objective " + name));
+            Assert.That(withParts.Message, Is.EqualTo(bare.Message));
+        }
+
+        [Test]
+        public void TheRegistrationRefusesAnObjectiveTwiceOrWithoutRules()
+        {
+            ServerObjectiveCreator create = (settings, host, parts) => new TeamKillsRules();
+
+            var twice = Assert.Throws<ArgumentException>(
+                () => ServerObjectiveFactory.Register((MatchObjective.None, create), (MatchObjective.None, create)));
+            var empty = Assert.Throws<ArgumentException>(() => ServerObjectiveFactory.Register((MatchObjective.Horde, null)));
+            var registered = ServerObjectiveFactory.Register((MatchObjective.Horde, create));
+
+            Assert.That(twice.Message, Does.StartWith("the match objective None is registered twice"));
+            Assert.That(empty.Message, Does.StartWith("the match objective Horde is registered without rules"));
+            Assert.That(registered[MatchObjective.Horde], Is.SameAs(create));
+            Assert.Throws<ArgumentNullException>(() => ServerObjectiveFactory.Register(null));
         }
 
         [Test]

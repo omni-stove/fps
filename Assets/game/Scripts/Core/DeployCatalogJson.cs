@@ -132,6 +132,12 @@ namespace Shooter.Core
         {
             var id = entry.ToText(entry.ItemPath(IdItem), entry.Require(IdItem));
             var role = entry.ToEnum<DeployRole>(entry.ItemPath(RoleItem), entry.Require(RoleItem));
+            // 地雷と遠隔爆弾は列挙にだけ先に足してあり、形の既定も置いた後の振る舞いもまだ無いので、足す前と同じく読むときに断る
+            if (role == DeployRole.Mine || role == DeployRole.RemoteCharge)
+            {
+                throw entry.Rejected(entry.ItemPath(RoleItem), $"role {role} is not supported yet");
+            }
+
             var deploy = ReadDeploy(entry, DeployType.DefaultDeploy(role));
             var ability = ReadAbility(entry);
 

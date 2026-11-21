@@ -38,7 +38,7 @@ namespace Shooter.Tests.EditMode
             MenuNavigator.SceneRoot = KitPaths.DefaultRoot;
 
             // 本物の選択 (LoadoutPreferenceStore.DefaultKey) を壊さないよう、テストごとに別のキーを使う
-            _store = new LoadoutPreferenceStore("Shooter.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"));
+            _store = new LoadoutPreferenceStore("Shooter.Tests.MainMenuLoadout." + Guid.NewGuid().ToString("N"), new LoadoutPresetSpec(3));
             _screen.LoadoutStore = _store;
             _names = new PlayerNameStore("Shooter.Tests.MainMenuName." + Guid.NewGuid().ToString("N"));
             _screen.NameStore = _names;
@@ -913,6 +913,103 @@ namespace Shooter.Tests.EditMode
             finally
             {
                 UnityEngine.Object.DestroyImmediate(catalog);
+            }
+        }
+
+        [Test]
+        public void LoadoutPresetsAreAddedUpToTheLimitSwitchedRenamedAndKept()
+        {
+            using (var assets = new LoadoutTestAssets())
+            {
+                _screen.Loadout = assets.Loadout;
+                _screen.Catalog = assets.Catalog;
+                _screen.Bind(_root);
+                var rifle = new[] { TestWeapons.RifleId, TestWeapons.HandgunId };
+                var smg = new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId };
+
+                _screen.OpenLoadout();
+                var panel = _screen.LoadoutPanel;
+                Assert.That(panel.HasPresets, Is.True);
+                Assert.That(panel.Presets.Count, Is.EqualTo(1), "the first open shows the current choice as the first preset");
+                Assert.That(panel.PresetTitle, Is.EqualTo("プリセット 1/1"));
+                Assert.That(panel.PresetName, Is.EqualTo("ロードアウト 1"));
+                Assert.That(panel.PresetPreviousButton.enabledSelf, Is.False, "one preset has nothing to switch to");
+                Assert.That(_store.Load(), Is.Null, "opening saves nothing");
+
+                panel.Select(0, 1);
+                panel.PresetNameField.value = "Close";
+                Assert.That(panel.SaveAsNewPreset(), Is.True);
+                Assert.That(panel.PresetTitle, Is.EqualTo("プリセット 2/2"));
+                Assert.That(panel.PresetName, Is.EqualTo("Close"));
+                Assert.That(panel.Status, Is.EqualTo(LoadoutFormat.PresetAdded("Close")));
+                Assert.That(panel.IsStatusError, Is.False);
+                Assert.That(_store.Load().WeaponIds, Is.EqualTo(smg), "the new preset is the one used");
+
+                panel.Select(0, 0);
+                panel.PresetNameField.value = "Third";
+                Assert.That(panel.SaveAsNewPreset(), Is.True);
+                Assert.That(panel.Presets.IsFull, Is.True);
+
+                Assert.That(panel.SaveAsNewPreset(), Is.False, "the store's spec keeps 3 presets");
+                Assert.That(panel.Status, Is.EqualTo(LoadoutFormat.PresetFull(3)));
+                Assert.That(panel.IsStatusError, Is.True);
+                Assert.That(panel.Presets.Count, Is.EqualTo(3));
+
+                Assert.That(panel.CyclePreset(-1), Is.True);
+                Assert.That(_screen.LoadoutPanel, Is.Not.SameAs(panel), "switching rebuilds the selection from the preset");
+                panel = _screen.LoadoutPanel;
+                Assert.That(panel.PresetName, Is.EqualTo("Close"));
+                Assert.That(panel.Selection.WeaponIds, Is.EqualTo(smg));
+                Assert.That(panel.FocusRow, Is.EqualTo(LoadoutSelectPanel.PresetRow));
+                Assert.That(panel.Status, Is.EqualTo(LoadoutFormat.PresetSwitched("Close")));
+                Assert.That(_store.Load().WeaponIds, Is.EqualTo(smg), "the switched preset is saved at once");
+
+                panel.PresetNameField.value = "  Rush  ";
+                Assert.That(panel.RenamePreset(), Is.True);
+                Assert.That(panel.PresetName, Is.EqualTo("Rush"));
+                Assert.That(panel.Status, Is.EqualTo(LoadoutFormat.PresetRenamed("Rush")));
+
+                Assert.That(panel.CyclePreset(-1), Is.True);
+                Assert.That(_screen.LoadoutPanel.Selection.WeaponIds, Is.EqualTo(rifle), "the first preset kept the choice shown on the first open");
+                Assert.That(_screen.LoadoutPanel.PresetName, Is.EqualTo("ロードアウト 1"));
+                _screen.CloseLoadout();
+
+                var reloaded = new LoadoutPreferenceStore(_store.Key, _store.Spec).LoadPresets();
+                Assert.That(reloaded.Count, Is.EqualTo(3));
+                Assert.That(reloaded.ActiveIndex, Is.EqualTo(0));
+                Assert.That(reloaded[0].HasName, Is.False);
+                Assert.That(reloaded[0].Choice.WeaponIds, Is.EqualTo(rifle));
+                Assert.That(reloaded[1].Name, Is.EqualTo("Rush"));
+                Assert.That(reloaded[1].Choice.WeaponIds, Is.EqualTo(smg));
+                Assert.That(reloaded[2].Name, Is.EqualTo("Third"));
+                Assert.That(reloaded[2].Choice.WeaponIds, Is.EqualTo(rifle));
+            }
+        }
+
+        [Test]
+        public void ConfirmSavesIntoTheActivePresetAndKeepsTheOthers()
+        {
+            using (var assets = new LoadoutTestAssets())
+            {
+                var presets = _store.LoadPresets();
+                presets.Add("A", new LoadoutChoice(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+                presets.Add("B", new LoadoutChoice(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
+                presets.Select(1);
+                _store.SavePresets(presets);
+                _screen.Loadout = assets.Loadout;
+                _screen.Catalog = assets.Catalog;
+                _screen.Bind(_root);
+
+                _screen.OpenLoadout();
+                Assert.That(_screen.LoadoutPanel.PresetName, Is.EqualTo("B"));
+                _screen.LoadoutPanel.Select(0, 1);
+                Assert.That(_screen.LoadoutPanel.Confirm(), Is.True);
+
+                var reloaded = _store.LoadPresets();
+                Assert.That(reloaded.ActiveIndex, Is.EqualTo(1));
+                Assert.That(reloaded[1].Name, Is.EqualTo("B"));
+                Assert.That(reloaded[1].Choice.WeaponIds, Is.EqualTo(new[] { LoadoutTestAssets.SmgId, TestWeapons.HandgunId }));
+                Assert.That(reloaded[0].Choice.WeaponIds, Is.EqualTo(new[] { TestWeapons.RifleId, TestWeapons.HandgunId }));
             }
         }
 

@@ -71,5 +71,6 @@ namespace Shooter.Protocol
         public const ushort StashState = 87;
         public const ushort BuyAnswer = 88;
         public const ushort PlayerNames = 89;
+        public const ushort LockOnWarning = 90;
     }
 }

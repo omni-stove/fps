@@ -21,6 +21,10 @@ namespace Shooter.Server
         // Bot の判断は ServerBots が持ち、ServerMelee は ServerBots に頼らず作るので、作った後に差し込む (UnawareBots)
         internal Func<int, bool> IsTargetUnaware { get; set; }
 
+        // 投げて持ち物から武器を外した後に呼ぶ。持ち物の武器の写しは ServerInventories が持ち、ServerMelee はそれを知らないので、
+        // 作った後に差し込む (ServerInventories.HoldWeapons)
+        internal Action<int> WeaponsDropped { get; set; }
+
         internal bool IsPerformingTakedown(int playerId)
         {
             return _takedowns.ContainsKey(playerId);

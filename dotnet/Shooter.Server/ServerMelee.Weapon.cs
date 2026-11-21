@@ -124,6 +124,7 @@ namespace Shooter.Server
                 return;
             }
 
+            WeaponsDropped?.Invoke(playerId);
             swinger.DropCharge();
             var spec = weapon.Melee.Throw;
             var velocity = LaunchDirection(body.Yaw, spec.UpwardDegrees) * spec.Speed;

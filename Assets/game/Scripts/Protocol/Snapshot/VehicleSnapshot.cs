@@ -9,6 +9,7 @@ namespace Shooter.Protocol
     {
         // default では null になるので、読むときに空へ寄せる。
         private VehiclePartDamageSync _parts;
+        private VehicleFlareSync _flares;
 
         public int Index { get; set; }
         public VehicleFields Present { get; set; }
@@ -27,14 +28,21 @@ namespace Shooter.Protocol
             set => _parts = value;
         }
 
+        // 空にいる撒いたフレア。乗っていない人の捕捉も、乗り物のフレアで外れるかを手元で確かめられるよう全員に送る。
+        public VehicleFlareSync Flares
+        {
+            get => _flares ?? VehicleFlareSync.None;
+            set => _flares = value;
+        }
+
         public int EntityId => Index;
 
         public int PresentBits => (int)Present;
 
         public int AllBits => (int)VehicleFields.All;
 
-        // 部位が無い・撃たれていない乗り物は、基準の無いスナップショットでも部位の欄を書かない。
-        public int OptionalBits => (int)VehicleFields.Parts;
+        // 部位が無い・撃たれていない乗り物と、フレアを撒いていない乗り物は、基準の無いスナップショットでもその欄を書かない。
+        public int OptionalBits => (int)(VehicleFields.Parts | VehicleFields.Flares);
 
         public int ChangedBits(in VehicleSnapshot baseline)
         {
@@ -52,6 +60,11 @@ namespace Shooter.Protocol
             if (!Parts.SameAs(baseline.Parts))
             {
                 bits |= VehicleFields.Parts;
+            }
+
+            if (!Flares.SameAs(baseline.Flares))
+            {
+                bits |= VehicleFields.Flares;
             }
 
             return (int)bits;
@@ -82,6 +95,11 @@ namespace Shooter.Protocol
             {
                 Parts.Write(writer);
             }
+
+            if ((fields & VehicleFields.Flares) != 0)
+            {
+                Flares.Write(writer);
+            }
         }
 
         public void ReadBits(MessageReader reader, int id, int bits)
@@ -106,6 +124,11 @@ namespace Shooter.Protocol
             {
                 Parts = VehiclePartDamageSync.Read(reader);
             }
+
+            if ((fields & VehicleFields.Flares) != 0)
+            {
+                Flares = VehicleFlareSync.Read(reader);
+            }
         }
 
         public void FillFrom(in VehicleSnapshot baseline)
@@ -127,6 +150,11 @@ namespace Shooter.Protocol
             if ((missing & VehicleFields.Parts) != 0)
             {
                 Parts = baseline.Parts;
+            }
+
+            if ((missing & VehicleFields.Flares) != 0)
+            {
+                Flares = baseline.Flares;
             }
 
             Present = VehicleFields.All;

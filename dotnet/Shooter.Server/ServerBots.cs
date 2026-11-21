@@ -683,9 +683,11 @@ namespace Shooter.Server
         // 狙うのは判断が向いている所 (最後に見た・聞いた相手の体の中心) の足元。爆風の届く所に味方がいれば投げない
         private void TryThrowGrenade(ServerBotAgent agent, ServerBody body, in EnemyPerception perception, EnemyDecision decision)
         {
-            // 隠れている間は壁のすぐ後ろでしゃがんでいて、低い弧が壁に当たって自分の足元で爆ぜるので投げない
+            // 隠れている間と、High の物陰で覗く間 (立った目より高い壁のすぐ後ろに立つ) は、弧が壁に当たって自分の足元で爆ぜるので投げない
             if (!agent.CanThrowGrenade
-                || (agent.Brain.State == EnemyState.TakeCover && agent.Brain.CoverPhase == EnemyCoverPhase.Hiding)
+                || (agent.Brain.State == EnemyState.TakeCover
+                    && (agent.Brain.CoverPhase == EnemyCoverPhase.Hiding
+                        || agent.Brain.CurrentCoverPoint?.Height == CoverHeight.High))
                 || !ServerBotAgent.WantsGrenade(agent.Brain.State, perception.HasLineOfSight, body.Position, decision.LookAt, _spec.Tactics))
             {
                 return;

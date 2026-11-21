@@ -47,7 +47,7 @@ namespace Shooter.Net.Tests
             _logs.Clear();
             _abilityRequests.Clear();
             _deployRequests.Clear();
-            _store = new LoadoutPreferenceStore(StoreKey);
+            _store = new LoadoutPreferenceStore(StoreKey, LoadoutPresetSpec.Default);
             _store.Delete();
             new BlockListStore(BlocksKey).Delete();
 

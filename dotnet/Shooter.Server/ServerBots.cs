@@ -118,12 +118,12 @@ namespace Shooter.Server
                 -geometry.Standing.BottomY,
                 geometry.Crouched.EyeY - geometry.Crouched.BottomY,
                 geometry.Standing.EyeY - geometry.Standing.BottomY);
-            if (_target == 0)
+            _hasNavMesh = HasNavMeshNearPatrolPoints();
+            if (_target == 0 && !ObjectiveDrivesBots)
             {
                 return;
             }
 
-            _hasNavMesh = HasNavMeshNearPatrolPoints();
             if (!_hasNavMesh)
             {
                 _log.WriteLine(LogTag + " no NavMesh near the spawn points of " + map.Name
@@ -156,7 +156,7 @@ namespace Shooter.Server
 
         public void Tick(long tick, float deltaSeconds)
         {
-            if (_target > 0)
+            if (_target > 0 || ObjectiveDrivesBots)
             {
                 Reconcile();
             }
@@ -252,15 +252,27 @@ namespace Shooter.Server
             }
 
             var humans = _match.HumanCount;
-            var desired = BotRoster.DesiredBots(_launchBots, session.Spec.Rules.MinPlayers, humans);
+            var wanted = _rules.Objective?.BotsWanted;
+            var desired = wanted.HasValue ? Math.Max(0, wanted.Value) : BotRoster.DesiredBots(_launchBots, session.Spec.Rules.MinPlayers, humans);
             if (desired != _loggedDesired)
             {
                 _loggedDesired = desired;
-                _log.WriteLine(LogTag + " humans=" + Text(humans) + " bots=" + Text(_agents.Count) + " desired=" + Text(desired));
+                _log.WriteLine(LogTag + " humans=" + Text(humans) + " bots=" + Text(_agents.Count) + " desired=" + Text(desired)
+                    + (wanted.HasValue ? " by=objective" : string.Empty));
             }
 
             while (_agents.Count > desired)
             {
+                if (wanted.HasValue)
+                {
+                    if (!TrimForObjective())
+                    {
+                        break;
+                    }
+
+                    continue;
+                }
+
                 Team? preferred = _trimRequests.Count > 0 ? _trimRequests.Dequeue() : (Team?)null;
                 if (!Trim(preferred, humans > 0 ? "replaced" : "no-humans"))
                 {
@@ -320,6 +332,38 @@ namespace Shooter.Server
             }
 
             Remove(victim, reason);
+            return true;
+        }
+
+        private bool ObjectiveDrivesBots => _rules.Objective?.BotsWanted.HasValue == true;
+
+        // チームの人数でなく目的の決める順で抜く。同じ順なら後から足した Bot (Id の大きい方) を抜く
+        private bool TrimForObjective()
+        {
+            var objective = _rules.Objective;
+            if (objective == null)
+            {
+                return false;
+            }
+
+            var victim = 0;
+            var lowest = int.MaxValue;
+            foreach (var playerId in _agents.Keys)
+            {
+                var order = objective.BotDropOrder(playerId);
+                if (order <= lowest)
+                {
+                    lowest = order;
+                    victim = playerId;
+                }
+            }
+
+            if (victim == 0)
+            {
+                return false;
+            }
+
+            Remove(victim, "objective");
             return true;
         }
 

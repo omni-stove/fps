@@ -31,7 +31,7 @@ namespace Shooter.Server
 
             var distance = Vector3.Distance(origin, point);
             _log.WriteLine(MeleeLog.Hit(Text(attackerId), Text(target), spec.Damage, distance));
-            var outcome = _combat.DealDamage(attackerId, target, spec.Damage, weaponId ?? StrikeWeaponId(attacker), HitZone.Body, attacker.Position);
+            var outcome = _combat.DealDamage(attackerId, target, spec.Damage, weaponId ?? StrikeWeaponId(attacker), HitZone.Body, attacker.Position, DamageKind.Melee);
             if (outcome != DamageOutcome.Ignored)
             {
                 _combat.NoteWounded(target, DamageKind.Melee);

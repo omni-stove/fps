@@ -88,6 +88,10 @@ namespace Shooter.Protocol
             _owner.ExtractionProgress = 0f;
             _owner.HasExtractionPoint = false;
             _owner.ExtractionPointId = 0;
+            _owner.Stamina = null;
+            _owner.Stagger = Shooter.Core.StaggerKind.None;
+            _owner.SuppressionLevel = 0f;
+            _owner.Suppressed = false;
             _owner.Grenades.Clear();
             _owner.EquippedWeaponIds.Clear();
             _owner.Present = OwnerFields.All;

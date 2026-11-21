@@ -871,6 +871,29 @@ namespace Shooter.Protocol.Tests
         }
 
         [Test]
+        public void BeingOutsideTheSquadsRoundTripsWithTheIdentity()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1);
+            var current = Build(101);
+            ref var outside = ref AddPlayer(current, 1);
+            outside.OutsideSquad = true;
+            outside.IsBot = true;
+            outside.Concealed = true;
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Identity));
+            Assert.That(got.Players[0].OutsideSquad, Is.True);
+            Assert.That(got.Players[0].IsBot, Is.True);
+            Assert.That(got.Players[0].Concealed, Is.True);
+            Assert.That(got.Players[0].SquadId, Is.Zero);
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].OutsideSquad, Is.True, "the baseline does not overwrite a sent flag");
+            Assert.That(Send(baseline, null).Players[0].OutsideSquad, Is.False);
+        }
+
+        [Test]
         public void ConcealedAndBotRoundTripTogether()
         {
             var sent = Build(100);
@@ -972,7 +995,7 @@ namespace Shooter.Protocol.Tests
             }
 
             Assert.That(bytes[at], Is.EqualTo(1));
-            bytes[at] = 1 << 2;
+            bytes[at] = 1 << 3;
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
         }
@@ -1210,7 +1233,8 @@ namespace Shooter.Protocol.Tests
             Assert.That(BitConverter.ToUInt16(bytes, _headBytes + 1), Is.EqualTo((ushort)OwnerFields.Extraction));
             Assert.That((int)OwnerFields.Extraction, Is.EqualTo(1 << 8));
 
-            bytes[_headBytes + 1 + 1] |= 1 << 1;
+            // 上のバイトの 1 << 4 は 1 << 12 で、制圧 (1 << 11) の次のまだ無い部分
+            bytes[_headBytes + 1 + 1] |= 1 << 4;
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
         }

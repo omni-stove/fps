@@ -92,6 +92,8 @@ namespace Shooter.Server
             {
                 mover.InputBudget = Math.Min(MaxInputBudget, mover.InputBudget + refill);
             }
+
+            TickGrappleSlots(deltaSeconds);
         }
 
         public void OnConnected(ConnectionId connection)
@@ -145,6 +147,7 @@ namespace Shooter.Server
         {
             foreach (var mover in _byPlayer.Values)
             {
+                ReleaseGrapple(mover, GrappleEnd.Lost);
                 var position = mover.State.Position;
                 CancelMantle(mover);
                 mover.Simulation = CreateSimulation(position);
@@ -242,6 +245,16 @@ namespace Shooter.Server
             public float MantleElapsed { get; set; }
 
             public float NextWarning { get; set; }
+
+            // 押し始めの tick だけで縄を撃ち・跳んで離すよう、前の入力で押していたかを覚える
+            public bool GrappleHeld { get; set; }
+
+            public bool JumpHeld { get; set; }
+
+            public GrappleHook Hook { get; set; }
+
+            // 初めて縄を撃とうとしたときに作る。回数を満たし直すときは捨てる
+            public AbilitySlot GrappleSlot { get; set; }
         }
     }
 }

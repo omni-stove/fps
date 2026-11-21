@@ -16,14 +16,14 @@ namespace Shooter.Runtime
         public const string LogTag = WaveLog.Tag;
 
         public const int DefaultEnemySideId = HordeSpec.DefaultEnemySideId;
-        public const int DefaultFirstEnemyCount = 3;
-        public const float DefaultEnemiesPerWave = 2f;
-        public const float DefaultFirstStrength = 1f;
-        public const float DefaultStrengthPerWave = 0.25f;
-        public const float DefaultMaxStrength = 3f;
-        public const int DefaultMaxAlive = 4;
-        public const float DefaultRestSeconds = 5f;
-        public const int DefaultWaveCount = 5;
+        public const int DefaultFirstEnemyCount = HordeSettings.DefaultFirstEnemyCount;
+        public const float DefaultEnemiesPerWave = HordeSettings.DefaultEnemiesPerWave;
+        public const float DefaultFirstStrength = HordeSettings.DefaultFirstStrength;
+        public const float DefaultStrengthPerWave = HordeSettings.DefaultStrengthPerWave;
+        public const float DefaultMaxStrength = HordeSettings.DefaultMaxStrength;
+        public const int DefaultMaxAlive = HordeSettings.DefaultMaxAlive;
+        public const float DefaultRestSeconds = HordeSettings.DefaultRestSeconds;
+        public const int DefaultWaveCount = HordeSettings.DefaultWaveCount;
         public const float DefaultAlertInterval = HordeSpec.DefaultAlertInterval;
         public const float DefaultMinSpawnDistance = HordeSpec.DefaultMinSpawnDistance;
         public const float DefaultCorpseSeconds = HordeSpec.DefaultCorpseSeconds;

@@ -6,7 +6,7 @@ namespace Shooter.Protocol
     public struct PlayerSnapshot : ISnapshotEntity<PlayerSnapshot>
     {
         private const int _motionFlagCount = 5;
-        private const int _identityFlagCount = 2;
+        private const int _identityFlagCount = 3;
         private const float _leanSteps = 127f;
 
         public int PlayerId { get; set; }
@@ -24,6 +24,9 @@ namespace Shooter.Protocol
         // 行を消さずに旗で隠すのは、名簿・スコア・残りの人数を行から数えているため。動きの値は送る側が空にする。
         // 見えるかが変わるたびに切り替わるが、部分のビットに空きが無いので、Bot の旗と同じバイトに載せて Identity で送る
         public bool Concealed { get; set; }
+
+        // 分隊の番号は 1 バイトをすべて使うので、分隊に入っていない人を番号で表せず、Bot の旗と同じバイトに載せる
+        public bool OutsideSquad { get; set; }
 
         // Bot の見た目の種類と、その予兆。部分のビットに空きが無いので Identity に載せる。
         // 予兆は 1 回の攻撃で数回しか変わらず、Concealed と同じく変わった時だけ Identity を送れば足りる
@@ -100,6 +103,7 @@ namespace Shooter.Protocol
             if (Team != baseline.Team
                 || IsBot != baseline.IsBot
                 || Concealed != baseline.Concealed
+                || OutsideSquad != baseline.OutsideSquad
                 || SquadId != baseline.SquadId
                 || Archetype != baseline.Archetype
                 || ArchetypeCue != baseline.ArchetypeCue
@@ -219,7 +223,7 @@ namespace Shooter.Protocol
             if ((fields & PlayerFields.Identity) != 0)
             {
                 writer.WriteByte((byte)Team);
-                writer.WriteByte((byte)((IsBot ? 1 : 0) | (Concealed ? 2 : 0)));
+                writer.WriteByte((byte)((IsBot ? 1 : 0) | (Concealed ? 2 : 0) | (OutsideSquad ? 4 : 0)));
                 writer.WriteString(CosmeticId, MatchProtocol.MaxContentIdBytes);
                 writer.WriteByte(SquadId);
                 writer.WriteByte((byte)Archetype);
@@ -358,6 +362,7 @@ namespace Shooter.Protocol
                 var flags = reader.ReadByteBelow(1 << _identityFlagCount, "player identity flags");
                 IsBot = (flags & 1) != 0;
                 Concealed = (flags & 2) != 0;
+                OutsideSquad = (flags & 4) != 0;
                 CosmeticId = reader.ReadString(MatchProtocol.MaxContentIdBytes, CosmeticId);
                 SquadId = reader.ReadByte();
                 Archetype = (EnemyArchetype)reader.ReadByteBelow(EnumRange<EnemyArchetype>.Count, "bot archetype");
@@ -484,6 +489,7 @@ namespace Shooter.Protocol
                 Team = baseline.Team;
                 IsBot = baseline.IsBot;
                 Concealed = baseline.Concealed;
+                OutsideSquad = baseline.OutsideSquad;
                 CosmeticId = baseline.CosmeticId;
                 SquadId = baseline.SquadId;
                 Archetype = baseline.Archetype;

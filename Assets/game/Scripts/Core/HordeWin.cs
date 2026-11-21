@@ -31,15 +31,27 @@ namespace Shooter.Core
                 throw new ArgumentNullException(nameof(session));
             }
 
-            // 脱落より先に見るのは、最後の敵を倒したのと同じ間に最後の 1 人が倒れたときを守る側の勝ちにするため。
-            if (_schedule.Phase == WavePhase.Completed)
-            {
-                return ModeOutcome.Win(Defenders);
-            }
-
-            return session.IsSideEliminated(Defenders) ? ModeOutcome.Win(Attackers) : ModeOutcome.Undecided;
+            var winner = Decide(_schedule.Phase, session.IsSideEliminated(Defenders), Defenders, Attackers);
+            return winner.HasValue ? ModeOutcome.Win(winner.Value) : ModeOutcome.Undecided;
         }
 
         public ModeOutcome CheckTimeUp(ModeSession session) => ModeOutcome.Undecided;
+
+        // ModeSession を受け取らないのは、専用サーバーの HordeRules (TeamDeathmatchSession) も同じ順で勝ち負けを決めるため。
+        // 脱落より先に見るのは、最後の敵を倒したのと同じ間に最後の 1 人が倒れたときを守る側の勝ちにするため。
+        public static Side? Decide(WavePhase phase, bool defendersOut, Side defenders, Side attackers)
+        {
+            if (defenders == attackers)
+            {
+                throw new ArgumentException($"defenders and attackers must differ, but both are {defenders}", nameof(attackers));
+            }
+
+            if (phase == WavePhase.Completed)
+            {
+                return defenders;
+            }
+
+            return defendersOut ? attackers : (Side?)null;
+        }
     }
 }

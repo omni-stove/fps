@@ -319,9 +319,11 @@ namespace Shooter.Editor
         }
 
         // 倒れた人は波でまとめて戻る (RespawnMode.Wave) ので、出現直後の無敵も残す。
+        // オフラインの HordeRunner は Objective を読まないが、専用サーバーは書き出したルールの Objective で目的を選ぶので Horde にする。
         public static GameRules HordeRules()
         {
             return TeamDeathmatchRules()
+                .WithObjective(MatchObjective.Horde)
                 .WithRespawnMode(RespawnMode.Wave)
                 .WithWaveIntervalSeconds(HordeWaveIntervalSeconds)
                 .WithReserveAmmoMultiplier(HordeReserveAmmoMultiplier);

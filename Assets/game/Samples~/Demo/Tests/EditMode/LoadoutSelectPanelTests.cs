@@ -206,6 +206,171 @@ namespace Shooter.Tests.EditMode
             return _container.Query<VisualElement>(className: LoadoutSelectPanel.AbilitySlotClass).ToList().ToArray();
         }
 
+        private LoadoutPresetBook OpenWithPresets(int count, int maxPresets = 3)
+        {
+            var book = new LoadoutPresetBook(new LoadoutPresetSpec(maxPresets, 12));
+            for (var i = 0; i < count; i++)
+            {
+                book.Add(i == 1 ? "Close" : string.Empty, new LoadoutChoice(new[] { _rifle, _handgun }));
+            }
+
+            _panel.Dispose();
+            _panel = new LoadoutSelectPanel(_container, Selection(), presets: book);
+            _panel.Confirmed += ids => _confirmed.Add(ids);
+            return book;
+        }
+
+        [Test]
+        public void WithoutPresetsThereIsNoPresetRow()
+        {
+            Assert.That(_panel.HasPresets, Is.False);
+            Assert.That(_container.Q<VisualElement>(className: LoadoutSelectPanel.PresetsClass), Is.Null);
+            Assert.That(_panel.PresetNameField, Is.Null);
+            Assert.That(_panel.CyclePreset(1), Is.False);
+            Assert.That(_panel.SaveAsNewPreset(), Is.False);
+            Assert.That(_panel.RenamePreset(), Is.False);
+        }
+
+        [Test]
+        public void ThePresetRowShowsTheActivePresetAboveTheSlots()
+        {
+            var book = OpenWithPresets(2);
+
+            var row = _container.Q<VisualElement>(className: LoadoutSelectPanel.PresetsClass);
+            Assert.That(row, Is.Not.Null);
+            Assert.That(_container.IndexOf(row), Is.LessThan(_container.IndexOf(Rows()[0])), "the presets come before the slots");
+            Assert.That(Rows(), Has.Length.EqualTo(2), "the preset row is not a weapon slot");
+            Assert.That(_panel.PresetTitle, Is.EqualTo("プリセット 1/2"));
+            Assert.That(_panel.PresetName, Is.EqualTo("ロードアウト 1"));
+            Assert.That(_panel.PresetNameField.value, Is.Empty);
+            Assert.That(_panel.PresetNameField.maxLength, Is.EqualTo(12));
+            Assert.That(_panel.FocusRow, Is.EqualTo(0), "the first weapon slot still has the focus");
+
+            book.Select(1);
+            _panel.RefreshPresets();
+
+            Assert.That(_panel.PresetTitle, Is.EqualTo("プリセット 2/2"));
+            Assert.That(_panel.PresetName, Is.EqualTo("Close"));
+            Assert.That(_panel.PresetNameField.value, Is.EqualTo("Close"));
+        }
+
+        [Test]
+        public void MoveFocusGoesThroughThePresetRowBeforeTheSlots()
+        {
+            OpenWithPresets(2);
+
+            _panel.MoveFocus(-1);
+            Assert.That(_panel.FocusRow, Is.EqualTo(LoadoutSelectPanel.PresetRow));
+            Assert.That(_container.Q<VisualElement>(className: LoadoutSelectPanel.PresetsClass)
+                .ClassListContains(LoadoutSelectPanel.FocusedPresetsClass), Is.True);
+            Assert.That(Rows()[0].ClassListContains(LoadoutSelectPanel.FocusedSlotClass), Is.False);
+
+            _panel.MoveFocus(-1);
+            Assert.That(_panel.FocusRow, Is.EqualTo(_panel.ConfirmRow), "moving up from the presets wraps to confirm");
+            _panel.MoveFocus(1);
+            Assert.That(_panel.FocusRow, Is.EqualTo(LoadoutSelectPanel.PresetRow), "moving down from confirm wraps to the presets");
+            _panel.MoveFocus(1);
+            Assert.That(_panel.FocusRow, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CycleOnThePresetRowAsksForTheNextPresetAndWraps()
+        {
+            OpenWithPresets(3);
+            var selected = new List<int>();
+            _panel.PresetSelected += selected.Add;
+            _panel.FocusPresets();
+
+            Assert.That(_panel.Cycle(1), Is.True);
+            Assert.That(_panel.Cycle(-1), Is.True);
+            Assert.That(_panel.CyclePreset(4), Is.True);
+
+            Assert.That(selected, Is.EqualTo(new[] { 1, 2, 1 }), "the panel asks; the caller switches the active preset");
+            Assert.That(_panel.Selection.WeaponIds, Is.EqualTo(new[] { _rifle, _handgun }), "the weapons are left to the caller");
+        }
+
+        [Test]
+        public void ASinglePresetHasNothingToSwitchTo()
+        {
+            OpenWithPresets(1);
+            var selected = new List<int>();
+            _panel.PresetSelected += selected.Add;
+
+            Assert.That(_panel.CyclePreset(1), Is.False);
+            Assert.That(_panel.PresetPreviousButton.enabledSelf, Is.False);
+            Assert.That(_panel.PresetNextButton.enabledSelf, Is.False);
+            Assert.That(selected, Is.Empty);
+        }
+
+        [Test]
+        public void SaveAsNewHandsOverTheTypedNameAndTheCurrentChoice()
+        {
+            OpenWithPresets(1);
+            var requested = new List<(string name, LoadoutChoice choice)>();
+            _panel.PresetSaveAsNewRequested += (name, choice) => requested.Add((name, choice));
+            _panel.Select(0, 1);
+            _panel.PresetNameField.value = "Rush";
+
+            Assert.That(_panel.SaveAsNewPreset(), Is.True);
+
+            Assert.That(requested.Count, Is.EqualTo(1));
+            Assert.That(requested[0].name, Is.EqualTo("Rush"));
+            Assert.That(requested[0].choice.WeaponIds, Is.EqualTo(new[] { _smg, _handgun }));
+            Assert.That(_confirmed, Is.Empty, "saving as new does not confirm");
+        }
+
+        [Test]
+        public void SaveAsNewAtTheLimitShowsTheLimitInstead()
+        {
+            OpenWithPresets(2, 2);
+            var requested = 0;
+            _panel.PresetSaveAsNewRequested += (_, _) => requested++;
+
+            Assert.That(_panel.SaveAsNewPreset(), Is.False);
+
+            Assert.That(requested, Is.Zero);
+            Assert.That(_panel.Status, Is.EqualTo("プリセットは 2 個まで保存できます"));
+            Assert.That(_panel.IsStatusError, Is.True);
+            Assert.That(_panel.SaveAsNewPresetButton.enabledSelf, Is.True, "the button stays so pressing it can tell the limit");
+        }
+
+        [Test]
+        public void RenameHandsOverTheTypedName()
+        {
+            OpenWithPresets(1);
+            var requested = new List<string>();
+            _panel.PresetRenameRequested += requested.Add;
+            _panel.PresetNameField.value = "Long";
+
+            Assert.That(_panel.RenamePreset(), Is.True);
+
+            Assert.That(requested, Is.EqualTo(new[] { "Long" }));
+        }
+
+        [Test]
+        public void BusyStopsThePresetButtons()
+        {
+            OpenWithPresets(2);
+            var selected = new List<int>();
+            _panel.PresetSelected += selected.Add;
+
+            _panel.SetBusy(true);
+
+            Assert.That(_panel.PresetNextButton.enabledSelf, Is.False);
+            Assert.That(_panel.RenamePresetButton.enabledSelf, Is.False);
+            Assert.That(_panel.SaveAsNewPresetButton.enabledSelf, Is.False);
+            Assert.That(_panel.PresetNameField.enabledSelf, Is.False);
+            Assert.That(_panel.CyclePreset(1), Is.False);
+            Assert.That(_panel.SaveAsNewPreset(), Is.False);
+            Assert.That(_panel.RenamePreset(), Is.False);
+
+            _panel.SetBusy(false);
+
+            Assert.That(_panel.PresetNextButton.enabledSelf, Is.True);
+            Assert.That(_panel.CyclePreset(1), Is.True);
+            Assert.That(selected, Is.EqualTo(new[] { 1 }));
+        }
+
         [Test]
         public void WithoutAbilitiesThereAreNoAbilityRows()
         {

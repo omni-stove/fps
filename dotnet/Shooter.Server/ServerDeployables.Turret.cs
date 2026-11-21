@@ -160,7 +160,7 @@ namespace Shooter.Server
             placed.HeldFor = null;
             placed.Turret.Fire();
             var damage = DamageAt(placed, hit.Zone, hit.Distance);
-            var outcome = _combat.DealDamage(placed.OwnerId, hitId, damage, placed.Weapon.Id, hit.Zone, eye);
+            var outcome = _combat.DealDamage(placed.OwnerId, hitId, damage, placed.Weapon.Id, hit.Zone, eye, DamageKind.Bullet);
             LogFired(placed, targetId, ServerDeployableLog.Owner(hitId), outcome == DamageOutcome.Ignored ? 0 : damage);
             if (outcome == DamageOutcome.Killed)
             {

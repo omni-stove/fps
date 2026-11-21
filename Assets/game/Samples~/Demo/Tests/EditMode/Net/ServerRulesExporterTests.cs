@@ -44,13 +44,32 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
-        public void TheBattleRoyaleAndExtractionRulesAreAlwaysExported()
+        public void TheBattleRoyaleExtractionAndHordeRulesAreAlwaysExported()
         {
             Assert.That(ServerRulesExporter.ModeRulesToExport, Is.EqualTo(new[]
             {
                 (GameRulesAssetBuilder.BattleRoyaleName, MatchObjective.BattleRoyale),
                 (GameRulesAssetBuilder.ExtractionName, MatchObjective.Extraction),
+                (GameRulesAssetBuilder.HordeName, MatchObjective.Horde),
             }));
+        }
+
+        [Test]
+        public void TheHordeRulesAreWrittenWithTheirObjectiveAndWaves()
+        {
+            var horde = Rules(GameRulesAssetBuilder.HordeName, GameRulesAssetBuilder.HordeRules());
+            var match = NetSceneBuilder.LoadOrBuildMatch();
+
+            var written = ServerRulesExporter.WriteRules(
+                _directory, match, ServerRulesExporter.WithModeRules(Array.Empty<GameRulesDefinition>(), new[] { horde }));
+
+            Assert.That(written, Is.EqualTo(new[] { Path.Combine(_directory, "Horde.json") }));
+            var text = File.ReadAllText(written[0]);
+            var file = NetMatchFile.Parse(text, written[0]);
+            Assert.That(file.Name, Is.EqualTo("Horde"));
+            Assert.That(file.Rules.Objective, Is.EqualTo(MatchObjective.Horde));
+            Assert.That(text, Does.Contain("\"horde\": {"), "a Horde rules file always shows its waves and currency");
+            Assert.That(file.Settings.Horde, Is.EqualTo(HordeSettings.Default));
         }
 
         [Test]

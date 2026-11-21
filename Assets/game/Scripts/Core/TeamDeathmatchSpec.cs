@@ -29,6 +29,10 @@ namespace Shooter.Core
         // 全滅で試合を終えないのは、全滅をラウンドの終わりとして外 (EliminationObjective) が数え、試合を次のラウンドへ続けるため
         public bool RespawnsByRound { get; }
 
+        // 立っている味方のいない人もダウンさせ、全員がダウンしても倒さない。ダウン中の敵にとどめを要る試合 (Execution) が、
+        // 最後の 1 人も倒れずにとどめを待つようにするため。ダウン (ActionRules.Downed) が Off なら何もしない
+        public bool DownsLastStanding { get; }
+
         public TeamDeathmatchSpec(
             int scoreLimit,
             float timeLimitSeconds,
@@ -38,7 +42,8 @@ namespace Shooter.Core
             int sideCapacity = DefaultSideCapacity,
             int pointsPerKill = DefaultPointsPerKill,
             int pointsPerAssist = DefaultPointsPerAssist,
-            bool respawnsByRound = false)
+            bool respawnsByRound = false,
+            bool downsLastStanding = false)
         {
             if (scoreLimit <= 0)
             {
@@ -84,6 +89,7 @@ namespace Shooter.Core
             PointsPerKill = pointsPerKill;
             PointsPerAssist = pointsPerAssist;
             RespawnsByRound = respawnsByRound;
+            DownsLastStanding = downsLastStanding;
         }
     }
 }

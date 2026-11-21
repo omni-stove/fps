@@ -147,10 +147,11 @@ namespace Shooter.Server
             modules.Add(pickups);
             modules.Add(new ServerEmotes(rules, movement, signals, tuning.Emotes, tuning.EmotesPath));
 
-            // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足し、拾い物は箱の後の空きに足すので、ルール・箱・拾い物の順
+            // 箱は目的 (ルール) が書いた旗・爆弾・台車の後の空きに足し、拾い物は箱の後の空きに足すので、ルール・箱・拾い物の順。
+            // 近接はルールが書いたダウンの欄にとどめの進み具合を書き足すので、ルールより後
             modules.Add(new ServerSnapshots(
                 motorSettings.Rules,
-                new ISnapshotContributor[] { movement, rules, loot, pickups, combat, vehicles, streaks, deployables, bots, status },
+                new ISnapshotContributor[] { movement, rules, loot, pickups, combat, vehicles, streaks, deployables, bots, status, melee },
                 tuning.AntiCheat,
                 rules));
 

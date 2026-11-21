@@ -17,11 +17,12 @@ namespace Shooter.Protocol.Tests
         private const int _battleRoyaleBytes = 8 + 4 + 8 + 4 + 4 + 4 + 4;
 
         // 25 で持ち主にスタミナ・よろけ・制圧が増え、26 で同期するルールにエモート (MatchRulesSync.Emote) が増え、
-        // 27 で乗り物に撒いたフレア (VehicleSnapshot.Flares) と、持ち主に Horde の補強の案内 (OwnerSnapshot.HordeOffer) が増えた
+        // 27 で乗り物に撒いたフレア (VehicleSnapshot.Flares) と、持ち主に Horde の補強の案内 (OwnerSnapshot.HordeOffer) が増え、
+        // 28 でダウン (DownedSync) にとどめを刺している人と進み具合が増えた
         [Test]
-        public void TheVersionIs27()
+        public void TheVersionIs28()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(27));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(28));
         }
 
         [Test]
@@ -1760,6 +1761,141 @@ namespace Shooter.Protocol.Tests
             }
 
             Assert.That(allocated, Is.Zero);
+        }
+
+        [Test]
+        public void TheExecutorAndTheExecuteProgressRoundTrip()
+        {
+            var sent = Build(100);
+            AddPlayer(sent, 1).Downed = new DownedSync(true, 12, 0).WithExecutor(7, 45);
+            AddPlayer(sent, 2).Downed = new DownedSync(true, 9, 30);
+
+            var got = Send(sent, null);
+
+            Assert.That(got.Players[0].Downed.IsDowned, Is.True);
+            Assert.That(got.Players[0].Downed.BleedoutSeconds, Is.EqualTo(12));
+            Assert.That(got.Players[0].Downed.HasExecutor, Is.True);
+            Assert.That(got.Players[0].Downed.ExecutorId, Is.EqualTo(7));
+            Assert.That(got.Players[0].Downed.ExecutePercent, Is.EqualTo(45));
+            Assert.That(got.Players[1].Downed.HasExecutor, Is.False);
+            Assert.That(got.Players[1].Downed.ExecutePercent, Is.Zero);
+            Assert.That(got.Players[1].Downed.RevivePercent, Is.EqualTo(30));
+            Assert.That(got.Players[0].ChangedBits(sent.Players[0]), Is.Zero);
+        }
+
+        // 刺している人 (4) と進み具合 (1) は、刺されている間だけ載る
+        [Test]
+        public void TheExecutorIsWrittenOnlyWhileSomeoneIsExecuting()
+        {
+            var plain = Build(100);
+            AddPlayer(plain, 1).Downed = new DownedSync(true, 12, 0);
+            var executing = Build(100);
+            AddPlayer(executing, 1).Downed = new DownedSync(true, 12, 0).WithExecutor(3, 10);
+
+            Assert.That(Size(executing, null) - Size(plain, null), Is.EqualTo(4 + 1));
+        }
+
+        [Test]
+        public void AdvancingTheExecutionSendsOnlyTheDownedPartAndResolves()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1).Downed = new DownedSync(true, 12, 0).WithExecutor(3, 10);
+            var current = Build(101);
+            AddPlayer(current, 1).Downed = new DownedSync(true, 12, 0).WithExecutor(3, 60);
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Downed));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].Downed.ExecutorId, Is.EqualTo(3));
+            Assert.That(got.Players[0].Downed.ExecutePercent, Is.EqualTo(60));
+            Assert.That(got.Players[0].WeaponId, Is.EqualTo("rifle"));
+        }
+
+        [Test]
+        public void StoppingTheExecutionIsSentAndClearsTheExecutor()
+        {
+            var baseline = Build(100);
+            AddPlayer(baseline, 1).Downed = new DownedSync(true, 12, 0).WithExecutor(3, 80);
+            var current = Build(101);
+            AddPlayer(current, 1).Downed = new DownedSync(true, 12, 0);
+
+            var got = Send(current, baseline);
+
+            Assert.That(got.Players[0].Present, Is.EqualTo(PlayerFields.Downed));
+            Assert.That(got.TryResolve(Send(baseline, null)), Is.True);
+            Assert.That(got.Players[0].Downed.HasExecutor, Is.False);
+            Assert.That(got.Players[0].Downed.ExecutePercent, Is.Zero);
+        }
+
+        [Test]
+        public void AStandingPlayerHasNoExecutor()
+        {
+            var standing = new DownedSync(false, 0, 0).WithExecutor(3, 50);
+
+            Assert.That(standing.HasExecutor, Is.False);
+            Assert.That(standing.SameAs(DownedSync.None), Is.True);
+        }
+
+        [Test]
+        public void AnExecutePercentPastFullIsClampedToFull()
+        {
+            Assert.That(new DownedSync(true, 5, 0).WithExecutor(3, 200).ExecutePercent, Is.EqualTo(DownedSync.FullPercent));
+        }
+
+        [Test]
+        public void AnExecutorOnAStandingPlayerIsNotWritten()
+        {
+            var sent = Build(100);
+            AddPlayer(sent, 1).Downed = new DownedSync(false, 0, 0) { HasExecutor = true, ExecutorId = 3, ExecutePercent = 10 };
+
+            Assert.Throws<InvalidOperationException>(() => new MessageWriter().WriteMessage(sent));
+        }
+
+        [Test]
+        public void AnExecutePercentPastFullIsUnreadable()
+        {
+            var sent = Build(100);
+            AddPlayer(sent, 1).Downed = new DownedSync(true, 12, 0).WithExecutor(3, 77);
+            var plain = Build(100);
+            AddPlayer(plain, 1).Downed = new DownedSync(true, 12, 0).WithExecutor(3, 76);
+            var bytes = Bytes(sent, null);
+            var other = Bytes(plain, null);
+
+            // 進み具合のバイトだけが違うので、1 違いの行と比べて場所を見つける
+            var at = 0;
+            while (bytes[at] == other[at])
+            {
+                at++;
+            }
+
+            Assert.That(bytes[at], Is.EqualTo(77));
+            bytes[at] = DownedSync.FullPercent + 1;
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
+        }
+
+        [Test]
+        public void AnExecutorOnAStandingPlayerIsUnreadable()
+        {
+            var sent = Build(100);
+            AddPlayer(sent, 1).Downed = new DownedSync(true, 0, 0).WithExecutor(3, 10);
+            var standing = Build(100);
+            AddPlayer(standing, 1).Downed = new DownedSync(false, 0, 0);
+            var bytes = Bytes(sent, null);
+            var other = Bytes(standing, null);
+
+            // ダウンしているかのバイトが最初に違う
+            var at = 0;
+            while (bytes[at] == other[at])
+            {
+                at++;
+            }
+
+            Assert.That(bytes[at], Is.EqualTo(1));
+            bytes[at] = 0;
+
+            Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
         }
 
         private static ref PlayerSnapshot AddPlayer(SnapshotMessage snapshot, int id)

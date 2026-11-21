@@ -69,7 +69,8 @@ namespace Shooter.Server.Tests
             Assert.That(_rules.Session.IsAlive(4), Is.True);
             Assert.That(Rules().Rounds.Phase, Is.EqualTo(RoundPhase.Live), "Bravo still has a player standing");
 
-            Assert.That(_rules.ApplyDamage(1, 4, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Killed), "the last player standing falls at once");
+            WaitOutTheSwing(1);
+            DownAndExecute(1, 4);
             Tick();
 
             Assert.That(_match.State, Is.EqualTo(GameModeState.Ended), _log.ToString());
@@ -95,7 +96,8 @@ namespace Shooter.Server.Tests
         {
             StartExecutionWithFour(roundWinsToWin: 2);
             DownAndExecute(1, 2);
-            Assert.That(_rules.ApplyDamage(1, 4, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Killed));
+            WaitOutTheSwing(1);
+            DownAndExecute(1, 4);
             Tick();
             Assert.That(_match.State, Is.EqualTo(GameModeState.Playing), "one round win is not enough");
 
@@ -206,6 +208,139 @@ namespace Shooter.Server.Tests
             Assert.That(_rules.Session.GetHealth(2), Is.LessThan(downedHealth), "the downed player is not shielded without the objective");
         }
 
+        // 確認方法の筋書き: 各チームの最後の 1 人も倒れた時点では倒れずにダウンし、とどめを刺されるまでラウンドは続く
+        [Test]
+        public void TheLastPlayerStandingIsDownedAndTheRoundWaitsForTheExecution()
+        {
+            StartExecutionWithFour(roundWinsToWin: 1);
+            DownAndExecute(1, 2);
+            WaitOutTheSwing(1);
+
+            Assert.That(_rules.ApplyDamage(1, 4, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Downed), "the last player standing is downed, not killed");
+            Tick();
+
+            Assert.That(_rules.Session.IsDowned(4), Is.True);
+            Assert.That(_rules.Session.IsAlive(4), Is.True);
+            Assert.That(Rules().Rounds.Phase, Is.EqualTo(RoundPhase.Live), "the round waits for the execution");
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Playing));
+            Assert.That(_rules.ApplyDamage(3, 4, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Ignored), "a shot still does not finish the last one");
+
+            PlaceFacing(4, -3.5f, 0f, _facingWest);
+            Face(1);
+            Press(1);
+            Hold(1, InputButtons.None, _executeTicks);
+            Tick();
+
+            Assert.That(_rules.Session.IsAlive(4), Is.False, _log.ToString());
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Ended));
+            var snapshot = default(MatchSnapshot);
+            _rules.FillMatch(ref snapshot);
+            Assert.That(snapshot.Winner, Is.EqualTo(Team.Alpha));
+            Assert.That(snapshot.LastRoundEnd, Is.EqualTo(RoundEndReason.DefendersEliminated));
+        }
+
+        // オフラインの ExecutionSession と同じく、全員がダウンしてもラウンドは終わらず、出血で倒れきった側が落とす
+        [Test]
+        public void AWholeSideDownedLosesOnlyWhenItBleedsOut()
+        {
+            StartExecutionWithFour(roundWinsToWin: 1);
+
+            Assert.That(_rules.ApplyDamage(1, 2, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Downed));
+            Assert.That(_rules.ApplyDamage(1, 4, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Downed));
+            Tick();
+
+            Assert.That(_rules.Session.IsDowned(2), Is.True);
+            Assert.That(_rules.Session.IsDowned(4), Is.True);
+            Assert.That(Rules().Rounds.Phase, Is.EqualTo(RoundPhase.Live), "a side whose everyone is downed has not fallen yet");
+
+            Step(ActionRules.DefaultDownedBleedoutSeconds + 0.5f);
+
+            Assert.That(_rules.Session.IsAlive(2), Is.False, _log.ToString());
+            Assert.That(_rules.Session.IsAlive(4), Is.False);
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Ended));
+            var snapshot = default(MatchSnapshot);
+            _rules.FillMatch(ref snapshot);
+            Assert.That(snapshot.Winner, Is.EqualTo(Team.Alpha));
+        }
+
+        // とどめの進み具合はサーバーの近接が持つので、刺されている人のダウンの欄に刺している人と百分率を書き足す
+        [Test]
+        public void TheExecutionProgressIsWrittenOnTheDownedRow()
+        {
+            StartExecutionWithFour();
+            Assert.That(_rules.ApplyDamage(1, 2, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Downed));
+            PlaceFacing(2, -3.5f, 0f, _facingWest);
+            Face(1);
+
+            var before = DownedRow(2);
+            Assert.That(before.IsDowned, Is.True);
+            Assert.That(before.HasExecutor, Is.False, "nobody is executing yet");
+
+            Press(1);
+            Hold(1, InputButtons.None, _executeTicks / 2);
+
+            Assert.That(_melee.TryGetExecution(2, out var executorId, out var progress), Is.True, _log.ToString());
+            Assert.That(executorId, Is.EqualTo(1));
+            Assert.That(progress, Is.GreaterThan(0f).And.LessThan(1f));
+            var during = DownedRow(2);
+            Assert.That(during.HasExecutor, Is.True);
+            Assert.That(during.ExecutorId, Is.EqualTo(1));
+            Assert.That(during.ExecutePercent, Is.EqualTo(HudFormat.RevivePercent(progress)));
+            Assert.That(during.ExecutePercent, Is.GreaterThan(0).And.LessThan(DownedSync.FullPercent));
+            Assert.That(DownedRow(4).HasExecutor, Is.False, "only the executed player carries the progress");
+
+            Hold(1, InputButtons.None, _executeTicks);
+
+            Assert.That(_melee.TryGetExecution(2, out _, out _), Is.False);
+            Assert.That(DownedRow(2).HasExecutor, Is.False, "the finished player is no longer downed");
+        }
+
+        [Test]
+        public void ARevivedTargetLosesTheExecutionProgress()
+        {
+            StartExecutionWithFour();
+            Assert.That(_rules.ApplyDamage(1, 2, NetMatchSettings.DefaultMaxHealth), Is.EqualTo(DamageOutcome.Downed));
+            PlaceFacing(2, -3.5f, 0f, _facingWest);
+            Face(1);
+            Press(1);
+            Assert.That(DownedRow(2).HasExecutor, Is.True, _log.ToString());
+
+            Assert.That(_rules.Session.TryRevive(4, 2, 60f), Is.True);
+            Tick();
+
+            Assert.That(_melee.TryGetExecution(2, out _, out _), Is.False);
+            Assert.That(DownedRow(2).HasExecutor, Is.False);
+            Assert.That(DownedRow(2).IsDowned, Is.False);
+        }
+
+        private DownedSync DownedRow(int playerId)
+        {
+            var snapshot = new SnapshotMessage();
+            foreach (var player in _match.Players)
+            {
+                _rules.FillPlayer(player.PlayerId, ref snapshot.Players.Add());
+            }
+
+            Assert.That(_match.TryGetPlayer(playerId, out var receiver), Is.True);
+            _melee.Contribute(snapshot, receiver);
+            for (var i = 0; i < snapshot.Players.Count; i++)
+            {
+                if (snapshot.Players[i].PlayerId == playerId)
+                {
+                    return snapshot.Players[i].Downed;
+                }
+            }
+
+            Assert.Fail("no row for player " + playerId);
+            return default;
+        }
+
+        // 1 人目のとどめの後、続けて近接のボタンを押しても待ちで断られないよう、振りと待ちの分 (1 秒) 進める
+        private void WaitOutTheSwing(int playerId)
+        {
+            Hold(playerId, InputButtons.None, (int)(1f / _tickSeconds));
+        }
+
         private ExecutionRules Rules()
         {
             return (ExecutionRules)_rules.Objective;
@@ -242,7 +377,11 @@ namespace Shooter.Server.Tests
             Face(attackerId);
             Press(attackerId);
             Hold(attackerId, InputButtons.None, _executeTicks);
-            Assert.That(_rules.Session.IsAlive(victimId), Is.False, _log.ToString());
+            // 各チームの最後の 1 人のとどめは、ラウンドの判定が入る分だけ 1 tick 遅れて倒れきる
+            Tick();
+            // 最後の 1 人が倒れきるとラウンドが終わり、続きのラウンドでは次の準備で全員が出直すので、倒れきったままとは限らない
+            var roundOver = Rules().Rounds.Phase != RoundPhase.Live;
+            Assert.That(roundOver || !_rules.Session.IsAlive(victimId), Is.True, _log.ToString());
         }
     }
 }

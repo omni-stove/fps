@@ -47,6 +47,7 @@ namespace Shooter.Server.Tests
             Assert.That(spec.TimeLimitSeconds, Is.EqualTo(float.MaxValue));
             Assert.That(spec.RespawnSeconds, Is.EqualTo(9f));
             Assert.That(spec.RespawnsByRound, Is.True);
+            Assert.That(spec.DownsLastStanding, Is.True, "the last player standing waits for the execution");
         }
 
         [Test]

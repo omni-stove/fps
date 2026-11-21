@@ -7,7 +7,7 @@ namespace Shooter.NetV2
 {
     // 届いたスナップショットから、オフラインの ExecutionRunner と同じ形の ModeStatus (Detail は ExecutionStatus) を作り、UI が ExecutionStatus に登録した書式役をそのまま使えるようにする。
     // サーバー (ExecutionRules) はラウンドの勝ち数を AlphaPoints・BravoPoints に、ラウンドの番号・勝ちに要る数・前のラウンドの勝者を RoundResult の欄に載せる。
-    // 残りの人数とダウンは各行の体力と DownedSync から数える
+    // 残りの人数・ダウン・とどめの進み具合は各行の体力と DownedSync から数え、自分が刺している相手を InteractTargetId にする
     public sealed class ClientExecutionStatus
     {
         private readonly int _localPlayerId;
@@ -40,21 +40,31 @@ namespace Shooter.NetV2
 
             _rows.Clear();
             Side? ownSide = null;
+            int? executeTargetId = null;
             var players = snapshot.Players;
             for (var i = 0; i < players.Count; i++)
             {
                 ref var player = ref players[i];
                 var downed = player.Downed;
+                var executed = downed.IsDowned && downed.HasExecutor;
                 _rows.Add(new Row(
                     player.PlayerId,
                     Side.FromTeam(player.Team),
                     player.Health > 0 || downed.IsDowned,
                     downed.IsDowned,
                     downed.IsDowned ? downed.BleedoutSeconds : 0,
-                    downed.IsDowned ? downed.RevivePercent : 0));
+                    downed.IsDowned ? downed.RevivePercent : 0,
+                    executed ? downed.ExecutorId : (int?)null,
+                    executed ? downed.ExecutePercent : 0));
                 if (player.PlayerId == _localPlayerId)
                 {
                     ownSide = Side.FromTeam(player.Team);
+                }
+
+                // サーバーの技は振る人ごとに 1 つなので、自分が刺している行は多くても 1 つ。崩れた値が届いても最初の行に決める
+                if (executed && downed.ExecutorId == _localPlayerId && !executeTargetId.HasValue)
+                {
+                    executeTargetId = player.PlayerId;
                 }
             }
 
@@ -75,8 +85,9 @@ namespace Shooter.NetV2
                 _rows.ToArray());
 
             var localPlayerId = ownSide.HasValue ? _localPlayerId : (int?)null;
+            var interactTargetId = localPlayerId.HasValue ? executeTargetId : null;
             if (Status != null && _view != null && _view.SameAs(view) && Status.OwnSide == ownSide && Status.IsEnded == ended
-                && Status.RemainingSeconds == remaining)
+                && Status.RemainingSeconds == remaining && Execution?.InteractTargetId == interactTargetId)
             {
                 return false;
             }
@@ -91,7 +102,7 @@ namespace Shooter.NetV2
                 null,
                 ended,
                 view.Winner,
-                ExecutionStatus.FromView(view, localPlayerId, null));
+                ExecutionStatus.FromView(view, localPlayerId, interactTargetId));
             return true;
         }
 
@@ -111,7 +122,8 @@ namespace Shooter.NetV2
 
         private readonly struct Row
         {
-            public Row(int playerId, Side side, bool isAlive, bool isDowned, int bleedoutSeconds, int revivePercent)
+            public Row(
+                int playerId, Side side, bool isAlive, bool isDowned, int bleedoutSeconds, int revivePercent, int? executorId, int executePercent)
             {
                 PlayerId = playerId;
                 Side = side;
@@ -119,6 +131,8 @@ namespace Shooter.NetV2
                 IsDowned = isDowned;
                 BleedoutSeconds = bleedoutSeconds;
                 RevivePercent = revivePercent;
+                ExecutorId = executorId;
+                ExecutePercent = executePercent;
             }
 
             public int PlayerId { get; }
@@ -133,10 +147,15 @@ namespace Shooter.NetV2
 
             public int RevivePercent { get; }
 
+            public int? ExecutorId { get; }
+
+            public int ExecutePercent { get; }
+
             public bool SameAs(in Row other)
             {
                 return PlayerId == other.PlayerId && Side == other.Side && IsAlive == other.IsAlive && IsDowned == other.IsDowned
-                    && BleedoutSeconds == other.BleedoutSeconds && RevivePercent == other.RevivePercent;
+                    && BleedoutSeconds == other.BleedoutSeconds && RevivePercent == other.RevivePercent
+                    && ExecutorId == other.ExecutorId && ExecutePercent == other.ExecutePercent;
             }
         }
 
@@ -249,16 +268,22 @@ namespace Shooter.NetV2
                 return index >= 0 && _rows[index].IsDowned ? _rows[index].BleedoutSeconds : (float?)null;
             }
 
-            // 百分率で届くので、HUD が切り捨てて同じ百分率に戻るよう、その百分率の幅の真ん中を返す
             public float GetReviveProgress(int playerId)
             {
                 var index = IndexOf(playerId);
-                if (index < 0)
-                {
-                    return 0f;
-                }
+                return index < 0 ? 0f : Progress(_rows[index].RevivePercent);
+            }
 
-                var percent = _rows[index].RevivePercent;
+            // 誰に刺されていても返す。HUD は自分の刺している相手 (InteractTargetId) のものだけを出す
+            public float GetExecuteProgress(int playerId)
+            {
+                var index = IndexOf(playerId);
+                return index < 0 ? 0f : Progress(_rows[index].ExecutePercent);
+            }
+
+            // 百分率で届くので、HUD が切り捨てて同じ百分率に戻るよう、その百分率の幅の真ん中を返す
+            private static float Progress(int percent)
+            {
                 if (percent <= 0)
                 {
                     return 0f;
@@ -266,9 +291,6 @@ namespace Shooter.NetV2
 
                 return percent >= DownedSync.FullPercent ? 1f : (percent + 0.5f) / DownedSync.FullPercent;
             }
-
-            // とどめの進み具合はサーバーの近接 (ServerMelee) が持ち、スナップショットに載らない
-            public float GetExecuteProgress(int playerId) => 0f;
 
             // 秒と百分率は丸めた値で届くので、そのまま比べる
             public bool SameAs(View other)

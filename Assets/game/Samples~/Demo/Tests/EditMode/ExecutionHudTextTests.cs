@@ -244,6 +244,19 @@ namespace Shooter.Tests.EditMode
             Assert.That(GameText.Resolve(formatter.Result(status)), Is.EqualTo("ALPHA の勝ち"));
         }
 
+        // ネット対戦のクライアントは、スナップショットに載ったとどめの進み具合と自分が刺している相手 (InteractTargetId) を渡す
+        [Test]
+        public void TheExecuteProgressFromAViewIsShown()
+        {
+            var view = new FixedView { ExecuteProgress = 0.455f };
+            var status = new ModeStatus(null, null, Side.Alpha, null, false, null, ExecutionStatus.FromView(view, _alphaOne, _bravoOne));
+            var lines = new List<LocalizedText>();
+
+            new ExecutionHudFormatter().AppendLines(status, lines);
+
+            Assert.That(Resolved(lines), Is.EqualTo(new[] { "ラウンド 2 (2 本先取)", "ALPHA 残り 1", "BRAVO 残り 2 (ダウン 1)", "とどめ 45%" }));
+        }
+
         [Test]
         public void TheStatusFromAViewHasNoSession()
         {
@@ -343,7 +356,9 @@ namespace Shooter.Tests.EditMode
 
             public float GetReviveProgress(int playerId) => 0f;
 
-            public float GetExecuteProgress(int playerId) => 0f;
+            public float ExecuteProgress { get; set; }
+
+            public float GetExecuteProgress(int playerId) => playerId == _bravoOne ? ExecuteProgress : 0f;
         }
 
         private static void WinRoundForAlpha(ExecutionSession execution)

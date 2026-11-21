@@ -7,7 +7,8 @@ namespace Shooter.Server
     // GameRules.Objective が Execution のとき、Elimination と同じくラウンドに区切り、ラウンドの勝ち負けは EliminationObjective に任せる。
     // オフラインの ExecutionSession と同じく、倒れた人はダウンし、ダウン中の敵はとどめの技 (DownedFinisher) でしか倒せない。
     // とどめは ServerMelee がテイクダウンと同じ ContextMeleeSelector・ContextMeleeRun で決め、倒した知らせ (PlayerKilled) で倒れた人に数える。
-    // ダウン中の人は倒れた人に数えないので、全員がとどめを刺されるか出血で倒れた側がラウンドを落とす
+    // ダウン中の人は倒れた人に数えず、最後の 1 人もダウンさせる (TeamDeathmatchSpec.DownsLastStanding) ので、
+    // 全員がとどめを刺されるか出血で倒れた側がラウンドを落とす
     internal sealed class ExecutionRules : IMatchObjectiveRules
     {
         private readonly IMatchObjectiveHost _host;
@@ -74,7 +75,10 @@ namespace Shooter.Server
                 _host.Log.WriteLine(ExecutionRulesLog.MeleeOff(rules.Actions.Melee));
             }
 
-            return new TeamDeathmatchSpec(int.MaxValue, float.MaxValue, settings.RespawnSeconds, sessionRules, respawnsByRound: true);
+            // オフラインの ExecutionSession と同じく、最後の 1 人もダウンさせ、とどめか出血で倒れるまでラウンドを続ける。
+            // 近接が Off ならダウン中の敵を撃って倒せるので、同じく最後の 1 人もダウンさせる
+            return new TeamDeathmatchSpec(
+                int.MaxValue, float.MaxValue, settings.RespawnSeconds, sessionRules, respawnsByRound: true, downsLastStanding: true);
         }
 
         public void CheckMap(ServerMapData map, NetMapPoints points)
@@ -132,7 +136,7 @@ namespace Shooter.Server
             _rounds.RemovePlayer(playerId);
         }
 
-        // ダウンは Session が倒れたと知らせないので、ここに来るのはとどめ・出血・ダウンを飛ばした倒れ方 (全滅・自滅) だけ
+        // ダウンは Session が倒れたと知らせないので、ここに来るのはとどめ・出血・ダウンを飛ばした倒れ方 (自滅) だけ
         public void PlayerKilled(int killerId, int victimId)
         {
             _rounds.ReportFall(killerId, victimId);

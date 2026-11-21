@@ -421,7 +421,8 @@ namespace Shooter.Server
 
         // 近接・ストリーク・設置物が与えるダメージの口。撃った弾と同じく MatchRulesModule.ApplyDamage を通すので、味方撃ち・出現直後の無敵・
         // ダウン・キルの数え方とキルフィードは撃った弾と同じになる。攻撃者が抜けていれば、爆発と同じく攻撃者のいないダメージ (倒れたら自滅) にする
-        internal DamageOutcome DealDamage(int? attackerId, int victimId, int amount, string weaponId, HitZone zone, Vector3? source)
+        internal DamageOutcome DealDamage(
+            int? attackerId, int victimId, int amount, string weaponId, HitZone zone, Vector3? source, DamageKind kind = DamageKind.Other)
         {
             ArgumentNullException.ThrowIfNull(weaponId);
             if (amount < 0)
@@ -443,6 +444,7 @@ namespace Shooter.Server
 
             var reflected = attacker.HasValue && IsReflected(attacker.Value, victimId);
             var hurt = reflected ? attacker.Value : victimId;
+            ReportStatusDamage(hurt, zone, kind, amount, outcome);
             if (source.HasValue && _fighters.TryGetValue(hurt, out var hurtFighter) && _bodies.TryGet(hurt, out var hurtBody))
             {
                 hurtFighter.LastHitDirection = hurtBody.Position - source.Value;

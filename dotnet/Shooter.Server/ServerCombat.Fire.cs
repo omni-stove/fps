@@ -152,6 +152,7 @@ namespace Shooter.Server
                 return;
             }
 
+            ReportNearMisses(shot, _segments);
             SendShot(shot.ShooterId, shot.Weapon.Id, _segments);
 
             // ペレットごとに知らせると 1 回の射撃でヒットマーカーと被弾の表示が何度も出るので、相手ごとにまとめてから送る。
@@ -192,6 +193,7 @@ namespace Shooter.Server
             {
                 _signals?.RaiseHit(shooterId, victimId, hit.Zone, hit.RewindTicks);
                 var hurt = IsReflected(shooterId, victimId) ? shooterId : victimId;
+                ReportStatusDamage(hurt, hit.Zone, DamageKind.Bullet, amount, outcome);
                 if (_fighters.TryGetValue(hurt, out var hurtFighter))
                 {
                     hurtFighter.LastHitDirection = direction;

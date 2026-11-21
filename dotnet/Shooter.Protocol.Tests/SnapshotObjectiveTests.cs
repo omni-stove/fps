@@ -17,9 +17,9 @@ namespace Shooter.Protocol.Tests
         private const int _battleRoyaleBytes = 8 + 4 + 8 + 4 + 4 + 4 + 4;
 
         [Test]
-        public void TheVersionIs24()
+        public void TheVersionIs25()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(24));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(25));
         }
 
         [Test]
@@ -1056,7 +1056,8 @@ namespace Shooter.Protocol.Tests
             Assert.That(BitConverter.ToUInt16(bytes, _headBytes + 1), Is.EqualTo((ushort)OwnerFields.Extraction));
             Assert.That((int)OwnerFields.Extraction, Is.EqualTo(1 << 8));
 
-            bytes[_headBytes + 1 + 1] |= 1 << 1;
+            // 上のバイトの 1 << 4 は 1 << 12 で、制圧 (1 << 11) の次のまだ無い部分
+            bytes[_headBytes + 1 + 1] |= 1 << 4;
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
         }

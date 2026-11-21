@@ -294,6 +294,7 @@ namespace Shooter.Server
             }
 
             var hurt = thrower.HasValue && IsReflected(thrower.Value, victimId) ? thrower.Value : victimId;
+            ReportStatusDamage(hurt, null, DamageKind.Explosion, damage, outcome);
             if (_fighters.TryGetValue(hurt, out var hurtFighter) && _bodies.TryGet(hurt, out var hurtBody))
             {
                 hurtFighter.LastHitDirection = hurtBody.Position - center;

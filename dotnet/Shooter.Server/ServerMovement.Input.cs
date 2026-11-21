@@ -69,12 +69,16 @@ namespace Shooter.Server
                     openParachute: frame.Has(InputButtons.OpenParachute),
                     closeParachute: frame.Has(InputButtons.CloseParachute))
                 .WithRules(_settings.Rules.Actions);
+            input = Restrain(mover, input);
 
             if (mover.Riding)
             {
                 mover.Yaw = input.Yaw;
                 mover.Aiming = input.Restrained().Aim;
                 mover.LastProcessedTick = frame.Tick;
+
+                // 座っている間は歩かないので、走っていない入力として時間だけ進め、スタミナを戻す
+                Stepped(mover, default, mover.State, mover.State);
                 Publish(mover);
                 return;
             }
@@ -85,6 +89,7 @@ namespace Shooter.Server
             mover.Yaw = input.Yaw;
             mover.Aiming = input.Restrained().Aim;
             mover.LastProcessedTick = frame.Tick;
+            Stepped(mover, input, previous, current);
             Publish(mover);
             Report(mover, frame.Tick, previous, current);
         }

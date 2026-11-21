@@ -76,7 +76,8 @@ namespace Shooter.Server
             return true;
         }
 
-        private static bool TryRead<T>(
+        // スタミナ・よろけ・制圧の調整値 (ServerPlayerStatusTuning) も同じ探し方と止め方で読む
+        internal static bool TryRead<T>(
             IReadOnlyList<string> searchRoots, string fileName, string what, Func<string, string, T> parse, out T value, out string path, out string error)
             where T : class
         {

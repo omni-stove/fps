@@ -1115,7 +1115,8 @@ namespace Shooter.Protocol.Tests
             Assert.That(BitConverter.ToUInt16(bytes, _headBytes + 1), Is.EqualTo((ushort)OwnerFields.Extraction));
             Assert.That((int)OwnerFields.Extraction, Is.EqualTo(1 << 8));
 
-            bytes[_headBytes + 1 + 1] |= 1 << 1;
+            // 上のバイトの 1 << 4 は 1 << 12 で、制圧 (1 << 11) の次のまだ無い部分
+            bytes[_headBytes + 1 + 1] |= 1 << 4;
 
             Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(new ArraySegment<byte>(bytes)));
         }

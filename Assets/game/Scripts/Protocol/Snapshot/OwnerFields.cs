@@ -16,6 +16,11 @@ namespace Shooter.Protocol
         Money = 1 << 6,
         Redeploy = 1 << 7,
         Extraction = 1 << 8,
-        All = Weapon | Loadout | Grenades | CarrySpeed | Knockback | Respawn | Money | Redeploy | Extraction,
+
+        // 走っている間と戻っている間は毎 tick 変わるので、変わりにくいよろけと制圧とは別の部分にして、変わった物だけを送る。
+        Stamina = 1 << 9,
+        Stagger = 1 << 10,
+        Suppression = 1 << 11,
+        All = Weapon | Loadout | Grenades | CarrySpeed | Knockback | Respawn | Money | Redeploy | Extraction | Stamina | Stagger | Suppression,
     }
 }

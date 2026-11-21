@@ -78,7 +78,8 @@ namespace Shooter.NetV2
         }
 
         // サーバーと同じ答えにするため、ダウン中か・使えない動き・持ち物の倍率は、届いている自分の行と試合のルールから入れる。
-        public CharacterMotorState Step(Vector2 move, float yaw, InputButtons buttons)
+        // pitch はグラップルの縄を撃つ向きにだけ使う。サーバーは真上・真下を超える値の入力を丸ごと捨てるので、送る前にその内へ収める
+        public CharacterMotorState Step(Vector2 move, float yaw, InputButtons buttons, float pitch = 0f)
         {
             if (!_prediction.IsStarted)
             {
@@ -90,6 +91,13 @@ namespace Shooter.NetV2
                 throw new ArgumentException("move and yaw must be finite");
             }
 
+            if (float.IsNaN(pitch) || float.IsInfinity(pitch))
+            {
+                throw new ArgumentOutOfRangeException(nameof(pitch), pitch, "pitch must be finite");
+            }
+
+            pitch = Math.Max(-InputFrame.MaxPitch, Math.Min(InputFrame.MaxPitch, pitch));
+
             // 座席にいる間の移動とボタンは乗り物の操作に使うので、歩く入力としてはサーバーに送らない (覗き込みだけは射撃のばらつきに効く)
             if (Vehicles.LocalSeat.IsRiding)
             {
@@ -97,7 +105,7 @@ namespace Shooter.NetV2
                 buttons &= InputButtons.Aim;
             }
 
-            var frame = new InputFrame(_nextTick, ClampMove(move), SnapshotMotion.WrapYaw(yaw), buttons);
+            var frame = new InputFrame(_nextTick, ClampMove(move), SnapshotMotion.WrapYaw(yaw), buttons, pitch);
             _nextTick++;
             var latest = _client.LatestSnapshot;
             var downed = false;

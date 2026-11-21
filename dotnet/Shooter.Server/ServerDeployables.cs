@@ -52,7 +52,8 @@ namespace Shooter.Server
 
         // flyDrones はドローンを置かせて飛ばすか。結線するまでは既定で断り、起動の口 (ServerModuleFactory) は今までどおり置かせない
         public ServerDeployables(
-            MatchRulesModule rules, ServerCombat combat, DeployCatalog catalog = null, string catalogPath = null, bool flyDrones = false)
+            MatchRulesModule rules, ServerCombat combat, DeployCatalog catalog = null, string catalogPath = null, bool flyDrones = false,
+            GrappleType grapple = null)
         {
             _rules = rules ?? throw new ArgumentNullException(nameof(rules));
             _combat = combat ?? throw new ArgumentNullException(nameof(combat));
@@ -66,14 +67,17 @@ namespace Shooter.Server
             // 倒されて戻る人をルールの RespawnAnchor の順でビーコンへ出せるよう、ルールにビーコンを渡す
             rules.Beacons = this;
 
-            // 要求の能力の検査 (ルール) と置くときの検査 (ここ) が同じ選択を見るよう、置ける物の一覧を持つ選択をルールに渡す
-            _abilities = new ServerAbilityChoices(_catalog);
+            // 要求の能力の検査 (ルール) と置くときの検査 (ここ) が同じ選択を見るよう、置ける物の一覧を持つ選択をルールに渡す。
+            // グラップルは置く物ではないが、同じ枠から選ぶので同じ選択に載せる (縄を掛けるのは ServerMovement)
+            _abilities = new ServerAbilityChoices(_catalog, AbilitySelection.DefaultSlotCount, grapple);
             rules.Abilities = _abilities;
         }
 
         public string Name => "deployables";
 
         public int Count => _placed.Count;
+
+        internal ServerAbilityChoices AbilityChoices => _abilities;
 
         public void Start(ServerContext context)
         {

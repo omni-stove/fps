@@ -1,0 +1,16 @@
+{
+  "id": "grapple",
+  "minRange": 2,
+  "maxRange": 30,
+  "pullSpeed": 18,
+  "pullAcceleration": 60,
+  "arriveDistance": 0.3,
+  "maxPullSeconds": 3,
+  "hangHeight": 0.8,
+  "edgeSnapDistance": 1.5,
+  "hangSeconds": 0.5,
+  "grabbableLayers": 1,
+  "maxCharges": 2,
+  "rechargeSeconds": 8,
+  "cooldownSeconds": 1
+}

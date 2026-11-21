@@ -23,15 +23,42 @@ namespace Shooter.Editor
         public const string OutputFolder = MapCollisionFiles.ServerDataFolder;
         public const string FileExtension = ShooterMapFile.Extension;
 
+        private static readonly string[] _builtInExtensions =
+        {
+            FileExtension, NavMeshFile.Extension, NetMapStructures.Extension, NetMapLadders.Extension, NetMapWater.Extension, NetMapVehicles.Extension,
+        };
+
+        private static readonly Dictionary<string, Func<IReadOnlyList<GameObject>, string>> _sceneData =
+            new Dictionary<string, Func<IReadOnlyList<GameObject>, string>>(StringComparer.Ordinal);
+
         private static Func<IReadOnlyList<string>> _mapScenes;
 
         public static string OutputDirectory => MapCollisionFiles.ServerDataDirectory;
+
+        public static IReadOnlyCollection<string> SceneDataExtensions => _sceneData.Keys;
 
         // マップの一覧はゲーム (取り込んだサンプルなど) が持つので、キットはその読み込み時に渡してもらう。
         // 渡す側はシーンが無ければ作ってから一覧を返してよい。
         public static void UseMapScenes(Func<IReadOnlyList<string>> provider)
         {
             _mapScenes = provider;
+        }
+
+        // 当たりや NavMesh のほかにシーンから書き出すマップのデータ (<マップ><extension>) を、ゲームが読み込み時に足す。
+        // 拡張子ごとに 1 つにするのは、スクリプトの読み込み直しで同じ書き手が登録し直しても 2 度書かないため。
+        public static void UseSceneData(string extension, Func<IReadOnlyList<GameObject>, string> write)
+        {
+            if (string.IsNullOrWhiteSpace(extension) || !extension.StartsWith(".", StringComparison.Ordinal) || extension.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
+            {
+                throw new ArgumentException(LogTag + " '" + extension + "' is not a file extension starting with '.'", nameof(extension));
+            }
+
+            if (Array.IndexOf(_builtInExtensions, extension) >= 0)
+            {
+                throw new ArgumentException(LogTag + " " + extension + " is already written by the exporter", nameof(extension));
+            }
+
+            _sceneData[extension] = write ?? throw new ArgumentNullException(nameof(write));
         }
 
         [MenuItem(MenuPath)]
@@ -187,6 +214,14 @@ namespace Shooter.Editor
                     WriteText(vehiclesPath, NetMapVehicles.Write(vehicles));
                     written.Add(vehiclesPath);
                     Debug.Log(LogTag + " wrote " + vehiclesPath + " from " + scenePath + " (" + vehicles.Vehicles.Count + " vehicles)");
+
+                    foreach (var data in _sceneData)
+                    {
+                        var dataPath = Path.Combine(outputDirectory, MapName(scenePath) + data.Key);
+                        WriteText(dataPath, data.Value(scene.GetRootGameObjects()));
+                        written.Add(dataPath);
+                        Debug.Log(LogTag + " wrote " + dataPath + " from " + scenePath);
+                    }
                 }
             }
             finally
@@ -348,12 +383,17 @@ namespace Shooter.Editor
                 kept.Add(Path.GetFullPath(path));
             }
 
-            var files = new List<string>(Directory.GetFiles(outputDirectory, "*" + FileExtension));
-            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NavMeshFile.Extension));
-            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapStructures.Extension));
-            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapLadders.Extension));
-            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapWater.Extension));
-            files.AddRange(Directory.GetFiles(outputDirectory, "*" + NetMapVehicles.Extension));
+            var files = new List<string>();
+            foreach (var extension in _builtInExtensions)
+            {
+                files.AddRange(Directory.GetFiles(outputDirectory, "*" + extension));
+            }
+
+            foreach (var extension in _sceneData.Keys)
+            {
+                files.AddRange(Directory.GetFiles(outputDirectory, "*" + extension));
+            }
+
             foreach (var path in files)
             {
                 if (kept.Contains(Path.GetFullPath(path)))

@@ -534,7 +534,8 @@ namespace Shooter.Runtime
                 prone,
                 traversal.Swim,
                 traversal.WallRun,
-                traversal.Parachute);
+                traversal.Parachute,
+                traversal.Zipline);
         }
 
         public bool TryCreateLoadout(out ServerLoadout loadout, out string error)

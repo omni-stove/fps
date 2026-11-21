@@ -57,7 +57,7 @@ run = [
 ]
 
 [export-server-data]
-description = "Write the collision, the NavMesh with its links, the destructible structures, the ladders, the water and the vehicles of every map selectable with -map to server-data/maps/<map>.fpsmap, <map>.fpsnav, <map>.structures.json, <map>.ladders.json, <map>.water.json and <map>.vehicles.json with the Unity editor in batch mode via Shooter.Editor.MapCollisionExporter.Export, removing those files of maps no longer listed (close the Editor first). Commit the result"
+description = "Write the collision, the NavMesh with its links, the destructible structures, the ladders, the water, the vehicles and the ziplines of every map selectable with -map to server-data/maps/<map>.fpsmap, <map>.fpsnav, <map>.structures.json, <map>.ladders.json, <map>.water.json, <map>.vehicles.json and <map>.ziplines.json with the Unity editor in batch mode via Shooter.Editor.MapCollisionExporter.Export, removing those files of maps no longer listed (close the Editor first). Commit the result"
 run = "unity --non-interactive run . -- -executeMethod Shooter.Editor.MapCollisionExporter.Export"
 
 [export-server-rules]

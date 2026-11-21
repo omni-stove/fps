@@ -36,7 +36,8 @@ namespace Shooter.Server.Tests
             Assert.That(data.World.Raycast(new Vector3(0f, 5f, 0f), -Vector3.UnitY, 10f, ~0, out var hit), Is.True);
             Assert.That(hit.Point.Y, Is.EqualTo(0.5f).Within(1e-4f));
             Assert.That(data.Navigation.SamplePosition(new Vector3(0.2f, 0.5f, 0.2f), 1f, ~0, out _), Is.True);
-            Assert.That(data.LogLine, Does.StartWith("[Server] map NetArena01 colliders=1 navTriangles=1 navLinks=0 spawnPoints=none controlPoints=none structures=none ladders=0 vehicles=0 water=0 from="));
+            Assert.That(data.LogLine, Does.StartWith("[Server] map NetArena01 colliders=1 navTriangles=1 navLinks=0 spawnPoints=none controlPoints=none structures=none ladders=0 vehicles=0 water=0 ziplines=0 from="));
+            Assert.That(data.Ziplines.Ziplines, Is.Empty, "a map exported before ziplines has none");
             Assert.That(data.Water.SurfaceAt(new Vector3(0f, 1f, 0f)), Is.Null, "a map exported before water has none");
         }
 
@@ -85,6 +86,36 @@ namespace Shooter.Server.Tests
 
             Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out _, out var error), Is.False);
             Assert.That(error, Does.Contain("NetArena01.ladders.json"));
+        }
+
+        [Test]
+        public void LoadsTheZiplinesBesideTheCollision()
+        {
+            var directory = TestMaps.Write(_second.Path, "NetArena01");
+            File.WriteAllText(
+                Path.Combine(directory, "NetArena01" + NetMapZiplines.Extension),
+                "{ \"ziplines\": [ { \"start\": [0, 6, 0], \"end\": [0, 2, 20], \"maxSpeed\": 10 } ] }");
+
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out var data, out var error), Is.True, error);
+
+            Assert.That(data.Ziplines.Ziplines, Has.Count.EqualTo(1));
+            Assert.That(data.Ziplines.Ziplines[0].End, Is.EqualTo(new Vector3(0f, 2f, 20f)));
+            Assert.That(data.Ziplines.Ziplines[0].Spec.MaxSpeed, Is.EqualTo(10f));
+            Assert.That(data.Ziplines.Ziplines[0].Spec.MinSpeed, Is.EqualTo(ZiplineSpec.DefaultMinSpeed), "a left-out speed reads as the default");
+            Assert.That(data.LogLine, Does.Contain(" ziplines=1 "));
+        }
+
+        [Test]
+        public void BrokenZiplinesAreAnError()
+        {
+            var directory = TestMaps.Write(_second.Path, "NetArena01");
+            File.WriteAllText(
+                Path.Combine(directory, "NetArena01" + NetMapZiplines.Extension),
+                "{ \"ziplines\": [ { \"start\": [0, 6, 0], \"end\": [0, 6, 1] } ] }");
+
+            Assert.That(ServerMapData.TryLoad("NetArena01", Roots(), out _, out var error), Is.False);
+            Assert.That(error, Does.Contain("NetArena01.ziplines.json"));
+            Assert.That(error, Does.Contain("ziplines[0].end"));
         }
 
         [Test]

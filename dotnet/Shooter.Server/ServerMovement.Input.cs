@@ -81,15 +81,17 @@ namespace Shooter.Server
             }
 
             var previous = mover.State;
-            var mantled = TryMantle(mover, frame.Tick, input);
-            var current = mantled ? mover.State : mover.Simulation.Step(mover.State, input);
+            var ziplined = TryZipline(mover, frame.Tick, input);
+            var mantled = !ziplined && TryMantle(mover, frame.Tick, input);
+            var current = ziplined || mantled ? mover.State : mover.Simulation.Step(mover.State, input);
             mover.State = current;
             mover.Yaw = input.Yaw;
-            mover.Aiming = input.Restrained().Aim;
-            mover.Sprinting = input.Restrained().Sprint;
+            // 片手で線を掴んでいるので、覗き込まず走らない (オフラインの ZiplineMovement は構えを外し、移動を横取りして走りの入力を読まない)
+            mover.Aiming = !ziplined && input.Restrained().Aim;
+            mover.Sprinting = !ziplined && input.Restrained().Sprint;
             mover.LastProcessedTick = frame.Tick;
             Publish(mover);
-            Report(mover, frame.Tick, previous, current, mantled);
+            Report(mover, frame.Tick, previous, current, mantled, ziplined);
         }
 
         // 構えた盾の重さもここに掛けるのは、持ち主の予測がこの値をスナップショット (OwnerSnapshot.CarrySpeedMultiplier) で受け取るため

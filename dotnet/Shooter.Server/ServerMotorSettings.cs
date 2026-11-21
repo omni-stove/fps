@@ -72,7 +72,24 @@ namespace Shooter.Server
             GameRules rules,
             float killPlaneY,
             Vector3 spawnPosition)
+            : this(motor, stance, mover, prone, swim, wallRun, parachute, ZiplineTuning.Default, rules, killPlaneY, spawnPosition)
         {
+        }
+
+        public ServerMotorSettings(
+            MotorSpec motor,
+            StanceGeometry stance,
+            CapsuleMoverSpec mover,
+            ProneSpec prone,
+            SwimTuning swim,
+            WallRunTuning wallRun,
+            ParachuteTuning parachute,
+            ZiplineTuning zipline,
+            GameRules rules,
+            float killPlaneY,
+            Vector3 spawnPosition)
+        {
+            Zipline = zipline ?? throw new ArgumentNullException(nameof(zipline));
             Prone = prone ?? throw new ArgumentNullException(nameof(prone));
             Swim = swim ?? throw new ArgumentNullException(nameof(swim));
             WallRun = wallRun ?? throw new ArgumentNullException(nameof(wallRun));
@@ -114,6 +131,8 @@ namespace Shooter.Server
 
         public ParachuteTuning Parachute { get; }
 
+        public ZiplineTuning Zipline { get; }
+
         public GameRules Rules { get; }
 
         public float KillPlaneY { get; }
@@ -122,12 +141,12 @@ namespace Shooter.Server
 
         public ServerMotorSettings WithRules(GameRules rules)
         {
-            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, Parachute, rules, KillPlaneY, SpawnPosition);
+            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, Parachute, Zipline, rules, KillPlaneY, SpawnPosition);
         }
 
         public ServerMotorSettings WithSpawnPosition(Vector3 spawnPosition)
         {
-            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, Parachute, Rules, KillPlaneY, spawnPosition);
+            return new ServerMotorSettings(Motor, Stance, Mover, Prone, Swim, WallRun, Parachute, Zipline, Rules, KillPlaneY, spawnPosition);
         }
     }
 }

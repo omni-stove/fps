@@ -6,7 +6,7 @@ namespace Shooter.Server
     // 1 つの入力で替わった動きをログに出し、着地と息切れを戦闘のモジュールへ知らせる
     internal sealed partial class ServerMovement
     {
-        private void Report(Mover mover, int tick, CharacterMotorState previous, CharacterMotorState current, bool mantled)
+        private void Report(Mover mover, int tick, CharacterMotorState previous, CharacterMotorState current, bool mantled, bool ziplined = false)
         {
             var playerId = mover.Player.PlayerId;
             if (previous.IsCrouched != current.IsCrouched)
@@ -53,14 +53,15 @@ namespace Shooter.Server
                 _log.WriteLine(ServerMovementLog.KnockbackLanded(playerId, tick, current.Position));
             }
 
-            // 崖のぼりの tick は Step を通らず、前の判定が残ったままなので、パラシュートの判定は読まない
+            // 崖のぼりとジップラインの tick は Step を通らず、前の判定が残ったままなので、パラシュートの判定は読まない
             var simulation = mover.Simulation;
-            if (!mantled && simulation.LastParachuteVerdict.HasValue)
+            var stepped = !mantled && !ziplined;
+            if (stepped && simulation.LastParachuteVerdict.HasValue)
             {
                 _log.WriteLine(ServerMovementLog.ParachuteOpen(playerId, tick, simulation.LastParachuteVerdict.Value, simulation.LastParachuteHeight));
             }
 
-            if (!mantled && simulation.LastParachuteClose.HasValue)
+            if (stepped && simulation.LastParachuteClose.HasValue)
             {
                 _log.WriteLine(ServerMovementLog.ParachuteClosed(playerId, tick, simulation.LastParachuteClose.Value));
             }
@@ -100,8 +101,9 @@ namespace Shooter.Server
                 Drowned?.Invoke(mover.Player, tick, drownings);
             }
 
-            // 着地した tick の速度は、まだ接地中の吸着の速度に戻る前の落下速度を持っている
-            if (!previous.IsGrounded && current.IsGrounded)
+            // 着地した tick の速度は、まだ接地中の吸着の速度に戻る前の落下速度を持っている。
+            // 線に吊られたまま足が床に触れた tick は落ちてきたのではない (速さは線を滑る速さ) ので、落下のダメージに数えない
+            if (!ziplined && !previous.IsGrounded && current.IsGrounded)
             {
                 Landed?.Invoke(mover.Player, tick, Math.Max(0f, -current.Velocity.Y));
             }

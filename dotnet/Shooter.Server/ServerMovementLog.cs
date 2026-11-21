@@ -41,6 +41,18 @@ namespace Shooter.Server
                 + " depth=" + depthText;
         }
 
+        // オフラインの ZiplineMovement.FormatGrabLog と同じ値を出す。線は名前を持たないので、マップの並びの番号で示す
+        public static string ZiplineGrab(int playerId, int tick, int line, float at, float remaining, float speed)
+        {
+            return Head("zipline", playerId, tick) + " grab line=" + line.ToString(CultureInfo.InvariantCulture)
+                + " at=" + F2(at) + " remaining=" + F2(remaining) + " speed=" + F2(speed);
+        }
+
+        public static string ZiplineRelease(int playerId, int tick, string reason, float speed)
+        {
+            return Head("zipline", playerId, tick) + " release reason=" + reason + " speed=" + F2(speed);
+        }
+
         public static string Prone(int playerId, int tick, bool prone)
         {
             return Head("prone", playerId, tick) + " prone=" + Bool(prone);
@@ -120,6 +132,11 @@ namespace Shooter.Server
         private static string Vector(Vector3 value)
         {
             return string.Format(CultureInfo.InvariantCulture, "({0:0.0}, {1:0.0}, {2:0.0})", value.X, value.Y, value.Z);
+        }
+
+        private static string F2(float value)
+        {
+            return value.ToString("0.00", CultureInfo.InvariantCulture);
         }
 
         private static string Head(string what, int playerId, int tick)

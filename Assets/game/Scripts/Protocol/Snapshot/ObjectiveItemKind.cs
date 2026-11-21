@@ -18,5 +18,8 @@ namespace Shooter.Protocol
         DeathBox,
 
         ExtractionPoint,
+
+        // Guardian のリーダー。持ち主がリーダーで、立っている間は本人が運び (Carried)、倒れたら倒れた場所に落ちる (Dropped)
+        Leader,
     }
 }

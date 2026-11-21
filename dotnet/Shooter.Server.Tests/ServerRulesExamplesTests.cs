@@ -230,6 +230,36 @@ namespace Shooter.Server.Tests
             }
         }
 
+        // 感染の調整値はオフラインの Resources/Tuning/infected.json と同じ値にして、オンラインでも同じ長さ・点で遊べるようにする
+        [Test]
+        public void TheInfectedExampleCarriesTheOfflineTuningAndCanBePlayedOnTheArena()
+        {
+            Assert.That(ServerRulesData.TryLoad("Infected", Roots(), out var data, out var error), Is.True, error);
+            Assert.That(ServerMapData.TryLoad(_map, Roots(), out var map, out error), Is.True, error);
+            var tuningPath = Path.Combine(Roots()[0], "Assets", "game", "Resources", "Tuning", "infected.json");
+            var offline = InfectedJson.Parse(File.ReadAllText(tuningPath), tuningPath);
+
+            Assert.That(data.Rules.Objective, Is.EqualTo(MatchObjective.Infected));
+            Assert.That(data.File.Name, Is.EqualTo("Infected"));
+            Assert.That(data.Rules.Actions.Downed, Is.EqualTo(Downed.Off), "a fallen survivor turns at once instead of waiting for a revive");
+            Assert.That(data.Rules.RespawnMode, Is.EqualTo(RespawnMode.Individual), "the turned come back as infected");
+            var spec = data.Settings.Infected;
+            Assert.That(spec.InitialInfected, Is.EqualTo(offline.InitialInfected));
+            Assert.That(spec.StartDelaySeconds, Is.EqualTo(offline.StartDelaySeconds));
+            Assert.That(spec.RoundSeconds, Is.EqualTo(offline.RoundSeconds));
+            Assert.That(spec.InfectedMaxHealth, Is.EqualTo(offline.InfectedMaxHealth));
+            Assert.That(spec.InfectedSpeedMultiplier, Is.EqualTo(offline.InfectedSpeedMultiplier));
+            Assert.That(spec.InfectedRespawnSeconds, Is.EqualTo(offline.InfectedRespawnSeconds));
+            Assert.That(spec.ScorePerInfection, Is.EqualTo(offline.ScorePerInfection));
+            Assert.That(spec.ScorePerSurvivedRound, Is.EqualTo(offline.ScorePerSurvivedRound));
+            Assert.That(spec.InfectedWeaponId, Is.EqualTo(offline.InfectedWeaponId));
+
+            var rules = new InfectedRules(data.Settings, new NoSessionHost());
+            Assert.That(rules.Objective, Is.EqualTo(MatchObjective.Infected));
+            Assert.That(rules.RemainingSeconds, Is.EqualTo(offline.RoundSeconds));
+            Assert.DoesNotThrow(() => rules.CheckMap(map, map.Points));
+        }
+
         private static string RequireExported(string relativePath)
         {
             var path = Path.Combine(Roots()[0], ServerMapData.DataDirectoryName, relativePath);

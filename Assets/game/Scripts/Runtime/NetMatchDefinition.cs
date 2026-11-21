@@ -89,6 +89,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("ガンゲームの武器の並びと調整値。空なら入口 (GameContent) のもの、それも無ければ武器の並びの無い既定値")]
         private GunGameLadderDefinition _gunGameLadder;
 
+        [SerializeField, Tooltip("感染 (Infected) の調整値。空なら InfectedRunner と同じく調整値の JSON (GameContent の InfectedTuning か Resources/Tuning/infected) を読む")]
+        private InfectedDefinition _infected;
+
         [Header("天候と時刻")]
         [SerializeField, Tooltip("試合の天候の Id。英数字と - _ で 64 文字まで。空ならマップの既定")]
         private string _weatherId = string.Empty;
@@ -297,6 +300,12 @@ namespace Shooter.Runtime
             set => _gunGameLadder = value;
         }
 
+        public InfectedDefinition Infected
+        {
+            get => _infected;
+            set => _infected = value;
+        }
+
         public string WeatherId
         {
             get => _weatherId;
@@ -438,7 +447,14 @@ namespace Shooter.Runtime
                     _economyRoundLossReward,
                     _economyLossStreakBonus,
                     _economyMaxLossReward),
-                _maxDisplayNameLength);
+                _maxDisplayNameLength,
+                ToInfected());
+        }
+
+        // 感染者の武器はアセットで付けても Id で運ぶ (サーバーは WeaponDefinition を読めない)
+        private InfectedSpec ToInfected()
+        {
+            return _infected != null ? _infected.ToSpec() : KitTuning.Infected;
         }
 
         // オフラインのモードと同じ値で動くよう、各モードのランナーと同じ順 (この欄、入口) で調整値のアセットを選ぶ

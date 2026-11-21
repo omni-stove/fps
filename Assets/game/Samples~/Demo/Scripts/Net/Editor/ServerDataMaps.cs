@@ -119,9 +119,19 @@ namespace Shooter.Editor
 
             // 塔の足場は動かない当たりなので、焼き直さないとサーバーの Bot が足場の中を歩いてしまう
             NetMapFeatureBuilder.PlaceTerrain(scene, NetMapFeatureBuilder.TerrainParent(surface), features);
-            SceneBuildHelpers.BakeNavMesh(surface);
-            SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
+            var existingData = surface.navMeshData;
+            var freshData = SceneBuildHelpers.BakeNavMesh(surface);
+            // 届くかの検査が通ってからアセットを書く。失敗しても、保存済みのシーンが指す NavMesh を消さない
             requireNavigable?.Invoke(features);
+            // SaveNavMeshData は消して作り直すので .meta の GUID が変わる。既存のアセットへ上書きして GUID を残す
+            if (existingData != null && freshData != existingData)
+            {
+                EditorUtility.CopySerialized(freshData, existingData);
+                surface.navMeshData = existingData;
+            }
+
+            EditorUtility.SetDirty(existingData != null ? existingData : freshData);
+            EditorUtility.SetDirty(surface);
             NetMapFeatureBuilder.PlaceVehicles(scene, null, features);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))

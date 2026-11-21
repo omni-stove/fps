@@ -12,6 +12,10 @@ namespace Shooter.NetV2.Tests
         private const int _localPlayerId = 1;
         private const string _droneId = "deploy-drone";
 
+        private static readonly int[] _four = { 4 };
+        private static readonly int[] _fourAndNine = { 4, 9 };
+        private static readonly int[] _fourTwice = { 4, 4 };
+
         // 送る知らせは使い回しなので、送ったときの中身を写しておく
         private readonly List<Sent> _sent = new List<Sent>();
         private readonly List<string> _log = new List<string>();
@@ -42,7 +46,7 @@ namespace Shooter.NetV2.Tests
         {
             _drone.Apply(Snapshot(Row(4, DeployableKind.Drone, _localPlayerId, new Vector3(-3f, 0.5f, 0f), 90f)), _localPlayerId);
 
-            Assert.That(_appeared, Is.EqualTo(new[] { 4 }));
+            Assert.That(_appeared, Is.EqualTo(_four));
             Assert.That(_drone.DroneId, Is.EqualTo(4));
             Assert.That(_drone.TypeId, Is.EqualTo(_droneId));
             Assert.That(_drone.Launch, Is.EqualTo(new Vector3(-3f, 0.5f, 0f)));
@@ -69,7 +73,7 @@ namespace Shooter.NetV2.Tests
             _drone.Apply(first, _localPlayerId);
             _drone.Apply(Snapshot(Row(4, DeployableKind.Drone, _localPlayerId, new Vector3(1f, 2f, 3f), 45f)), _localPlayerId);
 
-            Assert.That(_appeared, Is.EqualTo(new[] { 4 }));
+            Assert.That(_appeared, Is.EqualTo(_four));
             Assert.That(_drone.Position, Is.EqualTo(new Vector3(1f, 2f, 3f)));
             Assert.That(_drone.Yaw, Is.EqualTo(45f));
             Assert.That(_drone.Launch, Is.EqualTo(Vector3.Zero), "the launch point stays where it was first seen");
@@ -203,7 +207,7 @@ namespace Shooter.NetV2.Tests
 
             _drone.Apply(Snapshot(), _localPlayerId);
 
-            Assert.That(_gone, Is.EqualTo(new[] { 4 }));
+            Assert.That(_gone, Is.EqualTo(_four));
             Assert.That(_drone.DroneId, Is.Null);
             Assert.That(_drone.IsPiloting, Is.False);
             Assert.That(_log, Does.Contain("[Drone] owner=1 kind=deploy-drone serial=4 piloting ended reason=DroneGone"));
@@ -219,7 +223,7 @@ namespace Shooter.NetV2.Tests
                 Row(4, DeployableKind.Drone, _localPlayerId, Vector3.Zero, 0f),
                 Row(9, DeployableKind.Drone, _localPlayerId, new Vector3(5f, 0.5f, 5f), 180f)), _localPlayerId);
 
-            Assert.That(_appeared, Is.EqualTo(new[] { 4, 9 }));
+            Assert.That(_appeared, Is.EqualTo(_fourAndNine));
             Assert.That(_drone.DroneId, Is.EqualTo(9));
             Assert.That(_drone.Launch, Is.EqualTo(new Vector3(5f, 0.5f, 5f)));
             Assert.That(_drone.IsPiloting, Is.False, "the part starts piloting the new one");
@@ -239,7 +243,7 @@ namespace Shooter.NetV2.Tests
             Assert.That(_drone.IsPiloting, Is.False);
             Assert.That(_sent, Is.Empty);
             _drone.Apply(Snapshot(Row(4, DeployableKind.Drone, _localPlayerId, Vector3.Zero, 0f)), _localPlayerId);
-            Assert.That(_appeared, Is.EqualTo(new[] { 4, 4 }), "after a reset the same drone is new again");
+            Assert.That(_appeared, Is.EqualTo(_fourTwice), "after a reset the same drone is new again");
         }
 
         private void AppearAndPilot()

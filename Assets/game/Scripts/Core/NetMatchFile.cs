@@ -178,6 +178,12 @@ namespace Shooter.Core
         public const string ParachuteDescentSpeedItem = "parachuteDescentSpeed";
         public const string ParachuteHorizontalSpeedItem = "parachuteHorizontalSpeed";
         public const string ParachuteSteerAccelerationItem = "parachuteSteerAcceleration";
+        public const string SlideStartSpeedItem = "slideStartSpeed";
+        public const string SlideDecelerationItem = "slideDeceleration";
+        public const string SlideEndSpeedItem = "slideEndSpeed";
+        public const string SlideMinSecondsItem = "slideMinSeconds";
+        public const string SlideMaxSecondsItem = "slideMaxSeconds";
+        public const string SlideSlopeAccelerationItem = "slideSlopeAcceleration";
 
         private const string _kind = "match rules JSON";
 
@@ -202,6 +208,7 @@ namespace Shooter.Core
             SwimSpeedItem, SwimBuoyancyItem, SwimBreathSecondsItem,
             WallRunEnabledItem, WallRunMaxSecondsItem, WallRunMinSpeedItem, WallRunGravityScaleItem, WallRunJumpOffSpeedItem,
             ParachuteMinOpenHeightItem, ParachuteDescentSpeedItem, ParachuteHorizontalSpeedItem, ParachuteSteerAccelerationItem,
+            SlideStartSpeedItem, SlideDecelerationItem, SlideEndSpeedItem, SlideMinSecondsItem, SlideMaxSecondsItem, SlideSlopeAccelerationItem,
         };
         private static readonly string[] _loadoutItems = { NameItem, SwitchSecondsItem, SlotsItem, WeaponsItem, AbilitiesItem };
         private static readonly string[] _catalogItems = { NameItem, WeaponsItem };
@@ -608,6 +615,13 @@ namespace Shooter.Core
             writer.Float(ParachuteDescentSpeedItem, parachute.DescentSpeed);
             writer.Float(ParachuteHorizontalSpeedItem, parachute.HorizontalSpeed);
             writer.Float(ParachuteSteerAccelerationItem, parachute.SteerAcceleration);
+            var slide = file.Motor.Slide;
+            writer.Float(SlideStartSpeedItem, slide.StartSpeed);
+            writer.Float(SlideDecelerationItem, slide.Deceleration);
+            writer.Float(SlideEndSpeedItem, slide.EndSpeed);
+            writer.Float(SlideMinSecondsItem, slide.MinSeconds);
+            writer.Float(SlideMaxSecondsItem, slide.MaxSeconds);
+            writer.Float(SlideSlopeAccelerationItem, slide.SlopeAcceleration);
             writer.EndObject();
 
             writer.BeginObject(LoadoutItem);
@@ -1011,6 +1025,7 @@ namespace Shooter.Core
                 var swim = ReadSwim(fields, d.Swim);
                 var wallRun = ReadWallRun(fields, d.WallRun);
                 var parachute = ReadParachute(fields, d.Parachute);
+                var slide = ReadSlide(fields, d.Slide);
                 var walkDirection = ReadDirection(fields, WalkForwardScaleItem, WalkBackwardScaleItem, WalkSideScaleItem, dm.WalkDirection);
                 var sprintDirection = ReadDirection(
                     fields, SprintForwardScaleItem, SprintBackwardScaleItem, SprintSideScaleItem, dm.SprintDirection);
@@ -1072,7 +1087,8 @@ namespace Shooter.Core
                     prone,
                     swim,
                     wallRun,
-                    parachute);
+                    parachute,
+                    slide);
             }
             catch (ArgumentException e)
             {
@@ -1198,6 +1214,32 @@ namespace Shooter.Core
                     : e.ParamName == "minSpeed" ? WallRunMinSpeedItem
                     : e.ParamName == "gravityScale" ? WallRunGravityScaleItem
                     : e.ParamName == "jumpOffSpeed" ? WallRunJumpOffSpeedItem
+                    : null;
+                throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
+            }
+        }
+
+        private static SlideTuning ReadSlide(ServerDataJson.Fields fields, SlideTuning fallback)
+        {
+            try
+            {
+                return new SlideTuning(
+                    fields.ReadFloat(SlideStartSpeedItem, fallback.StartSpeed),
+                    fields.ReadFloat(SlideDecelerationItem, fallback.Deceleration),
+                    fields.ReadFloat(SlideEndSpeedItem, fallback.EndSpeed),
+                    fields.ReadFloat(SlideMinSecondsItem, fallback.MinSeconds),
+                    fields.ReadFloat(SlideMaxSecondsItem, fallback.MaxSeconds),
+                    fields.ReadFloat(SlideSlopeAccelerationItem, fallback.SlopeAcceleration));
+            }
+            catch (ArgumentException e)
+            {
+                // SlideTuning の引数名には項目名の頭の slide が付いていないので、ここで項目名に直す
+                var item = e.ParamName == "startSpeed" ? SlideStartSpeedItem
+                    : e.ParamName == "deceleration" ? SlideDecelerationItem
+                    : e.ParamName == "endSpeed" ? SlideEndSpeedItem
+                    : e.ParamName == "minSeconds" ? SlideMinSecondsItem
+                    : e.ParamName == "maxSeconds" ? SlideMaxSecondsItem
+                    : e.ParamName == "slopeAcceleration" ? SlideSlopeAccelerationItem
                     : null;
                 throw fields.Rejected(item == null ? fields.Path : fields.ItemPath(item), e.Message, e);
             }

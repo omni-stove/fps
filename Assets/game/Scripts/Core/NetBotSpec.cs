@@ -4,7 +4,7 @@ namespace Shooter.Core
 {
     public sealed class NetBotSpec
     {
-        // 既定値は Unity の NetTeamDeathmatch.Bots と同じ。NetTest (60m 四方) で、出会った相手と撃ち合える距離にしてある
+        // NetTest (60m 四方) で、出会った相手と撃ち合える距離にしてある
         public const float DefaultSightRange = 40f;
         public const float DefaultAttackRange = 25f;
         public const float DefaultLoseSightSeconds = 2f;

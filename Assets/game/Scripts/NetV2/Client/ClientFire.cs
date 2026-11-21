@@ -11,8 +11,7 @@ namespace Shooter.NetV2
         Reload,
     }
 
-    // 撃てるか (弾・間隔・当たり) はサーバーが決めるが、サーバーが捨てると分かっている射撃は送らない
-    // (Netcode のクライアントの NetPlayer.Update と NetPlayerWeapon.PrepareFire と同じ条件)。
+    // 撃てるか (弾・間隔・当たり) はサーバーが決めるが、サーバーが捨てると分かっている射撃は送らない。
     public static class ClientFire
     {
         public static FireDecision Decide(SnapshotMessage latest, int playerId, in CharacterMotorState predicted)

@@ -105,7 +105,6 @@ jobs:
         Packages/packages-lock.json
         ProjectSettings/*
         Assets/Plugins/*
-        Assets/TutorialInfo/*
     secrets: inherit
 
   lint:

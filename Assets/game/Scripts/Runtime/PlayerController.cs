@@ -27,7 +27,7 @@ namespace Shooter.Runtime
         // 立ち 2m・半径 0.5m のプレイヤーで、目が足元から 0.8m になる高さにする。
         public const float DefaultCrouchHeight = 1.2f;
 
-        [SerializeField, Tooltip("移動の調整値。空なら Resources の MotorSettings、それも無ければ既定の値。ネット対戦の NetworkPlayerMotor と同じものを使う")]
+        [SerializeField, Tooltip("移動の調整値。空なら Resources の MotorSettings、それも無ければ既定の値。ネット対戦と同じものを使う")]
         private MotorSettings _motorSettings;
 
         [SerializeField, Min(0.01f), Tooltip("しゃがみのカプセルの高さ (m)。半径の 2 倍以上、立ちの高さ以下")]

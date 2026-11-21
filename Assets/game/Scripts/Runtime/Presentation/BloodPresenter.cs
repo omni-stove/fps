@@ -295,7 +295,7 @@ namespace Shooter.Runtime
 
         private static bool IsCharacter(Collider collider)
         {
-            // NetPlayer は Hitbox も Damageable も持たず、本体の CharacterController のカプセルが当たり判定になる。
+            // ネット対戦の本体は Hitbox も Damageable も持たず、本体の CharacterController のカプセルが当たり判定になる。
             return collider.GetComponentInParent<Hitbox>(true) != null
                 || collider.GetComponentInParent<Damageable>(true) != null
                 || collider.GetComponentInParent<CharacterController>(true) != null;

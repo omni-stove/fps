@@ -154,7 +154,7 @@ namespace Shooter.NetV2
             }
         }
 
-        // 拠点の円盤を持ち主の色で塗る (Netcode の NetControlPoint と同じ)。拠点はマップの番号 (ControlPointZone.Index) で指す
+        // 拠点の円盤を持ち主の色で塗る。拠点はマップの番号 (ControlPointZone.Index) で指す
         private void ShowControlPoints(SnapshotMessage snapshot)
         {
             var points = snapshot.ControlPoints;

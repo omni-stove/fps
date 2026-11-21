@@ -8,7 +8,7 @@ namespace Shooter.Protocol
         public const int DefaultDisconnectTimeoutMilliseconds = 5000;
         public const int DefaultPingIntervalMilliseconds = 1000;
 
-        // 今の Netcode のクライアント (1 秒ごとに 10 回) と同じく、約 10 秒で諦める。
+        // 1 秒ごとに 10 回、約 10 秒で諦める。
         public const int DefaultConnectAttemptIntervalMilliseconds = 1000;
 
         public const int DefaultMaxConnectAttempts = 10;

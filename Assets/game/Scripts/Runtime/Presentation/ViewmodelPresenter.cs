@@ -70,7 +70,7 @@ namespace Shooter.Runtime
             }
         }
 
-        // ネット対戦の NetPlayer のように WeaponController を持たない本体が、持っている武器の Id を渡すための差し込み口。
+        // ネット対戦の本体のように WeaponController を持たない本体が、持っている武器の Id を渡すための差し込み口。
         public Func<string> WeaponIdSource { get; set; }
 
         public Func<string, IReadOnlyList<string>> AttachmentsSource { get; set; }

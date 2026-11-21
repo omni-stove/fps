@@ -51,7 +51,6 @@ namespace Shooter.NetV2
             return true;
         }
 
-        // Netcode のクライアント (EosAntiCheat) と同じ文にする。
         public static string LaunchHint => "; launch the game through the EAC bootstrapper (start_protected_game) or pass " + AntiCheatSettings.NoEacFlag;
     }
 }

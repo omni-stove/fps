@@ -5,7 +5,7 @@ namespace Shooter.Core
 {
     public sealed class NetTransportPlan
     {
-        // Netcode のサーバー・.NET のサーバー・v2 のクライアントで同じ文にするため、ここに 1 つだけ持つ。
+        // .NET のサーバーと v2 のクライアントで同じ文にするため、ここに 1 つだけ持つ。
         public const string CredentialsMissingLog = "[Net] EOS credentials missing, using UDP";
 
         private static readonly IReadOnlyList<string> _none = Array.Empty<string>();

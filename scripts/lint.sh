@@ -2,7 +2,7 @@
 # C# の書式・スタイル・アナライザを検査する。Unity 非依存のコードは dotnet/Shooter.slnx で全規則を、
 # Assets/game の全 .cs は書式だけを見る (MonoBehaviour などは Unity 抜きでビルドできないため)。
 # あわせて Assets/ 以下の追跡ファイル・フォルダと .meta の対応と、UI のコードに日本語の直書きが無いこと (ui_text_problems) と、
-# .cs に /// のコメントが無いこと (comment_problems) を検査する。
+# .cs に /// のコメントが無いこと (comment_problems) と、server-data/tuning が Resources/Tuning の同じ名前のファイルと同じこと (scripts/server-tuning.sh) を検査する。
 # 問題が無ければ何も出さず、あれば指摘の行だけを出して 1 で終わる。--fix で直せるものを直す
 # (.meta の抜けは、.cs・.asmdef・.asmref・テキストアセットとフォルダなら Unity と同じ形で作る。本体の無い .meta は消さない。詳しくは fix_metas)。
 # --fix-meta は .meta の抜けだけを直して終わる。CI の meta ジョブが dotnet 無しで作り直すため。
@@ -232,6 +232,8 @@ out="$( {
 	[ -z "$texts" ] || { printf '%s\n' "$texts"; status=1; }
 	comments="$(comment_problems)" || status=1
 	[ -z "$comments" ] || { printf '%s\n' "$comments"; status=1; }
+	tuning="$(sh scripts/server-tuning.sh 2>&1)" || status=1
+	[ -z "$tuning" ] || { printf '%s\n' "$tuning"; status=1; }
 	echo "status=$status"
 } 2>&1)"
 status="${out##*status=}"

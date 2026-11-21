@@ -4,7 +4,7 @@ using Shooter.Protocol;
 
 namespace Shooter.NetV2
 {
-    // 表示をオフラインと同じ PingController.ShowShared に任せるため、Netcode のクライアントと同じ SharedPingMarkers に写す。
+    // 表示をオフラインと同じ PingController.ShowShared に任せるため、SharedPingMarkers に写す。
     public sealed class ClientPings
     {
         private readonly Action<string> _log;

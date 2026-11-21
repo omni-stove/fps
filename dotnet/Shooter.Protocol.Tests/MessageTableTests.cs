@@ -364,6 +364,7 @@ namespace Shooter.Protocol.Tests
         [TestCase(MessageIds.VoteKickRequest)]
         [TestCase(MessageIds.BuyRequest)]
         [TestCase(MessageIds.InteractRequest)]
+        [TestCase(MessageIds.DetonateRequest)]
         public void TheNewRequestsAreOnlyReadByTheServer(ushort id)
         {
             Assert.That(MatchMessages.CreateServerTable().TryGet(id, out _), Is.True);

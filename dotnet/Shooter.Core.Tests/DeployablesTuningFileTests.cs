@@ -8,12 +8,20 @@ namespace Shooter.Core.Tests
     // サーバーの設置物の値は Unity のアセット (Samples~/Demo/Abilities) を書き出したものではないので、食い違いをここで見つける
     public sealed class DeployablesTuningFileTests
     {
-        private static readonly string[] _shippedIds = { "deploy-turret", "deploy-shield", "deploy-decoy", "deploy-beacon" };
-        private static readonly string[] _assetNames = { "DeployTurret", "DeployShield", "DeployDecoy" };
-        private static readonly DeployRole[] _shippedRoles = { DeployRole.Turret, DeployRole.Shield, DeployRole.Decoy, DeployRole.Beacon };
+        private static readonly string[] _shippedIds =
+        {
+            "deploy-turret", "deploy-shield", "deploy-decoy", "deploy-beacon", "deploy-mine", "deploy-remote-charge",
+        };
+
+        // ビーコンはビルダーが作るので比べず、手で作った地雷と C4 のアセットとは形も比べる
+        private static readonly string[] _assetNames = { "DeployTurret", "DeployShield", "DeployDecoy", null, "DeployMine", "DeployRemoteCharge" };
+        private static readonly DeployRole[] _shippedRoles =
+        {
+            DeployRole.Turret, DeployRole.Shield, DeployRole.Decoy, DeployRole.Beacon, DeployRole.Mine, DeployRole.RemoteCharge,
+        };
 
         [Test]
-        public void TheShippedFileIsReadableAndHasATurretAShieldADecoyAndABeacon()
+        public void TheShippedFileIsReadableAndHasEveryRoleTheServerPlaces()
         {
             var catalog = Read(RepositoryRoot());
 
@@ -73,8 +81,14 @@ namespace Shooter.Core.Tests
             var catalog = Read(root);
             for (var i = 0; i < _assetNames.Length; i++)
             {
+                if (_assetNames[i] == null)
+                {
+                    continue;
+                }
+
                 var asset = File.ReadAllText(Path.Combine(root, "Assets", "game", "Samples~", "Demo", "Abilities", _assetNames[i] + ".asset"));
                 var type = catalog.All[i];
+                Assert.That(asset, Does.Contain("  _overflow: " + Text((int)type.Deploy.Overflow) + "\n"), _assetNames[i]);
                 var deploy = type.Deploy;
                 Assert.That(asset, Does.Contain("  _id: " + type.Id + "\n"), _assetNames[i]);
                 Assert.That(asset, Does.Contain("  _maxActive: " + Text(deploy.MaxActive) + "\n"), _assetNames[i]);
@@ -88,6 +102,30 @@ namespace Shooter.Core.Tests
                     Does.Contain("  _size: {x: " + Text(deploy.Width) + ", y: " + Text(deploy.Height) + ", z: " + Text(deploy.Depth) + "}"),
                     _assetNames[i]);
             }
+        }
+
+        [Test]
+        public void TheMineAndTheRemoteChargeExplodeLikeTheirDemoAssets()
+        {
+            var root = RepositoryRoot();
+            var catalog = Read(root);
+            var mine = catalog.All.Single(t => t.Role == DeployRole.Mine);
+            var charge = catalog.All.Single(t => t.Role == DeployRole.RemoteCharge);
+            var mineAsset = File.ReadAllText(Path.Combine(root, "Assets", "game", "Samples~", "Demo", "Abilities", "DeployMine.asset"));
+            var chargeAsset = File.ReadAllText(Path.Combine(root, "Assets", "game", "Samples~", "Demo", "Abilities", "DeployRemoteCharge.asset"));
+
+            Assert.That(mineAsset, Does.Contain("  _armSeconds: " + Text(mine.Mine.ArmSeconds) + "\n"));
+            Assert.That(mineAsset, Does.Contain("  _triggerRadius: " + Text(mine.Mine.TriggerRadius) + "\n"));
+            AssertExplosion(mineAsset, mine.Mine.Explosion, "DeployMine");
+            AssertExplosion(chargeAsset, charge.RemoteCharge.Explosion, "DeployRemoteCharge");
+        }
+
+        private static void AssertExplosion(string asset, ExplosionSpec explosion, string name)
+        {
+            Assert.That(asset, Does.Contain("  _maxDamage: " + Text(explosion.Damage.MaxDamage) + "\n"), name);
+            Assert.That(asset, Does.Contain("  _damageRadius: " + Text(explosion.Damage.Radius) + "\n"), name);
+            Assert.That(asset, Does.Contain("  _fullDamageRadius: " + Text(explosion.Damage.FullDamageRadius) + "\n"), name);
+            Assert.That(asset, Does.Contain("  _structureDamageAtCenter: " + Text(explosion.StructureDamageAtCenter) + "\n"), name);
         }
 
         private static DeployCatalog Read(string root)

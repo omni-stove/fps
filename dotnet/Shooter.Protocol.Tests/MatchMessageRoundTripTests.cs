@@ -1423,6 +1423,33 @@ namespace Shooter.Protocol.Tests
             Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
         }
 
+        [Test]
+        public void PickupRequest()
+        {
+            var got = ToServer<PickupRequestMessage>(new PickupRequestMessage { ItemId = 33554433 });
+
+            Assert.That(got.ItemId, Is.EqualTo(33554433));
+            Assert.That(ToServer<PickupRequestMessage>(new PickupRequestMessage()).ItemId, Is.Zero);
+        }
+
+        [Test]
+        public void APickupRequestWithANegativeItemIsNotWritten()
+        {
+            Assert.Throws<System.InvalidOperationException>(
+                () => new MessageWriter().WriteMessage(new PickupRequestMessage { ItemId = -1 }));
+        }
+
+        [Test]
+        public void APickupRequestWithANegativeItemIsUnreadable()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(MessageIds.PickupRequest);
+            writer.WriteByte(PickupRequestMessage.CurrentVersion);
+            writer.WriteInt32(-1);
+
+            Assert.Throws<MessageReadException>(() => _server.Read(writer.AsSegment()));
+        }
+
         [TestCase(ExtractionOutcome.None)]
         [TestCase(ExtractionOutcome.Extracted)]
         [TestCase(ExtractionOutcome.Killed)]

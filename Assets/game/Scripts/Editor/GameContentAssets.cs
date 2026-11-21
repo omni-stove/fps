@@ -58,6 +58,7 @@ namespace Shooter.Editor
             new Slot("StreakIcons", typeof(StreakIconCatalog), c => c.StreakIcons, (c, v) => c.StreakIcons = (StreakIconCatalog)v),
             new Slot("EmoteAnimations", typeof(EmoteCatalog), c => c.EmoteAnimations, (c, v) => c.EmoteAnimations = (EmoteCatalog)v),
             new Slot("VisionVisuals", typeof(VisionVisualCatalog), c => c.VisionVisuals, (c, v) => c.VisionVisuals = (VisionVisualCatalog)v),
+            new Slot("Music", typeof(MusicCatalog), c => c.Music, (c, v) => c.Music = (MusicCatalog)v),
         };
 
         // 調整値の JSON は型が TextAsset で見分けられないので、キットが Resources から読むときのファイル名で選ぶ。

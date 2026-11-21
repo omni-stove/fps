@@ -1,0 +1,7 @@
+{
+  "qualityLevel": -1,
+  "vSync": false,
+  "frameRateLimit": 0,
+  "frameRateChoices": [30, 60, 120, 144, 240],
+  "headlessFrameRate": 60
+}

@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using NUnit.Framework;
 using Shooter.Core;
 using Shooter.Protocol;
@@ -198,11 +200,193 @@ namespace Shooter.Server.Tests
             Assert.That(Row(1).Team, Is.EqualTo(Team.Alpha));
         }
 
-        private static NetMatchSettings Settings(float roundSeconds = 30f)
+        [Test]
+        public void TheFirstInfectedGetsTheInfectedHealthAndSpeedAtOnce()
+        {
+            Start(Settings(maxHealth: 175, speedMultiplier: 1.25f));
+            Join(1);
+            Join(2);
+            Join(3);
+            Assert.That(_module.Session.GetMaxHealth(1), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
+            Assert.That(Body(1).MoveSpeedMultiplier, Is.EqualTo(1f), "everyone moves as a survivor before the outbreak");
+
+            Advance(1.1f);
+
+            var session = _module.Session;
+            Assert.That(session.GetMaxHealth(1), Is.EqualTo(175));
+            Assert.That(session.GetHealth(1), Is.EqualTo(175), "the first infected starts full, as offline respawns them");
+            Assert.That(Body(1).MoveSpeedMultiplier, Is.EqualTo(1.25f));
+            Assert.That(session.GetMaxHealth(2), Is.EqualTo(NetMatchSettings.DefaultMaxHealth), "survivors keep the shared cap");
+            Assert.That(Body(2).MoveSpeedMultiplier, Is.EqualTo(1f));
+            Assert.That(_log.ToString(), Does.Contain("[Infected] infected body player=1 maxHealth=175 speedMultiplier=1.25"));
+
+            Assert.That(_module.ApplyDamage(2, 1, 100), Is.EqualTo(DamageOutcome.Damaged), "the infected outlasts a hit that fells a survivor");
+            Assert.That(session.GetHealth(1), Is.EqualTo(75));
+        }
+
+        [Test]
+        public void AFallenSurvivorComesBackWithTheInfectedBody()
+        {
+            Start(Settings());
+            Join(1);
+            Join(2);
+            Join(3);
+            Advance(1.1f);
+
+            Assert.That(_module.ApplyDamage(1, 2, 100), Is.EqualTo(DamageOutcome.Killed));
+
+            var session = _module.Session;
+            Assert.That(session.IsAlive(2), Is.False);
+            Assert.That(session.GetMaxHealth(2), Is.EqualTo(InfectedSpec.DefaultInfectedMaxHealth));
+            Assert.That(Body(2).MoveSpeedMultiplier, Is.EqualTo(InfectedSpec.DefaultInfectedSpeedMultiplier));
+
+            Advance(0.6f);
+
+            Assert.That(session.IsAlive(2), Is.True);
+            Assert.That(session.GetHealth(2), Is.EqualTo(InfectedSpec.DefaultInfectedMaxHealth));
+        }
+
+        [Test]
+        public void TheNextMatchGivesEveryoneTheSurvivorBodyBack()
+        {
+            Start(Settings());
+            Join(1);
+            Join(2);
+            Advance(1.1f);
+            Assert.That(_module.Session.GetMaxHealth(1), Is.EqualTo(InfectedSpec.DefaultInfectedMaxHealth));
+            Assert.That(_module.ApplyDamage(1, 2, 100), Is.EqualTo(DamageOutcome.Killed));
+            Step();
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Ended));
+
+            Advance(1.1f);
+
+            Assert.That(_match.State, Is.EqualTo(GameModeState.Playing));
+            var session = _module.Session;
+            foreach (var id in new[] { 1, 2 })
+            {
+                Assert.That(session.GetMaxHealth(id), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
+                Assert.That(session.GetHealth(id), Is.EqualTo(NetMatchSettings.DefaultMaxHealth));
+                Assert.That(Body(id).MoveSpeedMultiplier, Is.EqualTo(1f));
+            }
+
+            Assert.That(_log.ToString(), Does.Contain("[Infected] survivor bodies restored players=1,2"));
+        }
+
+        [Test]
+        public void StoppingTheObjectiveGivesTheSpeedBack()
+        {
+            Start(Settings());
+            Join(1);
+            Join(2);
+            Advance(1.1f);
+            var body = Body(1);
+            Assert.That(body.MoveSpeedMultiplier, Is.EqualTo(InfectedSpec.DefaultInfectedSpeedMultiplier));
+
+            _module.Stop();
+            _module = null;
+
+            Assert.That(body.MoveSpeedMultiplier, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ThePlayerWhoJoinsInfectedGetsTheBodyAndTheWeapon()
+        {
+            Start(Settings(weaponId: TestRules.HandgunId));
+            Join(1);
+            Join(2);
+            Advance(1.1f);
+            var rearmed = new List<int>();
+            _module.WeaponsChanged += rearmed.Add;
+
+            Join(3);
+
+            Assert.That(_module.Session.GetHealth(3), Is.EqualTo(InfectedSpec.DefaultInfectedMaxHealth), "joined at full health, then raised to the infected cap");
+            Assert.That(Body(3).MoveSpeedMultiplier, Is.EqualTo(InfectedSpec.DefaultInfectedSpeedMultiplier));
+            Assert.That(_module.WeaponsFor(3).Select(w => w.Id), Is.EqualTo(new[] { TestRules.HandgunId }));
+            Assert.That(rearmed, Is.Empty, "the weapon is not swapped inside the join");
+
+            Step();
+
+            Assert.That(rearmed, Is.EqualTo(new[] { 3 }));
+            Assert.That(_log.ToString(), Does.Contain("[Infected] rearm player=3 weapon=" + TestRules.HandgunId));
+        }
+
+        [Test]
+        public void TheInfectedHoldOnlyTheInfectedWeaponAndTheFirstInfectedSwapsAtOnce()
+        {
+            Start(Settings(weaponId: TestRules.HandgunId));
+            Join(1);
+            Join(2);
+            Join(3);
+            Step();
+            Assert.That(_module.InfectedWeapon.Id, Is.EqualTo(TestRules.HandgunId));
+            Assert.That(_log.ToString(), Does.Contain("[Infected] infected weapon=" + TestRules.HandgunId + " rules=Infected"));
+            Assert.That(_module.WeaponsFor(1).Count, Is.EqualTo(2), "survivors keep the loadout");
+            var rearmed = new List<int>();
+            _module.WeaponsChanged += rearmed.Add;
+
+            Advance(1.1f);
+
+            Assert.That(rearmed, Is.EqualTo(_firstInfected), "the first infected is standing, so it swaps without a respawn");
+            Assert.That(_module.WeaponsFor(1).Select(w => w.Id), Is.EqualTo(new[] { TestRules.HandgunId }));
+            Assert.That(_module.WeaponsFor(2).Count, Is.EqualTo(2));
+
+            Assert.That(_module.ApplyDamage(1, 2, 100), Is.EqualTo(DamageOutcome.Killed));
+            Step();
+
+            Assert.That(rearmed, Is.EqualTo(_firstInfected), "a fallen survivor gets the weapon when it respawns, not while down");
+            Assert.That(_module.WeaponsFor(2).Select(w => w.Id), Is.EqualTo(new[] { TestRules.HandgunId }));
+        }
+
+        [Test]
+        public void WithoutAnInfectedWeaponTheInfectedKeepTheLoadout()
+        {
+            Start(Settings());
+            Join(1);
+            Join(2);
+            var rearmed = 0;
+            _module.WeaponsChanged += _ => rearmed++;
+
+            Advance(1.1f);
+
+            Assert.That(_module.InfectedWeapon, Is.Null);
+            Assert.That(((InfectedRules)_module.Objective).IsInfected(1), Is.True);
+            Assert.That(_module.WeaponsFor(1).Count, Is.EqualTo(2));
+            Assert.That(rearmed, Is.Zero);
+        }
+
+        [Test]
+        public void AnInfectedWeaponOutsideTheLoadoutAndCatalogStopsTheStart()
+        {
+            var e = Assert.Throws<InvalidOperationException>(() => Start(Settings(weaponId: "claws")));
+
+            Assert.That(e.Message, Is.EqualTo(
+                "cannot start the Infected match: the infected weapon claws is not in the loadout or the catalog of rules Infected"));
+            _module = null;
+        }
+
+        private static NetMatchSettings Settings(
+            float roundSeconds = 30f,
+            int maxHealth = InfectedSpec.DefaultInfectedMaxHealth,
+            float speedMultiplier = InfectedSpec.DefaultInfectedSpeedMultiplier,
+            string weaponId = InfectedSpec.DefaultInfectedWeaponId)
         {
             return new NetMatchSettings(
                 restartDelaySeconds: 1f,
-                infected: new InfectedSpec(initialInfected: 1, startDelaySeconds: 1f, roundSeconds: roundSeconds, infectedRespawnSeconds: 0.5f));
+                infected: new InfectedSpec(
+                    initialInfected: 1,
+                    startDelaySeconds: 1f,
+                    roundSeconds: roundSeconds,
+                    infectedMaxHealth: maxHealth,
+                    infectedSpeedMultiplier: speedMultiplier,
+                    infectedRespawnSeconds: 0.5f,
+                    infectedWeaponId: weaponId));
+        }
+
+        private ServerBody Body(int id)
+        {
+            Assert.That(_context.Bodies.TryGet(id, out var body), Is.True);
+            return body;
         }
 
         private static GameRules Rules()

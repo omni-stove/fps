@@ -52,6 +52,9 @@ namespace Shooter.Core
 
         // _health と同じ顔ぶれを持つ。Health を作り直すたびに作り直す。
         private readonly Dictionary<int, HealthRegenerator> _regenerators = new Dictionary<int, HealthRegenerator>();
+
+        // SetMaxHealth で MaxHealth から替えた人だけを持つ
+        private readonly Dictionary<int, int> _maxHealthOf = new Dictionary<int, int>();
         private readonly DownedTracker _downed;
 
         private readonly Dictionary<int, float> _spawnProtection = new Dictionary<int, float>();
@@ -185,6 +188,52 @@ namespace Shooter.Core
         {
             var health = FindHealth(playerId);
             return IsDownedUnchecked(playerId) ? _downed.GetHealth(playerId) : health.Current;
+        }
+
+        public int GetMaxHealth(int playerId)
+        {
+            FindHealth(playerId);
+            return _maxHealthOf.TryGetValue(playerId, out var max) ? max : MaxHealth;
+        }
+
+        // 陣営で体の違う試合 (感染者など) が、1 人だけ体力の上限を替えるための口。今の体力は値のまま残し、新しい上限を超える分だけ削る。
+        // 満たすかは呼ぶ側が Heal で決める (倒れている人・ダウン中の人は Heal できないので、次の出現か起き上がりで新しい上限になる)。
+        // 替えた上限は出直しても残り、抜けたときと次の試合 (Restart) で MaxHealth に戻る
+        public bool SetMaxHealth(int playerId, int maxHealth)
+        {
+            if (maxHealth <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(maxHealth), maxHealth, "maxHealth must be positive");
+            }
+
+            var health = FindHealth(playerId);
+            if (health.Max == maxHealth)
+            {
+                return false;
+            }
+
+            if (maxHealth == MaxHealth)
+            {
+                _maxHealthOf.Remove(playerId);
+            }
+            else
+            {
+                _maxHealthOf[playerId] = maxHealth;
+            }
+
+            var current = Math.Min(health.Current, maxHealth);
+            var resized = new Health(maxHealth);
+            resized.TakeDamage(maxHealth - current);
+            var regenerator = new HealthRegenerator(resized, Spec.Rules);
+            regenerator.ContinueFrom(_regenerators[playerId]);
+            _health[playerId] = resized;
+            _regenerators[playerId] = regenerator;
+            if (current != health.Current)
+            {
+                PlayerChanged?.Invoke(playerId);
+            }
+
+            return true;
         }
 
         public int Heal(int playerId, int amount)
@@ -337,6 +386,7 @@ namespace Shooter.Core
             _match.RemovePlayer(playerId);
             _health.Remove(playerId);
             _regenerators.Remove(playerId);
+            _maxHealthOf.Remove(playerId);
             _spawnProtection.Remove(playerId);
             _ledger.Clear(playerId);
             if (_downed != null)
@@ -694,6 +744,9 @@ namespace Shooter.Core
                 _held[key] = _held[key].WithoutStats();
             }
 
+            // 前の試合で替えた上限 (感染者など) は、その試合の陣営の体なので次の試合へ持ち込まない
+            _maxHealthOf.Clear();
+
             var playerIds = new List<int>(_health.Keys);
             List<int> wasDowned = null;
             foreach (var playerId in playerIds)
@@ -880,7 +933,7 @@ namespace Shooter.Core
 
         private bool ResetHealth(int playerId)
         {
-            var health = new Health(MaxHealth);
+            var health = new Health(_maxHealthOf.TryGetValue(playerId, out var max) ? max : MaxHealth);
             _health[playerId] = health;
             _ledger.Clear(playerId);
             _regenerators[playerId] = new HealthRegenerator(health, Spec.Rules);
@@ -977,8 +1030,9 @@ namespace Shooter.Core
         // 起き上がった直後から回復させると、起こしてもらうだけで体力が満タンへ向かってしまうので、被弾した直後と同じ待ちから始める
         private void SetRevivedHealth(int playerId, int current)
         {
-            var health = new Health(MaxHealth);
-            health.TakeDamage(MaxHealth - current);
+            var max = _maxHealthOf.TryGetValue(playerId, out var changed) ? changed : MaxHealth;
+            var health = new Health(max);
+            health.TakeDamage(Math.Max(0, max - current));
             var regenerator = new HealthRegenerator(health, Spec.Rules);
             regenerator.NotifyDamaged();
             _health[playerId] = health;

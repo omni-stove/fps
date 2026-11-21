@@ -79,6 +79,7 @@ namespace Shooter.Server
     internal sealed class ServerBody
     {
         private readonly StanceGeometry _geometry;
+        private float _moveSpeedMultiplier = 1f;
 
         public ServerBody(int playerId, StanceGeometry geometry)
         {
@@ -135,6 +136,21 @@ namespace Shooter.Server
 
         // 構えている盾。null なら盾を持っていないか下げている。戦闘 (ServerCombat) が決め、当たり判定と移動の速さが読む
         public RiotShieldSpec RaisedShield { get; internal set; }
+
+        // 目的が人ごとに掛ける移動の速さ (感染者など)。移動 (ServerMovement) が持ち運びの倍率に掛け、持ち主の予測にもその積を送る
+        public float MoveSpeedMultiplier
+        {
+            get => _moveSpeedMultiplier;
+            set
+            {
+                if (!(value > 0f) || float.IsInfinity(value))
+                {
+                    throw new ArgumentOutOfRangeException(nameof(value), value, "the move speed multiplier must be positive and finite");
+                }
+
+                _moveSpeedMultiplier = value;
+            }
+        }
 
         public void SetPose(Vector3 position, float yaw, PlayerStance stance)
         {

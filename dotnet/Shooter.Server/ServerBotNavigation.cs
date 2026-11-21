@@ -75,6 +75,11 @@ namespace Shooter.Server
             return _navigation.SamplePosition(position, _sampleRadius, AllAreas, out _);
         }
 
+        public bool TrySample(Vector3 position, out Vector3 onMesh)
+        {
+            return _navigation.SamplePosition(position, _sampleRadius, AllAreas, out onMesh);
+        }
+
         public bool TryPath(Vector3 from, Vector3 destination, NavPath path)
         {
             ArgumentNullException.ThrowIfNull(path);

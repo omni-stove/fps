@@ -312,6 +312,40 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void OnlyABotIsSwungWithoutAnInput()
+        {
+            StartWithTwo();
+            Place(2, -3.5f, 0f);
+
+            Assert.That(_melee.IsOn, Is.True);
+            Assert.That(_melee.BotSwing(1), Is.False, "a human swings with InputButtons.Melee");
+            Assert.That(_melee.IsSwinging(1), Is.False);
+            Assert.That(_log.ToString(), Does.Not.Contain("[Melee] swing id=1"));
+        }
+
+        [Test]
+        public void ABotReadsTheSameSwingTheModuleAdvances()
+        {
+            StartWithTwo();
+            var botId = BotRoster.FirstBotPlayerId;
+
+            var swing = _melee.SwingOf(botId);
+
+            Assert.That(_melee.SwingOf(botId), Is.SameAs(swing));
+            Assert.That(swing.Spec, Is.SameAs(_spec));
+            Assert.That(_melee.BotSwing(botId), Is.False, "the bot is not in the match");
+            Assert.That(swing.IsSwinging, Is.False);
+        }
+
+        [Test]
+        public void TheMeleeRuleTellsWhetherBotsMaySwing()
+        {
+            Start(MeleeRules().WithActions(MeleeRules().Actions.WithMelee(Melee.Off)));
+
+            Assert.That(_melee.IsOn, Is.False);
+        }
+
+        [Test]
         public void TheSpecIsRequired()
         {
             var rules = new MatchRulesModule();

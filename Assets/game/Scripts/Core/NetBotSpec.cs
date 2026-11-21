@@ -70,7 +70,8 @@ namespace Shooter.Core
             float stuckProgress,
             float rallyRouteRadiusFraction = DefaultRallyRouteRadiusFraction,
             float rallyRouteAngleStepDegrees = DefaultRallyRouteAngleStepDegrees,
-            float rallyMoveRadiusFraction = DefaultRallyMoveRadiusFraction)
+            float rallyMoveRadiusFraction = DefaultRallyMoveRadiusFraction,
+            BotTacticsSpec tactics = null)
         {
             Brain = brain ?? throw new ArgumentNullException(nameof(brain));
             Input = input ?? throw new ArgumentNullException(nameof(input));
@@ -98,6 +99,7 @@ namespace Shooter.Core
             RepathDistance = repathDistance;
             StuckSeconds = stuckSeconds;
             StuckProgress = stuckProgress;
+            Tactics = tactics ?? BotTacticsSpec.Default;
         }
 
         public EnemySpec Brain { get; }
@@ -119,6 +121,8 @@ namespace Shooter.Core
         public float RallyRouteAngleStepDegrees { get; }
 
         public float RallyMoveRadiusFraction { get; }
+
+        public BotTacticsSpec Tactics { get; }
 
         private static void RequireNonNegative(float value, string name)
         {

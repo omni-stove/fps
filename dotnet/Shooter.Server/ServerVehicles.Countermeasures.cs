@@ -41,6 +41,7 @@ namespace Shooter.Server
                 return false;
             }
 
+            car.SyncFlares();
             _log.WriteLine(ServerCountermeasureLog.Deployed(car.Name, playerId, flareId, pod.Remaining, pod.Spec.Count));
             return true;
         }
@@ -131,7 +132,17 @@ namespace Shooter.Server
         {
             foreach (var car in _cars)
             {
-                car.Flares?.Tick(deltaSeconds, _flareGravity);
+                if (car.Flares == null)
+                {
+                    continue;
+                }
+
+                // 間隔の残りも数えるので Tick は毎回呼ぶ。並びは空にフレアが無いあいだは作り直さず、燃え尽きた tick にだけ空へ戻す
+                car.Flares.Tick(deltaSeconds, _flareGravity);
+                if (car.Flares.Flares.Count > 0 || car.FlareSync.Count > 0)
+                {
+                    car.SyncFlares();
+                }
             }
         }
 

@@ -223,6 +223,39 @@ namespace Shooter.NetV2.Tests
         }
 
         [Test]
+        public void ALockedVehicleIsSentAsAVehicleWithItsIndex()
+        {
+            var request = new FireRequestMessage();
+            var owner = Armed(new WeaponSync { WeaponCount = 1 }).Owner;
+
+            ClientFire.Fill(request, owner, _rifleId, default, TriggerEdge.None, ClientLockTargetIds.OfVehicle(3));
+
+            Assert.That(request.HasLockTarget, Is.True);
+            Assert.That(request.LockTargetKind, Is.EqualTo(LockTargetKind.Vehicle));
+            Assert.That(request.LockTargetId, Is.EqualTo(3));
+
+            ClientFire.Fill(request, owner, _rifleId, default, TriggerEdge.None, 3);
+
+            Assert.That(request.LockTargetKind, Is.EqualTo(LockTargetKind.Player), "the same number without the vehicle base is a person");
+            Assert.That(request.LockTargetId, Is.EqualTo(3));
+
+            ClientFire.Fill(request, owner, _rifleId, default, TriggerEdge.None, null);
+
+            Assert.That(request.LockTargetKind, Is.EqualTo(LockTargetKind.Player));
+        }
+
+        [Test]
+        public void VehicleLockIdsDoNotOverlapPlayerIds()
+        {
+            Assert.That(ClientLockTargetIds.IsVehicle(0), Is.False);
+            Assert.That(ClientLockTargetIds.IsVehicle(ClientLockTargetIds.VehicleBase - 1), Is.False);
+            Assert.That(ClientLockTargetIds.IsVehicle(ClientLockTargetIds.OfVehicle(0)), Is.True);
+            Assert.That(ClientLockTargetIds.WireIdOf(ClientLockTargetIds.OfVehicle(63)), Is.EqualTo(63));
+            Assert.That(ClientLockTargetIds.WireIdOf(12), Is.EqualTo(12));
+            Assert.That(() => ClientLockTargetIds.OfVehicle(-1), Throws.InstanceOf<System.ArgumentOutOfRangeException>());
+        }
+
+        [Test]
         public void AChargedShotIsSentWithTheChargeItWasReleasedWith()
         {
             var trigger = new ClientTrigger(Charged());

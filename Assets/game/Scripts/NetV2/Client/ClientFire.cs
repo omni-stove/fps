@@ -70,7 +70,8 @@ namespace Shooter.NetV2
             request.ChargeFraction = Math.Min(1f, Math.Max(0f, pull.ChargeFraction));
             request.AmmoTypeIndex = owner != null ? owner.Weapon.AmmoTypeIndex : (byte)0;
             request.HasLockTarget = lockTargetId.HasValue;
-            request.LockTargetId = lockTargetId ?? 0;
+            request.LockTargetId = lockTargetId.HasValue ? ClientLockTargetIds.WireIdOf(lockTargetId.Value) : 0;
+            request.LockTargetKind = lockTargetId.HasValue ? ClientLockTargetIds.KindOf(lockTargetId.Value) : LockTargetKind.Player;
             request.Trigger = edge;
         }
 

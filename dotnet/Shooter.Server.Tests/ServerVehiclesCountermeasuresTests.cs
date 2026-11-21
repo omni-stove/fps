@@ -101,6 +101,29 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
+        public void TheSnapshotCarriesTheFlaresInTheAirUntilTheyBurnOut()
+        {
+            Start();
+            BoardDriver();
+            Assert.That(VehicleRow(0).Flares.Count, Is.Zero, "nothing is in the air before the first flare");
+
+            _vehicles.DeployCountermeasure(1);
+            var deployed = VehicleRow(0).Flares;
+            Tick();
+            var flying = VehicleRow(0).Flares;
+
+            Assert.That(deployed.Count, Is.EqualTo(1), "the flare is sent from the tick it is deployed");
+            Assert.That(flying.Count, Is.EqualTo(1));
+            Assert.That(flying.IdAt(0), Is.EqualTo(0));
+            Assert.That(Vector3.Distance(flying.PositionAt(0), _heliPosition + _flareOffset), Is.LessThan(1e-4f));
+            Assert.That(VehicleRow(1).Flares.Count, Is.Zero, "a vehicle without flares sends none");
+
+            Step(_flareLifetime + 0.05f);
+
+            Assert.That(VehicleRow(0).Flares.Count, Is.Zero);
+        }
+
+        [Test]
         public void TheCountermeasureRequestFromTheClientDeploysAFlare()
         {
             Start();
@@ -441,6 +464,16 @@ namespace Shooter.Server.Tests
             }
 
             return rows;
+        }
+
+        private VehicleSnapshot VehicleRow(int index)
+        {
+            var snapshot = new SnapshotMessage();
+            Assert.That(_match.TryGetPlayer(1, out var receiver), Is.True);
+            _vehicles.Contribute(snapshot, receiver);
+            var at = snapshot.Vehicles.IndexOf(index);
+            Assert.That(at, Is.GreaterThanOrEqualTo(0));
+            return snapshot.Vehicles[at];
         }
 
         private ServerBody Body(int id)

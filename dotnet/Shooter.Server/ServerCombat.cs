@@ -187,6 +187,7 @@ namespace Shooter.Server
             _statusEffects.Tick(deltaSeconds);
             _lockOn.Tick(deltaSeconds);
             _areaEffects.Tick(deltaSeconds);
+            UpdateShields();
             _hitboxes.Record((int)Math.Min(tick, int.MaxValue));
 
             // 飛ぶ弾は巻き戻さずに今の位置へ当てるので、この tick の位置を残してから進める
@@ -609,6 +610,11 @@ namespace Shooter.Server
             public Vector3 LastHitDirection { get; set; }
 
             public bool WasAiming { get; set; }
+
+            // 出した盾の武器の Id と、構えているか。変わった tick だけログを出すために前の tick の値を持つ
+            public string ShieldWeaponId { get; set; }
+
+            public bool ShieldRaised { get; set; }
         }
     }
 }

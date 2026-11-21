@@ -126,13 +126,7 @@ namespace Shooter.Server
             var last = flying.Collision.LastHit;
 
             // 距離減衰は撃った所から飛んだ道のりで決める (オフラインの ProjectileBody と同じ)
-            var hit = last.HitTarget
-                ? ShotHit.Target(last.Point, last.Normal, flight.Distance, last.TargetId, last.TargetPosition, last.TargetCrouched, last.Zone)
-                : last.HitVehicle
-                    ? ShotHit.Vehicle(last.Point, last.Normal, flight.Distance, last.VehicleIndex, last.DamageMultiplier, last.VehiclePartId)
-                    : last.HitDeployable
-                        ? ShotHit.Deployable(last.Point, last.Normal, flight.Distance, last.DeployableId)
-                        : ShotHit.World(new WorldHit(last.Point, last.Normal, flight.Distance, last.ColliderId, last.Layer));
+            var hit = last.WithDistance(flight.Distance);
             SendEnded(flying, hit.HitTarget ? ProjectileEndReason.HitCharacter : ProjectileEndReason.HitWorld);
             Log(flying, hit);
             var velocity = flight.Velocity;

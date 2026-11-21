@@ -143,7 +143,7 @@ Editor のスクリプトが作るアセットとシーンの置き場 (出力�
    書き出したクライアントでは `-mode client -address <ホスト> -port 7777` を付けて起動すると、メニューを通らずにつなぐ。
 5. Bot は人が 1 人もいないと置かれないので、試すときはクライアントを 1 人つなぐ。
 
-ドローン・盾・暗視とサーマルはオフラインだけで、サーバーでは効かない。
+ドローン・暗視とサーマルはオフラインだけで、サーバーでは効かない。
 
 ## データで変えられる場所
 
@@ -171,6 +171,6 @@ Editor のスクリプトが作るアセットとシーンの置き場 (出力�
 | 持ち物・移動の調整値 | `inventory.json`・`traversal.json`・`stealth.json`・`squad.json`・`ping.json`・`key-sharing.json`・`rumble.json` | 同上 |
 | Bot | `bots.json` | 同上 |
 | 成長・記録 | `progression.json`・`skill.json`・`achievements.json`・`leaderboards.json`・`cosmetics.json`・`replay.json`・`telemetry.json` | 同上 |
-| 画面に出す量と色 | `minimap.json`・`nameplates.json`・`palettes.json`・`chat-words.json`・`weather.json` | 同上 |
+| 画面に出す量と色 | `minimap.json`・`nameplates.json`・`palettes.json`・`chat-words.json`・`weather.json`・`graphics.json` | 同上 |
 | モードの調整値 | `payload.json`・`economy.json`・`supply-drops.json`・`redeploy.json`・`infected.json`・`extraction.json`・`loot.json`・`stash.json` | 同上 |
 | サーバーの調整値 | `server-data/tuning/*.json` | `make export-server-rules` が書き出す。`economy.json`・`mutators.json`・`playlists/*.json` は手で写す |

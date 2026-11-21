@@ -5,6 +5,9 @@ namespace Shooter.Core
     {
         public const string LogTag = "[Combat]";
 
+        // 下げた理由。オフライン (WeaponController) とサーバー (ServerCombat) で同じ語を出し、同じ grep で拾えるようにする。
+        public const string SprintCause = "sprint";
+
         public static string Out(string holderId, string weaponId)
         {
             return $"{LogTag} riot-shield out id={holderId} weapon={weaponId}";

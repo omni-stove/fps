@@ -10,10 +10,7 @@ namespace Shooter.Server
         // 項目が無いときに null を返すのは、全部オフのルールで何も書かせないため
         public static string Warning(string rulesName, IReadOnlyList<string> actions)
         {
-            if (actions == null)
-            {
-                throw new ArgumentNullException(nameof(actions));
-            }
+            ArgumentNullException.ThrowIfNull(actions);
 
             if (actions.Count == 0)
             {

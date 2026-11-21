@@ -22,10 +22,7 @@ namespace Shooter.Server
 
         public static IReadOnlyList<string> EnabledIn(GameRules rules)
         {
-            if (rules == null)
-            {
-                throw new ArgumentNullException(nameof(rules));
-            }
+            ArgumentNullException.ThrowIfNull(rules);
 
             var actions = rules.Actions;
             var enabled = new List<string>();

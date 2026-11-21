@@ -53,7 +53,7 @@ namespace Shooter.Server
                 _log.WriteLine(ServerMovementLog.KnockbackLanded(playerId, tick, current.Position));
             }
 
-            // 崖のぼりとジップラインの tick は Step を通らず、前の判定が残ったままなので、パラシュートの判定は読まない
+            // 崖のぼりとジップラインの tick は Step を通らず、前の判定が残ったままなので、パラシュートと滑りの判定は読まない
             var simulation = mover.Simulation;
             var stepped = !mantled && !ziplined;
             if (stepped && simulation.LastParachuteVerdict.HasValue)
@@ -66,7 +66,10 @@ namespace Shooter.Server
                 _log.WriteLine(ServerMovementLog.ParachuteClosed(playerId, tick, simulation.LastParachuteClose.Value));
             }
 
-            ReportSlide(playerId, tick, simulation);
+            if (stepped)
+            {
+                ReportSlide(playerId, tick, simulation);
+            }
 
             // 傾きは毎 tick 少しずつ変わるので、向きが替わったときだけ出す
             var leanBefore = Math.Sign(previous.Lean.Amount);

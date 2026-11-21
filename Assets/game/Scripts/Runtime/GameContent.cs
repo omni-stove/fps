@@ -147,6 +147,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("味方・敵・目的の物などの色の組 (標準・色覚向け) の JSON。空なら Resources/Tuning/palettes")]
         private TextAsset _palettesTuning;
 
+        [SerializeField, Tooltip("グラフィック設定の初期値 (画質・VSync・fps 上限) と選べる fps 上限の JSON。空なら Resources/Tuning/graphics")]
+        private TextAsset _graphicsTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -527,6 +530,12 @@ namespace Shooter.Runtime
         {
             get => _palettesTuning;
             set => _palettesTuning = value;
+        }
+
+        public TextAsset GraphicsTuning
+        {
+            get => _graphicsTuning;
+            set => _graphicsTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog

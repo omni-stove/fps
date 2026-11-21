@@ -54,7 +54,7 @@ docker compose -f docker/server/compose.yaml up -d
 - Bot は人が 1 人もいないと置かれない。試すときはクライアントを 1 人つなぐ。
 - ドローン・暗視とサーマルはオフラインだけで、サーバーでは効かない。
 - プレイリストでは `match.*` と武器が最初の項目のルールのまま変わらないので、後の項目で使うモードの節も最初の項目に書く。
-- `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力・速さ・武器 (`infectedMaxHealth`・`infectedSpeedMultiplier`・`infectedWeaponId`) はまだサーバーでは変わらない。
+- `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力の上限と速さ (`infectedMaxHealth`・`infectedSpeedMultiplier`) は感染したときから効き、試合の頭で生存者の値に戻る。`infectedWeaponId` の武器はルールのロードアウトか武器の一覧 (カタログ) に無いと起動 (と次のルールへの切り替え) を断る。空なら感染しても持っている武器のまま。クライアントの体力の表示の上限は接続のときに受けた全員共通の値 (`match.maxHealth`) のままなので、感染者は上限を超えた体力が出る。
 - `Execution` はラウンドの数と秒を `match.round*` に、とどめの秒数と距離を `match.execution` に書く。とどめは近接のボタンで刺すので、ルールの `melee` を `On` にする (`Off` ならダウン中の敵を撃って倒せる)。各チームの最後の 1 人もダウンし、全員がダウンしてもラウンドは終わらず、とどめを刺されるか出血で倒れきった側が落とす。とどめの進み具合は刺されている人のスナップショットの行 (`DownedSync`) に載り、刺している人の HUD に「とどめ NN%」として出る。
 
 ## CI のテンプレート

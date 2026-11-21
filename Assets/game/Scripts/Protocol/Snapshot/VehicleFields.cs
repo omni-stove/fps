@@ -9,6 +9,7 @@ namespace Shooter.Protocol
         Transform = 1 << 0,
         State = 1 << 1,
         Parts = 1 << 2,
-        All = Transform | State | Parts,
+        Flares = 1 << 3,
+        All = Transform | State | Parts | Flares,
     }
 }

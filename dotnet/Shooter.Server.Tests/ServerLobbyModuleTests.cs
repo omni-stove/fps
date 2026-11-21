@@ -350,6 +350,72 @@ namespace Shooter.Server.Tests
             Assert.Throws<InvalidOperationException>(() => _module.Region = "asia");
         }
 
+        [Test]
+        public void AServerWithoutRulesPublishesTeamDeathmatch()
+        {
+            Start();
+            Tick();
+            _backend.CompleteLogin(_server);
+
+            Assert.That(_module.Mode, Is.EqualTo(ServerLobby.TeamDeathmatchMode));
+            Assert.That(_backend.CreatedAttributes, Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.ModeKey && a.Text == "tdm"));
+        }
+
+        [Test]
+        public void TheObjectiveOfTheStartingRulesGoesIntoTheCreatedLobby()
+        {
+            Start(TestRules.Data(GameRules.Default.WithObjective(MatchObjective.Domination)));
+            Tick();
+            _backend.CompleteLogin(_server);
+
+            Assert.That(_backend.CreatedAttributes, Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.ModeKey && a.Text == "domination"));
+            var lobby = new LobbyInfo("l1", _server, _backend.CreatedMaxMembers, new[] { _server }, _backend.CreatedAttributes);
+            _backend.CompleteCreate(lobby);
+
+            Assert.That(lobby.Mode, Is.EqualTo("domination"));
+            Assert.That(_backend.Updates, Is.Empty);
+            Assert.That(_log.ToString(), Does.Contain(" mode=domination"));
+        }
+
+        [Test]
+        public void TheModeFollowsTheRulesOfTheCurrentMatch()
+        {
+            var current = GameRules.Default.WithObjective(MatchObjective.Hardpoint);
+            _module.CurrentRules = () => current;
+            Start(TestRules.Data());
+            Tick();
+            _backend.CompleteLogin(_server);
+
+            Assert.That(_backend.CreatedAttributes, Has.Some.Matches<LobbyAttribute>(a => a.Key == ServerLobby.ModeKey && a.Text == "hardpoint"));
+            _backend.CompleteCreate(new LobbyInfo("l1", _server, NetMatchSettings.DefaultMaxPlayers, new[] { _server }, _backend.CreatedAttributes));
+
+            current = GameRules.Default.WithObjective(MatchObjective.KillConfirmed);
+            Tick();
+
+            Assert.That(_backend.Updates, Has.Count.EqualTo(1));
+            Assert.That(_backend.Updates[0], Has.Count.EqualTo(1));
+            Assert.That(_backend.Updates[0][0].Key, Is.EqualTo(ServerLobby.ModeKey));
+            Assert.That(_backend.Updates[0][0].Text, Is.EqualTo("kill-confirmed"));
+            Assert.That(_log.ToString(), Does.Contain("[Lobby] mode hardpoint -> kill-confirmed"));
+        }
+
+        [Test]
+        public void WithoutCurrentRulesTheModeFallsBackToTheStartingRules()
+        {
+            _module.CurrentRules = () => null;
+            Start(TestRules.Data(GameRules.Default.WithObjective(MatchObjective.Payload)));
+
+            Assert.That(_module.Mode, Is.EqualTo("payload"));
+        }
+
+        [Test]
+        public void CurrentRulesAreSetOnlyBeforeStart()
+        {
+            Start();
+
+            Assert.Throws<InvalidOperationException>(() => _module.CurrentRules = () => GameRules.Default);
+        }
+
         private void Start(ServerRulesData rules = null)
         {
             _module.Start(new ServerContext(

@@ -254,6 +254,7 @@ namespace Shooter.Tests.EditMode
         public void TheTextsResolveInEveryLanguage()
         {
             Assert.That(Text(ServerBrowserText.Mode("tdm")), Is.Not.EqualTo("tdm"), "the kit's mode has a name");
+            Assert.That(Text(ServerBrowserText.Mode(ServerLobby.ModeName(MatchObjective.Domination))), Is.Not.EqualTo("domination"));
             Assert.That(Text(ServerBrowserText.Mode("custom-mode")), Is.EqualTo("custom-mode"), "an unnamed mode shows its key");
             Assert.That(Text(ServerBrowserText.Region(null)), Is.EqualTo(Text(new LocalizedText(ServerBrowserText.UnknownKey))));
             Assert.That(Text(ServerBrowserText.Map("NoSuchMap")), Is.EqualTo("NoSuchMap"));

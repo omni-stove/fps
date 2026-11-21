@@ -142,6 +142,52 @@ namespace Shooter.Net.Tests
             Assert.That(parts.Vehicle, Is.Null);
         }
 
+        [Test]
+        public void TheLockOnPointIsTheMiddleOfTheHullTurnedWithTheShownVehicle()
+        {
+            var heli = AddHull("Heli", flares: null);
+            heli.transform.SetPositionAndRotation(new Vector3(10f, 0f, 0f), Quaternion.Euler(0f, 90f, 0f));
+            _vehicles.Enter(_scene, _client, _stance, null);
+
+            Assert.That(_vehicles.TryGetShownCenter(0, out var center), Is.True);
+            Assert.That(Vector3.Distance(NetV2Math.ToUnity(center), new Vector3(12f, 1f, 0f)), Is.LessThan(Epsilon), "the hull box (0, 1, 2) turned a quarter to the right");
+
+            heli.transform.SetPositionAndRotation(new Vector3(0f, 5f, 0f), Quaternion.identity);
+
+            Assert.That(_vehicles.TryGetShownCenter(0, out center), Is.True);
+            Assert.That(Vector3.Distance(NetV2Math.ToUnity(center), new Vector3(0f, 6f, 2f)), Is.LessThan(Epsilon), "it follows where the vehicle is shown");
+            Assert.That(_vehicles.TryGetShownCenter(1, out _), Is.False, "there is no second vehicle");
+        }
+
+        [Test]
+        public void TheHullMiddleAveragesTheSolidCollidersOnly()
+        {
+            var heli = AddHull("Heli", flares: null);
+            var tail = new GameObject("Tail").AddComponent<BoxCollider>();
+            tail.transform.SetParent(heli.transform, false);
+            tail.center = new Vector3(0f, 1f, -6f);
+            var trigger = new GameObject("Door").AddComponent<BoxCollider>();
+            trigger.transform.SetParent(heli.transform, false);
+            trigger.center = new Vector3(50f, 0f, 0f);
+            trigger.isTrigger = true;
+
+            var center = NetV2Vehicles.LocalCenter(heli.GetComponent<Vehicle>());
+
+            Assert.That(Vector3.Distance(center, new Vector3(0f, 1f, -2f)), Is.LessThan(Epsilon), "the body (0, 1, 2) and the tail (0, 1, -6); the trigger is left out");
+        }
+
+        [Test]
+        public void OnlyAVehicleWithFlaresHasADecoyCone()
+        {
+            AddHull("Heli", flares: new CountermeasureSpec(decoyConeDegrees: 12f));
+            AddHull("Jeep", flares: null);
+            _vehicles.Enter(_scene, _client, _stance, null);
+
+            Assert.That(_vehicles.DecoyConeDegrees(0), Is.EqualTo(12f));
+            Assert.That(_vehicles.DecoyConeDegrees(1), Is.Null, "the jeep carries no flares");
+            Assert.That(_vehicles.DecoyConeDegrees(2), Is.Null);
+        }
+
         private static VehiclePartDamageSync Taken(string partId, int damage)
         {
             Assert.That(VehiclePartDamageSync.None.TryAdd(partId, damage, out var parts), Is.True);
@@ -182,6 +228,27 @@ namespace Shooter.Net.Tests
             {
                 // Edit Mode では OnEnable が走らないので、遊ぶときと同じく乗り物へつないだ状態を作る。
                 root.AddComponent<AircraftPartDamage>().Attach(vehicle);
+            }
+
+            return root;
+        }
+
+        // 動かす部品を付けない乗り物に、乗り物から見て (0, 1, 2) を中心にした箱の当たり判定だけを付ける
+        private GameObject AddHull(string name, CountermeasureSpec flares)
+        {
+            var root = new GameObject(name);
+            _created.Add(root);
+            SceneManager.MoveGameObjectToScene(root, _scene);
+            new GameObject("Pilot").AddComponent<VehicleSeat>().transform.SetParent(root.transform, false);
+            var vehicle = root.AddComponent<Vehicle>();
+            vehicle.Configure(new VehicleSpec(name.ToLowerInvariant(), 1000, new[] { new VehicleSeatSpec(VehicleSeatRole.Driver) }));
+            var body = new GameObject("Body").AddComponent<BoxCollider>();
+            body.transform.SetParent(root.transform, false);
+            body.center = new Vector3(0f, 1f, 2f);
+            body.size = new Vector3(2f, 1f, 4f);
+            if (flares != null)
+            {
+                root.AddComponent<VehicleCountermeasures>().Configure(flares);
             }
 
             return root;

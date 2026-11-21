@@ -29,5 +29,20 @@
   "serverBrowser.column.ping": "Ping",
   "serverBrowser.players": "{0}/{1}",
   "serverBrowser.ping": "{0} ms",
-  "serverBrowser.mode.tdm": "チームデスマッチ"
+  "serverBrowser.mode.tdm": "チームデスマッチ",
+  "serverBrowser.mode.domination": "ドミネーション",
+  "serverBrowser.mode.elimination": "エリミネーション",
+  "serverBrowser.mode.capture-the-flag": "キャプチャー・ザ・フラッグ",
+  "serverBrowser.mode.hardpoint": "ハードポイント",
+  "serverBrowser.mode.search-and-destroy": "サーチ&デストロイ",
+  "serverBrowser.mode.free-for-all": "フリー・フォー・オール",
+  "serverBrowser.mode.kill-confirmed": "キル確認",
+  "serverBrowser.mode.gun-game": "ガンゲーム",
+  "serverBrowser.mode.payload": "ペイロード",
+  "serverBrowser.mode.battle-royale": "バトルロイヤル",
+  "serverBrowser.mode.extraction": "脱出",
+  "serverBrowser.mode.horde": "ホード",
+  "serverBrowser.mode.infected": "感染",
+  "serverBrowser.mode.guardian": "ガーディアン",
+  "serverBrowser.mode.execution": "処刑"
 }

@@ -17,11 +17,12 @@ namespace Shooter.Protocol.Tests
         private const int _battleRoyaleBytes = 8 + 4 + 8 + 4 + 4 + 4 + 4;
 
         // 25 で持ち主にスタミナ・よろけ・制圧が増え、26 で同期するルールにエモート (MatchRulesSync.Emote) が増え、
-        // 27 でダウン (DownedSync) にとどめを刺している人と進み具合が増えた
+        // 27 で乗り物に撒いたフレア (VehicleSnapshot.Flares) と、持ち主に Horde の補強の案内 (OwnerSnapshot.HordeOffer) が増え、
+        // 28 でダウン (DownedSync) にとどめを刺している人と進み具合が増えた
         [Test]
-        public void TheVersionIs27()
+        public void TheVersionIs28()
         {
-            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(27));
+            Assert.That(SnapshotMessage.CurrentVersion, Is.EqualTo(28));
         }
 
         [Test]

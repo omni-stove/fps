@@ -48,6 +48,19 @@ namespace Shooter.Core
             _pending = 0d;
         }
 
+        // 体力の上限を替えるときは Health を作り直すので、被弾からの待ちと回復の端数を作り直す前の分から引き継ぐ。
+        // NotifyDamaged で済ませないのは、上限を替えただけで回復の待ちが初めからになるため
+        internal void ContinueFrom(HealthRegenerator previous)
+        {
+            if (previous == null)
+            {
+                throw new ArgumentNullException(nameof(previous));
+            }
+
+            _delayRemaining = Math.Min(previous._delayRemaining, RegenDelaySeconds);
+            _pending = previous._pending;
+        }
+
         public int Tick(float deltaSeconds)
         {
             if (!(deltaSeconds >= 0f))

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace Shooter.Core
 {
@@ -16,15 +17,27 @@ namespace Shooter.Core
         public const string GroundedItem = "grounded";
         public const string AItem = "a";
         public const string BItem = "b";
+        public const string FortificationsItem = "fortifications";
+        public const string StructureItem = "structure";
+        public const string PositionItem = "position";
+        public const string StartsBuiltItem = "startsBuilt";
+        public const string NameKeyItem = "nameKey";
 
         private const string _kind = "map structures JSON";
 
-        private static readonly string[] _topItems = { StructuresItem };
+        private static readonly string[] _topItems = { StructuresItem, FortificationsItem };
         private static readonly string[] _structureItems = { PiecesItem, AdjacencyItem };
         private static readonly string[] _pieceItems = { MaxHealthItem, GroundedItem };
         private static readonly string[] _pairItems = { AItem, BItem };
+        private static readonly string[] _fortificationItems = { StructureItem, PositionItem, StartsBuiltItem, NameKeyItem };
 
         public NetMapStructures(IReadOnlyList<StructureLayout> structures)
+            : this(structures, null)
+        {
+        }
+
+        // fortifications は Horde の防衛物 (HordeFortification の付いた建物)。null なら無し
+        public NetMapStructures(IReadOnlyList<StructureLayout> structures, IReadOnlyList<MapFortification> fortifications)
         {
             if (structures == null)
             {
@@ -38,9 +51,43 @@ namespace Shooter.Core
             }
 
             Structures = copy.AsReadOnly();
+
+            var fortificationCopy = new List<MapFortification>();
+            var seen = new HashSet<int>();
+            if (fortifications != null)
+            {
+                foreach (var fortification in fortifications)
+                {
+                    if (fortification == null)
+                    {
+                        throw new ArgumentException("fortifications must not contain null", nameof(fortifications));
+                    }
+
+                    if (fortification.Structure >= copy.Count)
+                    {
+                        throw new ArgumentException(
+                            "the fortification of structure " + Text(fortification.Structure) + " is beyond the " + Text(copy.Count) + " structure(s)",
+                            nameof(fortifications));
+                    }
+
+                    if (!seen.Add(fortification.Structure))
+                    {
+                        throw new ArgumentException("structure " + Text(fortification.Structure) + " is a fortification twice", nameof(fortifications));
+                    }
+
+                    fortificationCopy.Add(fortification);
+                }
+            }
+
+            // 近さが同じ防衛物を選ぶ順を書き出しの並びに左右させないよう、建物の番号の順にする
+            fortificationCopy.Sort((a, b) => a.Structure.CompareTo(b.Structure));
+            Fortifications = fortificationCopy.AsReadOnly();
         }
 
         public IReadOnlyList<StructureLayout> Structures { get; }
+
+        // 建物の番号の昇順
+        public IReadOnlyList<MapFortification> Fortifications { get; }
 
         public static NetMapStructures Parse(string text, string sourceName)
         {
@@ -81,7 +128,41 @@ namespace Shooter.Core
                 }
             }
 
-            return new NetMapStructures(structures);
+            var fortifications = new List<MapFortification>();
+            var fortificationNodes = top.Array(FortificationsItem);
+            for (var i = 0; i < fortificationNodes.Count; i++)
+            {
+                var fields = top.Element(fortificationNodes[i], FortificationsItem, i, _fortificationItems);
+                var structureItem = fields.ItemPath(StructureItem);
+                var structure = fields.ToInt(structureItem, fields.Require(StructureItem));
+                if (structure < 0 || structure >= structures.Count)
+                {
+                    throw fields.Rejected(
+                        structureItem, "must be one of the " + Text(structures.Count) + " structure(s) of this map, but is " + Text(structure));
+                }
+
+                foreach (var earlier in fortifications)
+                {
+                    if (earlier.Structure == structure)
+                    {
+                        throw fields.Rejected(structureItem, "structure " + Text(structure) + " is a fortification twice");
+                    }
+                }
+
+                var position = fields.ReadVector3(PositionItem);
+                try
+                {
+                    fortifications.Add(new MapFortification(
+                        structure, position, fields.ReadBool(StartsBuiltItem, true), fields.ReadString(NameKeyItem, string.Empty)));
+                }
+                catch (ArgumentException e)
+                {
+                    // MapFortification の引数名は項目名と同じ
+                    throw fields.Rejected(e.ParamName == null ? fields.Path : fields.ItemPath(e.ParamName), e.Message, e);
+                }
+            }
+
+            return new NetMapStructures(structures, fortifications);
         }
 
         public static string Write(NetMapStructures structures)
@@ -120,7 +201,27 @@ namespace Shooter.Core
             }
 
             writer.EndArray();
+
+            // 防衛物の無いマップ (Horde でないマップ) は前と同じ形のまま書く
+            if (structures.Fortifications.Count > 0)
+            {
+                writer.BeginArray(FortificationsItem);
+                foreach (var fortification in structures.Fortifications)
+                {
+                    writer.BeginElement();
+                    writer.Int(StructureItem, fortification.Structure);
+                    writer.Vector3(PositionItem, fortification.Position);
+                    writer.Bool(StartsBuiltItem, fortification.StartsBuilt);
+                    writer.String(NameKeyItem, fortification.NameKey);
+                    writer.EndObject();
+                }
+
+                writer.EndArray();
+            }
+
             return writer.Finish();
         }
+
+        private static string Text(int value) => value.ToString(CultureInfo.InvariantCulture);
     }
 }

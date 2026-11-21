@@ -94,7 +94,7 @@ namespace Shooter.Server.Tests
         }
 
         [Test]
-        public void StartingLogsTheTuningAndWhatTheServerDoesNotApplyYet()
+        public void StartingLogsTheTuningAndTheInfectedBody()
         {
             var settings = new NetMatchSettings(infected: new InfectedSpec(2, 5f, 200f, 175, 1.25f, 4f, 2, 6, "claws"));
             var rules = new InfectedRules(settings, _host);
@@ -105,7 +105,25 @@ namespace Shooter.Server.Tests
 
             Assert.That(_log.ToString(), Is.EqualTo(
                 "[Infected] net initialInfected=2 startDelay=5 roundSeconds=200 respawn=4 scorePerInfection=2 scorePerSurvivedRound=6" + Environment.NewLine
-                + "[Infected] not applied online yet infectedMaxHealth=175 infectedSpeedMultiplier=1.25 infectedWeaponId=claws" + Environment.NewLine));
+                + "[Infected] body maxHealth=175 speedMultiplier=1.25 weapon=claws" + Environment.NewLine));
+        }
+
+        [Test]
+        public void AnEmptyWeaponIdIsLoggedAsKeepingTheLoadout()
+        {
+            var rules = new InfectedRules(NetMatchSettings.Default, _host);
+
+            rules.Start();
+
+            Assert.That(_log.ToString(), Does.Contain("[Infected] body maxHealth=150 speedMultiplier=1.15 weapon=loadout"));
+        }
+
+        [Test]
+        public void NoOneIsInfectedBeforeJoiningTheObjective()
+        {
+            var rules = new InfectedRules(NetMatchSettings.Default, _host);
+
+            Assert.That(rules.IsInfected(1), Is.False);
         }
 
         [Test]

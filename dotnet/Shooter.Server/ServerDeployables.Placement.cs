@@ -42,10 +42,9 @@ namespace Shooter.Server
 
         // 床に立てる物の置き場所。持ち主の体から置く地点まで壁が無いかも見る
         private ServerDeployRefusal Stand(
-            ServerBody body, DeploySpec spec, Vector3 position, float facing, out Vector3 point, out Vector3 normal, out int surfaceId)
+            ServerBody body, DeploySpec spec, Vector3 position, float facing, out Vector3 point, out Vector3 normal)
         {
             normal = Vector3.UnitY;
-            surfaceId = 0;
             var verdict = Survey(spec, position, facing, out point);
             if (verdict != DeployVerdict.Ok)
             {

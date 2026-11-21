@@ -250,6 +250,37 @@ namespace Shooter.Server
             return _cars[vehicle].Map;
         }
 
+        public string NameOf(int vehicle)
+        {
+            return _cars[vehicle].Name;
+        }
+
+        // 置いた物を貼る先を探す口。撃った弾の Raycast と違い巻き戻さないのは、貼った後は今の車体に付いて動くため。
+        // 乗っている乗り物を飛ばすのは撃った弾と同じく、体の中心が車体の箱の中にあり、座席から自分の車体に貼らせないため
+        public bool RaycastPresent(
+            Vector3 origin, Vector3 unit, float maxDistance, int riderId, out int vehicle, out float distance, out Vector3 normal)
+        {
+            vehicle = -1;
+            distance = maxDistance;
+            normal = default;
+            var own = _riders.TryGetValue(riderId, out var riding) ? riding.Car.Index : -1;
+            foreach (var car in _cars)
+            {
+                if (car.Index == own
+                    || !car.Map.RaycastHull(car.Position, car.Rotation, origin, unit, distance, out var hit, out var hitNormal, out _)
+                    || hit > distance)
+                {
+                    continue;
+                }
+
+                vehicle = car.Index;
+                distance = hit;
+                normal = hitNormal;
+            }
+
+            return vehicle >= 0;
+        }
+
         public int OccupantOf(int vehicle, int seat)
         {
             return _cars[vehicle].Occupants[seat];

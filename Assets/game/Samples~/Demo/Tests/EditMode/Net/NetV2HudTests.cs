@@ -213,6 +213,64 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void GuardianPublishesTheLeadersAsTheModeStatusAndTheKillScoresOnTop()
+        {
+            var snapshot = Snapshot(MatchObjective.Guardian);
+            snapshot.Tick = 10;
+            snapshot.Match.AlphaScore = 2;
+            snapshot.Match.BravoScore = 4;
+            snapshot.Match.RemainingSeconds = 90;
+            AddLeader(snapshot, Team.Alpha, _otherId, false);
+            AddLeader(snapshot, Team.Bravo, _localId, false);
+
+            _hud.Apply(snapshot);
+
+            var status = GameSignals.ModeStatus.Value;
+            Assert.That(status, Is.Not.Null);
+            Assert.That(status.Detail, Is.InstanceOf<GuardianStatus>(), "the same detail type as offline, so the Guardian formatter reads it");
+            var guardian = (GuardianStatus)status.Detail;
+            Assert.That(guardian.Leaders.GetLeader(Side.Alpha), Is.EqualTo(_otherId));
+            Assert.That(guardian.Leaders.GetLeader(Side.Bravo), Is.EqualTo(_localId));
+            Assert.That(guardian.LocalPlayerId, Is.EqualTo((int?)_localId));
+            Assert.That(status.OwnSide, Is.EqualTo((Side?)Side.Bravo));
+            Assert.That(_hud.Model.FirstScore, Is.EqualTo(4), "Guardian sends the kill score in the match score, not in the points");
+            Assert.That(_hud.Model.SecondScore, Is.EqualTo(2));
+
+            snapshot.Tick++;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value, Is.SameAs(status), "an unchanged match is not published again");
+
+            snapshot.Tick++;
+            snapshot.ObjectiveItems[0].State = ObjectiveItemState.Dropped;
+            _hud.Apply(snapshot);
+            var fallen = GameSignals.ModeStatus.Value;
+            Assert.That(fallen, Is.Not.SameAs(status));
+            Assert.That(((GuardianStatus)fallen.Detail).Leaders.HasLeaderFallen(Side.Alpha), Is.True);
+
+            snapshot.Tick++;
+            snapshot.Match.Objective = MatchObjective.None;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null, "a match without a mode takes the status back");
+        }
+
+        [Test]
+        public void ClearSignalsTakesBackTheGuardianStatusAndAcceptsTheNextConnectionsTicks()
+        {
+            var snapshot = Snapshot(MatchObjective.Guardian);
+            snapshot.Tick = 50;
+            AddLeader(snapshot, Team.Alpha, _otherId, false);
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value, Is.Not.Null);
+
+            _hud.ClearSignals();
+            Assert.That(GameSignals.ModeStatus.Value, Is.Null);
+
+            snapshot.Tick = 1;
+            _hud.Apply(snapshot);
+            Assert.That(GameSignals.ModeStatus.Value?.Detail, Is.InstanceOf<GuardianStatus>(), "an earlier tick after clearing is not taken as a late one");
+        }
+
+        [Test]
         public void HardpointPublishesTheMirroredHillAsTheModeStatusUntilTheModeEnds()
         {
             var snapshot = Snapshot(MatchObjective.Hardpoint);
@@ -778,6 +836,20 @@ namespace Shooter.Net.Tests
             var cart = new GameObject("PayloadCart").AddComponent<PayloadCart>();
             _created.Add(cart.gameObject);
             cart.SetRoute(points, checkpointPoints);
+        }
+
+        private static void AddLeader(SnapshotMessage snapshot, Team team, int leader, bool fallen)
+        {
+            ref var item = ref snapshot.ObjectiveItems.Add();
+            item.ItemId = Side.FromTeam(team).Id;
+            item.Present = ObjectiveItemFields.All;
+            item.Kind = ObjectiveItemKind.Leader;
+            item.Team = team;
+            item.HasOwner = true;
+            item.OwnerId = leader;
+            item.State = fallen ? ObjectiveItemState.Dropped : ObjectiveItemState.Carried;
+            item.HasCarrier = !fallen;
+            item.CarrierId = fallen ? 0 : leader;
         }
 
         private static void AddPoint(SnapshotMessage snapshot, int index, Team? owner, int percent, bool contested)

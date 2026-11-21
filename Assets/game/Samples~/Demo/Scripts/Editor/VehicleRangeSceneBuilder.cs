@@ -45,6 +45,7 @@ namespace Shooter.Editor
         public const string WaterSurfaceName = "WaterSurface";
         public const string HelicopterName = VehicleFixtureBuilder.HelicopterName;
         public const string BoatName = VehicleFixtureBuilder.BoatName;
+        public const string HorseName = VehicleFixtureBuilder.HorseName;
         public const string BotCarName = "BotCar";
         public const string BotCarVehicleId = "bot-car";
         public const string BotCarRouteName = "BotCarRoute";
@@ -70,6 +71,10 @@ namespace Shooter.Editor
         // 水場の南の端から北へ進ませ、smoke が 10m ほど進めても水の中に収まる所。
         public static readonly Vector3 BoatGround = new Vector3(45f, 0f, -58f);
         public static readonly Quaternion BoatRotation = Quaternion.LookRotation(Vector3.forward, Vector3.up);
+
+        // 柱の列の北で、タレットと敵の間の空いた所。東を向けて置けば、床の東の端まで柱にも乗り物にも当たらずに駆けられる。
+        public static readonly Vector3 HorseOrigin = new Vector3(5f, 0f, 32f);
+        public static readonly Quaternion HorseRotation = Quaternion.LookRotation(Vector3.right, Vector3.up);
 
         // 滑走路の西で、Bot の車の道から離れた北西の角。西へ進ませれば smoke の 10m で床の外へ出ない。
         public static readonly Vector3 HelicopterOrigin = new Vector3(-50f, 0f, 58f);
@@ -194,6 +199,7 @@ namespace Shooter.Editor
             var aircraftEngine = AircraftFixtureBuilder.BuildEngineSound(AircraftFixtureBuilder.EngineSoundPath);
             var helicopter = VehicleFixtureBuilder.LoadOrBuildHelicopterDefinition(VehicleFixtureBuilder.HelicopterDefinitionPath);
             var boat = VehicleFixtureBuilder.LoadOrBuildBoatDefinition(VehicleFixtureBuilder.BoatDefinitionPath);
+            var horse = VehicleFixtureBuilder.LoadOrBuildHorseDefinition(VehicleFixtureBuilder.HorseDefinitionPath);
             var playerWeapons = TpsRangeSceneBuilder.LoadPlayerWeapons();
             var rangeWeapons = WeaponAssetBuilder.LoadRangeWeapons().Weapons;
             var gunWeapon = MountedGunRangeFixture.PickGunWeapon(rangeWeapons);
@@ -212,7 +218,7 @@ namespace Shooter.Editor
             SceneBuildHelpers.SaveNavMeshData(surface, navMeshDataPath);
             SceneBuildHelpers.RequireOnNavMesh(new[] { EnemyGround }, NavMeshCheckRadius, "enemy");
             CreateSurroundings(scene);
-            CreateActors(scene, playerWeapons, gunWeapon, rules, aircraft, helicopter, boat, lockOnWeapon, aircraftEngine);
+            CreateActors(scene, playerWeapons, gunWeapon, rules, aircraft, helicopter, boat, horse, lockOnWeapon, aircraftEngine);
 
             if (!EditorSceneManager.SaveScene(scene, scenePath))
             {
@@ -361,6 +367,7 @@ namespace Shooter.Editor
             AircraftDefinition aircraft,
             HelicopterDefinition helicopter,
             BoatDefinition boat,
+            HorseDefinition horse,
             WeaponDefinition lockOnWeapon,
             AudioClip aircraftEngine = null)
         {
@@ -391,6 +398,11 @@ namespace Shooter.Editor
                 throw new ArgumentNullException(nameof(boat));
             }
 
+            if (horse == null)
+            {
+                throw new ArgumentNullException(nameof(horse));
+            }
+
             if (lockOnWeapon == null)
             {
                 throw new ArgumentNullException(nameof(lockOnWeapon));
@@ -401,6 +413,7 @@ namespace Shooter.Editor
             AircraftFixtureBuilder.Validate(aircraft);
             helicopter.ToSpec();
             var hull = boat.ToSpec();
+            horse.ToSpec();
             if (lockOnWeapon.ToSpec().Round.Homing == null)
             {
                 throw new ArgumentException($"weapon '{lockOnWeapon.Id}' has no homing round, so the turret could never lock on", nameof(lockOnWeapon));
@@ -428,6 +441,7 @@ namespace Shooter.Editor
                 created.Add(VehicleFixtureBuilder.CreateHelicopter(
                     scene, null, HelicopterName, HelicopterOrigin, HelicopterRotation, helicopter).gameObject);
                 created.Add(VehicleFixtureBuilder.CreateBoat(scene, null, BoatName, BoatOrigin(hull), BoatRotation, boat).gameObject);
+                created.Add(VehicleFixtureBuilder.CreateHorse(scene, null, HorseName, HorseOrigin, HorseRotation, horse).gameObject);
                 CreateBotCar(scene, created);
                 CreateBotAircraft(scene, aircraft, aircraftEngine, created);
                 CreateLockOnTurret(scene, lockOnWeapon, created);

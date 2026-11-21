@@ -29,6 +29,7 @@ namespace Shooter.Tests.EditMode
         private AircraftDefinition _aircraft;
         private HelicopterDefinition _helicopter;
         private BoatDefinition _boat;
+        private HorseDefinition _horse;
         private AudioClip _engine;
 
         [SetUp]
@@ -73,6 +74,11 @@ namespace Shooter.Tests.EditMode
             _boat.name = "Boat";
             _assets.Add(_boat);
             VehicleFixtureBuilder.ConfigureBoat(_boat);
+            _horse = ScriptableObject.CreateInstance<HorseDefinition>();
+            _horse.name = "Horse";
+            _assets.Add(_horse);
+            VehicleFixtureBuilder.ConfigureHorse(_horse);
+            _horse.Mass = 420f;
             _engine = AudioClip.Create("Engine", 4410, 1, 44100, false);
             _assets.Add(_engine);
         }
@@ -301,13 +307,16 @@ namespace Shooter.Tests.EditMode
         public void ActorsNeedWeaponsRulesAndEveryVehicleAsset()
         {
             var rifle = new[] { _rifle };
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, null, _heatGun, _rules, _aircraft, _helicopter, _boat, _guided));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, null, _rules, _aircraft, _helicopter, _boat, _guided));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, null, _aircraft, _helicopter, _boat, _guided));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, null, _helicopter, _boat, _guided));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, null, _boat, _guided));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, _helicopter, null, _guided));
-            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, _helicopter, _boat, null));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, null, _heatGun, _rules, _aircraft, _helicopter, _boat, _horse, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, null, _rules, _aircraft, _helicopter, _boat, _horse, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, null, _aircraft, _helicopter, _boat, _horse, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, null, _helicopter, _boat, _horse, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, null, _boat, _horse, _guided));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, _helicopter, null, _horse, _guided));
+            var horseError = Assert.Throws<ArgumentNullException>(
+                () => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, _helicopter, _boat, null, _guided));
+            Assert.That(horseError.ParamName, Is.EqualTo("horse"));
+            Assert.Throws<ArgumentNullException>(() => VehicleRangeSceneBuilder.CreateActors(_scene, rifle, _heatGun, _rules, _aircraft, _helicopter, _boat, _horse, null));
             Assert.That(_scene.rootCount, Is.Zero, "nothing is placed when an argument is missing");
         }
 
@@ -338,10 +347,21 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AnInvalidHorseAssetPlacesNothingAndNamesTheAsset()
+        {
+            _horse.WalkSpeed = _horse.TrotSpeed + 1f;
+
+            var error = Assert.Throws<ArgumentException>(() => CreateActors());
+
+            Assert.That(error.Message, Does.Contain("'Horse'"));
+            Assert.That(_scene.rootCount, Is.Zero);
+        }
+
+        [Test]
         public void AWeaponWithoutHomingCannotArmTheTurret()
         {
             var error = Assert.Throws<ArgumentException>(
-                () => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft, _helicopter, _boat, _rifle));
+                () => VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft, _helicopter, _boat, _horse, _rifle));
 
             Assert.That(error.ParamName, Is.EqualTo("lockOnWeapon"));
             Assert.That(_scene.rootCount, Is.Zero);
@@ -493,6 +513,173 @@ namespace Shooter.Tests.EditMode
 
             Assert.That(boat.FindBoardableSeat(boat.Seats[0].EnterPoints[0].position, out var distance), Is.EqualTo(0));
             Assert.That(distance, Is.LessThanOrEqualTo(VehicleSpec.DefaultEnterRange));
+        }
+
+        [Test]
+        public void TheHorseRunsOnItsAssetWithARiderAndAPassengerWhoShootsBesideAndBehind()
+        {
+            CreateActors();
+
+            var horse = Find(VehicleRangeSceneBuilder.HorseName).GetComponent<Vehicle>();
+            Assert.That(horse, Is.Not.Null);
+            Assert.That(horse.VehicleId, Is.EqualTo("horse"));
+            Assert.That(VehicleFixtureBuilder.HorseVehicleId, Is.EqualTo("horse"));
+            Assert.That(VehicleFixtureBuilder.HorseDefinitionPath, Does.EndWith("Vehicles/Horse.asset"));
+            Assert.That(horse.transform.position, Is.EqualTo(VehicleRangeSceneBuilder.HorseOrigin));
+            Assert.That(Vector3.Angle(horse.transform.forward, Vector3.right), Is.LessThan(0.1f));
+
+            Assert.That(horse.Seats.Count, Is.EqualTo(2));
+            Assert.That(horse.Seats.Select(s => s.Role), Is.EqualTo(new[] { VehicleSeatRole.Driver, VehicleSeatRole.Passenger }));
+            Assert.That(horse.Seats.Select(s => s.name), Is.EqualTo(new[] { "Seat_Rider", "Seat_Passenger" }));
+            Assert.That(horse.FiringOf(horse.Seats[0]), Is.EqualTo(VehicleSeatFiring.None), "the rider holds the reins");
+            Assert.That(horse.FiringOf(horse.Seats[1]), Is.EqualTo(VehicleSeatFiring.OwnWeapon));
+            var passenger = horse.Spec.Seats[1];
+            Assert.That(passenger.OwnWeaponArcDegrees, Is.EqualTo(300f));
+            Assert.That(passenger.AllowsOwnWeaponAt(90f), Is.True, "beside the horse");
+            Assert.That(passenger.AllowsOwnWeaponAt(180f), Is.True, "behind the horse");
+            Assert.That(passenger.AllowsOwnWeaponAt(0f), Is.False, "not through the rider's back");
+            Assert.That(horse.Seats[1].transform.localPosition.z, Is.LessThan(horse.Seats[0].transform.localPosition.z), "the passenger sits behind the rider");
+
+            var motor = horse.GetComponent<SimpleHorseMotor>();
+            Assert.That(motor, Is.Not.Null);
+            Assert.That(motor.Definition, Is.SameAs(_horse));
+            Assert.That(motor.Body.mass, Is.EqualTo(420f), "the mass comes from the asset, not the default");
+            Assert.That(motor.Body.constraints & RigidbodyConstraints.FreezeRotationX, Is.EqualTo(RigidbodyConstraints.FreezeRotationX));
+            Assert.That(motor.Body.constraints & RigidbodyConstraints.FreezeRotationZ, Is.EqualTo(RigidbodyConstraints.FreezeRotationZ));
+            var scheme = horse.GetComponent<HorseControlScheme>();
+            Assert.That(scheme, Is.Not.Null);
+            Assert.That(VehicleControlSchemes.For(horse.gameObject), Is.SameAs(scheme));
+            var gait = horse.GetComponent<HorseGaitAnimator>();
+            Assert.That(gait, Is.Not.Null);
+            Assert.That(gait.Animator, Is.Null, "the box-and-cylinder shape has nothing to animate");
+            Assert.That(horse.GetComponent<VehicleMotorLink>(), Is.Not.Null);
+
+            Assert.That(horse.FindBoardableSeat(horse.Seats[0].EnterPoints[0].position, out var riderDistance), Is.EqualTo(0));
+            Assert.That(riderDistance, Is.LessThanOrEqualTo(VehicleSpec.DefaultEnterRange));
+            Assert.That(horse.FindBoardableSeat(horse.Seats[1].EnterPoints[0].position, out var passengerDistance), Is.EqualTo(1));
+            Assert.That(passengerDistance, Is.LessThanOrEqualTo(VehicleSpec.DefaultEnterRange));
+        }
+
+        [Test]
+        public void WithoutAModelTheHorseIsBuiltFromBoxesAndCylindersStandingOnItsHooves()
+        {
+            CreateActors();
+            Physics.SyncTransforms();
+
+            var horse = Find(VehicleRangeSceneBuilder.HorseName).transform;
+            Assert.That(horse.Find(VehicleFixtureBuilder.HorseModelName), Is.Null);
+            var shape = horse.Find(VehicleFixtureBuilder.HorseShapeName);
+            Assert.That(shape, Is.Not.Null);
+            foreach (var part in new[] { "Torso", "Neck", "Head", "Leg_0", "Leg_1", "Leg_2", "Leg_3" })
+            {
+                Assert.That(shape.Find(part), Is.Not.Null, part);
+                Assert.That(shape.Find(part).GetComponent<MeshRenderer>(), Is.Not.Null, part);
+            }
+
+            Assert.That(shape.GetComponentsInChildren<Collider>(), Is.Empty, "the shape is only a mark");
+            Assert.That(shape.Find("Leg_0").GetComponent<MeshFilter>().sharedMesh.name, Does.Contain("Cylinder"));
+
+            var torso = shape.Find("Torso").GetComponent<Renderer>().bounds;
+            var leg = shape.Find("Leg_0").GetComponent<Renderer>().bounds;
+            var head = shape.Find("Head").GetComponent<Renderer>().bounds;
+            Assert.That(leg.min.y, Is.EqualTo(VehicleRangeSceneBuilder.HorseOrigin.y).Within(Epsilon), "the hooves touch the ground");
+            Assert.That(leg.max.y, Is.EqualTo(torso.min.y).Within(Epsilon), "the legs carry the torso");
+            Assert.That(head.min.y, Is.GreaterThan(torso.max.y), "the head is held above the back");
+            Assert.That(head.center.x, Is.GreaterThan(torso.max.x - 0.5f), "the head is ahead of the torso, facing east");
+
+            var colliders = horse.GetComponentsInChildren<Collider>();
+            Assert.That(colliders.Length, Is.EqualTo(1));
+            Assert.That(colliders[0].transform, Is.SameAs(horse));
+            Assert.That(colliders[0].bounds.min.y, Is.EqualTo(VehicleRangeSceneBuilder.HorseOrigin.y).Within(Epsilon));
+            Assert.That(colliders[0].bounds.max.y, Is.EqualTo(1.6f).Within(Epsilon), "the body box reaches the back");
+        }
+
+        [Test]
+        public void TheHorseStandsOnTheFloorClearOfEveryOtherVehicleWithRoomToGallopEast()
+        {
+            VehicleRangeSceneBuilder.CreateLevel(_scene);
+            CreateActors();
+            Physics.SyncTransforms();
+
+            var horse = Find(VehicleRangeSceneBuilder.HorseName).GetComponent<Vehicle>();
+            var motor = horse.GetComponent<SimpleHorseMotor>();
+            motor.Step(0f);
+            Assert.That(motor.IsGrounded, Is.True, "the hooves are on the floor");
+
+            var body = horse.GetComponent<BoxCollider>().bounds;
+            foreach (var hit in Physics.OverlapBox(body.center + (Vector3.up * 0.05f), body.extents + new Vector3(1f, 0f, 1f), Quaternion.identity))
+            {
+                Assert.That(hit.transform.IsChildOf(horse.transform), Is.True, $"'{hit.name}' crowds the horse");
+            }
+
+            var others = _scene.GetRootGameObjects()
+                .SelectMany(r => r.GetComponentsInChildren<Vehicle>())
+                .Where(v => v != horse)
+                .ToList();
+            Assert.That(others, Is.Not.Empty);
+            foreach (var other in others)
+            {
+                Assert.That(
+                    Vector3.Distance(other.transform.position, horse.transform.position),
+                    Is.GreaterThan(VehicleSpec.DefaultEnterRange * 4f),
+                    $"Interact beside the horse never boards '{other.name}'");
+                foreach (var seat in horse.Seats)
+                {
+                    Assert.That(other.FindBoardableSeat(seat.EnterPoints[0].position, out _), Is.LessThan(0), $"'{other.name}' from {seat.name}");
+                }
+            }
+
+            // 床の東の端まで、柱にもコースにも乗り物にも当たらずに駆けられる。
+            var run = VehicleRangeSceneBuilder.FloorHalfExtent - body.max.x;
+            var hits = Physics.BoxCastAll(
+                body.center + (Vector3.up * 0.1f), body.extents * 0.9f, Vector3.right, Quaternion.identity, run, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Ignore);
+            foreach (var hit in hits)
+            {
+                Assert.That(hit.transform.IsChildOf(horse.transform), Is.True, $"'{hit.collider.name}' stands in the horse's path");
+            }
+
+            Assert.That(
+                Vector3.Distance(VehicleRangeSceneBuilder.HorseOrigin, VehicleRangeSceneBuilder.EnemyGround),
+                Is.GreaterThan(VehicleRangeSceneBuilder.EnemySightRange),
+                "the enemy does not see the horse where it waits");
+            Assert.That(Mathf.Abs(VehicleRangeSceneBuilder.HorseOrigin.z), Is.LessThan(VehicleRangeSceneBuilder.FloorHalfExtent - 5f));
+        }
+
+        [Test]
+        public void AHorseModelReplacesTheShapeAndDrivesTheGaitAnimator()
+        {
+            var model = new GameObject("HorseArt");
+            SceneManager.MoveGameObjectToScene(model, _scene);
+            var rig = new GameObject("Rig");
+            rig.transform.SetParent(model.transform, false);
+            rig.AddComponent<Animator>();
+
+            var horse = VehicleFixtureBuilder.CreateHorse(_scene, null, "Mount", new Vector3(1f, 0f, 2f), Quaternion.identity, _horse, model);
+
+            var instance = horse.transform.Find(VehicleFixtureBuilder.HorseModelName);
+            Assert.That(instance, Is.Not.Null);
+            Assert.That(instance.localPosition, Is.EqualTo(Vector3.zero));
+            Assert.That(horse.transform.Find(VehicleFixtureBuilder.HorseShapeName), Is.Null, "a model leaves out the box-and-cylinder shape");
+            Assert.That(horse.GetComponent<HorseGaitAnimator>().Animator, Is.SameAs(instance.GetComponentInChildren<Animator>()));
+            Assert.That(model.transform.parent, Is.Null, "the source model is copied, not moved");
+            Assert.That(horse.Seats.Select(s => s.Role), Is.EqualTo(new[] { VehicleSeatRole.Driver, VehicleSeatRole.Passenger }));
+            Assert.That(horse.GetComponent<BoxCollider>().size, Is.EqualTo(VehicleFixtureBuilder.HorseBodyColliderSize), "the model does not change where the horse is hit");
+            Assert.That(horse.GetComponent<SimpleHorseMotor>().Definition, Is.SameAs(_horse));
+        }
+
+        [Test]
+        public void AHorseWithoutAnAssetRunsOnTheDefaultsAndBadArgumentsPlaceNothing()
+        {
+            var horse = VehicleFixtureBuilder.CreateHorse(_scene, null, "Plain", Vector3.zero, Quaternion.identity);
+            Assert.That(horse.GetComponent<SimpleHorseMotor>().Definition, Is.Null);
+            Assert.That(horse.GetComponent<SimpleHorseMotor>().Body.mass, Is.EqualTo(HorseSpec.DefaultMass));
+
+            var count = _scene.rootCount;
+            Assert.Throws<ArgumentException>(() => VehicleFixtureBuilder.CreateHorse(_scene, null, " ", Vector3.zero, Quaternion.identity));
+            Assert.Throws<ArgumentException>(() => VehicleFixtureBuilder.CreateHorse(default, null, "Plain", Vector3.zero, Quaternion.identity));
+            _horse.WalkSpeed = _horse.TrotSpeed + 1f;
+            Assert.Throws<ArgumentException>(() => VehicleFixtureBuilder.CreateHorse(_scene, null, "Plain", Vector3.zero, Quaternion.identity, _horse));
+            Assert.That(_scene.rootCount, Is.EqualTo(count));
         }
 
         [Test]
@@ -739,7 +926,7 @@ namespace Shooter.Tests.EditMode
 
         private GameBootstrap CreateActors(AudioClip engine = null)
         {
-            return VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft, _helicopter, _boat, _guided, engine);
+            return VehicleRangeSceneBuilder.CreateActors(_scene, new[] { _rifle }, _heatGun, _rules, _aircraft, _helicopter, _boat, _horse, _guided, engine);
         }
 
         private WeaponDefinition NewWeapon(string name, WeaponSpec spec)

@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 
 namespace Shooter.Editor
 {
-    // 停めておく乗り物のほかに、試走場 (VehicleRangeSceneBuilder) のヘリとボートと、その値のアセットもここで組む。
+    // 停めておく乗り物のほかに、試走場 (VehicleRangeSceneBuilder) のヘリとボートと馬と、その値のアセットもここで組む。
     public static class VehicleFixtureBuilder
     {
         public const string DefaultName = "ParkedVehicle";
@@ -91,9 +91,58 @@ namespace Shooter.Editor
         // 胴の後ろの端の下から撒くのは、撒いた直後のフレアが翼の当たりに重ならず、機体の見た目からも離れて見えるようにするため。
         public static readonly Vector3 AircraftFlareEjectLocal = new Vector3(0f, 0.6f, -4.2f);
 
+        public const string HorseName = "Horse";
+        public const string HorseVehicleId = "horse";
+        public const string HorseModelName = "Model";
+        public const string HorseShapeName = "Shape";
+        public const string HorseTorsoName = "Torso";
+        public const string HorseNeckName = "Neck";
+        public const string HorseHeadName = "Head";
+        public const string HorseLegNamePrefix = "Leg_";
+        public const string RiderSeatName = "Seat_Rider";
+
+        // 後ろの席は騎手の背に遮られる前だけを外し、横と後ろへ自分の武器を撃てるようにする。
+        public const float HorsePassengerArcDegrees = 300f;
+
+        // 原点を蹄の高さに置く (SimpleHorseMotor が原点の真下で接地を見るため)。脚の上端に胴の底を揃える。
+        public const float HorseLegLength = 0.9f;
+        public const float HorseLegThickness = 0.2f;
+        public static readonly Vector3 HorseTorsoSize = new Vector3(0.7f, 0.7f, 1.8f);
+        public static readonly Vector3 HorseTorsoCenter = new Vector3(0f, HorseLegLength + 0.35f, 0f);
+        public static readonly Vector3 HorseNeckSize = new Vector3(0.3f, 0.8f, 0.35f);
+        public static readonly Vector3 HorseNeckCenter = new Vector3(0f, 1.8f, 0.95f);
+        public const float HorseNeckTiltDegrees = 30f;
+        public static readonly Vector3 HorseHeadSize = new Vector3(0.28f, 0.3f, 0.6f);
+        public static readonly Vector3 HorseHeadCenter = new Vector3(0f, 2.15f, 1.35f);
+
+        public static readonly Vector3[] HorseLegFeet =
+        {
+            new Vector3(-0.22f, 0f, 0.7f),
+            new Vector3(0.22f, 0f, 0.7f),
+            new Vector3(-0.22f, 0f, -0.7f),
+            new Vector3(0.22f, 0f, -0.7f),
+        };
+
+        // 当たりは形の部品ごとでなく、蹄から背までの箱 1 つにする。モデルを差し替えても、地面に立つ高さと撃たれる大きさが変わらないようにするため。
+        public static readonly Vector3 HorseBodyColliderSize = new Vector3(HorseTorsoSize.x, HorseTorsoTop, HorseTorsoSize.z);
+        public static readonly Vector3 HorseBodyColliderCenter = new Vector3(0f, HorseTorsoTop / 2f, 0f);
+
+        // 座席は乗り手の足の位置なので、背より下の、胴の脇に足が垂れる高さに置く。
+        public static readonly Vector3 HorseRiderSeatLocal = new Vector3(0f, 1f, 0.25f);
+        public static readonly Vector3 HorsePassengerSeatLocal = new Vector3(0f, 1f, -0.5f);
+        public static readonly Vector3 HorseRiderEnterLocal = new Vector3(-1.2f, 0f, 0.25f);
+        public static readonly Vector3 HorsePassengerEnterLocal = new Vector3(1.2f, 0f, -0.5f);
+        public static readonly Vector3 HorseLeftExitLocal = new Vector3(-1.6f, 0f, 0f);
+        public static readonly Vector3 HorseRightExitLocal = new Vector3(1.6f, 0f, 0f);
+        public static readonly Vector3 HorseRearExitLocal = new Vector3(0f, 0f, -2.2f);
+
+        public static float HorseTorsoTop => HorseTorsoCenter.y + (HorseTorsoSize.y / 2f);
+
         public static string HelicopterDefinitionPath => ShooterKitRoot.OutputPath("Vehicles/" + HelicopterName + ".asset");
 
         public static string BoatDefinitionPath => ShooterKitRoot.OutputPath("Vehicles/" + BoatName + ".asset");
+
+        public static string HorseDefinitionPath => ShooterKitRoot.OutputPath("Vehicles/" + HorseName + ".asset");
 
         public static VehicleSpec Spec(string gunnerWeaponId = null)
         {
@@ -217,6 +266,18 @@ namespace Shooter.Editor
                 chaseHeight: BoatChaseHeight);
         }
 
+        public static VehicleSpec HorseVehicleSpec()
+        {
+            return new VehicleSpec(
+                HorseVehicleId,
+                VehicleSpec.DefaultMaxHealth,
+                new[]
+                {
+                    new VehicleSeatSpec(VehicleSeatRole.Driver, VehicleSeatPose.Seated, VehicleCameraView.Chase),
+                    new VehicleSeatSpec(VehicleSeatRole.Passenger, VehicleSeatPose.Seated, VehicleCameraView.Chase, HorsePassengerArcDegrees),
+                });
+        }
+
         // VehicleSpec は値を変えられないので、Id や脱出の値だけを差し替えた写しを作る。同じ組み方の乗り物を、smoke が Id で見分けられるようにするため。
         public static VehicleSpec Respec(VehicleSpec spec, string id = null, BailOutSpec bailOut = null)
         {
@@ -268,6 +329,32 @@ namespace Shooter.Editor
             var built = SceneBuildHelpers.CreateOrUpdateAsset<BoatDefinition>(path, ConfigureBoat);
             Debug.Log($"{LogTag} saved '{path}'");
             return built;
+        }
+
+        public static HorseDefinition LoadOrBuildHorseDefinition(string path)
+        {
+            path = SceneBuildHelpers.ValidateAssetPath(path);
+            var existing = AssetDatabase.LoadAssetAtPath<HorseDefinition>(path);
+            if (existing != null)
+            {
+                existing.ToSpec();
+                return existing;
+            }
+
+            var built = SceneBuildHelpers.CreateOrUpdateAsset<HorseDefinition>(path, ConfigureHorse);
+            Debug.Log($"{LogTag} saved '{path}'");
+            return built;
+        }
+
+        public static void ConfigureHorse(HorseDefinition definition)
+        {
+            if (definition == null)
+            {
+                throw new ArgumentNullException(nameof(definition));
+            }
+
+            definition.CopyFrom(HorseSpec.Default);
+            definition.ToSpec();
         }
 
         public static void ConfigureHelicopter(HelicopterDefinition definition)
@@ -444,6 +531,68 @@ namespace Shooter.Editor
             }
         }
 
+        // model は見た目だけを差し替える。当たりと座席は model の有無で変えず、どの見た目でも同じ所に乗り降りできるようにする。
+        public static Vehicle CreateHorse(
+            Scene scene,
+            Transform parent,
+            string name,
+            Vector3 position,
+            Quaternion rotation,
+            HorseDefinition definition = null,
+            GameObject model = null)
+        {
+            RequireScene(scene, name);
+            var gait = definition != null ? definition.ToSpec() : HorseSpec.Default;
+
+            var root = new GameObject(name);
+            try
+            {
+                Place(scene, parent, root, position, rotation);
+
+                var body = root.AddComponent<Rigidbody>();
+                body.mass = gait.Mass;
+                // SimpleHorseMotor も Awake で掛けるが、シーンに残る値でも転ばないよう、組むときにも掛けておく。
+                body.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+                body.interpolation = RigidbodyInterpolation.Interpolate;
+                body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+
+                var collider = root.AddComponent<BoxCollider>();
+                collider.center = HorseBodyColliderCenter;
+                collider.size = HorseBodyColliderSize;
+
+                var animator = model != null ? CreateHorseModel(root.transform, model) : CreateHorseShape(root.transform);
+
+                var leftExit = CreatePoint(root.transform, "Exit_Left", HorseLeftExitLocal);
+                var rightExit = CreatePoint(root.transform, "Exit_Right", HorseRightExitLocal);
+                var rearExit = CreatePoint(root.transform, "Exit_Rear", HorseRearExitLocal);
+
+                // 子の並び順が座席の番号になるので、騎手・後ろの席の順に作る。
+                var rider = CreateSeat(root.transform, RiderSeatName, HorseRiderSeatLocal);
+                rider.SetEnterPoints(CreatePoint(root.transform, "Enter_Rider", HorseRiderEnterLocal));
+                rider.SetExitPoints(leftExit, rightExit);
+
+                var passenger = CreateSeat(root.transform, PassengerSeatName, HorsePassengerSeatLocal);
+                passenger.SetEnterPoints(CreatePoint(root.transform, "Enter_Passenger", HorsePassengerEnterLocal));
+                passenger.SetExitPoints(rightExit, leftExit);
+
+                var vehicle = root.AddComponent<Vehicle>();
+                vehicle.SetExitPoints(rearExit);
+                vehicle.RefreshSeats();
+                vehicle.Configure(HorseVehicleSpec());
+
+                root.AddComponent<SimpleHorseMotor>().Definition = definition;
+                root.AddComponent<HorseControlScheme>();
+                root.AddComponent<HorseGaitAnimator>().Animator = animator;
+                root.AddComponent<VehicleMotorLink>();
+                return vehicle;
+            }
+            catch
+            {
+                UnityEngine.Object.DestroyImmediate(root);
+                throw;
+            }
+        }
+
         // 飛行機にフレアと空中の脱出を持たせる。値は乗り物の部品に入れて残すので、シーンを開き直しても同じ値で動く。
         public static VehicleCountermeasures EquipAircraft(Vehicle aircraft, CountermeasureSpec countermeasures = null, BailOutSpec bailOut = null)
         {
@@ -498,6 +647,40 @@ namespace Shooter.Editor
             barrel.transform.localPosition = new Vector3(0f, 0f, MuzzleLocal.z / 2f);
             barrel.transform.localScale = new Vector3(0.12f, 0.12f, MuzzleLocal.z);
             return gun;
+        }
+
+        // Prefab のアセットは繋がりを残して置き、Prefab を直せばシーンの馬にも映るようにする。
+        private static Animator CreateHorseModel(Transform parent, GameObject model)
+        {
+            var instance = PrefabUtility.IsPartOfPrefabAsset(model)
+                ? (GameObject)PrefabUtility.InstantiatePrefab(model, parent)
+                : UnityEngine.Object.Instantiate(model, parent, false);
+            instance.name = HorseModelName;
+            instance.transform.localPosition = Vector3.zero;
+            instance.transform.localRotation = Quaternion.identity;
+            return instance.GetComponentInChildren<Animator>();
+        }
+
+        // 形の部品は試すための目印なので、当たりは外して胴の箱 (CreateHorse の BoxCollider) に任せる。
+        private static Animator CreateHorseShape(Transform parent)
+        {
+            var shape = CreatePoint(parent, HorseShapeName, Vector3.zero);
+            CreateBox(shape, HorseTorsoName, HorseTorsoCenter, HorseTorsoSize, false);
+            CreateBox(shape, HorseNeckName, HorseNeckCenter, HorseNeckSize, false).transform.localRotation =
+                Quaternion.Euler(HorseNeckTiltDegrees, 0f, 0f);
+            CreateBox(shape, HorseHeadName, HorseHeadCenter, HorseHeadSize, false);
+
+            for (var i = 0; i < HorseLegFeet.Length; i++)
+            {
+                var leg = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+                leg.name = HorseLegNamePrefix + i;
+                UnityEngine.Object.DestroyImmediate(leg.GetComponent<Collider>());
+                leg.transform.SetParent(shape, false);
+                leg.transform.localPosition = HorseLegFeet[i] + new Vector3(0f, HorseLegLength / 2f, 0f);
+                leg.transform.localScale = new Vector3(HorseLegThickness, HorseLegLength / 2f, HorseLegThickness);
+            }
+
+            return null;
         }
 
         private static void RequireScene(Scene scene, string name)

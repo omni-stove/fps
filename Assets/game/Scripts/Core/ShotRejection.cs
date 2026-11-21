@@ -43,5 +43,8 @@ namespace Shooter.Core
         SeatCannotFire,
 
         OutsideSeatArc,
+
+        // 盾の武器は弾を撃たない (オフラインの WeaponController.IsFireBlocked と同じ)。
+        ShieldWeapon,
     }
 }

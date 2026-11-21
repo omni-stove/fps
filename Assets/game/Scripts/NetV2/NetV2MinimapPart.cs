@@ -7,7 +7,8 @@ using Shooter.Runtime;
 
 namespace Shooter.NetV2
 {
-    // 敵はスナップショットに載っていても地図には載せない。載せるとオンラインに無い UAV と同じく敵が常に見えてしまう。
+    // 敵はスナップショットに載っていても地図には載せない。載せると敵が常に見えてしまい、UAV の間だけ見えるという差が無くなる。
+    // オンラインの UAV はサーバー (ServerStreaks) が使った人の陣営に敵を追う印 (PingPlaced) を送るので、地図には印として載る。
     public sealed class NetV2MinimapPart : INetV2ClientPart
     {
         private const float _degreesPerRadian = 180f / MathF.PI;

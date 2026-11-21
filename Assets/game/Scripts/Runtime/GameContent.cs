@@ -147,6 +147,9 @@ namespace Shooter.Runtime
         [SerializeField, Tooltip("味方・敵・目的の物などの色の組 (標準・色覚向け) の JSON。空なら Resources/Tuning/palettes")]
         private TextAsset _palettesTuning;
 
+        [SerializeField, Tooltip("保存しておけるロードアウトの組の数と名前の長さの JSON。空なら Resources/Tuning/loadout-presets")]
+        private TextAsset _loadoutPresetsTuning;
+
         [Header("武器・キャンペーン")]
         [SerializeField, Tooltip("使える武器の一覧")]
         private WeaponCatalogAsset _weaponCatalog;
@@ -527,6 +530,12 @@ namespace Shooter.Runtime
         {
             get => _palettesTuning;
             set => _palettesTuning = value;
+        }
+
+        public TextAsset LoadoutPresetsTuning
+        {
+            get => _loadoutPresetsTuning;
+            set => _loadoutPresetsTuning = value;
         }
 
         public WeaponCatalogAsset WeaponCatalog

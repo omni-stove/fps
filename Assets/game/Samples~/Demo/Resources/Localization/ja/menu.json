@@ -54,5 +54,18 @@
   "loadout.abilityPrevious": "<",
   "loadout.abilityNext": ">",
   "loadout.rejected": "選べません",
-  "loadout.rejectedWithReason": "選べません: {0}"
+  "loadout.rejectedWithReason": "選べません: {0}",
+  "loadout.presetTitle": "プリセット {0}/{1}",
+  "loadout.presetUnnamed": "ロードアウト {0}",
+  "loadout.presetPrevious": "<",
+  "loadout.presetNext": ">",
+  "loadout.presetNameLabel": "名前",
+  "loadout.presetRename": "名前を変更",
+  "loadout.presetSaveAsNew": "新しく保存",
+  "loadout.presetAdded": "{0} として保存しました",
+  "loadout.presetRenamed": "名前を {0} に変えました",
+  "loadout.presetSwitched": "{0} に切り替えました。次の出現から使います",
+  "loadout.presetFull": "プリセットは {0} 個まで保存できます",
+  "loadout.presetNameInvalid": "この名前は使えません ({0} 文字まで、改行なし)",
+  "loadout.presetSaveFailed": "プリセットを保存できませんでした"
 }

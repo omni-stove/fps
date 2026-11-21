@@ -23,6 +23,70 @@ namespace Shooter.Runtime
 
         public static string NextAbility => GameText.Get("loadout.abilityNext");
 
+        public static string PreviousPreset => GameText.Get("loadout.presetPrevious");
+
+        public static string NextPreset => GameText.Get("loadout.presetNext");
+
+        public static string PresetNameLabel => GameText.Get("loadout.presetNameLabel");
+
+        public static string RenamePreset => GameText.Get("loadout.presetRename");
+
+        public static string SaveAsNewPreset => GameText.Get("loadout.presetSaveAsNew");
+
+        public static string PresetSaveFailed => GameText.Get("loadout.presetSaveFailed");
+
+        // index は 0 から。画面には 1 から出す
+        public static string PresetTitle(int index, int count)
+        {
+            if (index < 0 || index >= count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), index, "index must be in [0, " + count + ")");
+            }
+
+            return GameText.Format("loadout.presetTitle", index + 1, count);
+        }
+
+        // プレイヤーが名前を付けていない組は、並びの番号で呼ぶ
+        public static string PresetName(LoadoutPreset preset, int index)
+        {
+            if (preset == null)
+            {
+                throw new ArgumentNullException(nameof(preset));
+            }
+
+            if (index < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(index), index, "index must not be negative");
+            }
+
+            return preset.HasName ? preset.Name : GameText.Format("loadout.presetUnnamed", index + 1);
+        }
+
+        public static string PresetAdded(string name)
+        {
+            return GameText.Format("loadout.presetAdded", name);
+        }
+
+        public static string PresetRenamed(string name)
+        {
+            return GameText.Format("loadout.presetRenamed", name);
+        }
+
+        public static string PresetSwitched(string name)
+        {
+            return GameText.Format("loadout.presetSwitched", name);
+        }
+
+        public static string PresetFull(int maxPresets)
+        {
+            return GameText.Format("loadout.presetFull", maxPresets);
+        }
+
+        public static string PresetNameInvalid(int maxNameLength)
+        {
+            return GameText.Format("loadout.presetNameInvalid", maxNameLength);
+        }
+
         public static string SlotTitle(int slot)
         {
             if (slot < 0)

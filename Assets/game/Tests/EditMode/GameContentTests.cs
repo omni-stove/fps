@@ -369,6 +369,7 @@ namespace Shooter.Tests.EditMode
                 (() => content.KeySharingTuning, v => content.KeySharingTuning = v),
                 (() => content.NameplatesTuning, v => content.NameplatesTuning = v),
                 (() => content.PalettesTuning, v => content.PalettesTuning = v),
+                (() => content.LoadoutPresetsTuning, v => content.LoadoutPresetsTuning = v),
             };
 
             foreach (var slot in slots)
@@ -453,6 +454,7 @@ namespace Shooter.Tests.EditMode
         [TestCase("_redeployTuning", "Resources/Tuning/redeploy")]
         [TestCase("_mutatorsTuning", "Resources/Tuning/mutators")]
         [TestCase("_playlistsTuning", "Resources/Tuning/playlists")]
+        [TestCase("_loadoutPresetsTuning", "Resources/Tuning/loadout-presets")]
         public void TheTuningFieldsNameTheirResourceFallback(string field, string resourcePath)
         {
             var info = typeof(GameContent).GetField(field, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
@@ -614,7 +616,8 @@ namespace Shooter.Tests.EditMode
             Assert.That(asked, Does.Contain("stash").And.Contain("extraction").And.Contain("replay"));
             Assert.That(asked, Does.Contain("payload").And.Contain("economy").And.Contain("supply-drops").And.Contain("mutators").And.Contain("playlists"));
             Assert.That(asked, Does.Contain("redeploy").And.Contain("key-sharing").And.Contain("nameplates").And.Contain("palettes"));
-            Assert.That(asked, Has.Count.EqualTo(38));
+            Assert.That(asked, Does.Contain("loadout-presets"));
+            Assert.That(asked, Has.Count.EqualTo(39));
         }
 
         [TestCase("Assets/MyGame/Tuning/minimap.json", "minimap", "Packages/com.example.kit/Resources/Tuning", true)]

@@ -272,6 +272,36 @@ namespace Shooter.NetV2
             }
         }
 
+        // 終わったスナップショットだけから勝った分隊を引く。立っている人数・残っている人数が単独で最も多い分隊で、並べば null
+        public static Side? LeadingSquad(SnapshotList<PlayerSnapshot> players)
+        {
+            if (players == null)
+            {
+                throw new ArgumentNullException(nameof(players));
+            }
+
+            int? leader = null;
+            var best = long.MinValue;
+            var tied = false;
+            for (var i = 0; i < players.Count; i++)
+            {
+                var squad = players[i].SquadId;
+                var count = FinalCount(players, squad);
+                if (count > best)
+                {
+                    best = count;
+                    leader = squad;
+                    tied = false;
+                }
+                else if (count == best && leader != squad)
+                {
+                    tied = true;
+                }
+            }
+
+            return leader.HasValue && !tied ? new Side(leader.Value) : (Side?)null;
+        }
+
         // オフラインの CaptureStandingAndPickLeader と同じく、立っている人数を上の桁、残っている人数を下の桁にする
         private static long FinalCount(SnapshotList<PlayerSnapshot> players, int squad)
         {

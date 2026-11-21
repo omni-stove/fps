@@ -5,6 +5,7 @@ using Shooter.Core;
 using Shooter.NetV2;
 using Shooter.Protocol;
 using Shooter.Runtime;
+using ExtractionOutcome = Shooter.Core.ExtractionOutcome;
 
 namespace Shooter.Net.Tests
 {
@@ -160,6 +161,36 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void GunGameWinsOnlyForTheSoleTopTierPlayerEvenOnTheWinningTeam()
+        {
+            var winner = GunGameSnapshot(ownTier: 6, otherTier: 3);
+            var loser = GunGameSnapshot(ownTier: 3, otherTier: 6);
+            var tied = GunGameSnapshot(ownTier: 4, otherTier: 4);
+
+            Assert.That(NetV2MatchResultPart.ResultOf(winner, _localId)?.Outcome, Is.EqualTo(MatchOutcome.Won));
+            Assert.That(NetV2MatchResultPart.ResultOf(loser, _localId)?.Outcome, Is.EqualTo(MatchOutcome.Lost));
+            Assert.That(NetV2MatchResultPart.ResultOf(tied, _localId)?.Outcome, Is.EqualTo(MatchOutcome.Draw));
+        }
+
+        [Test]
+        public void BattleRoyaleWinsForTheSquadThatIsLeftStanding()
+        {
+            Assert.That(NetV2MatchResultPart.ResultOf(BattleRoyaleSnapshot(ownHealth: 50, otherHealth: 0), _localId)?.Outcome, Is.EqualTo(MatchOutcome.Won));
+            Assert.That(NetV2MatchResultPart.ResultOf(BattleRoyaleSnapshot(ownHealth: 0, otherHealth: 50), _localId)?.Outcome, Is.EqualTo(MatchOutcome.Lost));
+        }
+
+        [Test]
+        public void ExtractionWinsOnlyWhenTheRaidEndedExtracted()
+        {
+            var snapshot = TeamSnapshot(GameModeState.Ended, null);
+            snapshot.Match.Objective = MatchObjective.Extraction;
+
+            Assert.That(NetV2MatchResultPart.ResultOf(snapshot, _localId, ExtractionOutcome.Extracted)?.Outcome, Is.EqualTo(MatchOutcome.Won));
+            Assert.That(NetV2MatchResultPart.ResultOf(snapshot, _localId, ExtractionOutcome.Died)?.Outcome, Is.EqualTo(MatchOutcome.Lost));
+            Assert.That(NetV2MatchResultPart.ResultOf(snapshot, _localId, ExtractionOutcome.TimedOut)?.Outcome, Is.EqualTo(MatchOutcome.Lost));
+        }
+
+        [Test]
         public void RefusesMissingInputs()
         {
             Assert.Throws<ArgumentNullException>(() => new NetV2MatchResultPart(null));
@@ -200,6 +231,42 @@ namespace Shooter.Net.Tests
             other.PlayerId = _otherId;
             other.Kills = otherKills;
             other.Deaths = 1;
+            return snapshot;
+        }
+
+        // 2 人とも Alpha で、勝った人のチームとして Alpha が届く
+        private static SnapshotMessage GunGameSnapshot(int ownTier, int otherTier)
+        {
+            var snapshot = new SnapshotMessage();
+            snapshot.Match.State = GameModeState.Ended;
+            snapshot.Match.Objective = MatchObjective.GunGame;
+            snapshot.Match.HasWinner = true;
+            snapshot.Match.Winner = Team.Alpha;
+            ref var own = ref snapshot.Players.Add();
+            own.PlayerId = _localId;
+            own.Team = Team.Alpha;
+            own.GunGameTier = ownTier;
+            ref var other = ref snapshot.Players.Add();
+            other.PlayerId = _otherId;
+            other.Team = Team.Alpha;
+            other.GunGameTier = otherTier;
+            return snapshot;
+        }
+
+        // サーバーは勝者のチームを送らない。自分は分隊 1、相手は分隊 2
+        private static SnapshotMessage BattleRoyaleSnapshot(int ownHealth, int otherHealth)
+        {
+            var snapshot = new SnapshotMessage();
+            snapshot.Match.State = GameModeState.Ended;
+            snapshot.Match.Objective = MatchObjective.BattleRoyale;
+            ref var own = ref snapshot.Players.Add();
+            own.PlayerId = _localId;
+            own.SquadId = 1;
+            own.Health = ownHealth;
+            ref var other = ref snapshot.Players.Add();
+            other.PlayerId = _otherId;
+            other.SquadId = 2;
+            other.Health = otherHealth;
             return snapshot;
         }
 

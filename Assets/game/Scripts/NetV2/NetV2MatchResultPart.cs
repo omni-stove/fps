@@ -2,6 +2,7 @@ using System;
 using Shooter.Core;
 using Shooter.Protocol;
 using Shooter.Runtime;
+using RaidOutcome = Shooter.Core.ExtractionOutcome;
 
 namespace Shooter.NetV2
 {
@@ -9,6 +10,7 @@ namespace Shooter.NetV2
     public sealed class NetV2MatchResultPart : INetV2ClientPart
     {
         private readonly MatchClient _client;
+        private readonly ClientExtractionStatus _extraction;
 
         // 終わった試合の画面の途中でつないだときに遊んでいない試合を数えないよう、終わっていない状態を見てから出す
         private bool _sawPlaying;
@@ -18,10 +20,19 @@ namespace Shooter.NetV2
         public NetV2MatchResultPart(MatchClient client)
         {
             _client = client ?? throw new ArgumentNullException(nameof(client));
+
+            // Receive しか使わず、自分の Id も調整値も読まない
+            _extraction = new ClientExtractionStatus(0);
         }
 
+        // 脱出の勝ち負けはスナップショットに無く、出撃の結果の知らせでだけ届くので、受けて覚えるだけにする
         public bool Handle(IMessage message)
         {
+            if (message is StashStateMessage stash)
+            {
+                _extraction.Receive(stash);
+            }
+
             return false;
         }
 
@@ -46,7 +57,7 @@ namespace Shooter.NetV2
             }
 
             _raised = true;
-            var result = ResultOf(snapshot, _client.PlayerId);
+            var result = ResultOf(snapshot, _client.PlayerId, _extraction.Outcome);
             if (result.HasValue)
             {
                 CombatEvents.RaiseMatchFinished(result.Value);
@@ -64,7 +75,7 @@ namespace Shooter.NetV2
 
         // 観戦しているだけで自分の行が無ければ、自分の勝ち負けが無いので null。
         // 専用サーバーの試合は相手の腕前を送ってこないので、相手は初めの値として腕前を動かす
-        public static MatchResult? ResultOf(SnapshotMessage snapshot, int localPlayerId)
+        public static MatchResult? ResultOf(SnapshotMessage snapshot, int localPlayerId, RaidOutcome raidOutcome = RaidOutcome.Raiding)
         {
             if (snapshot == null)
             {
@@ -88,6 +99,26 @@ namespace Shooter.NetV2
                 outcome = OutcomeOf(status.Winner, ownSide);
                 ownScore = ScoreOf(status, ownSide);
             }
+            else if (match.Objective == MatchObjective.GunGame)
+            {
+                // サーバーはスナップショットの勝者をチームでしか送れず、同じチームの負けた人まで勝ちになるので、段が単独で最も高い人を勝者にする
+                outcome = OutcomeOf(GunGameLeader(snapshot.Players), new Side(localPlayerId));
+                ownScore = row.Kills;
+            }
+            else if (match.Objective == MatchObjective.BattleRoyale)
+            {
+                // サーバーは勝者のチームを送らず分隊で決めるので、分隊の立っている人数から勝った分隊を引く
+                outcome = OutcomeOf(ClientBattleRoyaleStatus.LeadingSquad(snapshot.Players), new Side(row.SquadId));
+                ownScore = 0;
+            }
+            else if (match.Objective == MatchObjective.Extraction)
+            {
+                // 勝ちは脱出できたかで決まり、チームの勝者は送られない。出撃の結果は StashStateMessage でしか届かない
+                outcome = raidOutcome == RaidOutcome.Extracted ? MatchOutcome.Won
+                    : raidOutcome == RaidOutcome.Raiding ? MatchOutcome.Draw
+                    : MatchOutcome.Lost;
+                ownScore = 0;
+            }
             else
             {
                 var winner = match.HasWinner ? Side.FromTeam(match.Winner) : (Side?)null;
@@ -96,6 +127,29 @@ namespace Shooter.NetV2
             }
 
             return new MatchResult(outcome, Math.Max(0, row.Kills), Math.Max(0, row.Deaths), Math.Max(0, ownScore), true);
+        }
+
+        private static Side? GunGameLeader(SnapshotList<PlayerSnapshot> players)
+        {
+            int? leader = null;
+            var best = int.MinValue;
+            var tied = false;
+            for (var i = 0; i < players.Count; i++)
+            {
+                var tier = players[i].GunGameTier;
+                if (tier > best)
+                {
+                    best = tier;
+                    leader = players[i].PlayerId;
+                    tied = false;
+                }
+                else if (tier == best)
+                {
+                    tied = true;
+                }
+            }
+
+            return leader.HasValue && !tied ? new Side(leader.Value) : (Side?)null;
         }
 
         private static MatchOutcome OutcomeOf(Side? winner, Side ownSide)

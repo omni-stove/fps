@@ -33,7 +33,7 @@ namespace Shooter.Core.Tests
         public void NetLinesNameTheGogglesSlotsAndTheOwner()
         {
             Assert.That(VisionLog.NetSlots(new[] { "goggles-night", null }), Is.EqualTo("[Vision] net goggles slots=goggles-night,-"));
-            Assert.That(VisionLog.NetSlots(new string[0]), Is.EqualTo("[Vision] net goggles slots="));
+            Assert.That(VisionLog.NetSlots(Array.Empty<string>()), Is.EqualTo("[Vision] net goggles slots="));
             Assert.That(VisionLog.NetAttached("7"), Is.EqualTo("[Vision] net vision attached owner=7"));
             Assert.That(VisionLog.NetAttached(null), Is.EqualTo("[Vision] net vision attached owner=-"));
             Assert.Throws<ArgumentNullException>(() => VisionLog.NetSlots(null));

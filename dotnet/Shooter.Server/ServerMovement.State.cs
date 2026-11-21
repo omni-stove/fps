@@ -24,6 +24,12 @@ namespace Shooter.Server
             return _byPlayer.TryGetValue(playerId, out var mover) && mover.Aiming;
         }
 
+        // 走るかはクライアントの SprintInput が決めて押したボタンで届くので、最後に当てた入力のボタンをそのまま返す
+        public bool IsSprinting(int playerId)
+        {
+            return _byPlayer.TryGetValue(playerId, out var mover) && mover.Sprinting;
+        }
+
         public int LastProcessedInputTick(int playerId)
         {
             return _byPlayer.TryGetValue(playerId, out var mover) ? mover.LastProcessedTick : -1;

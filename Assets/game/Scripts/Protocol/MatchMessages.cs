@@ -74,6 +74,7 @@ namespace Shooter.Protocol
                 new StashStateMessage(),
                 new BuyAnswerMessage(),
                 new PlayerNamesMessage(),
+                new LockOnWarningMessage(),
             };
         }
 

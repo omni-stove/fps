@@ -30,7 +30,8 @@ namespace Shooter.Server
 
             // 車体の厚さは .fpsmap に無く測れないので、抜けない物として扱う
             // 置いた物はオフラインでも弾を受け止めて止める (Deployable.TryStopBullet) ので、抜けない物として扱う
-            if (hit.HitVehicle || hit.HitDeployable)
+            // 持っている盾もオフラインでは貫通の前に止める (HitscanDelivery の BulletShield.TryBlock) ので、抜けない
+            if (hit.HitVehicle || hit.HitDeployable || hit.HitShield)
             {
                 return float.PositiveInfinity;
             }
@@ -146,6 +147,7 @@ namespace Shooter.Server
                 _many.Add(ShotHit.Target(point, normal, distance, id, body.Position, body.Crouched, body.Zone(point)));
             }
 
+            AddHeldShieldHits(origin, unit, range, clamped, _rewound, _many);
             return LastRecordedTick - clamped;
         }
     }

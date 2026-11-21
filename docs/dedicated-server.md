@@ -49,7 +49,7 @@ docker compose -f docker/server/compose.yaml up -d
 - `Payload` の道筋は `NetArena01` に、`BattleRoyale`・`Extraction` のエリアと脱出地点は `NetBattleRoyale` にだけある。
 - `NetBattleRoyale` の箱の表はキットの `loot.json` に無いので、ゲームが表を足すまで箱は空で開く。
 - Bot は人が 1 人もいないと置かれない。試すときはクライアントを 1 人つなぐ。
-- ドローン・盾・暗視とサーマルはオフラインだけで、サーバーでは効かない。盾の武器はルールと `economy.json` に入れない。
+- ドローン・暗視とサーマルはオフラインだけで、サーバーでは効かない。
 - プレイリストでは `match.*` と武器が最初の項目のルールのまま変わらないので、後の項目で使うモードの節も最初の項目に書く。
 - `Infected` の調整値はルールの `match.infected` に `infected.json` と同じ項目名で書く。感染者の体力・速さ・武器 (`infectedMaxHealth`・`infectedSpeedMultiplier`・`infectedWeaponId`) はまだサーバーでは変わらない。
 

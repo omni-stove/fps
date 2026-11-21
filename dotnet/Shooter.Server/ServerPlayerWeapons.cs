@@ -37,6 +37,11 @@ namespace Shooter.Server
 
         public WeaponSpec CurrentSpec => _loadout?.Current.Spec;
 
+        public bool IsSwitching => _loadout != null && _loadout.IsSwitching;
+
+        // 盾の武器は弾を込めない (オフラインの WeaponController.StartReload と同じ)
+        private bool HoldsShield => _loadout != null && _loadout.Current.Spec.IsShield;
+
         public IReadOnlyList<ServerWeapon> Items => _loadout?.Items ?? Array.Empty<ServerWeapon>();
 
         public IReadOnlyList<WeaponSpec> Specs { get; private set; } = Array.Empty<WeaponSpec>();
@@ -272,12 +277,14 @@ namespace Shooter.Server
                 return ShotRejection.NoWeapon;
             }
 
-            return _loadout.IsSwitching ? ShotRejection.Switching : _loadout.Current.TryFire();
+            return _loadout.IsSwitching ? ShotRejection.Switching
+                : HoldsShield ? ShotRejection.ShieldWeapon
+                : _loadout.Current.TryFire();
         }
 
         public bool TryReload()
         {
-            return _loadout != null && !_loadout.IsSwitching && _loadout.Current.TryStartReload();
+            return _loadout != null && !_loadout.IsSwitching && !HoldsShield && _loadout.Current.TryStartReload();
         }
 
         public bool CancelReload()
@@ -293,7 +300,7 @@ namespace Shooter.Server
 
         public bool TryActiveReload()
         {
-            if (_loadout == null || _loadout.IsSwitching || !_loadout.Current.TryActiveReload(out var result))
+            if (_loadout == null || _loadout.IsSwitching || HoldsShield || !_loadout.Current.TryActiveReload(out var result))
             {
                 return false;
             }
@@ -354,7 +361,7 @@ namespace Shooter.Server
 
         public bool TrySwitchAmmoType()
         {
-            if (_loadout == null || _loadout.IsSwitching || !_loadout.Current.TrySwitchAmmoType())
+            if (_loadout == null || _loadout.IsSwitching || HoldsShield || !_loadout.Current.TrySwitchAmmoType())
             {
                 return false;
             }

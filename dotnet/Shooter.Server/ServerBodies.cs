@@ -133,6 +133,9 @@ namespace Shooter.Server
 
         public float CarriedItemWeight { get; set; }
 
+        // 構えている盾。null なら盾を持っていないか下げている。戦闘 (ServerCombat) が決め、当たり判定と移動の速さが読む
+        public RiotShieldSpec RaisedShield { get; internal set; }
+
         public void SetPose(Vector3 position, float yaw, PlayerStance stance)
         {
             SetPose(position, yaw, stance, CharacterLadderState.NoLadder);

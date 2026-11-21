@@ -101,6 +101,12 @@ namespace Shooter.Core
         public const string LossStreakBonusItem = "lossStreakBonus";
         public const string MaxLossRewardItem = "maxLossReward";
 
+        // 節の中の項目名は、オフラインの調整値 (Resources/Tuning/infected.json) と同じ InfectedJson の名前にする
+        public const string InfectedItem = "infected";
+
+        // 節の中の項目名は ExecutionSpec.ItemNames。ラウンドの勝ち数・待ち・制限時間は Elimination と同じ round* を使う
+        public const string ExecutionItem = "execution";
+
         public const string HordeItem = "horde";
         public const string StartingCurrencyItem = "startingCurrency";
         public const string KillRewardPerWaveItem = "killRewardPerWave";
@@ -240,7 +246,7 @@ namespace Shooter.Core
             ChatIntervalSecondsItem, MaxChatLengthItem, MaxDisplayNameLengthItem, RoundWinsToWinItem, RoundPreparationSecondsItem,
             RoundTimeLimitSecondsItem, WeatherIdItem, TimeOfDayIdItem,
             CaptureTheFlagItem, HardpointItem, SearchAndDestroyItem, FreeForAllItem, KillConfirmedItem, GunGameItem,
-            VoteKickItem, PayloadItem, EconomyItem, HordeItem,
+            VoteKickItem, PayloadItem, EconomyItem, InfectedItem, ExecutionItem, HordeItem,
         };
 
         private static readonly string[] _captureTheFlagItems =
@@ -584,6 +590,33 @@ namespace Shooter.Core
                 writer.EndObject();
             }
 
+            // Infected でないルールに既定値のままなら書かないのは、節を足す前に書き出したルールのファイルを書き出し直さずにそのまま使えるようにするため
+            var infected = s.Infected;
+            if (file.Rules.Objective == MatchObjective.Infected || !IsDefault(infected))
+            {
+                writer.BeginObject(InfectedItem);
+                writer.Int(InfectedJson.InitialInfectedItem, infected.InitialInfected);
+                writer.Float(InfectedJson.StartDelaySecondsItem, infected.StartDelaySeconds);
+                writer.Float(InfectedJson.RoundSecondsItem, infected.RoundSeconds);
+                writer.Int(InfectedJson.InfectedMaxHealthItem, infected.InfectedMaxHealth);
+                writer.Float(InfectedJson.InfectedSpeedMultiplierItem, infected.InfectedSpeedMultiplier);
+                writer.Float(InfectedJson.InfectedRespawnSecondsItem, infected.InfectedRespawnSeconds);
+                writer.Int(InfectedJson.ScorePerInfectionItem, infected.ScorePerInfection);
+                writer.Int(InfectedJson.ScorePerSurvivedRoundItem, infected.ScorePerSurvivedRound);
+                writer.String(InfectedJson.InfectedWeaponIdItem, infected.InfectedWeaponId);
+                writer.EndObject();
+            }
+
+            // Infected の節と同じく、節を足す前に書き出したルールのファイルをそのまま使えるよう、Execution でなく既定値のままなら書かない
+            var execution = s.Execution;
+            if (file.Rules.Objective == MatchObjective.Execution || !execution.SameAs(ExecutionSpec.Default))
+            {
+                writer.BeginObject(ExecutionItem);
+                writer.Float(ExecutionSpec.ExecuteSecondsItem, execution.ExecuteSeconds);
+                writer.Float(ExecutionSpec.ExecuteRangeItem, execution.ExecuteRange);
+                writer.EndObject();
+            }
+
             writer.EndObject();
 
             var motor = file.Motor.Motor;
@@ -748,6 +781,8 @@ namespace Shooter.Core
             var voteKick = ReadVoteKick(match.Object(VoteKickItem, _voteKickItems), d.VoteKick);
             var payload = ReadPayload(match.Object(PayloadItem, _payloadItems), d.Payload);
             var economy = ReadEconomy(match.Object(EconomyItem, _economyItems), d.Economy);
+            var infected = ReadInfected(match.Object(InfectedItem, InfectedJson.ItemNames), d.Infected);
+            var execution = ReadExecution(match.Object(ExecutionItem, ExecutionSpec.ItemNames), d.Execution);
             var horde = ReadHorde(match.Object(HordeItem, _hordeItems), d.Horde);
             try
             {
@@ -787,6 +822,8 @@ namespace Shooter.Core
                     payload,
                     economy,
                     match.ReadInt(MaxDisplayNameLengthItem, d.MaxDisplayNameLength),
+                    infected,
+                    execution,
                     horde);
             }
             catch (ArgumentException e)
@@ -1024,6 +1061,65 @@ namespace Shooter.Core
             {
                 throw RejectedSpec(fields, e);
             }
+        }
+
+        private static InfectedSpec ReadInfected(ServerDataJson.Fields fields, InfectedSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new InfectedSpec(
+                    fields.ReadInt(InfectedJson.InitialInfectedItem, fallback.InitialInfected),
+                    fields.ReadFloat(InfectedJson.StartDelaySecondsItem, fallback.StartDelaySeconds),
+                    fields.ReadFloat(InfectedJson.RoundSecondsItem, fallback.RoundSeconds),
+                    fields.ReadInt(InfectedJson.InfectedMaxHealthItem, fallback.InfectedMaxHealth),
+                    fields.ReadFloat(InfectedJson.InfectedSpeedMultiplierItem, fallback.InfectedSpeedMultiplier),
+                    fields.ReadFloat(InfectedJson.InfectedRespawnSecondsItem, fallback.InfectedRespawnSeconds),
+                    fields.ReadInt(InfectedJson.ScorePerInfectionItem, fallback.ScorePerInfection),
+                    fields.ReadInt(InfectedJson.ScorePerSurvivedRoundItem, fallback.ScorePerSurvivedRound),
+                    fields.ReadString(InfectedJson.InfectedWeaponIdItem, fallback.InfectedWeaponId));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static ExecutionSpec ReadExecution(ServerDataJson.Fields fields, ExecutionSpec fallback)
+        {
+            if (fields == null)
+            {
+                return fallback;
+            }
+
+            try
+            {
+                return new ExecutionSpec(
+                    fields.ReadFloat(ExecutionSpec.ExecuteSecondsItem, fallback.ExecuteSeconds),
+                    fields.ReadFloat(ExecutionSpec.ExecuteRangeItem, fallback.ExecuteRange));
+            }
+            catch (ArgumentException e)
+            {
+                throw RejectedSpec(fields, e);
+            }
+        }
+
+        private static bool IsDefault(InfectedSpec spec)
+        {
+            var d = InfectedSpec.Default;
+            return spec.InitialInfected == d.InitialInfected
+                && spec.StartDelaySeconds == d.StartDelaySeconds
+                && spec.RoundSeconds == d.RoundSeconds
+                && spec.InfectedMaxHealth == d.InfectedMaxHealth
+                && spec.InfectedSpeedMultiplier == d.InfectedSpeedMultiplier
+                && spec.InfectedRespawnSeconds == d.InfectedRespawnSeconds
+                && spec.ScorePerInfection == d.ScorePerInfection
+                && spec.ScorePerSurvivedRound == d.ScorePerSurvivedRound
+                && spec.InfectedWeaponId == d.InfectedWeaponId;
         }
 
         private static HordeSettings ReadHorde(ServerDataJson.Fields fields, HordeSettings fallback)

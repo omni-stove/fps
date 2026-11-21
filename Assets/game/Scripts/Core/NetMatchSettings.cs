@@ -75,6 +75,8 @@ namespace Shooter.Core
             PayloadSpec payload = null,
             EconomySpec economy = null,
             int maxDisplayNameLength = DefaultMaxDisplayNameLength,
+            InfectedSpec infected = null,
+            ExecutionSpec execution = null,
             HordeSettings horde = null)
         {
             RequirePositive(scoreLimit, nameof(scoreLimit));
@@ -139,6 +141,8 @@ namespace Shooter.Core
             VoteKick = voteKick ?? VoteKickSpec.Default;
             Payload = payload ?? PayloadSpec.Default;
             Economy = economy ?? EconomySpec.Default;
+            Infected = infected ?? InfectedSpec.Default;
+            Execution = execution ?? ExecutionSpec.Default;
             Horde = horde ?? HordeSettings.Default;
             MapPool = CopyMapPool(mapPool);
             MapVoteSeconds = mapVoteSeconds;
@@ -206,6 +210,8 @@ namespace Shooter.Core
                 payload: Payload,
                 economy: Economy,
                 maxDisplayNameLength: MaxDisplayNameLength,
+                infected: Infected,
+                execution: Execution,
                 horde: Horde);
         }
 
@@ -281,6 +287,10 @@ namespace Shooter.Core
         public PayloadSpec Payload { get; }
 
         public EconomySpec Economy { get; }
+
+        public InfectedSpec Infected { get; }
+
+        public ExecutionSpec Execution { get; }
 
         public HordeSettings Horde { get; }
 

@@ -15,7 +15,9 @@ namespace Shooter.Server
                 + " impact=" + Text(spec.ImpactSeconds)
                 + " swing=" + Text(spec.SwingSeconds)
                 + " cooldown=" + Text(spec.CooldownSeconds)
-                + " weapon=" + (string.IsNullOrEmpty(weaponId) ? "held" : weaponId);
+                + " weapon=" + (string.IsNullOrEmpty(weaponId) ? "held" : weaponId)
+                + " takedown=" + Text(spec.AlignSeconds + spec.TakedownSeconds)
+                + " behindArc=" + Text(spec.BehindArcDegrees);
         }
 
         private static string Text(float value) => value.ToString(CultureInfo.InvariantCulture);

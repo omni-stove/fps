@@ -87,6 +87,12 @@ namespace Shooter.Server
             return !_objective.AreHostile(a, aTeam, b, bTeam) && !_objective.AreAllies(a, aTeam, b, bTeam);
         }
 
+        // 目的がとどめを技に限るときのダウン中の人。出血で倒れるのは Session の Tick が決めるので、ここでは止めない
+        private bool ShieldsDowned(int victimId)
+        {
+            return _objective?.DownedFinisher != null && _session.IsDowned(victimId);
+        }
+
         public void FillControlPoints(SnapshotList<ControlPointSnapshot> points)
         {
             ArgumentNullException.ThrowIfNull(points);

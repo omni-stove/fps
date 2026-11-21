@@ -129,6 +129,79 @@ namespace Shooter.Server
             return true;
         }
 
+        // 拾った武器で weaponId の武器を置き換え、置き換えた武器を返す。並びの位置と構えている番号はそのままにする
+        // (今の武器を置き換えたら、拾った武器を構える)。weaponId を持っていない・spec の武器を既に持っているなら何もせず null
+        public ServerHeldWeapon Replace(string weaponId, WeaponSpec spec, float switchSeconds, GameRules rules)
+        {
+            ArgumentNullException.ThrowIfNull(weaponId);
+            ArgumentNullException.ThrowIfNull(spec);
+            ArgumentNullException.ThrowIfNull(rules);
+            var index = IndexOf(weaponId);
+            if (index < 0 || (!string.Equals(weaponId, spec.Id, StringComparison.Ordinal) && IndexOf(spec.Id) >= 0))
+            {
+                _log.WriteLine(ServerWeaponsLog.Give(_playerId, spec.Id, index < 0 ? "not-held:" + weaponId : "held"));
+                return null;
+            }
+
+            var items = _loadout.Items;
+            var replaced = HeldAt(index);
+            items[index].UseAmmoPool(null);
+            var weapon = new ServerWeapon(spec, rules);
+            if (_poolFor != null)
+            {
+                weapon.UseAmmoPool(_poolFor(spec));
+            }
+
+            var weapons = new List<ServerWeapon>(items);
+            weapons[index] = weapon;
+            var bases = new List<WeaponSpec>(_baseSpecs);
+            bases[index] = spec;
+            _baseSpecs = bases.AsReadOnly();
+            _attachments.Remove(weaponId);
+            SetLoadout(new Loadout<ServerWeapon>(weapons, switchSeconds, HolsterWeapon, DrawSeconds, HolsterSeconds, _loadout.CurrentIndex));
+            _log.WriteLine(ServerWeaponsLog.Replaced(_playerId, spec.Id, weaponId));
+            return replaced;
+        }
+
+        // 構えている武器を手放さずに写す。武器が無ければ null
+        public ServerHeldWeapon CurrentHeld()
+        {
+            return _loadout == null ? null : HeldAt(_loadout.CurrentIndex);
+        }
+
+        // 持っている武器のうち weaponId のもの。無ければ null
+        public ServerWeapon Find(string weaponId)
+        {
+            var index = IndexOf(weaponId);
+            return index < 0 ? null : _loadout.Items[index];
+        }
+
+        private int IndexOf(string weaponId)
+        {
+            if (_loadout == null || weaponId == null)
+            {
+                return -1;
+            }
+
+            var items = _loadout.Items;
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (string.Equals(items[i].Spec.Id, weaponId, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private ServerHeldWeapon HeldAt(int index)
+        {
+            var weapon = _loadout.Items[index];
+            return new ServerHeldWeapon(
+                _baseSpecs[index], AttachmentsOf(weapon.Spec.Id), weapon.AmmoInMagazine, weapon.HasAmmoPool ? 0 : weapon.ReserveAmmo);
+        }
+
         // 武器をすべて手放す。次の Equip か Give まで撃てない (TryFire は NoWeapon を返す)
         public void Clear()
         {
@@ -151,6 +224,57 @@ namespace Shooter.Server
             _chargeFraction = 0f;
             _burstRoundsLeft = 0;
             _log.WriteLine(ServerWeaponsLog.Clear(_playerId, count));
+        }
+
+        // 次の武器は持ち替えの待ちを課さずに構える。並びを作り直す Give・Refill と同じく、TrySelect で待たせると構える番号が先に動いてしまうため。
+        // 付けた物を外した元の値を返すのは、Take と同じく、拾い直した先で付けた物を別に扱えるようにするため
+        public bool Drop(string weaponId, out WeaponSpec spec)
+        {
+            spec = null;
+            if (_loadout == null || weaponId == null)
+            {
+                return false;
+            }
+
+            var items = _loadout.Items;
+            var index = -1;
+            for (var i = 0; i < items.Count; i++)
+            {
+                if (string.Equals(items[i].Spec.Id, weaponId, StringComparison.Ordinal))
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index < 0)
+            {
+                return false;
+            }
+
+            spec = _baseSpecs[index];
+            if (items.Count == 1)
+            {
+                Clear();
+                _log.WriteLine(ServerWeaponsLog.Drop(_playerId, weaponId, 0));
+                return true;
+            }
+
+            var current = _loadout.CurrentIndex;
+            var weapons = new List<ServerWeapon>(items);
+            var baseSpecs = new List<WeaponSpec>(_baseSpecs);
+            weapons[index].UseAmmoPool(null);
+            weapons.RemoveAt(index);
+            baseSpecs.RemoveAt(index);
+            _baseSpecs = baseSpecs.AsReadOnly();
+            _attachments.Remove(weaponId);
+            var selected = current > index ? current - 1 : Math.Min(current, weapons.Count - 1);
+            _chargeFraction = 0f;
+            _chargeFrom = _now();
+            _burstRoundsLeft = 0;
+            SetLoadout(new Loadout<ServerWeapon>(weapons, _loadout.SwitchSeconds, HolsterWeapon, DrawSeconds, HolsterSeconds, selected));
+            _log.WriteLine(ServerWeaponsLog.Drop(_playerId, weaponId, weapons.Count));
+            return true;
         }
 
         // 持っている武器を並びの順に取り出して手放す。付けた物を外した元の値と、付けていた物の Id を返すのは、

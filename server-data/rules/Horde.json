@@ -261,7 +261,13 @@
     "parachuteMinOpenHeight": 6,
     "parachuteDescentSpeed": 4,
     "parachuteHorizontalSpeed": 6,
-    "parachuteSteerAcceleration": 8
+    "parachuteSteerAcceleration": 8,
+    "slideStartSpeed": 11,
+    "slideDeceleration": 8,
+    "slideEndSpeed": 3,
+    "slideMinSeconds": 0.4,
+    "slideMaxSeconds": 3,
+    "slideSlopeAcceleration": 20
   },
   "loadout": {
     "name": "DefaultLoadout",

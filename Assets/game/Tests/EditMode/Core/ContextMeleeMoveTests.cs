@@ -89,6 +89,45 @@ namespace Shooter.Core.Tests
         }
 
         [Test]
+        public void TheExecuteMoveNeedsADownedTargetAndTakesItsAmountsFromTheExecutionSpec()
+        {
+            var execute = ContextMeleeMove.Execute(new ExecutionSpec(2.5f, 3f));
+
+            Assert.That(execute.Id, Is.EqualTo(ContextMeleeMove.ExecuteId));
+            Assert.That(execute.Priority, Is.EqualTo(ContextMeleeMove.ExecutePriority));
+            Assert.That(execute.Priority, Is.GreaterThan(ContextMeleeMove.FinisherPriority));
+            Assert.That(execute.Priority, Is.GreaterThan(ContextMeleeMove.TakedownPriority));
+            Assert.That(execute.Required, Is.EqualTo(ContextMeleeConditions.TargetDowned));
+            Assert.That(execute.Excluded, Is.EqualTo(ContextMeleeConditions.None));
+            Assert.That(execute.Reach, Is.EqualTo(3f));
+            Assert.That(execute.StandDistance, Is.Zero);
+            Assert.That(execute.AlignSeconds, Is.Zero);
+            Assert.That(execute.PerformSeconds, Is.EqualTo(2.5f));
+            Assert.That(execute.TotalSeconds, Is.EqualTo(2.5f));
+            Assert.That(execute.Outcome, Is.EqualTo(ContextMeleeOutcome.Kill));
+            Assert.That(execute.HealthReward, Is.Zero);
+            Assert.That(execute.AmmoReward, Is.Zero);
+            Assert.That(execute.Interruptible, Is.False);
+            Assert.That(execute.WitnessAwareness, Is.Zero);
+            Assert.Throws<ArgumentNullException>(() => ContextMeleeMove.Execute(null));
+        }
+
+        [Test]
+        public void TheExecuteMoveIsChosenOverTheTakedownForADownedTarget()
+        {
+            var selector = new ContextMeleeSelector();
+            selector.Register(ContextMeleeMove.Takedown(MeleeSpec.Default));
+            selector.Register(ContextMeleeMove.Execute(ExecutionSpec.Default));
+            var everything = ContextMeleeConditions.TargetDowned | ContextMeleeConditions.TargetBehind | ContextMeleeConditions.TargetUnaware;
+
+            Assert.That(selector.Select(new ContextMeleeSituation(everything, 1f)).Id, Is.EqualTo(ContextMeleeMove.ExecuteId));
+            Assert.That(
+                selector.Select(new ContextMeleeSituation(ContextMeleeConditions.TargetBehind | ContextMeleeConditions.TargetUnaware, 1f)).Id,
+                Is.EqualTo(ContextMeleeMove.TakedownId));
+            Assert.That(selector.Select(new ContextMeleeSituation(ContextMeleeConditions.TargetDowned, ExecutionSpec.DefaultExecuteRange + 0.1f)), Is.Null);
+        }
+
+        [Test]
         public void OnlyTheTakedownRaisesWitnessesByDefault()
         {
             Assert.That(Make().WitnessAwareness, Is.Zero);

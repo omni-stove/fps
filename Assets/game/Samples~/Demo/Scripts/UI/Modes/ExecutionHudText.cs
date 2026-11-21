@@ -64,15 +64,25 @@ namespace Shooter.Runtime
             return new LocalizedText("mode.execution.executing", percent);
         }
 
-        public static IReadOnlyList<ModeHudScoreLine> RoundWins(ExecutionSession session, Side? ownSide)
+        public static LocalizedText Time(IExecutionView view)
         {
-            if (session == null)
+            if (view == null)
             {
-                throw new ArgumentNullException(nameof(session));
+                throw new ArgumentNullException(nameof(view));
             }
 
-            var alpha = session.Round.GetRoundWins(Side.Alpha);
-            var bravo = session.Round.GetRoundWins(Side.Bravo);
+            return LocalizedText.Literal(HudNumberFormat.RemainingTime(view.RoundRemaining));
+        }
+
+        public static IReadOnlyList<ModeHudScoreLine> RoundWins(IExecutionView view, Side? ownSide)
+        {
+            if (view == null)
+            {
+                throw new ArgumentNullException(nameof(view));
+            }
+
+            var alpha = view.GetRoundWins(Side.Alpha);
+            var bravo = view.GetRoundWins(Side.Bravo);
             Side? leader = alpha == bravo ? (Side?)null : alpha > bravo ? Side.Alpha : Side.Bravo;
             var lines = new List<ModeHudScoreLine>(2);
             foreach (var side in new[] { Side.Alpha, Side.Bravo })
@@ -92,68 +102,61 @@ namespace Shooter.Runtime
             return lines;
         }
 
-        public static IReadOnlyList<LocalizedText> Lines(ExecutionSession session, int? localPlayerId, int? interactTargetId)
+        public static IReadOnlyList<LocalizedText> Lines(IExecutionView view, int? localPlayerId, int? interactTargetId)
         {
-            if (session == null)
+            if (view == null)
             {
-                throw new ArgumentNullException(nameof(session));
+                throw new ArgumentNullException(nameof(view));
             }
 
-            var round = session.Round;
             var lines = new List<LocalizedText>();
-            if (round.RoundNumber >= 1)
+            if (view.RoundNumber >= 1)
             {
-                lines.Add(Round(round.RoundNumber, round.WinsToWin));
+                lines.Add(Round(view.RoundNumber, view.WinsToWin));
             }
 
-            if (round.Phase == RoundPhase.Preparing)
+            if (view.Phase == RoundPhase.Preparing)
             {
-                if (session.HasFinishedRound)
+                if (view.HasFinishedRound)
                 {
-                    lines.Add(RoundResult(session.LastRoundWinner));
+                    lines.Add(RoundResult(view.LastRoundWinner));
                 }
 
-                lines.Add(Preparation(HudFormat.DisplayedSeconds(round.PreparationRemaining)));
+                lines.Add(Preparation(HudFormat.DisplayedSeconds(view.PreparationRemaining)));
             }
 
-            var mode = session.Mode;
-            var local = localPlayerId.HasValue && mode.HasPlayer(localPlayerId.Value) ? localPlayerId : null;
-            var ownSide = local.HasValue ? mode.GetSide(local.Value) : (Side?)null;
+            var local = localPlayerId.HasValue && view.HasPlayer(localPlayerId.Value) ? localPlayerId : null;
+            var ownSide = local.HasValue ? view.GetSide(local.Value) : (Side?)null;
             var first = ownSide ?? Side.Alpha;
             var second = first == Side.Alpha ? Side.Bravo : Side.Alpha;
-            lines.Add(Remaining(first, session.CountRemaining(first), session.CountDowned(first)));
-            lines.Add(Remaining(second, session.CountRemaining(second), session.CountDowned(second)));
+            lines.Add(Remaining(first, view.CountRemaining(first), view.CountDowned(first)));
+            lines.Add(Remaining(second, view.CountRemaining(second), view.CountDowned(second)));
 
-            if (local.HasValue && session.IsDowned(local.Value))
+            if (local.HasValue && view.IsDowned(local.Value))
             {
-                var bleedout = session.GetBleedoutRemaining(local.Value) ?? 0f;
-                lines.Add(HudText.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(session.GetReviveProgress(local.Value))));
+                var bleedout = view.GetBleedoutRemaining(local.Value) ?? 0f;
+                lines.Add(HudText.Downed(HudFormat.DisplayedSeconds(bleedout), HudFormat.RevivePercent(view.GetReviveProgress(local.Value))));
             }
-            else if (local.HasValue && interactTargetId.HasValue && session.IsDowned(interactTargetId.Value) && mode.HasPlayer(interactTargetId.Value))
+            else if (local.HasValue && interactTargetId.HasValue && view.HasPlayer(interactTargetId.Value) && view.IsDowned(interactTargetId.Value))
             {
                 var target = interactTargetId.Value;
-                lines.Add(mode.GetSide(target) == ownSide
-                    ? HudText.Reviving(HudFormat.RevivePercent(session.GetReviveProgress(target)))
-                    : Executing(HudFormat.RevivePercent(session.GetExecuteProgress(target))));
+                lines.Add(view.GetSide(target) == ownSide
+                    ? HudText.Reviving(HudFormat.RevivePercent(view.GetReviveProgress(target)))
+                    : Executing(HudFormat.RevivePercent(view.GetExecuteProgress(target))));
             }
 
             return lines;
         }
 
-        public static LocalizedText Result(ExecutionSession session)
+        public static LocalizedText Result(IExecutionView view)
         {
-            if (session == null)
+            if (view == null)
             {
-                throw new ArgumentNullException(nameof(session));
+                throw new ArgumentNullException(nameof(view));
             }
 
-            var round = session.Round;
-            if (round.Phase != RoundPhase.Ended || !round.Winner.HasValue)
-            {
-                return default;
-            }
-
-            return HudText.Wins(ModeHudText.SideName(round.Winner.Value));
+            var winner = view.Winner;
+            return winner.HasValue ? HudText.Wins(ModeHudText.SideName(winner.Value)) : default;
         }
     }
 }

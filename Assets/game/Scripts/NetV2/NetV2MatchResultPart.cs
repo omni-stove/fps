@@ -81,7 +81,7 @@ namespace Shooter.NetV2
             _disposed = true;
         }
 
-        // 観戦しているだけで自分の行が無ければ、自分の勝ち負けが無いので null。
+        // 観戦しているだけで自分の行が無ければ、自分の勝ち負けが無いので null。Battle Royale で分隊に入っていなければ同じく null。
         // 専用サーバーの試合は相手の腕前を送ってこないので、相手は初めの値として腕前を動かす
         public static MatchResult? ResultOf(SnapshotMessage snapshot, int localPlayerId, RaidOutcome raidOutcome = RaidOutcome.Raiding)
         {
@@ -97,6 +97,11 @@ namespace Shooter.NetV2
             }
 
             var row = snapshot.Players[own];
+            if (snapshot.Match.Objective == MatchObjective.BattleRoyale && row.OutsideSquad)
+            {
+                return null;
+            }
+
             var match = snapshot.Match;
             MatchOutcome outcome;
             int ownScore;

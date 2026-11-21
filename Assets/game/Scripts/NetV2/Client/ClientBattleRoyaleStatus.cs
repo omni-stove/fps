@@ -78,7 +78,10 @@ namespace Shooter.NetV2
 
                 for (var i = 0; i < players.Count; i++)
                 {
-                    _entrants.Add(players[i].SquadId);
+                    if (!players[i].OutsideSquad)
+                    {
+                        _entrants.Add(players[i].SquadId);
+                    }
                 }
 
                 PlaceEliminated(snapshot);
@@ -272,7 +275,7 @@ namespace Shooter.NetV2
             }
         }
 
-        // 終わったスナップショットだけから勝った分隊を引く。立っている人数・残っている人数が単独で最も多い分隊で、並べば null
+        // 終わったスナップショットだけから勝った分隊を引く。立っている人数・残っている人数が単独で最も多い分隊で、並べば null。分隊に入っていない人も分隊 0 として届くので、OutsideSquad の行は数えない
         public static Side? LeadingSquad(SnapshotList<PlayerSnapshot> players)
         {
             if (players == null)
@@ -285,6 +288,11 @@ namespace Shooter.NetV2
             var tied = false;
             for (var i = 0; i < players.Count; i++)
             {
+                if (players[i].OutsideSquad)
+                {
+                    continue;
+                }
+
                 var squad = players[i].SquadId;
                 var count = FinalCount(players, squad);
                 if (count > best)
@@ -309,7 +317,7 @@ namespace Shooter.NetV2
             var downed = 0;
             for (var i = 0; i < players.Count; i++)
             {
-                if (players[i].SquadId == squad && players[i].Downed.IsDowned)
+                if (players[i].SquadId == squad && !players[i].OutsideSquad && players[i].Downed.IsDowned)
                 {
                     downed++;
                 }
@@ -324,7 +332,7 @@ namespace Shooter.NetV2
             for (var i = 0; i < players.Count; i++)
             {
                 ref var row = ref players[i];
-                if (row.SquadId == squad && IsRemaining(row))
+                if (row.SquadId == squad && !row.OutsideSquad && IsRemaining(row))
                 {
                     count++;
                 }

@@ -180,6 +180,26 @@ namespace Shooter.Net.Tests
         }
 
         [Test]
+        public void BattleRoyaleDoesNotCountPlayersOutsideTheSquadsAsSquadZero()
+        {
+            // 分隊 0 は全滅し、分隊 2 が 1 人残る。分隊に入れなかった 2 人が分隊 0 として立っている
+            var snapshot = BattleRoyaleSnapshot(ownHealth: 0, otherHealth: 50);
+            snapshot.Players[0].SquadId = 0;
+            for (var id = 2; id <= 3; id++)
+            {
+                ref var outside = ref snapshot.Players.Add();
+                outside.PlayerId = id;
+                outside.SquadId = 0;
+                outside.OutsideSquad = true;
+                outside.Health = 100;
+            }
+
+            Assert.That(NetV2MatchResultPart.ResultOf(snapshot, _localId)?.Outcome, Is.EqualTo(MatchOutcome.Lost));
+            Assert.That(NetV2MatchResultPart.ResultOf(snapshot, _otherId)?.Outcome, Is.EqualTo(MatchOutcome.Won));
+            Assert.That(NetV2MatchResultPart.ResultOf(snapshot, 2), Is.Null, "a player outside the squads has no result");
+        }
+
+        [Test]
         public void ExtractionWinsOnlyWhenTheRaidEndedExtracted()
         {
             var snapshot = TeamSnapshot(GameModeState.Ended, null);

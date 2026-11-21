@@ -448,8 +448,15 @@ namespace Shooter.NetV2
 
         private void Fail(string reason)
         {
+            // ログイン中の失敗はサービスを手放す。EOS のサービスは 2 度目の Login を断るので、持ったままでは「更新」が効かなくなる。
+            var wasLoggingIn = _step == Step.LoggingIn;
             _generation++;
             _pinger?.CancelAll();
+            if (wasLoggingIn)
+            {
+                RetireBackend();
+            }
+
             _step = Step.Unavailable;
             _lobbies.Clear();
             _listings.Clear();

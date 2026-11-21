@@ -33,6 +33,13 @@ namespace Shooter.Core.Tests
             Server("e", 5, 45, "us-east", "ctf", "harbor"),
         };
 
+        private static readonly string[] _idsUnder45Ping = { "b", "e", "c", "d" };
+        private static readonly string[] _idsPingZero = { "d" };
+        private static readonly string[] _regionChoices = { "asia", "europe", "us-east" };
+        private static readonly string[] _modeChoices = { "ctf", "tdm" };
+        private static readonly string[] _mapChoices = { "harbor", "quarry" };
+        private static readonly string[] _idsA = { "a" };
+
         [Test]
         public void TheDefaultShowsEveryServerByLowestPingWithUnmeasuredLast()
         {
@@ -135,8 +142,8 @@ namespace Shooter.Core.Tests
         {
             var shown = ServerListQuery.Default.WithMaxPing(45).Apply(_servers);
 
-            Assert.That(Ids(shown), Is.EqualTo(new[] { "b", "e", "c", "d" }));
-            Assert.That(Ids(ServerListQuery.Default.WithMaxPing(0).Apply(_servers)), Is.EqualTo(new[] { "d" }));
+            Assert.That(Ids(shown), Is.EqualTo(_idsUnder45Ping));
+            Assert.That(Ids(ServerListQuery.Default.WithMaxPing(0).Apply(_servers)), Is.EqualTo(_idsPingZero));
         }
 
         [Test]
@@ -175,16 +182,16 @@ namespace Shooter.Core.Tests
         [Test]
         public void TheChoicesAreTheDistinctNamesInOrder()
         {
-            Assert.That(ServerListQuery.Regions(_servers), Is.EqualTo(new[] { "asia", "europe", "us-east" }));
-            Assert.That(ServerListQuery.Modes(_servers), Is.EqualTo(new[] { "ctf", "tdm" }));
-            Assert.That(ServerListQuery.Maps(_servers), Is.EqualTo(new[] { "harbor", "quarry" }));
+            Assert.That(ServerListQuery.Regions(_servers), Is.EqualTo(_regionChoices));
+            Assert.That(ServerListQuery.Modes(_servers), Is.EqualTo(_modeChoices));
+            Assert.That(ServerListQuery.Maps(_servers), Is.EqualTo(_mapChoices));
             Assert.That(ServerListQuery.Regions(Array.Empty<ServerListing>()), Is.Empty);
         }
 
         [Test]
         public void ApplySkipsMissingRowsAndRejectsBadArguments()
         {
-            Assert.That(Ids(ServerListQuery.Default.Apply(new[] { null, Server("a", 1, 10) })), Is.EqualTo(new[] { "a" }));
+            Assert.That(Ids(ServerListQuery.Default.Apply(new[] { null, Server("a", 1, 10) })), Is.EqualTo(_idsA));
             Assert.Throws<ArgumentNullException>(() => ServerListQuery.Default.Apply(null));
             Assert.Throws<ArgumentNullException>(() => ServerListQuery.Default.Matches(null));
             Assert.Throws<ArgumentNullException>(() => ServerListQuery.Regions(null));

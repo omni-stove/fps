@@ -91,6 +91,45 @@ namespace Shooter.Tests.EditMode
         }
 
         [Test]
+        public void AVehicleWithoutFlaresIsWrittenWithoutCountermeasures()
+        {
+            var vehicles = MapVehicleExporter.Collect(new[] { _car.gameObject });
+
+            Assert.That(vehicles.Vehicles[0].Countermeasures, Is.Null);
+        }
+
+        [Test]
+        public void TheFlaresAreWrittenWithTheirSettings()
+        {
+            var flares = _car.gameObject.AddComponent<VehicleCountermeasures>();
+            flares.Configure(new CountermeasureSpec(3, 0.5f, 2f, 25f, 9f, 0.2f));
+            flares.Settings.EjectLocalOffset = new Vector3(0f, -1f, -3f);
+            flares.Settings.EjectLocalDirection = new Vector3(1f, 0f, 0f);
+
+            var read = NetMapVehicles.Parse(NetMapVehicles.Write(MapVehicleExporter.Collect(new[] { _car.gameObject })), "memory");
+
+            var written = read.Vehicles[0].Countermeasures;
+            Assert.That(written, Is.Not.Null);
+            Assert.That(written.Spec.Count, Is.EqualTo(3));
+            Assert.That(written.Spec.IntervalSeconds, Is.EqualTo(0.5f));
+            Assert.That(written.Spec.LifetimeSeconds, Is.EqualTo(2f));
+            Assert.That(written.Spec.DecoyConeDegrees, Is.EqualTo(25f));
+            Assert.That(written.Spec.EjectSpeed, Is.EqualTo(9f));
+            Assert.That(written.Spec.GravityMultiplier, Is.EqualTo(0.2f));
+            AssertNear(written.EjectOffset, new Vector3(0f, -1f, -3f));
+            AssertNear(written.EjectDirection, new Vector3(1f, 0f, 0f));
+        }
+
+        [Test]
+        public void DisabledFlaresAreNotWritten()
+        {
+            var flares = _car.gameObject.AddComponent<VehicleCountermeasures>();
+            flares.enabled = false;
+
+            Assert.That(MapVehicleExporter.Collect(new[] { _car.gameObject }).Vehicles[0].Countermeasures, Is.Null);
+        }
+
+        [Test]
         public void TheMapCollisionLeavesTheVehicleOut()
         {
             var map = MapCollisionExporter.Collect(new[] { _floor, _car.gameObject });

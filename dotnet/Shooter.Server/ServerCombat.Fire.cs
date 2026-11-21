@@ -277,6 +277,7 @@ namespace Shooter.Server
             _botFire.AmmoTypeIndex = fighter.Weapons.AmmoTypeIndex;
             _botFire.HasLockTarget = false;
             _botFire.LockTargetId = 0;
+            _botFire.LockTargetKind = LockTargetKind.Player;
             _botFire.Trigger = TriggerEdge.None;
             return Fire(fighter, _botFire);
         }

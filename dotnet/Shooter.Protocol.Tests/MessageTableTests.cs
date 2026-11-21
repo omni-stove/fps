@@ -19,7 +19,51 @@ namespace Shooter.Protocol.Tests
 
             Assert.That(declared, Is.Unique);
             Assert.That(received, Is.Unique);
-            Assert.That(received, Is.EquivalentTo(declared));
+            Assert.That(received, Is.SubsetOf(declared));
+            Assert.That(declared.Except(received).Where(id => !MessageTable.IsReserved(id)), Is.Empty,
+                "an id that no side reads must be one of the reserved ids");
+        }
+
+        [Test]
+        public void TheEmotePickupAndDroneIdsAreReservedAfterTheInteractRequest()
+        {
+            Assert.That(MessageIds.EmoteRequest, Is.EqualTo(36));
+            Assert.That(MessageIds.PickupRequest, Is.EqualTo(37));
+            Assert.That(MessageIds.DroneControl, Is.EqualTo(38));
+            Assert.That(MessageTable.IsReserved(MessageIds.EmoteRequest), Is.True);
+            Assert.That(MessageTable.IsReserved(MessageIds.PickupRequest), Is.True);
+            Assert.That(MessageTable.IsReserved(MessageIds.DroneControl), Is.True);
+            Assert.That(MessageTable.IsReserved(MessageIds.InteractRequest), Is.False);
+            Assert.That(MessageTable.IsReserved(60000), Is.False);
+        }
+
+        // 予約した Id は前の版と同じく読まずに断るが、知らない Id とは理由を分ける
+        [TestCase(MessageIds.EmoteRequest)]
+        [TestCase(MessageIds.PickupRequest)]
+        [TestCase(MessageIds.DroneControl)]
+        public void AReservedIdIsRejectedByBothSidesUntilItsMessageIsAdded(ushort id)
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(id);
+            writer.WriteByte(1);
+
+            var server = Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(writer.AsSegment()));
+            var client = Assert.Throws<MessageReadException>(() => MatchMessages.CreateClientTable().Read(writer.AsSegment()));
+
+            Assert.That(server.Message, Does.Contain("message id " + id + " is reserved"));
+            Assert.That(client.Message, Does.Contain("message id " + id + " is reserved"));
+        }
+
+        [Test]
+        public void AnUnknownIdIsNotCalledReserved()
+        {
+            var writer = new MessageWriter();
+            writer.WriteUInt16(60000);
+            writer.WriteByte(1);
+
+            var error = Assert.Throws<MessageReadException>(() => MatchMessages.CreateServerTable().Read(writer.AsSegment()));
+
+            Assert.That(error.Message, Does.Contain("message id 60000 is not accepted here"));
         }
 
         [Test]
@@ -167,7 +211,7 @@ namespace Shooter.Protocol.Tests
         public void UnknownInputButtonIsRejected()
         {
             var input = new InputMessage();
-            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)4096));
+            input.Add(new InputFrame(1, Vector2.Zero, 0f, (InputButtons)32768));
             var writer = new MessageWriter();
             writer.WriteMessage(input);
 
@@ -207,6 +251,45 @@ namespace Shooter.Protocol.Tests
             Assert.That((int)InputButtons.Melee, Is.EqualTo(512));
             Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.Melee | InputButtons.Crouch));
             Assert.That(InputButtons.All & InputButtons.Melee, Is.EqualTo(InputButtons.Melee));
+        }
+
+        [Test]
+        public void TheSlideGrappleAndTakedownButtonsAreReadByTheServer()
+        {
+            var input = new InputMessage();
+            input.Add(new InputFrame(1, Vector2.Zero, 0f, InputButtons.Slide | InputButtons.Sprint));
+            input.Add(new InputFrame(2, Vector2.Zero, 0f, InputButtons.Grapple));
+            input.Add(new InputFrame(3, Vector2.Zero, 0f, InputButtons.Takedown | InputButtons.Crouch));
+            var writer = new MessageWriter();
+            writer.WriteMessage(input);
+
+            var got = (InputMessage)MatchMessages.CreateServerTable().Read(writer.AsSegment());
+
+            Assert.That((int)InputButtons.Slide, Is.EqualTo(4096));
+            Assert.That((int)InputButtons.Grapple, Is.EqualTo(8192));
+            Assert.That((int)InputButtons.Takedown, Is.EqualTo(16384));
+            Assert.That(got[0].Buttons, Is.EqualTo(InputButtons.Slide | InputButtons.Sprint));
+            Assert.That(got[1].Buttons, Is.EqualTo(InputButtons.Grapple));
+            Assert.That(got[2].Buttons, Is.EqualTo(InputButtons.Takedown | InputButtons.Crouch));
+        }
+
+        [Test]
+        public void TheExistingButtonsKeepTheirValuesAndAllHasEveryButton()
+        {
+            Assert.That((int)InputButtons.Sprint, Is.EqualTo(1));
+            Assert.That((int)InputButtons.Jump, Is.EqualTo(2));
+            Assert.That((int)InputButtons.Crouch, Is.EqualTo(4));
+            Assert.That((int)InputButtons.Cover, Is.EqualTo(8));
+            Assert.That((int)InputButtons.Aim, Is.EqualTo(16));
+            Assert.That((int)InputButtons.Dodge, Is.EqualTo(32));
+            Assert.That((int)InputButtons.Prone, Is.EqualTo(64));
+            Assert.That((int)InputButtons.LeanLeft, Is.EqualTo(128));
+            Assert.That((int)InputButtons.LeanRight, Is.EqualTo(256));
+            Assert.That((int)InputButtons.Melee, Is.EqualTo(512));
+            Assert.That((int)InputButtons.OpenParachute, Is.EqualTo(1024));
+            Assert.That((int)InputButtons.CloseParachute, Is.EqualTo(2048));
+            Assert.That((int)InputButtons.All, Is.EqualTo(32767));
+            Assert.That(InputMessage.CurrentVersion, Is.EqualTo(5));
         }
 
         [Test]

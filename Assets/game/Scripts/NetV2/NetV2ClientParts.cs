@@ -84,11 +84,37 @@ namespace Shooter.NetV2
 
     public static class NetV2ClientParts
     {
+        // 後から足す部品は Create の本体を書き換えず、ここに 1 行ずつ並べる。null を返した登録は、その試合では部品を出さない (再生では送れない口など)。
+        // 組み込みの部品の後ろ、声の部品の前に、並べた順で足す
+        internal static readonly IReadOnlyList<Func<NetV2ClientPartsContext, INetV2ClientPart>> Registered =
+            new Func<NetV2ClientPartsContext, INetV2ClientPart>[]
+            {
+            };
+
         public static List<INetV2ClientPart> Create(NetV2ClientPartsContext context)
+        {
+            return Create(context, Registered);
+        }
+
+        internal static List<INetV2ClientPart> Create(
+            NetV2ClientPartsContext context, IReadOnlyList<Func<NetV2ClientPartsContext, INetV2ClientPart>> registered)
         {
             if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
+            }
+
+            if (registered == null)
+            {
+                throw new ArgumentNullException(nameof(registered));
+            }
+
+            for (var i = 0; i < registered.Count; i++)
+            {
+                if (registered[i] == null)
+                {
+                    throw new ArgumentException("registered part " + i + " is null", nameof(registered));
+                }
             }
 
             var client = context.Client;
@@ -149,6 +175,8 @@ namespace Shooter.NetV2
                 parts.Add(new NetV2NetStatsPart(client, context.NetStatsIntervalSeconds));
             }
 
+            AddRegistered(parts, context, registered);
+
             if (context.Voice != null)
             {
                 parts.Add(new NetV2VoicePart(
@@ -163,6 +191,34 @@ namespace Shooter.NetV2
             }
 
             return parts;
+        }
+
+        // 途中の登録が投げたら、それまでに作った部品を捨てずに返すと誰も Dispose しないので、ここで片付けてから投げ直す
+        private static void AddRegistered(
+            List<INetV2ClientPart> parts, NetV2ClientPartsContext context, IReadOnlyList<Func<NetV2ClientPartsContext, INetV2ClientPart>> registered)
+        {
+            for (var i = 0; i < registered.Count; i++)
+            {
+                INetV2ClientPart part;
+                try
+                {
+                    part = registered[i](context);
+                }
+                catch
+                {
+                    foreach (var made in parts)
+                    {
+                        made.Dispose();
+                    }
+
+                    throw;
+                }
+
+                if (part != null)
+                {
+                    parts.Add(part);
+                }
+            }
         }
 
         public static Streaks StreaksRule(MatchClient client)
